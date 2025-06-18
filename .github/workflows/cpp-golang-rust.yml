@@ -261,7 +261,7 @@ jobs:
         CURVE_DIR=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.curve-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         export LD_LIBRARY_PATH=${{ steps.curve-backend-flag.outputs.INSTALL_PATH }}/lib
-        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath=$LD_LIBRARY_PATH"
         go test ./$CURVE_DIR/tests -count=1 -failfast -p 2 -timeout 60m -v
 
 
@@ -465,7 +465,7 @@ jobs:
         FIELD_DIR=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.field-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         export LD_LIBRARY_PATH=${{ steps.field-backend-flag.outputs.INSTALL_PATH }}/lib
-        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$FIELD -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$FIELD -lstdc++ -Wl,-rpath=$LD_LIBRARY_PATH"
         if [ -d "./$FIELD/tests" ]; then
           echo "Running tests for $FIELD..."
           go test ./$FIELD_DIR/tests -count=1 -failfast -p 2 -timeout 60m -v
@@ -706,7 +706,7 @@ jobs:
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.hash-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         export LD_LIBRARY_PATH=${{ steps.hash-backend-flag.outputs.INSTALL_PATH }}/lib
-        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_hash -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_hash -lstdc++ -Wl,-rpath=$LD_LIBRARY_PATH"
         go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
     - name: Test GoLang Merkle Tree
       working-directory: ./wrappers/golang/merkle-tree
@@ -714,7 +714,7 @@ jobs:
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.hash-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         export LD_LIBRARY_PATH=${{ steps.hash-backend-flag.outputs.INSTALL_PATH }}/lib
-        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_hash -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_hash -lstdc++ -Wl,-rpath=$LD_LIBRARY_PATH"
         go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
 
   test-linux-runtime:
@@ -788,7 +788,7 @@ jobs:
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
         export LD_LIBRARY_PATH=${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib
-        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -lstdc++ -Wl,-rpath=$LD_LIBRARY_PATH"
         go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
 
   run-rust-examples:
@@ -917,9 +917,10 @@ jobs:
     - name: Build PQC library & tests
       working-directory: ./icicle
       run: |
+        export ICICLE_INSTALL_DIR=$GITHUB_WORKSPACE/icicle/install 
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DHASH=OFF -DCUDA_PQC_BACKEND=ON -DPQC=ON -S . -B build
-        cmake --build build -j
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DHASH=OFF -DCUDA_PQC_BACKEND=ON -DPQC=ON -DCMAKE_INSTALL_PREFIX=$ICICLE_INSTALL_DIR -S . -B build
+        cmake --build build --target install -j
 
     - name: Run backend specific PQC Tests
       working-directory: ./icicle/build/backend/cuda_pqc/tests
@@ -940,3 +941,20 @@ jobs:
         export ICICLE_INSTALL_DIR=$GITHUB_WORKSPACE/icicle/install
         export LD_LIBRARY_PATH=$ICICLE_INSTALL_DIR/lib:$LD_LIBRARY_PATH
         cargo test --release --verbose
+    
+    - name: Setup go
+      if: ${{ needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' }}
+      timeout-minutes: 15
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+      with:
+        go-version: '1.22.0'
+        cache: false
+  
+    - name: Test GoLang PQC
+      working-directory: ./wrappers/golang/pqc
+      if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') }}
+      run: |
+        export ICICLE_INSTALL_DIR=$GITHUB_WORKSPACE/icicle/install 
+        export LD_LIBRARY_PATH=$ICICLE_INSTALL_DIR/lib
+        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_pqc -lstdc++ -Wl,-rpath=$LD_LIBRARY_PATH"
+        go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
