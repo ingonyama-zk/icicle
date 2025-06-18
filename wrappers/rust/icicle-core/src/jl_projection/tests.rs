@@ -1,10 +1,12 @@
 use crate::jl_projection::{
     get_jl_matrix_rows, get_jl_matrix_rows_as_polyring, jl_projection, JLProjection, JLProjectionPolyRing,
 };
-use crate::polynomial_ring::PolynomialRing;
-use crate::traits::{Arithmetic, FieldImpl};
+use crate::polynomial_ring::{
+    flatten_device_polynomials, flatten_host_polynomials, flatten_host_polynomials_mut, PolynomialRing,
+};
+use crate::traits::{Arithmetic, FieldImpl, GenerateRandom};
 use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::memory::HostSlice;
+use icicle_runtime::memory::{DeviceVec, HostSlice};
 use rand::Rng;
 
 pub fn check_jl_projection<F>()
@@ -162,4 +164,75 @@ where
             );
         }
     }
+}
+
+/// Tests JL projection on both host and device representations of a polynomial vector.
+/// Verifies consistency between host and device projection results and supports projecting into polynomials.
+pub fn check_polynomial_projection<P>()
+where
+    P: PolynomialRing + GenerateRandom<P>,
+    P::Base: FieldImpl,
+    <P::Base as FieldImpl>::Config: JLProjection<P::Base>,
+{
+    let num_polys = 10;
+    let projection_dim = 256;
+    assert_eq!(projection_dim % P::DEGREE, 0, "Output size must be divisible by DEGREE");
+
+    // === generate host polynomial vector ===
+    let host_polys = P::generate_random(num_polys);
+
+    // === Copy to device memory ===
+    let mut device_vec = DeviceVec::<P>::device_malloc(num_polys).unwrap();
+    device_vec
+        .copy_from_host(&HostSlice::from_slice(&host_polys))
+        .unwrap();
+
+    // === JL projection parameters ===
+    let mut seed = [0u8; 32];
+    rand::thread_rng().fill(&mut seed);
+    let cfg = VecOpsConfig::default();
+
+    // === Project flattened device memory ===
+    let scalar_device_slice = flatten_device_polynomials(&device_vec);
+    let mut projected_from_device = vec![P::Base::zero(); projection_dim];
+    jl_projection(
+        scalar_device_slice,
+        &seed,
+        &cfg,
+        HostSlice::from_mut_slice(&mut projected_from_device),
+    )
+    .expect("JL projection on device memory failed");
+
+    // === Project flattened host memory ===
+    let scalar_host_slice = flatten_host_polynomials(&HostSlice::from_slice(&host_polys));
+    let mut projected_from_host = vec![P::Base::zero(); projection_dim];
+    jl_projection(
+        scalar_host_slice,
+        &seed,
+        &cfg,
+        HostSlice::from_mut_slice(&mut projected_from_host),
+    )
+    .expect("JL projection on host memory failed");
+
+    // === Assert host/device projection results match ===
+    assert_eq!(
+        projected_from_host, projected_from_device,
+        "Host and device projections differ"
+    );
+    assert_ne!(
+        projected_from_host,
+        vec![P::Base::zero(); projection_dim],
+        "Projection result is all zero"
+    );
+
+    // === Project directly into a polynomial vector (flattened target) ===
+    let mut projected_polys = vec![P::zero(); projection_dim / P::DEGREE];
+    let poly_output_slice = flatten_host_polynomials_mut(HostSlice::from_mut_slice(&mut projected_polys));
+    jl_projection(scalar_host_slice, &seed, &cfg, poly_output_slice).expect("JL projection into polynomial failed");
+
+    assert_ne!(
+        projected_polys,
+        vec![P::zero(); projection_dim / P::DEGREE],
+        "Projected polynomial vector is all zero"
+    );
 }

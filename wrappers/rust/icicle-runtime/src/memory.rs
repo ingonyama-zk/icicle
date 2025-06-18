@@ -250,6 +250,14 @@ impl<T> HostSlice<T> {
         self.0
             .iter_mut()
     }
+
+    pub unsafe fn from_raw_parts<'a>(ptr: *const T, len: usize) -> &'a HostSlice<T> {
+        &*(std::slice::from_raw_parts(ptr, len) as *const [T] as *const HostSlice<T>)
+    }
+
+    pub unsafe fn from_raw_parts_mut<'a>(ptr: *mut T, len: usize) -> &'a mut HostSlice<T> {
+        &mut *(std::slice::from_raw_parts_mut(ptr, len) as *mut [T] as *mut HostSlice<T>)
+    }
 }
 
 impl<T> DeviceSlice<T> {
@@ -345,6 +353,20 @@ impl<T> DeviceSlice<T> {
             )
             .wrap()
         }
+    }
+
+    /// # Safety
+    /// `ptr` must point to `len` contiguous elements in device memory.
+    /// The caller must ensure the memory is valid for the lifetime `'a` and not aliased.
+    pub unsafe fn from_raw_parts<'a>(ptr: *const T, len: usize) -> &'a DeviceSlice<T> {
+        &*(std::slice::from_raw_parts(ptr, len) as *const [T] as *const DeviceSlice<T>)
+    }
+
+    /// # Safety
+    /// `ptr` must point to `len` contiguous elements in device memory and be uniquely owned.
+    /// The caller must ensure the memory is valid for the lifetime `'a` and not aliased.
+    pub unsafe fn from_raw_parts_mut<'a>(ptr: *mut T, len: usize) -> &'a mut DeviceSlice<T> {
+        &mut *(std::slice::from_raw_parts_mut(ptr, len) as *mut [T] as *mut DeviceSlice<T>)
     }
 }
 
