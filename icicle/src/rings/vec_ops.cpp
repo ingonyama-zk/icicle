@@ -29,7 +29,7 @@ namespace icicle {
   }
 
   ICICLE_DISPATCHER_INST(RandomSamplingRingRqDispatcher, ring_rq_random_sampling, ringRqRandomSamplingImpl);
-  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, random_sampling_rq)(
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, random_sampling_polyring)(
     uint64_t size, bool fast_mode, const std::byte* seed, uint64_t seed_len, const VecOpsConfig* config, Rq* output)
   {
     return RandomSamplingRingRqDispatcher::execute(size, fast_mode, seed, seed_len, *config, output);

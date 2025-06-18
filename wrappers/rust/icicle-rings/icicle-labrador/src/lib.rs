@@ -4,6 +4,7 @@ pub mod norm;
 pub mod ntt;
 pub mod polynomial_ring;
 pub mod program;
+pub mod random_sampling;
 pub mod ring;
 pub mod rns;
 pub mod symbol;
