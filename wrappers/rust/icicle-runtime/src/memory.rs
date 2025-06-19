@@ -90,7 +90,8 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
             return Ok(());
         }
         if size > self.len() {
-            panic!("size exceeds slice length");
+            eprintln!("size exceeds slice length");
+            return Err(eIcicleError::CopyFailed);
         }
         unsafe {
             runtime::memset(self.as_mut_ptr() as *mut c_void, value as i32, size).wrap()?;
@@ -103,7 +104,8 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
             return Ok(());
         }
         if size > self.len() {
-            panic!("size exceeds slice length");
+            eprintln!("size exceeds slice length");
+            return Err(eIcicleError::CopyFailed);
         }
         unsafe {
             runtime::memset_async(self.as_mut_ptr() as *mut c_void, value as i32, size, stream.handle).wrap()?;
@@ -148,10 +150,12 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
             return Ok(());
         }
         if size > self.len() {
-            panic!("size exceeds slice length");
+            eprintln!("size exceeds slice length");
+            return Err(eIcicleError::CopyFailed);
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an active device");
+            eprintln!("not allocated on an active device");
+            return Err(eIcicleError::CopyFailed);
         }
 
         let byte_size = size_of::<T>() * size;
@@ -163,10 +167,12 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
             return Ok(());
         }
         if size > self.len() {
-            panic!("size exceeds slice length");
+            eprintln!("size exceeds slice length");
+            return Err(eIcicleError::CopyFailed);
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an active device");
+            eprintln!("not allocated on an active device");
+            return Err(eIcicleError::CopyFailed);
         }
 
         let byte_size = size_of::<T>() * size;
@@ -279,7 +285,8 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an active device");
+            eprintln!("not allocated on an active device");
+            return Err(eIcicleError::CopyFailed);
         }
 
         let size = size_of::<T>() * self.len();
@@ -298,7 +305,8 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an active device");
+            eprintln!("not allocated on an active device");
+            return Err(eIcicleError::CopyFailed);
         }
 
         let size = size_of::<T>() * self.len();
@@ -316,7 +324,8 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an active device");
+            eprintln!("not allocated on an active device");
+            return Err(eIcicleError::CopyFailed);
         }
 
         let size = size_of::<T>() * self.len();
@@ -340,7 +349,8 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an active device");
+            eprintln!("not allocated on an active device");
+            return Err(eIcicleError::CopyFailed);
         }
 
         let size = size_of::<T>() * self.len();
@@ -677,11 +687,13 @@ pub mod reinterpret {
         }
 
         fn memset(&mut self, _: u8, _: usize) -> Result<(), eIcicleError> {
-            panic!("Cannot memset immutable UnifiedSlice");
+            eprintln!("Cannot memset immutable UnifiedSlice");
+            Err(eIcicleError::CopyFailed)
         }
 
         fn memset_async(&mut self, _: u8, _: usize, _: &IcicleStream) -> Result<(), eIcicleError> {
-            panic!("Cannot memset_async immutable UnifiedSlice");
+            eprintln!("Cannot memset_async immutable UnifiedSlice");
+            Err(eIcicleError::CopyFailed)
         }
     }
 
