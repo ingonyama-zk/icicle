@@ -551,75 +551,84 @@ TEST_F(RingTestBase, JLMatrixRowsCPUCUDAConsistency)
     GTEST_SKIP() << "Both CPU and CUDA devices are required for this test";
   }
 
-  std::stringstream cpu_timer_label, cuda_timer_label;
-  cpu_timer_label << "JL-matrix-rows CPU";
-  cuda_timer_label << "JL-matrix-rows CUDA";
+  // Test both regular and negacyclic cases
+  for (bool negacyclic_conjugate : {false, true}) {
+    std::stringstream cpu_timer_label, cuda_timer_label;
+    cpu_timer_label << "JL-matrix-rows CPU" << (negacyclic_conjugate ? " (negacyclic)" : "");
+    cuda_timer_label << "JL-matrix-rows CUDA" << (negacyclic_conjugate ? " (negacyclic)" : "");
 
-  // Get matrix from CPU device
-  ICICLE_CHECK(icicle_set_device("CPU"));
-  START_TIMER(cpu_generate);
-  ICICLE_CHECK(get_jl_matrix_rows(
-    seed, sizeof(seed),
-    N,           // row_size = input dimension
-    0,           // start_row
-    output_size, // num_rows
-    cfg,
-    cpu_matrix.data() // Output: [num_rows x row_size]
-  ));
-  END_TIMER(cpu_generate, cpu_timer_label.str().c_str(), true);
+    // Get matrix from CPU device
+    ICICLE_CHECK(icicle_set_device("CPU"));
+    START_TIMER(cpu_generate);
+    ICICLE_CHECK(get_jl_matrix_rows(
+      seed, sizeof(seed),
+      N,           // row_size = input dimension
+      0,           // start_row
+      output_size, // num_rows
+      cfg,
+      cpu_matrix.data(), // Output: [num_rows x row_size]
+      negacyclic_conjugate // negacyclic conjugation flag
+    ));
+    END_TIMER(cpu_generate, cpu_timer_label.str().c_str(), true);
 
-  // Get matrix from CUDA device
-  ICICLE_CHECK(icicle_set_device("CUDA"));
-  START_TIMER(cuda_generate);
-  ICICLE_CHECK(get_jl_matrix_rows(
-    seed, sizeof(seed),
-    N,           // row_size = input dimension
-    0,           // start_row
-    output_size, // num_rows
-    cfg,
-    cuda_matrix.data() // Output: [num_rows x row_size]
-  ));
-  END_TIMER(cuda_generate, cuda_timer_label.str().c_str(), true);
+    // Get matrix from CUDA device
+    ICICLE_CHECK(icicle_set_device("CUDA"));
+    START_TIMER(cuda_generate);
+    ICICLE_CHECK(get_jl_matrix_rows(
+      seed, sizeof(seed),
+      N,           // row_size = input dimension
+      0,           // start_row
+      output_size, // num_rows
+      cfg,
+      cuda_matrix.data(), // Output: [num_rows x row_size]
+      negacyclic_conjugate // negacyclic conjugation flag
+    ));
+    END_TIMER(cuda_generate, cuda_timer_label.str().c_str(), true);
 
-  // Compare matrices element by element
-  for (size_t i = 0; i < output_size * N; ++i) {
-    ASSERT_EQ(cpu_matrix[i], cuda_matrix[i])
-      << "Matrix mismatch at index " << i << ": CPU = " << cpu_matrix[i] << ", CUDA = " << cuda_matrix[i];
-  }
+    // Compare matrices element by element
+    for (size_t i = 0; i < output_size * N; ++i) {
+      ASSERT_EQ(cpu_matrix[i], cuda_matrix[i])
+        << "Matrix mismatch at index " << i << " (negacyclic=" << negacyclic_conjugate 
+        << "): CPU = " << cpu_matrix[i] << ", CUDA = " << cuda_matrix[i];
+    }
 
-  // Additional verification: test with different start_row and num_rows parameters
-  const size_t start_row = 10;
-  const size_t partial_rows = 50;
-  std::vector<field_t> cpu_partial(partial_rows * N);
-  std::vector<field_t> cuda_partial(partial_rows * N);
+    // Additional verification: test with different start_row and num_rows parameters
+    const size_t start_row = 10;
+    const size_t partial_rows = 50;
+    std::vector<field_t> cpu_partial(partial_rows * N);
+    std::vector<field_t> cuda_partial(partial_rows * N);
 
-  // CPU partial matrix
-  ICICLE_CHECK(icicle_set_device("CPU"));
-  ICICLE_CHECK(get_jl_matrix_rows(
-    seed, sizeof(seed),
-    N,           // row_size
-    start_row,   // start_row
-    partial_rows, // num_rows
-    cfg,
-    cpu_partial.data()
-  ));
+    // CPU partial matrix
+    ICICLE_CHECK(icicle_set_device("CPU"));
+    ICICLE_CHECK(get_jl_matrix_rows(
+      seed, sizeof(seed),
+      N,           // row_size
+      start_row,   // start_row
+      partial_rows, // num_rows
+      cfg,
+      cpu_partial.data(),
+      negacyclic_conjugate // negacyclic conjugation flag
+    ));
 
-  // CUDA partial matrix
-  ICICLE_CHECK(icicle_set_device("CUDA"));
-  ICICLE_CHECK(get_jl_matrix_rows(
-    seed, sizeof(seed),
-    N,           // row_size
-    start_row,   // start_row
-    partial_rows, // num_rows
-    cfg,
-    cuda_partial.data()
-  ));
+    // CUDA partial matrix
+    ICICLE_CHECK(icicle_set_device("CUDA"));
+    ICICLE_CHECK(get_jl_matrix_rows(
+      seed, sizeof(seed),
+      N,           // row_size
+      start_row,   // start_row
+      partial_rows, // num_rows
+      cfg,
+      cuda_partial.data(),
+      negacyclic_conjugate // negacyclic conjugation flag
+    ));
 
-  // Compare partial matrices
-  for (size_t i = 0; i < partial_rows * N; ++i) {
-    ASSERT_EQ(cpu_partial[i], cuda_partial[i])
-      << "Partial matrix mismatch at index " << i << " (start_row=" << start_row << ", partial_rows=" << partial_rows
-      << "): CPU = " << cpu_partial[i] << ", CUDA = " << cuda_partial[i];
+    // Compare partial matrices
+    for (size_t i = 0; i < partial_rows * N; ++i) {
+      ASSERT_EQ(cpu_partial[i], cuda_partial[i])
+        << "Partial matrix mismatch at index " << i << " (start_row=" << start_row 
+        << ", partial_rows=" << partial_rows << ", negacyclic=" << negacyclic_conjugate
+        << "): CPU = " << cpu_partial[i] << ", CUDA = " << cuda_partial[i];
+    }
   }
 }
 
