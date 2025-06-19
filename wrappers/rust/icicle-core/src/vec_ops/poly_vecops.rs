@@ -1,11 +1,51 @@
+//! # Polynomial Ring Vector Operations
+//!
+//! This module defines vectorized operations over slices of types implementing the [`PolynomialRing`] trait.
+//!
+//! Each function operates on slices of polynomials (e.g., `[Rq]`) that internally store their coefficients in a base field (e.g., `Zq`).
+//! These polynomials are "flattened" at runtime to perform efficient scalar-wise operations over the coefficient field.
+//!
+//! The implementation supports both host and device memory via the [`HostOrDeviceSlice`] abstraction.
+//!
+//! ## Supported Operations
+//! - `polyvec_add`: Element-wise addition of two polynomial vectors
+//! - `polyvec_sub`: Element-wise subtraction of two polynomial vectors
+//! - `polyvec_mul`: Element-wise multiplication of two polynomial vectors
+//! - `polyvec_mul_by_scalar`: Multiply each polynomial by a scalar field element
+//! - `polyvec_sum_reduce`: Reduce a vector of polynomials into a single polynomial by summing them coefficient-wise
+//!
+//! ## Safety
+//! All vector operations rely on a guaranteed memory layout where a polynomial is backed by `[P::Base; DEGREE]`.
+//! This is enforced by the [`PolynomialRing`] trait and the `reinterpret_slice` utility.
+
 use super::{add_scalars, mul_scalars, scalar_mul, sub_scalars, sum_scalars, VecOps, VecOpsConfig};
 use crate::{polynomial_ring::PolynomialRing, traits::FieldImpl};
 use icicle_runtime::{
     errors::eIcicleError,
-    memory::{reinterpret_slice, reinterpret_slice_mut, HostOrDeviceSlice},
+    memory::{
+        reinterpret::{reinterpret_slice, reinterpret_slice_mut},
+        HostOrDeviceSlice,
+    },
 };
 
-// <Rq,Zq> vector-mul
+/// Multiplies each polynomial in the input vector by a corresponding scalar field element.
+///
+/// Each `P` is a polynomial over `P::Base`, and this function scales all coefficients of `P[i]`
+/// by `scalar[i]`.
+///
+/// # Constraints
+/// - `input_scalarvec.len() == input_polyvec.len()`
+/// - All memory regions must be properly allocated on the same memory space (host or device).
+///
+/// # Semantics
+/// ```text
+/// result[i] = input_polyvec[i] * input_scalarvec[i]
+/// ```
+///
+/// # Example
+/// ```ignore
+/// polyvec_mul_by_scalar(&[Rq; N], &[Zq; N], &mut [Rq; N], &cfg)
+/// ```
 pub fn polyvec_mul_by_scalar<P>(
     input_polyvec: &(impl HostOrDeviceSlice<P> + ?Sized),
     input_scalarvec: &(impl HostOrDeviceSlice<P::Base> + ?Sized),
@@ -26,7 +66,14 @@ where
     }
 }
 
-// <Rq,Rq> vector-mul
+/// Computes element-wise multiplication of two polynomial vectors.
+///
+/// Each pair of polynomials is multiplied coefficient-wise.
+///
+/// # Semantics
+/// ```text
+/// result[i] = input_polyvec_a[i] * input_polyvec_b[i]
+/// ```
 pub fn polyvec_mul<P>(
     input_polyvec_a: &(impl HostOrDeviceSlice<P> + ?Sized),
     input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
@@ -46,7 +93,12 @@ where
     }
 }
 
-// <Rq,Rq> vector-add
+/// Computes element-wise addition of two polynomial vectors.
+///
+/// # Semantics
+/// ```text
+/// result[i] = input_polyvec_a[i] + input_polyvec_b[i]
+/// ```
 pub fn polyvec_add<P>(
     input_polyvec_a: &(impl HostOrDeviceSlice<P> + ?Sized),
     input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
@@ -65,7 +117,13 @@ where
         add_scalars(&vec_a_flat, &vec_b_flat, &mut result_flat, cfg)
     }
 }
-// <Rq,Rq> vector-sub
+
+/// Computes element-wise subtraction of two polynomial vectors.
+///
+/// # Semantics
+/// ```text
+/// result[i] = input_polyvec_a[i] - input_polyvec_b[i]
+/// ```
 pub fn polyvec_sub<P>(
     input_polyvec_a: &(impl HostOrDeviceSlice<P> + ?Sized),
     input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
@@ -84,7 +142,19 @@ where
         sub_scalars(&vec_a_flat, &vec_b_flat, &mut result_flat, cfg)
     }
 }
-// <Rq> vector-reduce
+
+/// Reduces a vector of polynomials into a single polynomial by summing them coefficient-wise.
+///
+/// The output is expected to be a slice of length 1.
+///
+/// # Semantics
+/// ```text
+/// result[0] = input_polyvec.iter().sum()
+/// ```
+///
+/// # Notes
+/// - Each coefficient is reduced independently (column-wise sum).
+/// - The output slice must have length 1 polynomial (`[P]`).
 pub fn polyvec_sum_reduce<P>(
     input_polyvec: &(impl HostOrDeviceSlice<P> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
