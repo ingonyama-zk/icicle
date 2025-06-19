@@ -523,6 +523,7 @@ TEST_F(RingTestBase, JLprojectionGetRowsTest)
 
 TEST_F(RingTestBase, JLMatrixRowsCPUCUDAConsistency)
 {
+  // todo: test the negacyclic conjugation flag
   const size_t N = 1 << 10;       // Input vector size (row size)
   const size_t output_size = 256; // Number of JL projection rows
 
