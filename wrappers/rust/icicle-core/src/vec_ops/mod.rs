@@ -4,6 +4,7 @@ use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
 
+pub mod poly_vecops;
 pub mod tests;
 
 #[repr(C)]

@@ -1,4 +1,4 @@
-use crate::polynomial_ring::{flatten_device_polynomials, flatten_host_polynomials, PolynomialRing};
+use crate::polynomial_ring::{flatten_polyring_slice, PolynomialRing};
 use crate::{
     curve::{Affine, Curve, Projective},
     field::Field,
@@ -220,7 +220,7 @@ where
     let poly_slice = HostSlice::from_slice(&polynomials);
 
     // Flatten the polynomial slice to a scalar slice
-    let scalar_slice = flatten_host_polynomials(poly_slice);
+    let scalar_slice = flatten_polyring_slice(poly_slice);
 
     // Ensure the flattened slice has the correct number of base elements
     let expected_len = poly_slice.len() * P::DEGREE;
@@ -259,7 +259,7 @@ where
 
     // Flatten the device polynomial slice
     let device_slice = &device_vec;
-    let scalar_slice = flatten_device_polynomials(device_slice);
+    let scalar_slice = flatten_polyring_slice(device_slice);
 
     // Check length is DEGREE × num_polynomials
     let expected_len = device_slice.len() * P::DEGREE;
