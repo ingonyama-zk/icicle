@@ -436,7 +436,7 @@ TEST_F(RingTestBase, JLProjectionTest)
 
   const auto cfg = VecOpsConfig{};
   for (auto device : s_registered_devices) {
-    if (device != "CPU") continue; // TODO implement for CUDA too
+    // if (device != "CPU") continue; // TODO implement for CUDA too
     ICICLE_CHECK(icicle_set_device(device));
     std::stringstream timer_label;
     timer_label << "JL-projection [device=" << device << "]";
@@ -486,7 +486,7 @@ TEST_F(RingTestBase, JLprojectionGetRowsTest)
   const auto cfg = VecOpsConfig{};
 
   for (const auto& device : s_registered_devices) {
-    if (device != "CPU") continue; // TODO: Extend to CUDA
+    // if (device != "CPU") continue; // TODO: Extend to CUDA
 
     ICICLE_CHECK(icicle_set_device(device));
 
@@ -524,6 +524,93 @@ TEST_F(RingTestBase, JLprojectionGetRowsTest)
   }
 }
 
+TEST_F(RingTestBase, JLMatrixRowsCPUCUDAConsistency)
+{
+  // todo: test the negacyclic conjugation flag
+  const size_t N = 1 << 10;       // Input vector size (row size)
+  const size_t output_size = 256; // Number of JL projection rows
+
+  // Skip test if fewer than 2 devices are available
+  if (s_registered_devices.size() < 2) { GTEST_SKIP() << "At least 2 devices are required for this test"; }
+
+  std::vector<field_t> main_matrix(output_size * N); // Matrix from main device
+  std::vector<field_t> ref_matrix(output_size * N);  // Matrix from reference device
+
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() % 256);
+  }
+
+  const auto cfg = VecOpsConfig{};
+
+  std::stringstream main_timer_label, ref_timer_label;
+  main_timer_label << "JL-matrix-rows " << main_device();
+  ref_timer_label << "JL-matrix-rows " << reference_device();
+
+  // Get matrix from reference device
+  ICICLE_CHECK(icicle_set_device(reference_device()));
+  START_TIMER(ref_generate);
+  ICICLE_CHECK(get_jl_matrix_rows(
+    seed, sizeof(seed),
+    N,           // row_size = input dimension
+    0,           // start_row
+    output_size, // num_rows
+    cfg,
+    ref_matrix.data() // Output: [num_rows x row_size]
+    ));
+  END_TIMER(ref_generate, ref_timer_label.str().c_str(), true);
+
+  // Get matrix from main device
+  ICICLE_CHECK(icicle_set_device(main_device()));
+  START_TIMER(main_generate);
+  ICICLE_CHECK(get_jl_matrix_rows(
+    seed, sizeof(seed),
+    N,           // row_size = input dimension
+    0,           // start_row
+    output_size, // num_rows
+    cfg,
+    main_matrix.data() // Output: [num_rows x row_size]
+    ));
+  END_TIMER(main_generate, main_timer_label.str().c_str(), true);
+
+  // Compare matrices element by element
+  for (size_t i = 0; i < output_size * N; ++i) {
+    ASSERT_EQ(ref_matrix[i], main_matrix[i]) << "Matrix mismatch at index " << i << ": " << reference_device() << " = "
+                                             << ref_matrix[i] << ", " << main_device() << " = " << main_matrix[i];
+  }
+
+  // Additional verification: test with different start_row and num_rows parameters
+  const size_t start_row = 10;
+  const size_t partial_rows = 50;
+  std::vector<field_t> ref_partial(partial_rows * N);
+  std::vector<field_t> main_partial(partial_rows * N);
+
+  // Reference device partial matrix
+  ICICLE_CHECK(icicle_set_device(reference_device()));
+  ICICLE_CHECK(get_jl_matrix_rows(
+    seed, sizeof(seed),
+    N,            // row_size
+    start_row,    // start_row
+    partial_rows, // num_rows
+    cfg, ref_partial.data()));
+
+  // Main device partial matrix
+  ICICLE_CHECK(icicle_set_device(main_device()));
+  ICICLE_CHECK(get_jl_matrix_rows(
+    seed, sizeof(seed),
+    N,            // row_size
+    start_row,    // start_row
+    partial_rows, // num_rows
+    cfg, main_partial.data()));
+
+  // Compare partial matrices
+  for (size_t i = 0; i < partial_rows * N; ++i) {
+    ASSERT_EQ(ref_partial[i], main_partial[i])
+      << "Partial matrix mismatch at index " << i << " (start_row=" << start_row << ", partial_rows=" << partial_rows
+      << "): " << reference_device() << " = " << ref_partial[i] << ", " << main_device() << " = " << main_partial[i];
+  }
+}
+
 // This test verifies the JL-projection lemma: projecting an input vector of Rq polynomials
 // via Zq yields the same value as the constant term of an inner product in Rq with conjugated rows.
 TEST_F(RingTestBase, JLprojectionLemma)
@@ -544,7 +631,8 @@ TEST_F(RingTestBase, JLprojectionLemma)
   }
 
   for (const auto& device : s_registered_devices) {
-    if (device == "CUDA") continue; // TODO: implement CUDA backend
+    // if (device == "CUDA") continue; // TODO: implement CUDA backend
+
     ICICLE_CHECK(icicle_set_device(device));
 
     // Pre-transform input into NTT domain
@@ -1082,5 +1170,52 @@ TEST_F(RingTestBase, NegacyclicNTT)
       PolyRing expected = PolyRing_multiplication(a[i], b[i]);
       EXPECT_EQ(0, memcmp(&expected, &res[i], sizeof(PolyRing)));
     }
+  }
+}
+
+TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
+{
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  const size_t N = (1 << 16) + 1; // Input vector size
+  const size_t output_size = 256; // JL projected size
+
+  // Skip test if fewer than 2 devices are available
+  if (s_registered_devices.size() < 2) { GTEST_SKIP() << "At least 2 devices are required for this test"; }
+
+  std::vector<field_t> input(N);
+  std::vector<field_t> ref_output(output_size);
+  std::vector<field_t> main_output(output_size);
+
+  // generate random values in [0, sqrt(q)]. We assume input is low norm.
+  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
+  for (auto& x : input) {
+    uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
+    x = field_t::from(val);
+  }
+
+  const auto cfg = VecOpsConfig{};
+
+  // Perform JL projection on reference device
+  ICICLE_CHECK(icicle_set_device(reference_device()));
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() % 256);
+  }
+  ICICLE_CHECK(
+    jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, ref_output.data(), ref_output.size()));
+
+  // Perform JL projection on main device
+  ICICLE_CHECK(icicle_set_device(main_device()));
+  ICICLE_CHECK(
+    jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, main_output.data(), main_output.size()));
+
+  // Compare results from reference and main devices
+  for (size_t i = 0; i < output_size; ++i) {
+    ASSERT_EQ(ref_output[i], main_output[i]) << "Mismatch at index " << i << ": " << reference_device() << " = "
+                                             << ref_output[i] << ", " << main_device() << " = " << main_output[i];
   }
 }
