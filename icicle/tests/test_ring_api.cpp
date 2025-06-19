@@ -426,7 +426,7 @@ TEST_F(RingTestBase, JLProjectionTest)
 
   const auto cfg = VecOpsConfig{};
   for (auto device : s_registered_devices) {
-    if (device != "CPU") continue; // TODO implement for CUDA too
+    // if (device != "CPU") continue; // TODO implement for CUDA too
     ICICLE_CHECK(icicle_set_device(device));
     std::stringstream timer_label;
     timer_label << "JL-projection [device=" << device << "]";
@@ -1191,7 +1191,8 @@ TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
   const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
   ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
 
-  const size_t N = 1 << 16;       // Input vector size
+  // const size_t N = 1 << 16;       // Input vector size
+  const size_t N = (1 << 16) + 1;       // Input vector size
   const size_t output_size = 256; // JL projected size
 
   std::vector<field_t> input(N);
