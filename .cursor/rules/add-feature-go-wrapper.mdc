@@ -1,0 +1,74 @@
+---
+description: How to add a new feature to go wrappers
+globs: 
+alwaysApply: false
+---
+# Add New Feature to Go Wrappers
+
+This checklist outlines the steps required to add support for a new ICICLE feature (e.g., Sumcheck, Pairing) to the Go wrappers generator. Replace `<FeatureName>` with the PascalCase name of the feature (e.g., `Sumcheck`) and `<featurename>` with the lowercase version (e.g., `sumcheck`).
+
+**Context Files:**
+
+*   `@wrappers/golang/internal/generator/config/config.go`
+*   `@wrappers/golang/internal/generator/config/fields.go` (or similar config initialization file)
+*   `@wrappers/golang/internal/generator/config/curves.go` (or similar config initialization file)
+*   `@wrappers/golang/internal/generator/main.go`
+*   `@icicle/cmake/features.cmake`
+*   (New) `@wrappers/golang/internal/generator/<featurename>/generate.go`
+*   (New) `@wrappers/golang/internal/generator/<featurename>/templates/<featurename>.go.tmpl`
+*   (New) `@wrappers/golang/internal/generator/<featurename>/templates/<featurename>_test.go.tmpl`
+*   (New) `@wrappers/golang/internal/generator/<featurename>/templates/<featurename>.h.tmpl`
+
+**Checklist:**
+
+*   [ ] **Update Config Structs:**
+    *   In `wrappers/golang/internal/generator/config/config.go`:
+        *   Add `Supports<FeatureName> bool` field to `FieldData` struct.
+        *   Add `Supports<FeatureName> bool` field to `CurveData` struct.
+
+*   [ ] **Update Config Initialization:**
+    *   In the files under `wrappers/golang/internal/generator/config/` where `FieldData` and `CurveData` instances are created (e.g., `fields.go`, `curves.go`):
+        *   Initialize the `Supports<FeatureName>` field for each field/curve based on its capabilities, typically by checking `icicle/cmake/features.cmake`.
+
+*   [ ] **Update Main Generator (`main.go`):**
+    *   In `wrappers/golang/internal/generator/main.go`:
+        *   Update the feature parsing logic (likely reading from `features.cmake`) to recognize the new `<FeatureName>` feature string.
+        *   Set the `Supports<FeatureName>` flag accordingly in the `CurveData` or `FieldData` instances being processed.
+        *   Add the import statement for the new generator package: `_ "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/<featurename>"`.
+        *   Within the loops processing curves and fields, add a conditional call to the new feature's generator:
+            ```go
+            if curve.Supports<FeatureName> { // or field.Supports<FeatureName>
+                <featurename>.Generate(outputDir, curve.Curve, ...) // Pass necessary arguments
+            }
+            ```
+
+*   [ ] **Create Feature Generator Directory:**
+    *   Create the directory: `wrappers/golang/internal/generator/<featurename>/`
+
+*   [ ] **Create Generator Logic File:**
+    *   Create the file: `wrappers/golang/internal/generator/<featurename>/generate.go`.
+    *   Define a `Generate` function responsible for executing templates.
+    *   Define a data struct (e.g., `<FeatureName>Data`) to pass information to the templates.
+    *   Define constants for the template file paths (pointing into the `templates` subdirectory).
+    *   Implement the `Generate` function to parse templates and call `generator_utils.GenerateFile` for each template (`.go`, `_test.go`, `.h`).
+
+*   [ ] **Create Templates Directory:**
+    *   Create the subdirectory: `wrappers/golang/internal/generator/<featurename>/templates/`
+
+*   [ ] **Create Go Template File:**
+    *   Create the Go code template: `wrappers/golang/internal/generator/<featurename>/templates/<featurename>.go.tmpl`.
+    *   Implement the Go bindings using CGO, referencing functions defined in the corresponding `.h.tmpl`. Use template variables (e.g., `{{.Field}}`, `{{.PackageName}}`) passed from `generate.go`.
+
+*   [ ] **Create Test Template File:**
+    *   Create the Go test template: `wrappers/golang/internal/generator/<featurename>/templates/<featurename>_test.go.tmpl`.
+    *   Add placeholder test functions (e.g., `Test<FeatureName>Functionality`, `Test<FeatureName>Serialization`) using the `testing` package and ideally `stretchr/testify`. Mark tests as skipped initially.
+
+*   [ ] **Create Header Template File:**
+    *   Create the C header template: `wrappers/golang/internal/generator/<featurename>/templates/<featurename>.h.tmpl`.
+    *   Define the necessary C function signatures, structs (like FFI-safe configs), typedefs, and includes required for the CGO calls in the `.go.tmpl` file. Use template variables as needed.
+
+*   [ ] **Run Generator:**
+    *   Execute `go generate` within the `wrappers/golang/internal/generator/` directory to test the changes and generate the new wrapper files.
+
+*   [ ] **Implement TODOs:**
+    *   Fill in any `// TODO:` comments left in the generated Go code or templates, especially around complex CGO conversions, memory management, and test logic.
