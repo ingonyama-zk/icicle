@@ -1,8 +1,10 @@
 #![allow(unused_imports)]
 use crate::field::FieldArithmetic;
+use crate::polynomial_ring::PolynomialRing;
 use crate::program::{Instruction, PreDefinedProgram, Program, ReturningValueProgram};
 use crate::symbol::Symbol;
-use crate::traits::GenerateRandom;
+use crate::traits::{Arithmetic, GenerateRandom};
+use crate::vec_ops::poly_vecops::{polyvec_add, polyvec_mul, polyvec_mul_by_scalar, polyvec_sub, polyvec_sum_reduce};
 use crate::vec_ops::{
     accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, execute_program, inv_scalars,
     mixed_mul_scalars, mul_scalars, product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars,
@@ -620,4 +622,199 @@ where
     mixed_mul_scalars(a_main, b, result_ref, &cfg).unwrap();
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
+}
+
+// pub fn check_poly_vecop_mul<P>()
+// where
+//     P: PolynomialRing + GenerateRandom<P>,
+//     P::Base: FieldImpl + Arithmetic,
+//     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
+// {
+//     // randomize two vectors of polynomials
+//     let size = 1 << 10;
+//     let input_polyvec_a = P::generate_random(size);
+//     let input_polyvec_b = P::generate_random(size);
+//     let mut result = vec![P::zero(); size];
+//     let mut expected_result = vec![P::zero(); size];
+
+//     // compute the result via poly vecops
+//     let cfg = VecOpsConfig::default();
+//     polyvec_mul(
+//         HostSlice::from_slice(&input_polyvec_a),
+//         HostSlice::from_slice(&input_polyvec_b),
+//         HostSlice::from_mut_slice(&mut result),
+//         &cfg,
+//     )
+//     .expect("Poly vecop mul failed");
+
+//     // compute directly the expected result and compare
+//     for i in 0..size {
+//         let a = &input_polyvec_a[i].values();
+//         let b = &input_polyvec_b[i].values();
+//         let a_mul_b = a
+//             .iter()
+//             .zip(b.iter())
+//             .map(|(x, y)| *x * *y)
+//             .collect::<Vec<_>>();
+//         expected_result[i] = P::from_slice(&a_mul_b);
+//     }
+//     assert_eq!(result, expected_result);
+// }
+
+/// Tests `polyvec_add`, `polyvec_sub`, and `polyvec_mul` against manual computation
+pub fn check_poly_vecops_add_sub_mul<P>()
+where
+    P: PolynomialRing + GenerateRandom<P> + PartialEq + core::fmt::Debug,
+    P::Base: FieldImpl + Arithmetic,
+    <P::Base as FieldImpl>::Config: VecOps<P::Base>,
+{
+    let size = 1 << 10;
+    let a_vec = P::generate_random(size);
+    let b_vec = P::generate_random(size);
+
+    let cfg = VecOpsConfig::default();
+
+    // Allocate buffers
+    let mut add_result = vec![P::zero(); size];
+    let mut sub_result = vec![P::zero(); size];
+    let mut mul_result = vec![P::zero(); size];
+
+    let mut expected_add = vec![P::zero(); size];
+    let mut expected_sub = vec![P::zero(); size];
+    let mut expected_mul = vec![P::zero(); size];
+
+    // Run vectorized ops
+    polyvec_add(
+        HostSlice::from_slice(&a_vec),
+        HostSlice::from_slice(&b_vec),
+        HostSlice::from_mut_slice(&mut add_result),
+        &cfg,
+    )
+    .expect("polyvec_add failed");
+
+    polyvec_sub(
+        HostSlice::from_slice(&a_vec),
+        HostSlice::from_slice(&b_vec),
+        HostSlice::from_mut_slice(&mut sub_result),
+        &cfg,
+    )
+    .expect("polyvec_sub failed");
+
+    polyvec_mul(
+        HostSlice::from_slice(&a_vec),
+        HostSlice::from_slice(&b_vec),
+        HostSlice::from_mut_slice(&mut mul_result),
+        &cfg,
+    )
+    .expect("polyvec_mul failed");
+
+    // Manually compute expected values
+    for i in 0..size {
+        let a = a_vec[i].values();
+        let b = b_vec[i].values();
+
+        let add = a
+            .iter()
+            .zip(b.iter())
+            .map(|(x, y)| *x + *y)
+            .collect::<Vec<_>>();
+        let sub = a
+            .iter()
+            .zip(b.iter())
+            .map(|(x, y)| *x - *y)
+            .collect::<Vec<_>>();
+        let mul = a
+            .iter()
+            .zip(b.iter())
+            .map(|(x, y)| *x * *y)
+            .collect::<Vec<_>>();
+
+        expected_add[i] = P::from_slice(&add);
+        expected_sub[i] = P::from_slice(&sub);
+        expected_mul[i] = P::from_slice(&mul);
+    }
+
+    // Assertions
+    assert_eq!(add_result, expected_add, "polyvec_add mismatch");
+    assert_eq!(sub_result, expected_sub, "polyvec_sub mismatch");
+    assert_eq!(mul_result, expected_mul, "polyvec_mul mismatch");
+}
+
+/// Tests polyvec_mul_by_scalar against reference implementation
+pub fn check_polyvec_mul_by_scalar<P>()
+where
+    P: PolynomialRing + GenerateRandom<P>,
+    P::Base: FieldImpl + Arithmetic,
+    <P::Base as FieldImpl>::Config: VecOps<P::Base> + GenerateRandom<P::Base>,
+{
+    let size = 1 << 10;
+    let polyvec = P::generate_random(size);
+    let scalarvec = <P::Base as FieldImpl>::Config::generate_random(size);
+
+    let cfg = VecOpsConfig::default();
+
+    let mut result = vec![P::zero(); size];
+    let mut expected_result = vec![P::zero(); size];
+
+    // Run the polyvec_mul_by_scalar vector op
+    polyvec_mul_by_scalar(
+        HostSlice::from_slice(&polyvec),
+        HostSlice::from_slice(&scalarvec),
+        HostSlice::from_mut_slice(&mut result),
+        &cfg,
+    )
+    .expect("polyvec_mul_by_scalar failed");
+
+    // Reference result (manual loop)
+    for i in 0..size {
+        let scalar = &scalarvec[i];
+        let poly = polyvec[i].values();
+        let product = poly
+            .iter()
+            .map(|c| *c * *scalar)
+            .collect::<Vec<_>>();
+        expected_result[i] = P::from_slice(&product);
+    }
+
+    // Check correctness
+    assert_eq!(result, expected_result, "polyvec_mul_by_scalar mismatch");
+}
+
+/// Tests polyvec_sum_reduce by summing all polynomials manually and comparing
+pub fn check_polyvec_sum_reduce<P>()
+where
+    P: PolynomialRing + GenerateRandom<P>,
+    P::Base: FieldImpl + Arithmetic,
+    <P::Base as FieldImpl>::Config: VecOps<P::Base>,
+{
+    let size = 1 << 10;
+    let polyvec = P::generate_random(size);
+    let cfg = VecOpsConfig::default();
+
+    let mut result = vec![P::zero(); 1]; // single reduced polynomial
+    let mut expected = vec![P::zero(); 1];
+
+    // Run the vectorized reduction
+    polyvec_sum_reduce(
+        HostSlice::from_slice(&polyvec),
+        HostSlice::from_mut_slice(&mut result),
+        &cfg,
+    )
+    .expect("polyvec_sum_reduce failed");
+
+    // Manually sum all polynomials coefficient-wise
+    let mut acc = vec![P::Base::zero(); P::DEGREE];
+    for poly in &polyvec {
+        for (i, coeff) in poly
+            .values()
+            .iter()
+            .enumerate()
+        {
+            acc[i] = acc[i] + *coeff;
+        }
+    }
+    expected[0] = P::from_slice(&acc);
+
+    // Assert result matches manual sum
+    assert_eq!(result, expected, "polyvec_sum_reduce mismatch");
 }

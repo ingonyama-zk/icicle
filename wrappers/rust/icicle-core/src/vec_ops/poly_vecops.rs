@@ -6,7 +6,7 @@ use icicle_runtime::{
     stream::IcicleStream,
 };
 
-// TODO Yuval: should we expose those flatten methods too?
+// TODO Yuval: generalize this and move to icicle-runtime
 
 enum UnifiedSlice<'a, T: 'a> {
     Host(&'a HostSlice<T>),
@@ -172,7 +172,6 @@ where
     P::Base: FieldImpl,
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
-    // TODO identify device slices
     unsafe {
         let vec_flat = flatten_polyring_slice(input_polyvec);
         let mut result_flat = flatten_polyring_slice_mut(result);
@@ -194,7 +193,6 @@ where
     P::Base: FieldImpl,
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
-    // TODO identify device slices
     unsafe {
         let vec_a_flat = flatten_polyring_slice(input_polyvec_a);
         let vec_b_flat = flatten_polyring_slice(input_polyvec_b);
@@ -215,7 +213,6 @@ where
     P::Base: FieldImpl,
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
-    // TODO identify device slices
     unsafe {
         let vec_a_flat = flatten_polyring_slice(input_polyvec_a);
         let vec_b_flat = flatten_polyring_slice(input_polyvec_b);
@@ -235,7 +232,6 @@ where
     P::Base: FieldImpl,
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
-    // TODO identify device slices
     unsafe {
         let vec_a_flat = flatten_polyring_slice(input_polyvec_a);
         let vec_b_flat = flatten_polyring_slice(input_polyvec_b);
@@ -254,7 +250,6 @@ where
     P::Base: FieldImpl,
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
-    // TODO identify device slices
     unsafe {
         let input_flat = flatten_polyring_slice(input_polyvec);
         let mut result_flat = flatten_polyring_slice_mut(result);
@@ -263,4 +258,44 @@ where
         local_cfg.columns_batch = true;
         sum_scalars(&input_flat, &mut result_flat, &local_cfg)
     }
+}
+
+#[macro_export]
+macro_rules! impl_poly_vecops_tests {
+    ($poly_type: ident) => {
+        use icicle_runtime::test_utilities;
+
+        /// Initializes devices before running tests.
+        pub fn initialize() {
+            test_utilities::test_load_and_init_devices();
+            test_utilities::test_set_main_device();
+        }
+
+        #[test]
+        fn test_polyvec_add_sub_mul() {
+            initialize();
+            test_utilities::test_set_main_device();
+            check_poly_vecops_add_sub_mul::<$poly_type>();
+            test_utilities::test_set_ref_device();
+            check_poly_vecops_add_sub_mul::<$poly_type>();
+        }
+
+        #[test]
+        fn test_polyvec_mul_by_scalar() {
+            initialize();
+            test_utilities::test_set_main_device();
+            check_polyvec_mul_by_scalar::<$poly_type>();
+            test_utilities::test_set_ref_device();
+            check_polyvec_mul_by_scalar::<$poly_type>();
+        }
+
+        #[test]
+        fn test_polyvec_sum_reduce() {
+            initialize();
+            test_utilities::test_set_main_device();
+            check_polyvec_sum_reduce::<$poly_type>();
+            test_utilities::test_set_ref_device();
+            check_polyvec_sum_reduce::<$poly_type>();
+        }
+    };
 }
