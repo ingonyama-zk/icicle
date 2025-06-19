@@ -562,7 +562,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 }
 
 std::vector<Rq> LabradorProver::prepare_recursion_witness(
-  PartialTranscript trs, LabradorBaseCaseProof pf, size_t base0, size_t mu, size_t nu)
+  const PartialTranscript& trs, const LabradorBaseCaseProof& pf, size_t base0, size_t mu, size_t nu)
 {
   // Step 1: Convert z_hat back to polynomial domain
   size_t n = pf.final_const.n;
@@ -640,7 +640,12 @@ std::vector<Rq> LabradorProver::prepare_recursion_witness(
 
 /// Returns the LabradorInstance for recursion problem
 LabradorInstance prepare_recursion_instance(
-  LabradorParam prev_param, EqualityInstance final_const, PartialTranscript trs, size_t base0, size_t mu, size_t nu)
+  const LabradorParam& prev_param,
+  const EqualityInstance& final_const,
+  const PartialTranscript& trs,
+  size_t base0,
+  size_t mu,
+  size_t nu)
 {
   const size_t r = final_const.r;
   const size_t n = final_const.n;
@@ -656,15 +661,15 @@ LabradorInstance prepare_recursion_instance(
 
   size_t m = t_len + g_len + h_len;
   size_t n_prime = std::max(std::ceil((double)n / nu), std::ceil((double)m / mu));
-  size_t L_t = (prev_param.t_len(r) + n_prime - 1) / n_prime;
-  size_t L_g = (prev_param.g_len(r) + n_prime - 1) / n_prime;
-  size_t L_h = (prev_param.h_len(r) + n_prime - 1) / n_prime;
+  size_t L_t = (t_len + n_prime - 1) / n_prime;
+  size_t L_g = (g_len + n_prime - 1) / n_prime;
+  size_t L_h = (h_len + n_prime - 1) / n_prime;
 
   // Step 7: Let recursion_instance be a new empty LabradorInstance
   size_t r_prime = 2 * nu + L_t + L_g + L_h;
   std::vector<std::byte> new_ajtai_seed(prev_param.ajtai_seed);
   new_ajtai_seed.push_back(std::byte('1'));
-  // TODO: set new beta correctly
+  // TODO: figure out param using Lattirust code
   LabradorParam recursion_param{
     new_ajtai_seed,
     prev_param.kappa,      // kappa
@@ -906,23 +911,22 @@ LabradorInstance prepare_recursion_instance(
   return recursion_instance;
 }
 
-// void prover(LabradorInstance lab_inst, const std::vector<Rq>& S, size_t num_rec)
-// {
-//   std::vector<std::byte> ajtai_seed;
-//   const char* str = "INSERT PREFIXED RANDOM VALUE HERE";
-//   ajtai_seed.assign(reinterpret_cast<const std::byte*>(str), reinterpret_cast<const std::byte*>(str + strlen(str)));
-//   std::vector<Zq> proof;
-//   std::vector<Rq> witness(S);
-//   LabradorProtocol L;
-//   for (size_t i = 0; i < num_rec; i++) {
-//     ajtai_seed.push_back(std::byte(i));
-//     LabradorRecursionRawInstance raw_inst = L.base_prover(lab_inst, ajtai_seed, witness, proof);
-//     auto [new_lab_inst, new_witness] = L.prepare_recursive_problem(ajtai_seed, raw_inst, 1 << 4, 1 << 4);
-//     lab_inst = new_lab_inst;
-//     witness = new_witness;
-//     ajtai_seed.pop_back();
-//   }
-// }
+std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver::prove()
+{
+  std::vector<PartialTranscript> trs;
+  PartialTranscript part_trs;
+  LabradorBaseCaseProof base_proof(lab_inst.r, lab_inst.n);
+  for (size_t i = 0; i < NUM_REC; i++) {
+    LabradorBaseProver base_prover(lab_inst, S);
+    std::tie(base_proof, part_trs) = base_prover.base_case_prover();
+    // TODO: figure out param using Lattirust code
+    size_t base0 = 1 << 8, mu = 1 << 8, nu = 1 << 8;
+    S = prepare_recursion_witness(part_trs, base_proof, base0, mu, nu);
+    lab_inst = prepare_recursion_instance(base_prover.lab_inst.param, base_proof.final_const, part_trs, base0, mu, nu);
+    trs.push_back(part_trs);
+  }
+  return std::make_pair(trs, base_proof);
+}
 
 // eIcicleError verify(/*TODO params*/)
 // {

@@ -40,24 +40,24 @@ using EqualityInstance = QuadraticConstraint;
 
 struct LabradorParam {
   // Seed to calculate Ajtai Matrix
-  const std::vector<std::byte> ajtai_seed;
+  std::vector<std::byte> ajtai_seed;
 
   // Matrix dimensions for Ajtai commitments
-  const size_t kappa;  // Ajtai matrix A dimensions: n × kappa
-  const size_t kappa1; // Matrix B,C dimensions for committing to decomposed vectors
-  const size_t kappa2; // Matrix D dimensions for committing to h vectors
+  size_t kappa;  // Ajtai matrix A dimensions: n × kappa
+  size_t kappa1; // Matrix B,C dimensions for committing to decomposed vectors
+  size_t kappa2; // Matrix D dimensions for committing to h vectors
 
   // Decomposition bases
-  const uint32_t base1; // Base for decomposing T
-  const uint32_t base2; // Base for decomposing g
-  const uint32_t base3; // Base for decomposing h
+  uint32_t base1; // Base for decomposing T
+  uint32_t base2; // Base for decomposing g
+  uint32_t base3; // Base for decomposing h
 
   // JL projection parameters
-  const size_t JL_out = 256; // Output dimension for Johnson-Lindenstrauss projection (typically 256)
+  size_t JL_out = 256; // Output dimension for Johnson-Lindenstrauss projection (typically 256)
 
   // Norm bounds
-  const double beta;                 // Witness norm bound
-  const uint64_t op_norm_bound = 15; // Operator norm bound for challenges
+  double beta;                 // Witness norm bound
+  uint64_t op_norm_bound = 15; // Operator norm bound for challenges
 
   // Constructor with default values matching the base implementation
   LabradorParam(
@@ -73,19 +73,25 @@ struct LabradorParam {
         beta(beta)
   {
   }
+  // Copy constructor
+  LabradorParam(const LabradorParam& other)
+      : ajtai_seed(other.ajtai_seed), kappa(other.kappa), kappa1(other.kappa1), kappa2(other.kappa2),
+        base1(other.base1), base2(other.base2), base3(other.base3), beta(other.beta)
+  {
+  }
 
-  size_t t_len(size_t r)
+  size_t t_len(size_t r) const
   {
     size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base1);
     return l1 * r * kappa;
   }
-  size_t g_len(size_t r)
+  size_t g_len(size_t r) const
   {
     size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base2);
     size_t r_choose_2 = (r * (r + 1)) / 2;
     return (l2 * r_choose_2);
   }
-  size_t h_len(size_t r)
+  size_t h_len(size_t r) const
   {
     size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base3);
     size_t r_choose_2 = (r * (r + 1)) / 2;
@@ -197,6 +203,8 @@ struct LabradorBaseProver {
   // S consists of r vectors of dim n arranged in row major order
   std::vector<Rq> S;
 
+  LabradorBaseProver(const LabradorInstance& lab_inst, const std::vector<Rq>& S) : lab_inst(lab_inst), S(S) {}
+
   std::pair<LabradorBaseCaseProof, PartialTranscript> base_case_prover();
 };
 
@@ -209,8 +217,16 @@ struct LabradorProver {
   // S consists of r vectors of dim n arranged in row major order
   std::vector<Rq> S;
   const size_t NUM_REC;
-  std::vector<Rq>
-  prepare_recursion_witness(PartialTranscript trs, LabradorBaseCaseProof pf, size_t base0, size_t mu, size_t nu);
+
+  LabradorProver(LabradorInstance& lab_inst, std::vector<Rq>& S, size_t NUM_REC)
+      : lab_inst(lab_inst), S(S), NUM_REC(NUM_REC)
+  {
+  }
+
+  std::vector<Rq> prepare_recursion_witness(
+    const PartialTranscript& trs, const LabradorBaseCaseProof& pf, size_t base0, size_t mu, size_t nu);
+
+  std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> prove();
 };
 
 struct LabradorVerifier {
