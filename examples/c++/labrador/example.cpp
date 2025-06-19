@@ -53,6 +53,9 @@ std::vector<T> extract_symm_part(T* mat, size_t n)
   return v;
 }
 
+/// Prover uses this function to select a valid JL projection for which the norm condition is satisfied .
+/// Returns (JL_i, p) such that [seed, JL_i] is the seed for the valid JL projection
+/// p is the result of applying this JL projection to the witness
 std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std::byte* seed, size_t seed_len) const
 {
   size_t JL_out = lab_inst.param.JL_out;
@@ -60,26 +63,30 @@ std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std:
   size_t r = lab_inst.r;
   size_t d = Rq::d;
 
+  // Create stream for async operations
+  VecOpsConfig config = default_vec_ops_config();
+  config.is_async = true;
+
   std::vector<Zq> p(JL_out, Zq::from(0));
   size_t JL_i = 0;
-  // TODO:convert this to just 1 call of JL projection
   while (true) {
     std::vector<std::byte> base_jl_seed(seed, seed + seed_len);
     base_jl_seed.push_back(std::byte(JL_i));
-
+    std::vector<Zq> s_projection(r * JL_out);
+    // TODO: parallelise this
     for (size_t j = 0; j < r; j++) {
       // add byte j to the seed
       std::vector<std::byte> jl_seed(base_jl_seed);
       jl_seed.push_back(std::byte(j));
 
-      std::vector<Zq> s_projection(JL_out);
       // create JL projection: P_j*s_j
       ICICLE_CHECK(jl_projection(
-        reinterpret_cast<const Zq*>(S.data() + j * n), n * d, jl_seed.data(), jl_seed.size(), {}, s_projection.data(),
-        JL_out));
-      // add output to p
-      vector_add(p.data(), s_projection.data(), s_projection.size(), {}, p.data());
+        reinterpret_cast<const Zq*>(S.data() + j * n), n * d, jl_seed.data(), jl_seed.size(), config,
+        &s_projection[j * JL_out], JL_out));
     }
+    ICICLE_CHECK(icicle_device_synchronize());
+    // sum s_projections to p
+    ICICLE_CHECK(vector_sum(s_projection.data(), JL_out, {}, p.data()));
     // check norm
     bool JL_check = false;
     double beta = lab_inst.param.beta;
@@ -97,9 +104,16 @@ std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std:
   return std::make_pair(JL_i, p);
 }
 
+/// returns Q: r X JL_out X n matrix such that
+/// Q(i,j,:) is the conjugation of the row of the JL projection viewed as a polynomial vector./
+/// JL_i needs to be the same as the one given by select_valid_jl_proj
 std::vector<Rq> compute_Q_poly(size_t n, size_t r, size_t JL_out, std::byte* seed, size_t seed_len, size_t JL_i)
 {
   size_t d = Rq::d;
+  // Create stream for async operations
+  VecOpsConfig config = default_vec_ops_config();
+  config.is_async = true;
+
   // Step 17: Create conjugated polynomial vectors from JL matrix rows
   std::vector<Rq> Q(r * JL_out * n);
   for (size_t i = 0; i < r; i++) {
@@ -115,9 +129,10 @@ std::vector<Rq> compute_Q_poly(size_t n, size_t r, size_t JL_out, std::byte* see
       0,      // row_index
       JL_out, // num_rows
       true,   // conjugate
-      {},     // config
+      config, // config
       Q.data() + i * JL_out * n));
   }
+  ICICLE_CHECK(icicle_device_synchronize());
   return Q;
 }
 
@@ -341,8 +356,6 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   const size_t r = lab_inst.r; // Number of witness vectors
   const size_t n = lab_inst.n; // Dimension of witness vectors
   constexpr size_t d = Rq::d;
-  // Ensure S is of the correct size
-  if (S.size() != r * n) { throw std::invalid_argument("S must have size r * n"); }
 
   PartialTranscript trs;
   // Step 2: Convert S to the NTT Domain
@@ -395,8 +408,6 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // Step 9: already done
 
   // Step 10: u1 = B@T_tilde + C@g_tilde
-  // Generate B, C
-  // TODO: change this so that B,C need not be computed and stored
   size_t kappa1 = lab_inst.param.kappa1;
   std::vector<std::byte> seed_B(ajtai_seed), seed_C(ajtai_seed);
   seed_B.push_back(std::byte('1'));
@@ -478,9 +489,8 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   trs.psi = psi;
   trs.omega = omega;
-  // Step 19: Aggregate ConstZeroInstance constraints
-  // For every 0 ≤ k < ceil(128/log(q)) compute aggregated constraints
 
+  // Step 19: Aggregate ConstZeroInstance constraints
   std::vector<Tq> msg3 =
     lab_inst.agg_const_zero_constraints(num_aggregation_rounds, JL_out, S_hat, g_hat, Q, psi, omega);
 
@@ -546,11 +556,11 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   size_t kappa2 = lab_inst.param.kappa2;
   std::vector<std::byte> seed_D(ajtai_seed);
   seed_D.push_back(std::byte('3'));
-
   // u2 = D@H_tilde
   Tq* u2_ptr =
     ajtai_commitment(seed_D.data(), seed_D.size(), l3 * r_choose_2, kappa2, H_tilde_hat.data(), H_tilde_hat.size());
   std::vector<Tq> u2(u2_ptr, u2_ptr + kappa2);
+
   // Step 27:
   // add u2 to the trs
   trs.u2 = u2;

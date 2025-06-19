@@ -203,7 +203,10 @@ struct LabradorBaseProver {
   // S consists of r vectors of dim n arranged in row major order
   std::vector<Rq> S;
 
-  LabradorBaseProver(const LabradorInstance& lab_inst, const std::vector<Rq>& S) : lab_inst(lab_inst), S(S) {}
+  LabradorBaseProver(const LabradorInstance& lab_inst, const std::vector<Rq>& S) : lab_inst(lab_inst), S(S)
+  {
+    if (S.size() != lab_inst.r * lab_inst.n) { throw std::invalid_argument("S must have size r * n"); }
+  }
 
   std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std::byte* seed, size_t seed_len) const;
   std::pair<LabradorBaseCaseProof, PartialTranscript> base_case_prover();
