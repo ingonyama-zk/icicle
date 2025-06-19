@@ -2,7 +2,7 @@ pub mod transcript;
 pub mod utils;
 
 use icicle_bn254::curve::ScalarField as Fr;
-use icicle_bn254::sumcheck::SumcheckWrapper;
+use icicle_bn254::sumcheck::{SumcheckProof, SumcheckWrapper};
 use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
 use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckTranscriptConfig};
 use icicle_core::traits::FieldImpl;
@@ -19,7 +19,7 @@ use std::time::Instant;
 
 const SAMPLES: usize = 1 << 22;
 
-pub fn verify_proof(sumcheck: SumcheckWrapper, proof: icicle_bn254::sumcheck::SumcheckProof, claimed_sum: Fr) {
+pub fn verify_proof(sumcheck: SumcheckWrapper, proof: SumcheckProof, claimed_sum: Fr) {
     let mut verifier_previous_transcript = Transcript::new(b"my_sumcheck");
     <Transcript as TranscriptProtocol<Fr>>::append_data(&mut verifier_previous_transcript, b"public", &claimed_sum);
     //get seed based on previous state
@@ -52,7 +52,7 @@ pub fn verify_proof(sumcheck: SumcheckWrapper, proof: icicle_bn254::sumcheck::Su
             assert!(false, "Sumcheck proof verification failed!");
         }
         Err(err) => {
-            eprintln!("Error in verification {:?}",err);
+            eprintln!("Error in verification {:?}", err);
             assert!(false, "Sumcheck proof verification encountered an error!");
         }
     }

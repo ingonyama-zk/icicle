@@ -1,4 +1,5 @@
 #include "test_mod_arithmetic_api.h"
+#include "test_matrix_api.h"
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
 #include "icicle/norm.h"
@@ -259,8 +260,9 @@ TEST_F(RingTestBase, BalancedDecompositionPolyRing)
   ICICLE_ASSERT(q > 0) << "Expecting positive modulus q to allow int64 arithmetic";
 
   // Generate a random input polynomial over PolyRing
-  PolyRing input_polynomial;
-  Zq::rand_host_many(reinterpret_cast<Zq*>(&input_polynomial), PolyRing::d);
+  constexpr size_t size = 7;
+  std::vector<PolyRing> input_polynomials(size);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(input_polynomials.data()), size * PolyRing::d);
 
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
@@ -272,33 +274,41 @@ TEST_F(RingTestBase, BalancedDecompositionPolyRing)
     for (uint32_t base : bases) {
       // Compute the number of digits for the given base
       const size_t num_digits = balanced_decomposition::compute_nof_digits<Zq>(base);
-      std::vector<PolyRing> decomposed_polynomials(num_digits);
+      std::vector<PolyRing> decomposed_polynomials(size * num_digits);
 
-      // Perform balanced decomposition into digits (for a single polynomial)
-      ICICLE_CHECK(
-        balanced_decomposition::decompose(&input_polynomial, 1, base, cfg, decomposed_polynomials.data(), num_digits));
+      // Perform balanced decomposition into digits. Output is digit-major
+      ICICLE_CHECK(balanced_decomposition::decompose(
+        input_polynomials.data(), input_polynomials.size(), base, cfg, decomposed_polynomials.data(),
+        decomposed_polynomials.size()));
 
       // Recompose the original polynomial from digits
-      PolyRing recomposed_polynomial;
-      // Generate powers of base: [1, base, base^2, ..., base^{t-1}]
+      std::vector<PolyRing> recomposed(size);
+      memset(recomposed.data(), 0, sizeof(PolyRing) * size);
+      // Generate repeated powers of base: each digit level gets the same base^i for all polynomials
       Zq power = Zq::from(1);
-      std::vector<Zq> powers(num_digits);
-      std::generate(powers.begin(), powers.end(), [&]() {
+      std::vector<Zq> powers(size * num_digits);
+      for (size_t digit_idx = 0; digit_idx < num_digits; ++digit_idx) {
         Zq current = power;
+        for (size_t poly_idx = 0; poly_idx < size; ++poly_idx) {
+          powers[digit_idx * size + poly_idx] = current;
+        }
         power = power * Zq::from(base);
-        return current;
-      });
+      }
 
-      // Scale each decomposed digit (polynomial) by its corresponding base power and sum all PolyRing polynomials:
-      //            P(x) = P₀(x) + b·P₁(x) + b²·P₂(x) + ... + b^{t−1}·P_{t−1}(x)
-      std::vector<PolyRing> scaled_digits(num_digits);
+      // Multiply each decomposed digit by its base power
+      std::vector<PolyRing> scaled_digits(size * num_digits);
       ICICLE_CHECK(
-        vector_mul(decomposed_polynomials.data(), powers.data(), num_digits, VecOpsConfig{}, scaled_digits.data()));
-      // Sum across the digits to reconstruct the original polynomial
-      ICICLE_CHECK(vector_sum(scaled_digits.data(), num_digits, VecOpsConfig{}, &recomposed_polynomial));
+        vector_mul(decomposed_polynomials.data(), powers.data(), size * num_digits, {}, scaled_digits.data()));
+
+      // Accumulate scaled digits into recomposed result
+      for (size_t digit_idx = 0; digit_idx < num_digits; ++digit_idx) {
+        ICICLE_CHECK(vector_add(
+          (const Zq*)recomposed.data(), (const Zq*)(scaled_digits.data() + digit_idx * size), size * PolyRing::d, {},
+          (Zq*)recomposed.data()));
+      }
 
       // Verify recomposed polynomial matches the original input
-      ASSERT_EQ(0, memcmp(&recomposed_polynomial, &input_polynomial, sizeof(PolyRing)));
+      ASSERT_EQ(0, memcmp(recomposed.data(), input_polynomials.data(), size * sizeof(PolyRing)));
     }
   }
 }
@@ -476,8 +486,9 @@ TEST_F(RingTestBase, JLprojectionGetRowsTest)
   const auto cfg = VecOpsConfig{};
 
   for (const auto& device : s_registered_devices) {
+    
     // if (device != "CPU") continue; // TODO: Extend to CUDA
-
+    
     ICICLE_CHECK(icicle_set_device(device));
 
     std::stringstream projection_timer_label, generate_timer_label;
@@ -500,13 +511,6 @@ TEST_F(RingTestBase, JLprojectionGetRowsTest)
       matrix.data() // Output: [num_rows x row_size]
       ));
     END_TIMER(generate, generate_timer_label.str().c_str(), true);
-
-    // std::cout << "Device: " << device << std::endl;
-    // std::cout << "Elements 32-64 of matrix: ";
-    // for (size_t i = 32; i < 64; ++i) {
-    //   std::cout << matrix[i] << " ";
-    // }
-    // std::cout << std::endl;
 
     // Step 3: Since input = {1,1,...,1}, matrix-vector product is just summing each row
     VecOpsConfig sum_cfg{};
@@ -637,7 +641,9 @@ TEST_F(RingTestBase, JLprojectionLemma)
   }
 
   for (const auto& device : s_registered_devices) {
+
     // if (device == "CUDA") continue; // TODO: implement CUDA backend
+
     ICICLE_CHECK(icicle_set_device(device));
 
     // Pre-transform input into NTT domain
