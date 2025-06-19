@@ -426,7 +426,7 @@ TEST_F(RingTestBase, JLProjectionTest)
 
   const auto cfg = VecOpsConfig{};
   for (auto device : s_registered_devices) {
-    // if (device != "CPU") continue; // TODO implement for CUDA too
+    if (device != "CPU") continue; // TODO implement for CUDA too
     ICICLE_CHECK(icicle_set_device(device));
     std::stringstream timer_label;
     timer_label << "JL-projection [device=" << device << "]";
@@ -1181,5 +1181,59 @@ TEST_F(RingTestBase, NegacyclicNTT)
       PolyRing expected = PolyRing_multiplication(a[i], b[i]);
       EXPECT_EQ(0, memcmp(&expected, &res[i], sizeof(PolyRing)));
     }
+  }
+}
+
+TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
+{
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  const size_t N = 1 << 16;       // Input vector size
+  const size_t output_size = 256; // JL projected size
+
+  std::vector<field_t> input(N);
+  std::vector<field_t> cpu_output(output_size);
+  std::vector<field_t> cuda_output(output_size);
+
+  // generate random values in [0, sqrt(q)]. We assume input is low norm.
+  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
+  for (auto& x : input) {
+    uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
+    x = field_t::from(val);
+  }
+
+  const auto cfg = VecOpsConfig{};
+
+  // Check availability of CPU and CUDA devices
+  bool cpu_available = false;
+  bool cuda_available = false;
+  for (const auto& device : s_registered_devices) {
+    if (device == "CPU") cpu_available = true;
+    if (device == "CUDA") cuda_available = true;
+  }
+
+  // Skip test if both devices are not available
+  if (!cpu_available || !cuda_available) {
+    GTEST_SKIP() << "Both CPU and CUDA devices are required for this test";
+  }
+
+  // Perform JL projection on CPU
+  ICICLE_CHECK(icicle_set_device("CPU"));
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() % 256);
+  }
+  ICICLE_CHECK(jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, cpu_output.data(), cpu_output.size()));
+
+  // Perform JL projection on CUDA
+  ICICLE_CHECK(icicle_set_device("CUDA"));
+  ICICLE_CHECK(jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, cuda_output.data(), cuda_output.size()));
+
+  // Compare results from CPU and CUDA
+  for (size_t i = 0; i < output_size; ++i) {
+    ASSERT_EQ(cpu_output[i], cuda_output[i]) << "Mismatch at index " << i << ": CPU = " << cpu_output[i] << ", CUDA = " << cuda_output[i];
   }
 }
