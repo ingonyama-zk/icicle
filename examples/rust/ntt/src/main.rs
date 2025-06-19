@@ -1,7 +1,7 @@
 use icicle_bls12_377::curve::ScalarField as BLS12377ScalarField;
 use icicle_bn254::curve::ScalarField;
 use icicle_core::field::PrimeField;
-use icicle_runtime::memory::{DeviceVec, HostOrDeviceSlice, HostSlice, DeviceSlice};
+use icicle_runtime::memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut};
 
 use clap::Parser;
 use icicle_core::{
@@ -37,86 +37,6 @@ fn try_load_and_set_backend_device(args: &Args) {
     println!("Setting device {}", args.device_type);
     let device = icicle_runtime::Device::new(&args.device_type, 0 /* =device_id*/);
     icicle_runtime::set_device(&device).unwrap();
-}
-
-// Add a small extension trait that exposes a convenient one-liner for moving data back to the host.
-trait DeviceVecExt<T: PrimeField + Copy> {
-    /// Convenience helper that copies the `DeviceVec` contents back to the host and returns them
-    /// as a `Vec`.
-    fn to_host_vec(&self) -> Vec<T>;
-}
-
-impl<T: PrimeField + Copy> DeviceVecExt<T> for DeviceVec<T> {
-    fn to_host_vec(&self) -> Vec<T> {
-        let mut host_vec = vec![T::zero(); self.len()];
-        self
-            .copy_to_host(HostSlice::from_mut_slice(&mut host_vec[..]))
-            .unwrap();
-        host_vec
-    }
-}
-
-// -----------------------------------------------------------------------------
-// Adapter traits that allow calling `ntt/ntt_inplace` without manual slice casts
-// -----------------------------------------------------------------------------
-
-/// Immutable adapter – turns common buffer types into something that implements
-/// `HostOrDeviceSlice`, which is what the low-level API expects.
-pub trait IntoIcicleSlice<'a, T: PrimeField + 'a> {
-    type Out: HostOrDeviceSlice<T> + ?Sized + 'a;
-    fn into_icicle_slice(self) -> &'a Self::Out;
-}
-
-/// Mutable adapter counterpart.
-pub trait IntoIcicleSliceMut<'a, T: PrimeField + 'a> {
-    type Out: HostOrDeviceSlice<T> + ?Sized + 'a;
-    fn into_icicle_slice_mut(self) -> &'a mut Self::Out;
-}
-
-// ------------------------ host-side buffers ----------------------------------
-
-impl<'a, T: PrimeField> IntoIcicleSlice<'a, T> for &'a [T] {
-    type Out = HostSlice<T>;
-    fn into_icicle_slice(self) -> &'a HostSlice<T> {
-        HostSlice::from_slice(self)
-    }
-}
-
-impl<'a, T: PrimeField> IntoIcicleSlice<'a, T> for &'a Vec<T> {
-    type Out = HostSlice<T>;
-    fn into_icicle_slice(self) -> &'a HostSlice<T> {
-        HostSlice::from_slice(self.as_slice())
-    }
-}
-
-impl<'a, T: PrimeField> IntoIcicleSliceMut<'a, T> for &'a mut [T] {
-    type Out = HostSlice<T>;
-    fn into_icicle_slice_mut(self) -> &'a mut HostSlice<T> {
-        HostSlice::from_mut_slice(self)
-    }
-}
-
-impl<'a, T: PrimeField> IntoIcicleSliceMut<'a, T> for &'a mut Vec<T> {
-    type Out = HostSlice<T>;
-    fn into_icicle_slice_mut(self) -> &'a mut HostSlice<T> {
-        HostSlice::from_mut_slice(self.as_mut_slice())
-    }
-}
-
-// ------------------------ device-side buffers --------------------------------
-
-impl<'a, T: PrimeField> IntoIcicleSlice<'a, T> for &'a DeviceVec<T> {
-    type Out = DeviceSlice<T>;
-    fn into_icicle_slice(self) -> &'a DeviceSlice<T> {
-        &**self // `Deref` to DeviceSlice
-    }
-}
-
-impl<'a, T: PrimeField> IntoIcicleSliceMut<'a, T> for &'a mut DeviceVec<T> {
-    type Out = DeviceSlice<T>;
-    fn into_icicle_slice_mut(self) -> &'a mut DeviceSlice<T> {
-        &mut **self // `DerefMut`
-    }
 }
 
 fn main() {

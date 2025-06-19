@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display};
 
 pub trait PrimeField:
-    Display + Debug + PartialEq + Copy + Clone + Into<Self::Limbs> + From<Self::Limbs> + Send + Sync
+    Display + Debug + PartialEq + Copy + Clone + Into<Self::Limbs> + From<Self::Limbs> + Send + Sync + Default
 {
     const LIMBS_SIZE: usize;
     type Limbs: AsRef<[u32]> + AsMut<[u32]>;
@@ -82,7 +82,7 @@ macro_rules! impl_field {
         $num_limbs:ident,
         $use_ffi:expr
     ) => {
-        #[derive(Copy, Clone)]
+        #[derive(Copy, Clone, Default)]
         #[repr(C)]
         pub struct $field {
             limbs: [u32; $num_limbs],
