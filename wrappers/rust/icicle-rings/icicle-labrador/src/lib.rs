@@ -1,8 +1,8 @@
 pub mod balanced_decomposition;
 pub mod jl_projection;
+pub mod matrix_ops;
 pub mod norm;
 pub mod ntt;
-pub mod matrix_ops;
 pub mod polynomial_ring;
 pub mod program;
 pub mod ring;
