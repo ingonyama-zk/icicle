@@ -5,6 +5,7 @@ use icicle_runtime::{
     memory::{DeviceSlice, HostOrDeviceSlice, HostSlice},
     stream::IcicleStream,
 };
+use std::mem::size_of;
 
 // TODO Yuval: generalize this and move to icicle-runtime
 
@@ -19,14 +20,14 @@ enum UnifiedSliceMut<'a, T: 'a> {
 }
 
 /// SAFETY: Caller must ensure layout of P as [P::Base; DEGREE]
-unsafe fn flatten_polyring_slice<P>(input: &(impl HostOrDeviceSlice<P> + ?Sized)) -> UnifiedSlice<'_, P::Base>
+unsafe fn reinterpret_slice<From, To>(input: &(impl HostOrDeviceSlice<From> + ?Sized)) -> UnifiedSlice<'_, To>
 where
-    P: PolynomialRing,
-    P::Base: FieldImpl,
+    From: Sized,
+    To: Sized,
 {
     let len = input.len();
-    let flat_len = len * P::DEGREE;
-    let ptr = input.as_ptr() as *const P::Base;
+    let flat_len = len * size_of::<From>() / size_of::<To>();
+    let ptr = input.as_ptr() as *const To;
 
     if input.is_on_device() {
         UnifiedSlice::Device(DeviceSlice::from_raw_parts(ptr, flat_len))
@@ -35,16 +36,16 @@ where
     }
 }
 
-unsafe fn flatten_polyring_slice_mut<P>(
-    input: &mut (impl HostOrDeviceSlice<P> + ?Sized),
-) -> UnifiedSliceMut<'_, P::Base>
+unsafe fn reinterpret_slice_mut<From, To>(
+    input: &mut (impl HostOrDeviceSlice<From> + ?Sized),
+) -> UnifiedSliceMut<'_, To>
 where
-    P: PolynomialRing,
-    P::Base: FieldImpl,
+    From: Sized,
+    To: Sized,
 {
     let len = input.len();
-    let flat_len = len * P::DEGREE;
-    let ptr = input.as_mut_ptr() as *mut P::Base;
+    let flat_len = len * size_of::<From>() / size_of::<To>();
+    let ptr = input.as_mut_ptr() as *mut To;
 
     if input.is_on_device() {
         UnifiedSliceMut::Device(DeviceSlice::from_raw_parts_mut(ptr, flat_len))
@@ -173,8 +174,8 @@ where
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
     unsafe {
-        let vec_flat = flatten_polyring_slice(input_polyvec);
-        let mut result_flat = flatten_polyring_slice_mut(result);
+        let vec_flat = reinterpret_slice::<P, P::Base>(input_polyvec);
+        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result);
         let mut local_cfg = cfg.clone();
         local_cfg.batch_size = input_scalarvec.len() as i32;
         scalar_mul(input_scalarvec, &vec_flat, &mut result_flat, &local_cfg)
@@ -194,9 +195,9 @@ where
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
     unsafe {
-        let vec_a_flat = flatten_polyring_slice(input_polyvec_a);
-        let vec_b_flat = flatten_polyring_slice(input_polyvec_b);
-        let mut result_flat = flatten_polyring_slice_mut(result);
+        let vec_a_flat = reinterpret_slice::<P, P::Base>(input_polyvec_a);
+        let vec_b_flat = reinterpret_slice::<P, P::Base>(input_polyvec_b);
+        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result);
         mul_scalars(&vec_a_flat, &vec_b_flat, &mut result_flat, cfg)
     }
 }
@@ -214,9 +215,9 @@ where
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
     unsafe {
-        let vec_a_flat = flatten_polyring_slice(input_polyvec_a);
-        let vec_b_flat = flatten_polyring_slice(input_polyvec_b);
-        let mut result_flat = flatten_polyring_slice_mut(result);
+        let vec_a_flat = reinterpret_slice::<P, P::Base>(input_polyvec_a);
+        let vec_b_flat = reinterpret_slice::<P, P::Base>(input_polyvec_b);
+        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result);
         add_scalars(&vec_a_flat, &vec_b_flat, &mut result_flat, cfg)
     }
 }
@@ -233,9 +234,9 @@ where
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
     unsafe {
-        let vec_a_flat = flatten_polyring_slice(input_polyvec_a);
-        let vec_b_flat = flatten_polyring_slice(input_polyvec_b);
-        let mut result_flat = flatten_polyring_slice_mut(result);
+        let vec_a_flat = reinterpret_slice::<P, P::Base>(input_polyvec_a);
+        let vec_b_flat = reinterpret_slice::<P, P::Base>(input_polyvec_b);
+        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result);
         sub_scalars(&vec_a_flat, &vec_b_flat, &mut result_flat, cfg)
     }
 }
@@ -251,8 +252,8 @@ where
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
     unsafe {
-        let input_flat = flatten_polyring_slice(input_polyvec);
-        let mut result_flat = flatten_polyring_slice_mut(result);
+        let input_flat = reinterpret_slice::<P, P::Base>(input_polyvec);
+        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result);
         let mut local_cfg = cfg.clone();
         local_cfg.batch_size = P::DEGREE as i32;
         local_cfg.columns_batch = true;
