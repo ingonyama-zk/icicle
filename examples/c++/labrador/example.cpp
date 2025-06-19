@@ -53,6 +53,100 @@ std::vector<T> extract_symm_part(T* mat, size_t n)
   return v;
 }
 
+std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std::byte* seed, size_t seed_len) const
+{
+  size_t JL_out = lab_inst.param.JL_out;
+  size_t n = lab_inst.n;
+  size_t r = lab_inst.r;
+  size_t d = Rq::d;
+
+  std::vector<Zq> p(JL_out, Zq::from(0));
+  size_t JL_i = 0;
+  // TODO:convert this to just 1 call of JL projection
+  while (true) {
+    std::vector<std::byte> base_jl_seed(seed, seed + seed_len);
+    base_jl_seed.push_back(std::byte(JL_i));
+
+    for (size_t j = 0; j < r; j++) {
+      // add byte j to the seed
+      std::vector<std::byte> jl_seed(base_jl_seed);
+      jl_seed.push_back(std::byte(j));
+
+      std::vector<Zq> s_projection(JL_out);
+      // create JL projection: P_j*s_j
+      ICICLE_CHECK(jl_projection(
+        reinterpret_cast<const Zq*>(S.data() + j * n), n * d, jl_seed.data(), jl_seed.size(), {}, s_projection.data(),
+        JL_out));
+      // add output to p
+      vector_add(p.data(), s_projection.data(), s_projection.size(), {}, p.data());
+    }
+    // check norm
+    bool JL_check = false;
+    double beta = lab_inst.param.beta;
+    ICICLE_CHECK(check_norm_bound(p.data(), JL_out, eNormType::L2, uint64_t(sqrt(JL_out / 2) * beta), {}, &JL_check));
+
+    if (JL_check) {
+      break;
+    } else {
+      p.assign(p.size(), Zq::from(0));
+      JL_i++;
+    }
+  }
+  // at the end JL projection is defined by JL_i and p is the projection output
+  // return these
+  return std::make_pair(JL_i, p);
+}
+
+std::vector<Rq> compute_Q_poly(size_t n, size_t r, size_t JL_out, std::byte* seed, size_t seed_len, size_t JL_i)
+{
+  size_t d = Rq::d;
+  // Step 17: Create conjugated polynomial vectors from JL matrix rows
+  std::vector<Rq> Q(r * JL_out * n);
+  for (size_t i = 0; i < r; i++) {
+    // Create seed for P_i matrix (same as in step 12)
+    std::vector<std::byte> base_jl_seed(seed, seed + seed_len);
+    base_jl_seed.push_back(std::byte(JL_i));
+    base_jl_seed.push_back(std::byte(i));
+
+    // compute the PI matrix, conjugated in Rq
+    ICICLE_CHECK(get_jl_matrix_rows<Rq>(
+      base_jl_seed.data(), base_jl_seed.size(),
+      n * d,  // row_size (M = n*d)
+      0,      // row_index
+      JL_out, // num_rows
+      true,   // conjugate
+      {},     // config
+      Q.data() + i * JL_out * n));
+  }
+  return Q;
+}
+
+std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, std::byte* seed, size_t seed_len)
+{
+  size_t d = Rq::d;
+  std::vector<Rq> challenge(r);
+  std::vector<size_t> j_ch(r, 0);
+  // TODO: can parallelise the i loop
+  for (size_t i = 0; i < r; i++) {
+    while (true) {
+      std::vector<std::byte> ch_seed(seed, seed + seed_len);
+      ch_seed.push_back(std::byte(i));
+      ch_seed.push_back(std::byte(j_ch[i]));
+      ICICLE_CHECK(sample_challenge_polynomials(ch_seed.data(), ch_seed.size(), {1, 2}, {31, 10}, challenge[i]));
+
+      bool norm_bound = false;
+      ICICLE_CHECK(check_norm_bound(challenge[i].values, d, eNormType::Lop, 15, {}, &norm_bound));
+
+      if (norm_bound) {
+        break;
+      } else {
+        j_ch[i]++;
+      }
+    }
+  }
+  return challenge;
+}
+
 // modifies the instance
 // returns num_aggregation_rounds number of polynomials
 std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
@@ -304,13 +398,9 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // Generate B, C
   // TODO: change this so that B,C need not be computed and stored
   size_t kappa1 = lab_inst.param.kappa1;
-  std::vector<Tq> B(kappa1 * l1 * r * kappa), C(kappa1 * r_choose_2 * l2);
-
   std::vector<std::byte> seed_B(ajtai_seed), seed_C(ajtai_seed);
   seed_B.push_back(std::byte('1'));
   seed_C.push_back(std::byte('2'));
-  ICICLE_CHECK(random_sampling(seed_B.data(), seed_B.size(), false, {}, B.data(), B.size()));
-  ICICLE_CHECK(random_sampling(seed_C.data(), seed_C.size(), false, {}, C.data(), C.size()));
 
   // compute NTTs for T_tilde, g_tilde
   std::vector<Tq> T_tilde_hat(T_tilde.size()), g_tilde_hat(g_tilde.size());
@@ -330,7 +420,6 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
 
   // Step 11: hash (lab_inst, ajtai_seed, u1) to get seed1
-
   // hash and get a challenge
   Hash hasher = Sha3_256::create();
   // TODO: add serialization to lab_inst, ajtai_seed, u1 and put them in the placeholder
@@ -345,39 +434,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // Step 12: Select a JL projection
   size_t JL_out = lab_inst.param.JL_out;
-  std::vector<Zq> p(JL_out, Zq::from(0));
-  size_t JL_i = 0;
-  // TODO:convert this to just 1 call of JL projection
-  while (true) {
-    std::vector<std::byte> base_jl_seed(seed1);
-    base_jl_seed.push_back(std::byte(JL_i));
-
-    for (size_t j = 0; j < r; j++) {
-      // add byte j to the seed
-      std::vector<std::byte> jl_seed(base_jl_seed);
-      jl_seed.push_back(std::byte(j));
-
-      std::vector<Zq> s_projection(JL_out);
-      // create JL projection: P_j*s_j
-      ICICLE_CHECK(jl_projection(
-        reinterpret_cast<const Zq*>(S.data() + j * n), n * d, jl_seed.data(), jl_seed.size(), {}, s_projection.data(),
-        s_projection.size()));
-      // add output to p
-      vector_add(p.data(), s_projection.data(), s_projection.size(), {}, p.data());
-    }
-    // check norm
-    bool JL_check = false;
-    double beta = lab_inst.param.beta;
-    ICICLE_CHECK(check_norm_bound(p.data(), JL_out, eNormType::L2, uint64_t(sqrt(JL_out / 2) * beta), {}, &JL_check));
-
-    if (JL_check) {
-      break;
-    } else {
-      p.assign(p.size(), Zq::from(0));
-      JL_i++;
-    }
-  }
-  // at the end JL projection is defined by JL_i and p is the projection output
+  auto [JL_i, p] = select_valid_jl_proj(seed1.data(), seed1.size());
 
   // Step 13: send (JL_i, p) to the Verifier and get a challenge
   trs.JL_i = JL_i;
@@ -395,25 +452,9 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // Step 15, 16: already done
 
   // Step 17: Create conjugated polynomial vectors from JL matrix rows
-  std::vector<Rq> Q(r * JL_out * n);
+  std::vector<Rq> Q = compute_Q_poly(n, r, JL_out, seed1.data(), seed1.size(), JL_i);
   // indexes into a multidim array of dim = r X JL_out X n
   auto Q_index = [n, JL_out](size_t i, size_t j, size_t k) { return (i * JL_out * n + j * n + k); };
-  for (size_t i = 0; i < r; i++) {
-    // Create seed for P_i matrix (same as in step 12)
-    std::vector<std::byte> base_jl_seed(seed1);
-    base_jl_seed.push_back(std::byte(JL_i));
-    base_jl_seed.push_back(std::byte(i));
-
-    // compute the PI matrix, conjugated in Rq
-    ICICLE_CHECK(get_jl_matrix_rows<Rq>(
-      base_jl_seed.data(), base_jl_seed.size(),
-      n * d,  // row_size (M = n*d)
-      0,      // row_index
-      JL_out, // num_rows
-      true,   // conjugate
-      {},     // config
-      Q.data() + i * JL_out * n));
-  }
 
   // Step 18: Let L be the number of constZeroInstance constraints in LabradorInstance.
   // For 0 ≤ k < ceil(128/log(q)), sample the following random vectors:
@@ -463,36 +504,33 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // Step 22:
   lab_inst.agg_equality_constraints(alpha_hat);
 
-  // Step 23: For 0 ≤ i ≤ j < r, the Prover computes:
-  // h_{ij} = 2^{-1}(<φ'_i, s_j> + <φ'_j, s_i>) ∈ R_q
-  // Alternatively, view as a matrix multiplication between matrix
-  // Λ = (φ'_0|φ'_1|···|φ'_{r-1})^T ∈ R_q^{r×n} and S ∈ R_q^{r×n} defined earlier.
-  // Let H ∈ R_q^{r×r}, such that H_{ij} = h_{ij}
-  // Then, H = 2^{-1}(Λ @ S^T + (Λ @ S^T)^T)
+  // Step 23: For 0 ≤ i ≤ j < r, the Prover computes the matrix multiplication between matrix
+  // Phi = (φ'_0|φ'_1|···|φ'_{r-1})^T ∈ R_q^{r×n} and S ∈ R_q^{r×n} defined earlier.
+  // Let H ∈ R_q^{r×r}, such that H = 2^{-1}(Phi @ S^T + (Phi @ S^T)^T)
 
-  // Construct Lambda_hat
+  // Matrix Phi
   const Tq* phi_final = lab_inst.equality_constraints[0].phi.data();
 
-  // Compute Λ @ S^T using the transposed S_hat
-  std::vector<Tq> Phi_times_S_hat(r * r);
-  ICICLE_CHECK(matmul(phi_final, r, n, S_hat_transposed.data(), n, r, {}, Phi_times_S_hat.data()));
+  // Compute Phi @ S^T using the transposed S_hat
+  std::vector<Tq> Phi_times_St_hat(r * r);
+  ICICLE_CHECK(matmul(phi_final, r, n, S_hat_transposed.data(), n, r, {}, Phi_times_St_hat.data()));
 
   // Convert back to Rq domain
-  std::vector<Rq> Phi_times_S(r * r), Phi_times_S_transposed(r * r);
-  ICICLE_CHECK(ntt(Phi_times_S_hat.data(), r * r, NTTDir::kInverse, {}, Phi_times_S.data()));
+  std::vector<Rq> Phi_times_St(r * r), Phi_times_St_transposed(r * r);
+  ICICLE_CHECK(ntt(Phi_times_St_hat.data(), r * r, NTTDir::kInverse, {}, Phi_times_St.data()));
   // transpose matrix
-  ICICLE_CHECK(matrix_transpose<Tq>(Phi_times_S.data(), r, r, {}, Phi_times_S_transposed.data()));
+  ICICLE_CHECK(matrix_transpose<Tq>(Phi_times_St.data(), r, r, {}, Phi_times_St_transposed.data()));
 
   // Compute H = 2^{-1}(LS + (LS)^T)
   Zq two_inv = Zq::inverse(Zq::from(2)); // 2^{-1} in Z_q
 
-  // Phi_times_S = Phi_times_S + Phi_times_S_transposed
-  ICICLE_CHECK(vector_add(Phi_times_S.data(), Phi_times_S_transposed.data(), r * r, {}, Phi_times_S.data()));
-  // Phi_times_S = 1/2 * Phi_times_S
+  // Phi_times_St = Phi_times_St + Phi_times_St_transposed
+  ICICLE_CHECK(vector_add(Phi_times_St.data(), Phi_times_St_transposed.data(), r * r, {}, Phi_times_St.data()));
+  // Phi_times_St = 1/2 * Phi_times_St
   ICICLE_CHECK(scalar_mul_vec(
-    &two_inv, reinterpret_cast<Zq*>(Phi_times_S.data()), r * r, {}, reinterpret_cast<Zq*>(Phi_times_S.data())));
+    &two_inv, reinterpret_cast<Zq*>(Phi_times_St.data()), r * r, {}, reinterpret_cast<Zq*>(Phi_times_St.data())));
 
-  std::vector<Rq> H = extract_symm_part(Phi_times_S.data(), r);
+  std::vector<Rq> H = extract_symm_part(Phi_times_St.data(), r);
 
   // Step 24: Decompose h
   size_t base3 = lab_inst.param.base3;
@@ -523,25 +561,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   trs.seed4 = seed4;
   // Step 28: sampling low operator norm challenges
-  std::vector<Rq> challenge(r);
-  std::vector<size_t> j_ch(r, 0);
-  for (size_t i = 0; i < r; i++) {
-    while (true) {
-      std::vector<std::byte> ch_seed(seed4);
-      ch_seed.push_back(std::byte(i));
-      ch_seed.push_back(std::byte(j_ch[i]));
-      ICICLE_CHECK(sample_challenge_polynomials(ch_seed.data(), ch_seed.size(), {1, 2}, {31, 10}, challenge[i]));
-
-      bool norm_bound = false;
-      ICICLE_CHECK(check_norm_bound(challenge[i].values, d, eNormType::Lop, 15, {}, &norm_bound));
-
-      if (norm_bound) {
-        break;
-      } else {
-        j_ch[i]++;
-      }
-    }
-  }
+  std::vector<Rq> challenge = sample_low_norm_challenges(n, r, seed4.data(), seed4.size());
 
   std::vector<Tq> challenges_hat(r);
   ICICLE_CHECK(ntt(challenge.data(), challenge.size(), NTTDir::kForward, {}, challenges_hat.data()));
@@ -549,6 +569,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // Step 29: Compute z_hat
   std::vector<Tq> z_hat(n);
+  // TODO: vectorise this
   for (size_t i = 0; i < n; i++) {
     for (size_t j = 0; j < r; j++) {
       Tq temp;
