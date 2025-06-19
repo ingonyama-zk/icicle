@@ -4,7 +4,6 @@
 
 using namespace icicle::labrador;
 
-// A*B
 /// @brief Computes the Ajtai input of the given input S. Views input S as matrix of vectors to be committed. Vectors
 /// are arranged in the row major form.
 /// @param ajtai_mat_seed seed for calculating entries of random Ajtai commitment matrix
@@ -28,6 +27,30 @@ Tq* ajtai_commitment(
   std::vector<Tq> comm(batch_size * output_len);
   ICICLE_CHECK(matmul(S, batch_size, input_len, A.data(), input_len, output_len, {}, comm.data()));
   return comm.data();
+}
+
+/// extracts the symmetric part of a n X n matrix as a n(n+1)/2 size vector
+template <typename T>
+std::vector<T> extract_symm_part(T* mat, size_t n)
+{
+  size_t n_choose_2 = (n * (n + 1)) / 2;
+  std::vector<T> v(n_choose_2);
+  size_t offset = 0;
+
+  // Create stream for async operations
+  icicleStreamHandle stream;
+  icicle_create_stream(&stream);
+
+  for (size_t i = 0; i < n; i++) {
+    icicle_copy_async(&v[offset], &mat[i * n + i], (n - i) * sizeof(T), stream);
+    offset += n - i;
+  }
+
+  // Synchronize to ensure all copies complete before returning
+  icicle_stream_synchronize(stream);
+  icicle_destroy_stream(stream);
+
+  return v;
 }
 
 // modifies the instance
@@ -263,14 +286,9 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Tq> G_hat(r * r);
   ICICLE_CHECK(matmul(S_hat.data(), r, n, S_hat_transposed.data(), n, r, {}, G_hat.data()));
 
+  std::vector<Tq> g_hat = extract_symm_part(G_hat.data(), r);
   size_t r_choose_2 = (r * (r + 1)) / 2;
   std::vector<Rq> g(r_choose_2);
-  std::vector<Tq> g_hat;
-  for (size_t i = 0; i < r; i++) {
-    for (size_t j = i; j < r; j++) {
-      g_hat.push_back(G_hat[i * r + j]);
-    }
-  }
 
   ICICLE_CHECK(ntt(g_hat.data(), r_choose_2, NTTDir::kInverse, {}, g.data()));
 
@@ -299,12 +317,16 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   ICICLE_CHECK(ntt(T_tilde.data(), T_tilde.size(), NTTDir::kForward, {}, T_tilde_hat.data()));
   ICICLE_CHECK(ntt(g_tilde.data(), g_tilde.size(), NTTDir::kForward, {}, g_tilde_hat.data()));
 
-  std::vector<Tq> u1(kappa1), v1(kappa1), v2(kappa1);
   // v1 = B@T_tilde
-  ICICLE_CHECK(matmul(B.data(), kappa1, l1 * r * kappa, T_tilde_hat.data(), T_tilde_hat.size(), 1, {}, v1.data()));
+  Tq* v1_ptr =
+    ajtai_commitment(seed_B.data(), seed_B.size(), l1 * r * kappa, kappa1, T_tilde_hat.data(), T_tilde_hat.size());
+  std::vector<Tq> v1(v1_ptr, v1_ptr + kappa1);
   // v2 = C@g_tilde
-  ICICLE_CHECK(
-    matmul(C.data(), kappa1, ((r * (r + 1)) / 2) * l2, g_tilde_hat.data(), g_tilde_hat.size(), 1, {}, v2.data()));
+  Tq* v2_ptr =
+    ajtai_commitment(seed_C.data(), seed_C.size(), (r_choose_2)*l2, kappa1, g_tilde_hat.data(), g_tilde_hat.size());
+  std::vector<Tq> v2(v2_ptr, v2_ptr + kappa1);
+
+  std::vector<Tq> u1(kappa1);
   vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
 
   // Step 11: hash (lab_inst, ajtai_seed, u1) to get seed1
@@ -449,30 +471,28 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // Then, H = 2^{-1}(Λ @ S^T + (Λ @ S^T)^T)
 
   // Construct Lambda_hat
-  std::vector<Tq> phi_final = lab_inst.equality_constraints[0].phi;
+  const Tq* phi_final = lab_inst.equality_constraints[0].phi.data();
 
   // Compute Λ @ S^T using the transposed S_hat
-  std::vector<Tq> LS_hat(r * r);
-  ICICLE_CHECK(matmul(phi_final.data(), r, n, S_hat_transposed.data(), n, r, {}, LS_hat.data()));
+  std::vector<Tq> Phi_times_S_hat(r * r);
+  ICICLE_CHECK(matmul(phi_final, r, n, S_hat_transposed.data(), n, r, {}, Phi_times_S_hat.data()));
 
   // Convert back to Rq domain
-  std::vector<Rq> LS(r * r);
-  ICICLE_CHECK(ntt(LS_hat.data(), r * r, NTTDir::kInverse, {}, LS.data()));
+  std::vector<Rq> Phi_times_S(r * r), Phi_times_S_transposed(r * r);
+  ICICLE_CHECK(ntt(Phi_times_S_hat.data(), r * r, NTTDir::kInverse, {}, Phi_times_S.data()));
+  // transpose matrix
+  ICICLE_CHECK(matrix_transpose<Tq>(Phi_times_S.data(), r, r, {}, Phi_times_S_transposed.data()));
 
   // Compute H = 2^{-1}(LS + (LS)^T)
-  std::vector<Rq> H;
   Zq two_inv = Zq::inverse(Zq::from(2)); // 2^{-1} in Z_q
 
-  for (size_t i = 0; i < r; i++) {
-    // only upper triangular elements
-    for (size_t j = i; j < r; j++) {
-      // H[i][j] = 2^{-1} * (LS[i][j] + LS[j][i])
-      Rq temp;
-      ICICLE_CHECK(vector_add(LS[i * r + j].values, LS[j * r + i].values, d, {}, temp.values));
-      ICICLE_CHECK(scalar_mul_vec(&two_inv, temp.values, d, {}, temp.values));
-      H.push_back(temp);
-    }
-  }
+  // Phi_times_S = Phi_times_S + Phi_times_S_transposed
+  ICICLE_CHECK(vector_add(Phi_times_S.data(), Phi_times_S_transposed.data(), r * r, {}, Phi_times_S.data()));
+  // Phi_times_S = 1/2 * Phi_times_S
+  ICICLE_CHECK(scalar_mul_vec(
+    &two_inv, reinterpret_cast<Zq*>(Phi_times_S.data()), r * r, {}, reinterpret_cast<Zq*>(Phi_times_S.data())));
+
+  std::vector<Rq> H = extract_symm_part(Phi_times_S.data(), r);
 
   // Step 24: Decompose h
   size_t base3 = lab_inst.param.base3;
@@ -485,18 +505,14 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // Step 25: already done
   // Step 26: commit to H_tilde
-  // TODO: change this so that D need not be computed and stored
   size_t kappa2 = lab_inst.param.kappa2;
-  std::vector<Tq> D(kappa2 * l3 * r_choose_2);
-
   std::vector<std::byte> seed_D(ajtai_seed);
   seed_D.push_back(std::byte('3'));
-  ICICLE_CHECK(random_sampling(seed_D.data(), seed_D.size(), false, {}, D.data(), D.size()));
 
-  std::vector<Tq> u2(kappa2);
   // u2 = D@H_tilde
-  ICICLE_CHECK(matmul(D.data(), kappa2, l3 * r_choose_2, H_tilde_hat.data(), H_tilde_hat.size(), 1, {}, u2.data()));
-
+  Tq* u2_ptr =
+    ajtai_commitment(seed_D.data(), seed_D.size(), l3 * r_choose_2, kappa2, H_tilde_hat.data(), H_tilde_hat.size());
+  std::vector<Tq> u2(u2_ptr, u2_ptr + kappa2);
   // Step 27:
   // add u2 to the trs
   trs.u2 = u2;
@@ -667,7 +683,8 @@ LabradorInstance prepare_recursion_instance(
   size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base1);
   size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base2);
   size_t r_choose_2 = (r * (r + 1)) / 2;
-  std::vector<Tq> B(prev_param.kappa1 * l1 * r * prev_param.kappa), C(prev_param.kappa1 * r_choose_2 * l2);
+  std::vector<Tq> B(prev_param.kappa1 * l1 * r * prev_param.kappa), C(prev_param.kappa1 * r_choose_2 * l2),
+    B_t(prev_param.kappa1 * l1 * r * prev_param.kappa), C_t(prev_param.kappa1 * r_choose_2 * l2);
 
   std::vector<std::byte> seed_B(prev_param.ajtai_seed), seed_C(prev_param.ajtai_seed);
   seed_B.push_back(std::byte('1'));
@@ -675,11 +692,15 @@ LabradorInstance prepare_recursion_instance(
   ICICLE_CHECK(random_sampling(seed_B.data(), seed_B.size(), false, {}, B.data(), B.size()));
   ICICLE_CHECK(random_sampling(seed_C.data(), seed_C.size(), false, {}, C.data(), C.size()));
 
+  // B_t, C_t are transposed B, C
+  ICICLE_CHECK(matrix_transpose<Tq>(B.data(), l1 * r * prev_param.kappa, prev_param.kappa1, {}, B_t.data()));
+  ICICLE_CHECK(matrix_transpose<Tq>(C.data(), r_choose_2 * l2, prev_param.kappa1, {}, C_t.data()));
+
   for (size_t i = 0; i < prev_param.kappa1; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
 
-    std::copy(&B[i * t_len], &B[(i + 1) * t_len], &new_constraint.phi[2 * nu * n_prime]);
-    std::copy(&C[i * g_len], &C[(i + 1) * g_len], &new_constraint.phi[(2 * nu + L_t) * n_prime]);
+    std::copy(&B_t[i * t_len], &B_t[(i + 1) * t_len], &new_constraint.phi[2 * nu * n_prime]);
+    std::copy(&C_t[i * g_len], &C_t[(i + 1) * g_len], &new_constraint.phi[(2 * nu + L_t) * n_prime]);
 
     new_constraint.b = u1[i];
 
@@ -690,16 +711,17 @@ LabradorInstance prepare_recursion_instance(
   // Generate D
   // TODO: change this so that D need not be computed and stored
   size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base3);
-  std::vector<Tq> D(prev_param.kappa2 * l3 * r_choose_2);
+  std::vector<Tq> D(prev_param.kappa2 * l3 * r_choose_2), D_t(prev_param.kappa2 * l3 * r_choose_2);
 
   std::vector<std::byte> seed_D(prev_param.ajtai_seed);
   seed_D.push_back(std::byte('3'));
   ICICLE_CHECK(random_sampling(seed_D.data(), seed_D.size(), false, {}, D.data(), D.size()));
+  ICICLE_CHECK(matrix_transpose<Tq>(D.data(), r_choose_2 * l3, prev_param.kappa2, {}, D_t.data()));
 
   for (size_t i = 0; i < prev_param.kappa2; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
 
-    std::copy(&D[i * h_len], &D[(i + 1) * h_len], &new_constraint.phi[(2 * nu + L_t + L_g) * n_prime]);
+    std::copy(&D_t[i * h_len], &D_t[(i + 1) * h_len], &new_constraint.phi[(2 * nu + L_t + L_g) * n_prime]);
     new_constraint.b = u2[i];
 
     recursion_instance.add_equality_constraint(new_constraint);
