@@ -530,8 +530,13 @@ TEST_F(RingTestBase, JLMatrixRowsCPUCUDAConsistency)
   const size_t N = 1 << 10;       // Input vector size (row size)
   const size_t output_size = 256; // Number of JL projection rows
 
-  std::vector<field_t> cpu_matrix(output_size * N);  // Matrix from CPU device
-  std::vector<field_t> cuda_matrix(output_size * N); // Matrix from CUDA device
+  // Skip test if fewer than 2 devices are available
+  if (s_registered_devices.size() < 2) { 
+    GTEST_SKIP() << "At least 2 devices are required for this test"; 
+  }
+
+  std::vector<field_t> main_matrix(output_size * N);   // Matrix from main device
+  std::vector<field_t> ref_matrix(output_size * N);    // Matrix from reference device
 
   std::byte seed[32];
   for (auto& b : seed) {
@@ -540,83 +545,71 @@ TEST_F(RingTestBase, JLMatrixRowsCPUCUDAConsistency)
 
   const auto cfg = VecOpsConfig{};
 
-  // Find CPU and CUDA devices
-  bool cpu_available = false;
-  bool cuda_available = false;
+  std::stringstream main_timer_label, ref_timer_label;
+  main_timer_label << "JL-matrix-rows " << main_device();
+  ref_timer_label << "JL-matrix-rows " << reference_device();
 
-  for (const auto& device : s_registered_devices) {
-    if (device == "CPU") cpu_available = true;
-    if (device == "CUDA") cuda_available = true;
-  }
-
-  // Skip test if both devices are not available
-  if (!cpu_available || !cuda_available) { GTEST_SKIP() << "Both CPU and CUDA devices are required for this test"; }
-
-  std::stringstream cpu_timer_label, cuda_timer_label;
-  cpu_timer_label << "JL-matrix-rows CPU";
-  cuda_timer_label << "JL-matrix-rows CUDA";
-
-  // Get matrix from CPU device
-  ICICLE_CHECK(icicle_set_device("CPU"));
-  START_TIMER(cpu_generate);
+  // Get matrix from reference device
+  ICICLE_CHECK(icicle_set_device(reference_device()));
+  START_TIMER(ref_generate);
   ICICLE_CHECK(get_jl_matrix_rows(
     seed, sizeof(seed),
     N,           // row_size = input dimension
     0,           // start_row
     output_size, // num_rows
     cfg,
-    cpu_matrix.data() // Output: [num_rows x row_size]
+    ref_matrix.data() // Output: [num_rows x row_size]
     ));
-  END_TIMER(cpu_generate, cpu_timer_label.str().c_str(), true);
+  END_TIMER(ref_generate, ref_timer_label.str().c_str(), true);
 
-  // Get matrix from CUDA device
-  ICICLE_CHECK(icicle_set_device("CUDA"));
-  START_TIMER(cuda_generate);
+  // Get matrix from main device
+  ICICLE_CHECK(icicle_set_device(main_device()));
+  START_TIMER(main_generate);
   ICICLE_CHECK(get_jl_matrix_rows(
     seed, sizeof(seed),
     N,           // row_size = input dimension
     0,           // start_row
     output_size, // num_rows
     cfg,
-    cuda_matrix.data() // Output: [num_rows x row_size]
+    main_matrix.data() // Output: [num_rows x row_size]
     ));
-  END_TIMER(cuda_generate, cuda_timer_label.str().c_str(), true);
+  END_TIMER(main_generate, main_timer_label.str().c_str(), true);
 
   // Compare matrices element by element
   for (size_t i = 0; i < output_size * N; ++i) {
-    ASSERT_EQ(cpu_matrix[i], cuda_matrix[i])
-      << "Matrix mismatch at index " << i << ": CPU = " << cpu_matrix[i] << ", CUDA = " << cuda_matrix[i];
+    ASSERT_EQ(ref_matrix[i], main_matrix[i])
+      << "Matrix mismatch at index " << i << ": " << reference_device() << " = " << ref_matrix[i] << ", " << main_device() << " = " << main_matrix[i];
   }
 
   // Additional verification: test with different start_row and num_rows parameters
   const size_t start_row = 10;
   const size_t partial_rows = 50;
-  std::vector<field_t> cpu_partial(partial_rows * N);
-  std::vector<field_t> cuda_partial(partial_rows * N);
+  std::vector<field_t> ref_partial(partial_rows * N);
+  std::vector<field_t> main_partial(partial_rows * N);
 
-  // CPU partial matrix
-  ICICLE_CHECK(icicle_set_device("CPU"));
+  // Reference device partial matrix
+  ICICLE_CHECK(icicle_set_device(reference_device()));
   ICICLE_CHECK(get_jl_matrix_rows(
     seed, sizeof(seed),
     N,            // row_size
     start_row,    // start_row
     partial_rows, // num_rows
-    cfg, cpu_partial.data()));
+    cfg, ref_partial.data()));
 
-  // CUDA partial matrix
-  ICICLE_CHECK(icicle_set_device("CUDA"));
+  // Main device partial matrix
+  ICICLE_CHECK(icicle_set_device(main_device()));
   ICICLE_CHECK(get_jl_matrix_rows(
     seed, sizeof(seed),
     N,            // row_size
     start_row,    // start_row
     partial_rows, // num_rows
-    cfg, cuda_partial.data()));
+    cfg, main_partial.data()));
 
   // Compare partial matrices
   for (size_t i = 0; i < partial_rows * N; ++i) {
-    ASSERT_EQ(cpu_partial[i], cuda_partial[i])
+    ASSERT_EQ(ref_partial[i], main_partial[i])
       << "Partial matrix mismatch at index " << i << " (start_row=" << start_row << ", partial_rows=" << partial_rows
-      << "): CPU = " << cpu_partial[i] << ", CUDA = " << cuda_partial[i];
+      << "): " << reference_device() << " = " << ref_partial[i] << ", " << main_device() << " = " << main_partial[i];
   }
 }
 
@@ -1189,13 +1182,17 @@ TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
   const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
   ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
 
-  // const size_t N = 1 << 16;       // Input vector size
   const size_t N = (1 << 16) + 1; // Input vector size
   const size_t output_size = 256; // JL projected size
 
+  // Skip test if fewer than 2 devices are available
+  if (s_registered_devices.size() < 2) { 
+    GTEST_SKIP() << "At least 2 devices are required for this test"; 
+  }
+
   std::vector<field_t> input(N);
-  std::vector<field_t> cpu_output(output_size);
-  std::vector<field_t> cuda_output(output_size);
+  std::vector<field_t> ref_output(output_size);
+  std::vector<field_t> main_output(output_size);
 
   // generate random values in [0, sqrt(q)]. We assume input is low norm.
   const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
@@ -1206,34 +1203,23 @@ TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
 
   const auto cfg = VecOpsConfig{};
 
-  // Check availability of CPU and CUDA devices
-  bool cpu_available = false;
-  bool cuda_available = false;
-  for (const auto& device : s_registered_devices) {
-    if (device == "CPU") cpu_available = true;
-    if (device == "CUDA") cuda_available = true;
-  }
-
-  // Skip test if both devices are not available
-  if (!cpu_available || !cuda_available) { GTEST_SKIP() << "Both CPU and CUDA devices are required for this test"; }
-
-  // Perform JL projection on CPU
-  ICICLE_CHECK(icicle_set_device("CPU"));
+  // Perform JL projection on reference device
+  ICICLE_CHECK(icicle_set_device(reference_device()));
   std::byte seed[32];
   for (auto& b : seed) {
     b = static_cast<std::byte>(rand_uint_32b() % 256);
   }
   ICICLE_CHECK(
-    jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, cpu_output.data(), cpu_output.size()));
+    jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, ref_output.data(), ref_output.size()));
 
-  // Perform JL projection on CUDA
-  ICICLE_CHECK(icicle_set_device("CUDA"));
+  // Perform JL projection on main device
+  ICICLE_CHECK(icicle_set_device(main_device()));
   ICICLE_CHECK(
-    jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, cuda_output.data(), cuda_output.size()));
+    jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, main_output.data(), main_output.size()));
 
-  // Compare results from CPU and CUDA
+  // Compare results from reference and main devices
   for (size_t i = 0; i < output_size; ++i) {
-    ASSERT_EQ(cpu_output[i], cuda_output[i])
-      << "Mismatch at index " << i << ": CPU = " << cpu_output[i] << ", CUDA = " << cuda_output[i];
+    ASSERT_EQ(ref_output[i], main_output[i])
+      << "Mismatch at index " << i << ": " << reference_device() << " = " << ref_output[i] << ", " << main_device() << " = " << main_output[i];
   }
 }
