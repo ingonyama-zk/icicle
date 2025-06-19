@@ -580,51 +580,59 @@ pub mod reinterpret {
     }
 
     /// SAFETY: Caller must ensure layout compatibility between `From` and `To`.
-    fn compute_output_len<From, To>(len: usize) -> usize {
+    fn compute_output_len<From, To>(len: usize) -> Result<usize, eIcicleError> {
         let from_size = size_of::<From>();
         let to_size = size_of::<To>();
 
-        assert!(from_size > 0 && to_size > 0, "Invalid zero-sized types");
-        assert!(
-            (from_size * len) % to_size == 0,
-            "reinterpret_slice: data size is not divisible"
-        );
+        if from_size == 0 || to_size == 0 {
+            return Err(eIcicleError::InvalidArgument);
+        }
 
-        (from_size * len) / to_size
+        let total_bytes = from_size
+            .checked_mul(len)
+            .ok_or(eIcicleError::InvalidArgument)?;
+
+        if total_bytes % to_size != 0 {
+            return Err(eIcicleError::InvalidArgument);
+        }
+
+        Ok(total_bytes / to_size)
     }
 
     /// SAFETY: Caller must ensure layout of P as [P::Base; DEGREE]
-    pub unsafe fn reinterpret_slice<From, To>(input: &(impl HostOrDeviceSlice<From> + ?Sized)) -> UnifiedSlice<'_, To>
+    pub unsafe fn reinterpret_slice<From, To>(
+        input: &(impl HostOrDeviceSlice<From> + ?Sized),
+    ) -> Result<UnifiedSlice<'_, To>, eIcicleError>
     where
         From: Sized,
         To: Sized,
     {
         let len = input.len();
-        let flat_len = compute_output_len::<From, To>(len);
+        let flat_len = compute_output_len::<From, To>(len)?;
         let ptr = input.as_ptr() as *const To;
 
         if input.is_on_device() {
-            UnifiedSlice::Device(DeviceSlice::from_raw_parts(ptr, flat_len))
+            Ok(UnifiedSlice::Device(DeviceSlice::from_raw_parts(ptr, flat_len)))
         } else {
-            UnifiedSlice::Host(HostSlice::from_raw_parts(ptr, flat_len))
+            Ok(UnifiedSlice::Host(HostSlice::from_raw_parts(ptr, flat_len)))
         }
     }
 
     pub unsafe fn reinterpret_slice_mut<From, To>(
         input: &mut (impl HostOrDeviceSlice<From> + ?Sized),
-    ) -> UnifiedSliceMut<'_, To>
+    ) -> Result<UnifiedSliceMut<'_, To>, eIcicleError>
     where
         From: Sized,
         To: Sized,
     {
         let len = input.len();
-        let flat_len = compute_output_len::<From, To>(len);
+        let flat_len = compute_output_len::<From, To>(len)?;
         let ptr = input.as_mut_ptr() as *mut To;
 
         if input.is_on_device() {
-            UnifiedSliceMut::Device(DeviceSlice::from_raw_parts_mut(ptr, flat_len))
+            Ok(UnifiedSliceMut::Device(DeviceSlice::from_raw_parts_mut(ptr, flat_len)))
         } else {
-            UnifiedSliceMut::Host(HostSlice::from_raw_parts_mut(ptr, flat_len))
+            Ok(UnifiedSliceMut::Host(HostSlice::from_raw_parts_mut(ptr, flat_len)))
         }
     }
 

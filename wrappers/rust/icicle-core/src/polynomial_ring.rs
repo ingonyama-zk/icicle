@@ -41,7 +41,8 @@ where
     P: PolynomialRing,
     P::Base: FieldImpl + 'a,
 {
-    unsafe { reinterpret_slice::<P, P::Base>(input) }
+    // Note that this can never fail here for a valid P
+    unsafe { reinterpret_slice::<P, P::Base>(input).expect("Internal error") }
 }
 
 /// Reinterprets a mutable slice of polynomials as a flat mutable slice of their base field elements.
@@ -57,7 +58,8 @@ where
     P: PolynomialRing,
     P::Base: FieldImpl + 'a,
 {
-    unsafe { reinterpret_slice_mut::<P, P::Base>(input) }
+    // Note that this can never fail here for a valid P
+    unsafe { reinterpret_slice_mut::<P, P::Base>(input).expect("Internal error") }
 }
 
 #[macro_export]

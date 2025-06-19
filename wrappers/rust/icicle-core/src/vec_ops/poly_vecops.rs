@@ -58,8 +58,8 @@ where
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
     unsafe {
-        let vec_flat = reinterpret_slice::<P, P::Base>(input_polyvec);
-        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result);
+        let vec_flat = reinterpret_slice::<P, P::Base>(input_polyvec)?;
+        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result)?;
         let mut local_cfg = cfg.clone();
         local_cfg.batch_size = input_scalarvec.len() as i32;
         scalar_mul(input_scalarvec, &vec_flat, &mut result_flat, &local_cfg)
@@ -86,9 +86,9 @@ where
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
     unsafe {
-        let vec_a_flat = reinterpret_slice::<P, P::Base>(input_polyvec_a);
-        let vec_b_flat = reinterpret_slice::<P, P::Base>(input_polyvec_b);
-        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result);
+        let vec_a_flat = reinterpret_slice::<P, P::Base>(input_polyvec_a)?;
+        let vec_b_flat = reinterpret_slice::<P, P::Base>(input_polyvec_b)?;
+        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result)?;
         mul_scalars(&vec_a_flat, &vec_b_flat, &mut result_flat, cfg)
     }
 }
@@ -111,9 +111,9 @@ where
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
     unsafe {
-        let vec_a_flat = reinterpret_slice::<P, P::Base>(input_polyvec_a);
-        let vec_b_flat = reinterpret_slice::<P, P::Base>(input_polyvec_b);
-        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result);
+        let vec_a_flat = reinterpret_slice::<P, P::Base>(input_polyvec_a)?;
+        let vec_b_flat = reinterpret_slice::<P, P::Base>(input_polyvec_b)?;
+        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result)?;
         add_scalars(&vec_a_flat, &vec_b_flat, &mut result_flat, cfg)
     }
 }
@@ -136,9 +136,9 @@ where
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
     unsafe {
-        let vec_a_flat = reinterpret_slice::<P, P::Base>(input_polyvec_a);
-        let vec_b_flat = reinterpret_slice::<P, P::Base>(input_polyvec_b);
-        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result);
+        let vec_a_flat = reinterpret_slice::<P, P::Base>(input_polyvec_a)?;
+        let vec_b_flat = reinterpret_slice::<P, P::Base>(input_polyvec_b)?;
+        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result)?;
         sub_scalars(&vec_a_flat, &vec_b_flat, &mut result_flat, cfg)
     }
 }
@@ -166,8 +166,8 @@ where
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
     unsafe {
-        let input_flat = reinterpret_slice::<P, P::Base>(input_polyvec);
-        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result);
+        let input_flat = reinterpret_slice::<P, P::Base>(input_polyvec)?;
+        let mut result_flat = reinterpret_slice_mut::<P, P::Base>(result)?;
         let mut local_cfg = cfg.clone();
         local_cfg.batch_size = P::DEGREE as i32;
         local_cfg.columns_batch = true;
