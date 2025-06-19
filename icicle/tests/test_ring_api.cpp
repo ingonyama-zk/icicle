@@ -540,16 +540,14 @@ TEST_F(RingTestBase, JLMatrixRowsCPUCUDAConsistency)
   // Find CPU and CUDA devices
   bool cpu_available = false;
   bool cuda_available = false;
-  
+
   for (const auto& device : s_registered_devices) {
     if (device == "CPU") cpu_available = true;
     if (device == "CUDA") cuda_available = true;
   }
 
   // Skip test if both devices are not available
-  if (!cpu_available || !cuda_available) {
-    GTEST_SKIP() << "Both CPU and CUDA devices are required for this test";
-  }
+  if (!cpu_available || !cuda_available) { GTEST_SKIP() << "Both CPU and CUDA devices are required for this test"; }
 
   std::stringstream cpu_timer_label, cuda_timer_label;
   cpu_timer_label << "JL-matrix-rows CPU";
@@ -565,7 +563,7 @@ TEST_F(RingTestBase, JLMatrixRowsCPUCUDAConsistency)
     output_size, // num_rows
     cfg,
     cpu_matrix.data() // Output: [num_rows x row_size]
-  ));
+    ));
   END_TIMER(cpu_generate, cpu_timer_label.str().c_str(), true);
 
   // Get matrix from CUDA device
@@ -578,7 +576,7 @@ TEST_F(RingTestBase, JLMatrixRowsCPUCUDAConsistency)
     output_size, // num_rows
     cfg,
     cuda_matrix.data() // Output: [num_rows x row_size]
-  ));
+    ));
   END_TIMER(cuda_generate, cuda_timer_label.str().c_str(), true);
 
   // Compare matrices element by element
@@ -597,23 +595,19 @@ TEST_F(RingTestBase, JLMatrixRowsCPUCUDAConsistency)
   ICICLE_CHECK(icicle_set_device("CPU"));
   ICICLE_CHECK(get_jl_matrix_rows(
     seed, sizeof(seed),
-    N,           // row_size
-    start_row,   // start_row
+    N,            // row_size
+    start_row,    // start_row
     partial_rows, // num_rows
-    cfg,
-    cpu_partial.data()
-  ));
+    cfg, cpu_partial.data()));
 
   // CUDA partial matrix
   ICICLE_CHECK(icicle_set_device("CUDA"));
   ICICLE_CHECK(get_jl_matrix_rows(
     seed, sizeof(seed),
-    N,           // row_size
-    start_row,   // start_row
+    N,            // row_size
+    start_row,    // start_row
     partial_rows, // num_rows
-    cfg,
-    cuda_partial.data()
-  ));
+    cfg, cuda_partial.data()));
 
   // Compare partial matrices
   for (size_t i = 0; i < partial_rows * N; ++i) {
@@ -1192,7 +1186,7 @@ TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
   ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
 
   // const size_t N = 1 << 16;       // Input vector size
-  const size_t N = (1 << 16) + 1;       // Input vector size
+  const size_t N = (1 << 16) + 1; // Input vector size
   const size_t output_size = 256; // JL projected size
 
   std::vector<field_t> input(N);
@@ -1217,9 +1211,7 @@ TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
   }
 
   // Skip test if both devices are not available
-  if (!cpu_available || !cuda_available) {
-    GTEST_SKIP() << "Both CPU and CUDA devices are required for this test";
-  }
+  if (!cpu_available || !cuda_available) { GTEST_SKIP() << "Both CPU and CUDA devices are required for this test"; }
 
   // Perform JL projection on CPU
   ICICLE_CHECK(icicle_set_device("CPU"));
@@ -1227,14 +1219,17 @@ TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
   for (auto& b : seed) {
     b = static_cast<std::byte>(rand_uint_32b() % 256);
   }
-  ICICLE_CHECK(jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, cpu_output.data(), cpu_output.size()));
+  ICICLE_CHECK(
+    jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, cpu_output.data(), cpu_output.size()));
 
   // Perform JL projection on CUDA
   ICICLE_CHECK(icicle_set_device("CUDA"));
-  ICICLE_CHECK(jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, cuda_output.data(), cuda_output.size()));
+  ICICLE_CHECK(
+    jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, cuda_output.data(), cuda_output.size()));
 
   // Compare results from CPU and CUDA
   for (size_t i = 0; i < output_size; ++i) {
-    ASSERT_EQ(cpu_output[i], cuda_output[i]) << "Mismatch at index " << i << ": CPU = " << cpu_output[i] << ", CUDA = " << cuda_output[i];
+    ASSERT_EQ(cpu_output[i], cuda_output[i])
+      << "Mismatch at index " << i << ": CPU = " << cpu_output[i] << ", CUDA = " << cuda_output[i];
   }
 }
