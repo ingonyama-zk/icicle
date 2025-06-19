@@ -531,12 +531,10 @@ TEST_F(RingTestBase, JLMatrixRowsCPUCUDAConsistency)
   const size_t output_size = 256; // Number of JL projection rows
 
   // Skip test if fewer than 2 devices are available
-  if (s_registered_devices.size() < 2) { 
-    GTEST_SKIP() << "At least 2 devices are required for this test"; 
-  }
+  if (s_registered_devices.size() < 2) { GTEST_SKIP() << "At least 2 devices are required for this test"; }
 
-  std::vector<field_t> main_matrix(output_size * N);   // Matrix from main device
-  std::vector<field_t> ref_matrix(output_size * N);    // Matrix from reference device
+  std::vector<field_t> main_matrix(output_size * N); // Matrix from main device
+  std::vector<field_t> ref_matrix(output_size * N);  // Matrix from reference device
 
   std::byte seed[32];
   for (auto& b : seed) {
@@ -577,8 +575,8 @@ TEST_F(RingTestBase, JLMatrixRowsCPUCUDAConsistency)
 
   // Compare matrices element by element
   for (size_t i = 0; i < output_size * N; ++i) {
-    ASSERT_EQ(ref_matrix[i], main_matrix[i])
-      << "Matrix mismatch at index " << i << ": " << reference_device() << " = " << ref_matrix[i] << ", " << main_device() << " = " << main_matrix[i];
+    ASSERT_EQ(ref_matrix[i], main_matrix[i]) << "Matrix mismatch at index " << i << ": " << reference_device() << " = "
+                                             << ref_matrix[i] << ", " << main_device() << " = " << main_matrix[i];
   }
 
   // Additional verification: test with different start_row and num_rows parameters
@@ -1186,9 +1184,7 @@ TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
   const size_t output_size = 256; // JL projected size
 
   // Skip test if fewer than 2 devices are available
-  if (s_registered_devices.size() < 2) { 
-    GTEST_SKIP() << "At least 2 devices are required for this test"; 
-  }
+  if (s_registered_devices.size() < 2) { GTEST_SKIP() << "At least 2 devices are required for this test"; }
 
   std::vector<field_t> input(N);
   std::vector<field_t> ref_output(output_size);
@@ -1219,7 +1215,7 @@ TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
 
   // Compare results from reference and main devices
   for (size_t i = 0; i < output_size; ++i) {
-    ASSERT_EQ(ref_output[i], main_output[i])
-      << "Mismatch at index " << i << ": " << reference_device() << " = " << ref_output[i] << ", " << main_device() << " = " << main_output[i];
+    ASSERT_EQ(ref_output[i], main_output[i]) << "Mismatch at index " << i << ": " << reference_device() << " = "
+                                             << ref_output[i] << ", " << main_device() << " = " << main_output[i];
   }
 }
