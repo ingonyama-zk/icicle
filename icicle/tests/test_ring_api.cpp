@@ -486,9 +486,8 @@ TEST_F(RingTestBase, JLprojectionGetRowsTest)
   const auto cfg = VecOpsConfig{};
 
   for (const auto& device : s_registered_devices) {
-    
     // if (device != "CPU") continue; // TODO: Extend to CUDA
-    
+
     ICICLE_CHECK(icicle_set_device(device));
 
     std::stringstream projection_timer_label, generate_timer_label;
@@ -641,7 +640,6 @@ TEST_F(RingTestBase, JLprojectionLemma)
   }
 
   for (const auto& device : s_registered_devices) {
-
     // if (device == "CUDA") continue; // TODO: implement CUDA backend
 
     ICICLE_CHECK(icicle_set_device(device));
@@ -1186,7 +1184,6 @@ TEST_F(RingTestBase, NegacyclicNTT)
 
 TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
 {
-
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
   const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
