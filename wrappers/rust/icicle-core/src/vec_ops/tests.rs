@@ -624,43 +624,6 @@ where
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
 }
 
-// pub fn check_poly_vecop_mul<P>()
-// where
-//     P: PolynomialRing + GenerateRandom<P>,
-//     P::Base: FieldImpl + Arithmetic,
-//     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
-// {
-//     // randomize two vectors of polynomials
-//     let size = 1 << 10;
-//     let input_polyvec_a = P::generate_random(size);
-//     let input_polyvec_b = P::generate_random(size);
-//     let mut result = vec![P::zero(); size];
-//     let mut expected_result = vec![P::zero(); size];
-
-//     // compute the result via poly vecops
-//     let cfg = VecOpsConfig::default();
-//     polyvec_mul(
-//         HostSlice::from_slice(&input_polyvec_a),
-//         HostSlice::from_slice(&input_polyvec_b),
-//         HostSlice::from_mut_slice(&mut result),
-//         &cfg,
-//     )
-//     .expect("Poly vecop mul failed");
-
-//     // compute directly the expected result and compare
-//     for i in 0..size {
-//         let a = &input_polyvec_a[i].values();
-//         let b = &input_polyvec_b[i].values();
-//         let a_mul_b = a
-//             .iter()
-//             .zip(b.iter())
-//             .map(|(x, y)| *x * *y)
-//             .collect::<Vec<_>>();
-//         expected_result[i] = P::from_slice(&a_mul_b);
-//     }
-//     assert_eq!(result, expected_result);
-// }
-
 /// Tests `polyvec_add`, `polyvec_sub`, and `polyvec_mul` against manual computation
 pub fn check_poly_vecops_add_sub_mul<P>()
 where
