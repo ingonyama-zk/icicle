@@ -1,5 +1,6 @@
 use crate::traits::FieldImpl;
-use icicle_runtime::memory::{DeviceSlice, HostOrDeviceSlice, HostSlice};
+use icicle_runtime::memory::reinterpret::{reinterpret_slice, reinterpret_slice_mut};
+use icicle_runtime::memory::HostOrDeviceSlice;
 
 /// Trait representing a polynomial ring: R = Base[X] / (X^DEGREE - MODULUS_COEFF)
 pub trait PolynomialRing: Sized + Clone + PartialEq + core::fmt::Debug {
@@ -25,58 +26,38 @@ pub trait PolynomialRing: Sized + Clone + PartialEq + core::fmt::Debug {
     fn from_slice(values: &[Self::Base]) -> Self;
 }
 
-/// Reinterprets a host slice of polynomials as a flat slice of scalar coefficients.
+/// Reinterprets a slice of polynomials as a flat slice of their base field elements (read-only).
+///
+/// This is useful for passing polynomial vectors to scalar vectorized operations.
 ///
 /// # Safety
-/// Assumes `P: #[repr(C)]` with `[P::Base; DEGREE]` layout.
-pub fn flatten_host_polynomials<P>(input: &HostSlice<P>) -> &HostSlice<P::Base>
+/// - The layout of each `P` must match `[P::Base; DEGREE]` exactly (assumed via `#[repr(C)]`)
+/// - The memory must be properly aligned and valid for reads
+#[inline(always)]
+pub fn flatten_polyring_slice<'a, P>(
+    input: &'a (impl HostOrDeviceSlice<P> + ?Sized),
+) -> impl HostOrDeviceSlice<P::Base> + 'a
 where
     P: PolynomialRing,
-    P::Base: FieldImpl,
+    P::Base: FieldImpl + 'a,
 {
-    let total = input.len() * P::DEGREE;
-    unsafe { HostSlice::from_raw_parts(input.as_ptr() as *const P::Base, total) }
+    unsafe { reinterpret_slice::<P, P::Base>(input) }
 }
 
-/// Reinterprets a device slice of polynomials as a flat slice of scalar coefficients.
+/// Reinterprets a mutable slice of polynomials as a flat mutable slice of their base field elements.
 ///
 /// # Safety
-/// Assumes device memory is laid out like `[P::Base; DEGREE]` per polynomial.
-pub fn flatten_device_polynomials<P>(input: &DeviceSlice<P>) -> &DeviceSlice<P::Base>
+/// - The layout of each `P` must match `[P::Base; DEGREE]`
+/// - Caller must ensure exclusive access and valid alignment for mutation
+#[inline(always)]
+pub fn flatten_polyring_slice_mut<'a, P>(
+    input: &'a mut (impl HostOrDeviceSlice<P> + ?Sized),
+) -> impl HostOrDeviceSlice<P::Base> + 'a
 where
     P: PolynomialRing,
-    P::Base: FieldImpl,
+    P::Base: FieldImpl + 'a,
 {
-    let total = input.len() * P::DEGREE;
-    unsafe { DeviceSlice::from_raw_parts(input.as_ptr() as *const P::Base, total) }
-}
-
-/// Reinterprets a mutable host slice of polynomials as a flat mutable slice of scalar coefficients.
-///
-/// # Safety
-/// Assumes device memory is laid out like `[P::Base; DEGREE]` per polynomial.
-/// Caller must ensure the slice is valid for mutation as `P::Base` elements.
-pub fn flatten_host_polynomials_mut<P>(input: &mut HostSlice<P>) -> &mut HostSlice<P::Base>
-where
-    P: PolynomialRing,
-    P::Base: FieldImpl,
-{
-    let total = input.len() * P::DEGREE;
-    unsafe { HostSlice::from_raw_parts_mut(input.as_mut_ptr() as *mut P::Base, total) }
-}
-
-/// Reinterprets a mutable device slice of polynomials as a flat mutable slice of scalar coefficients.
-///
-/// # Safety
-/// Assumes device memory is laid out like `[P::Base; DEGREE]` per polynomial.
-/// Assumes memory layout is compatible. Caller must ensure it is valid and exclusive.
-pub fn flatten_device_polynomials_mut<P>(input: &mut DeviceSlice<P>) -> &mut DeviceSlice<P::Base>
-where
-    P: PolynomialRing,
-    P::Base: FieldImpl,
-{
-    let total = input.len() * P::DEGREE;
-    unsafe { DeviceSlice::from_raw_parts_mut(input.as_mut_ptr() as *mut P::Base, total) }
+    unsafe { reinterpret_slice_mut::<P, P::Base>(input) }
 }
 
 #[macro_export]
