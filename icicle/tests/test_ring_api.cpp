@@ -1180,6 +1180,7 @@ TEST_F(RingTestBase, NegacyclicNTT)
 
 TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
 {
+
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
   const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
