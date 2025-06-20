@@ -14,7 +14,7 @@ using namespace icicle::labrador;
 /// @param S_len length of data to be committed. If `S_len > input_len` then S_len must be a multiple of input_len. The
 /// input S will be viewed as a row major arrangement of S_len/input_len vectors to be committed.
 /// @return S_len/input_len commitments of length equal to output_len arranged in row major form.
-Tq* ajtai_commitment(
+std::vector<Tq> ajtai_commitment(
   const std::byte* ajtai_mat_seed, size_t seed_len, size_t input_len, size_t output_len, const Tq* S, size_t S_len)
 {
   size_t batch_size = S_len / input_len;
@@ -26,7 +26,7 @@ Tq* ajtai_commitment(
 
   std::vector<Tq> comm(batch_size * output_len);
   ICICLE_CHECK(matmul(S, batch_size, input_len, A.data(), input_len, output_len, {}, comm.data()));
-  return comm.data();
+  return comm;
 }
 
 /// extracts the symmetric part of a n X n matrix as a n(n+1)/2 size vector
@@ -340,8 +340,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // Use ajtai_commitment to compute T_hat = S_hat @ A
   size_t kappa = lab_inst.param.kappa;
-  Tq* T_hat_ptr = ajtai_commitment(seed_A.data(), seed_A.size(), n, kappa, S_hat.data(), r * n);
-  std::vector<Tq> T_hat(T_hat_ptr, T_hat_ptr + r * kappa);
+  std::vector<Tq> T_hat = ajtai_commitment(seed_A.data(), seed_A.size(), n, kappa, S_hat.data(), r * n);
 
   // Step 4: already done
 
@@ -389,13 +388,11 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   ICICLE_CHECK(ntt(g_tilde.data(), g_tilde.size(), NTTDir::kForward, {}, g_tilde_hat.data()));
 
   // v1 = B@T_tilde
-  Tq* v1_ptr =
+  std::vector<Tq> v1 =
     ajtai_commitment(seed_B.data(), seed_B.size(), l1 * r * kappa, kappa1, T_tilde_hat.data(), T_tilde_hat.size());
-  std::vector<Tq> v1(v1_ptr, v1_ptr + kappa1);
   // v2 = C@g_tilde
-  Tq* v2_ptr =
+  std::vector<Tq> v2 =
     ajtai_commitment(seed_C.data(), seed_C.size(), (r_choose_2)*l2, kappa1, g_tilde_hat.data(), g_tilde_hat.size());
-  std::vector<Tq> v2(v2_ptr, v2_ptr + kappa1);
 
   std::vector<Tq> u1(kappa1);
   vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
@@ -525,9 +522,8 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<std::byte> seed_D(ajtai_seed);
   seed_D.push_back(std::byte('3'));
   // u2 = D@H_tilde
-  Tq* u2_ptr =
+  std::vector<Tq> u2 =
     ajtai_commitment(seed_D.data(), seed_D.size(), l3 * r_choose_2, kappa2, H_tilde_hat.data(), H_tilde_hat.size());
-  std::vector<Tq> u2(u2_ptr, u2_ptr + kappa2);
 
   // Step 27:
   // add u2 to the trs
@@ -703,8 +699,8 @@ LabradorInstance prepare_recursion_instance(
   for (size_t i = 0; i < prev_param.kappa1; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
 
-    std::copy(&B_t[i * t_len], &B_t[(i + 1) * t_len], &new_constraint.phi[2 * nu * n_prime]);
-    std::copy(&C_t[i * g_len], &C_t[(i + 1) * g_len], &new_constraint.phi[(2 * nu + L_t) * n_prime]);
+    icicle_copy(&new_constraint.phi[2 * nu * n_prime], &B_t[i * t_len], t_len * sizeof(Tq));
+    icicle_copy(&new_constraint.phi[(2 * nu + L_t) * n_prime], &C_t[i * g_len], g_len * sizeof(Tq));
 
     new_constraint.b = u1[i];
 
@@ -725,7 +721,7 @@ LabradorInstance prepare_recursion_instance(
   for (size_t i = 0; i < prev_param.kappa2; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
 
-    std::copy(&D_t[i * h_len], &D_t[(i + 1) * h_len], &new_constraint.phi[(2 * nu + L_t + L_g) * n_prime]);
+    icicle_copy(&new_constraint.phi[(2 * nu + L_t + L_g) * n_prime], &D_t[i * h_len], sizeof(Tq) * h_len);
     new_constraint.b = u2[i];
 
     recursion_instance.add_equality_constraint(new_constraint);
@@ -747,8 +743,8 @@ LabradorInstance prepare_recursion_instance(
   for (size_t i = 0; i < prev_param.kappa; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
 
-    std::copy(&A_t[i * n], &A_t[(i + 1) * n], new_constraint.phi.data());
-    std::copy(&A_t[i * n], &A_t[(i + 1) * n], new_constraint.phi[nu * n_prime]);
+    icicle_copy(new_constraint.phi.data(), &A_t[i * n], n * sizeof(Tq));
+    icicle_copy(&new_constraint.phi[nu * n_prime], &A_t[i * n], n * sizeof(Tq));
     // new_constraint.phi[nu+ j] = base0*new_constraint.phi[nu+ j]
     Zq base0_scalar = Zq::from(base0);
     ICICLE_CHECK(scalar_mul_vec(
@@ -789,8 +785,8 @@ LabradorInstance prepare_recursion_instance(
       ICICLE_CHECK(vector_add(c_times_phi[j].values, temp.values, d, {}, c_times_phi[j].values));
     }
   }
-  std::copy(c_times_phi.begin(), c_times_phi.end(), step11_constraint.phi.data());
-  std::copy(c_times_phi.begin(), c_times_phi.end(), &step11_constraint.phi[nu]);
+  icicle_copy(step11_constraint.phi.data(), c_times_phi.data(), c_times_phi.size() * sizeof(Tq));
+  icicle_copy(&step11_constraint.phi[nu], c_times_phi.data(), c_times_phi.size() * sizeof(Tq));
 
   // step11_constraint.phi[nu+ j] = base0*step11_constraint.phi[nu+ j]
   Zq base0_scalar = Zq::from(base0);
