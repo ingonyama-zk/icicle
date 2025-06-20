@@ -272,55 +272,49 @@ void LabradorInstance::agg_equality_constraints(const std::vector<Tq>& alpha_hat
 
   // For 0 ≤ i,j < r, the Prover computes a''_{ij}:
   const size_t K = equality_constraints.size();
-  const size_t d = Rq::d;
-  std::vector<Tq> a_final(r * n, zero());
-  for (size_t i = 0; i < r; i++) {
-    for (size_t j = 0; j < r; j++) {
-      // a''_{ij} = ∑_{k=0}^{K-1} α_k * a_{ij}^{(k)} (multiplication in T_q)
-      for (size_t k = 0; k < K; k++) {
-        // Get a_{ij}^{(k)} from equality constraint k (already in T_q)
-        Tq a_ij_k = equality_constraints[k].a[i * r + j];
+  const size_t d = Tq::d;
+  EqualityInstance final_const(r, n);
 
-        // Multiply by α_k and add to sum (T_q operations)
-        Tq temp;
-        ICICLE_CHECK(vector_mul(alpha_hat[k].values, a_ij_k.values, d, {}, temp.values));
-        ICICLE_CHECK(vector_add(a_final[i * r + j].values, temp.values, d, {}, a_final[i * r + j].values));
-      }
-    }
+  VecOpsConfig async_config = default_vec_ops_config();
+  async_config.is_async = true;
+
+  // a''_{ij} = ∑_{k=0}^{K-1} α_k * a_{ij}^{(k)}
+
+  // Compute: equality_constraints[k].a = alpha_hat[k]*equality_constraints[k].a
+  for (size_t k = 0; k < K; k++) {
+    ICICLE_CHECK(matmul(
+      &alpha_hat[k], 1, 1, equality_constraints[k].a.data(), 1, r * r, async_config, equality_constraints[k].a.data()));
+  }
+  ICICLE_CHECK(icicle_device_synchronize());
+  // final_const.a = \sum_k equality_constraints[k].a
+  for (size_t k = 0; k < K; k++) {
+    ICICLE_CHECK(vector_add(final_const.a.data(), equality_constraints[k].a.data(), r * r, {}, final_const.a.data()));
   }
 
-  // For 0 ≤ i < r, the Prover computes φ'_i:
-  std::vector<Tq> phi_final(r * n, zero());
-  for (size_t i = 0; i < r; i++) {
-    for (size_t m = 0; m < n; m++) {
-      // φ'_i[m] = ∑_{k=0}^{K-1} α_k * φ_i^{(k)}[m] (multiplication in T_q)
-      for (size_t k = 0; k < K; k++) {
-        // Get φ_i^{(k)}[m] from equality constraint k (already in T_q)
-        Tq phi_i_k_m = equality_constraints[k].phi[i * n + m];
-
-        // Multiply by α_k and add to sum (T_q operations)
-        Tq temp;
-        ICICLE_CHECK(vector_mul(alpha_hat[k].values, phi_i_k_m.values, d, {}, temp.values));
-        ICICLE_CHECK(vector_add(phi_final[i * n + m].values, temp.values, d, {}, phi_final[i * n + m].values));
-      }
-    }
+  // φ'_i = ∑_{k=0}^{K-1} α_k * φ_i^{(k)}
+  // Compute: equality_constraints[k].phi = alpha_hat[k]*equality_constraints[k].phi
+  for (size_t k = 0; k < K; k++) {
+    ICICLE_CHECK(matmul(
+      &alpha_hat[k], 1, 1, equality_constraints[k].phi.data(), 1, r * n, async_config,
+      equality_constraints[k].phi.data()));
+  }
+  ICICLE_CHECK(icicle_device_synchronize());
+  // final_const.phi = \sum_k equality_constraints[k].phi
+  for (size_t k = 0; k < K; k++) {
+    ICICLE_CHECK(
+      vector_add(final_const.phi.data(), equality_constraints[k].phi.data(), r * n, {}, final_const.phi.data()));
   }
 
-  // The Prover also computes b':
-  Tq b_final;
-
+  // b = ∑_{k=0}^{K-1} α_k * b^{(k)}
   for (size_t k = 0; k < K; k++) {
     // Get b^{(k)} from equality constraint k (already in T_q)
     Tq b_k = equality_constraints[k].b;
 
     // Multiply by α_k and add to sum (T_q operations)
     Tq temp;
-    ICICLE_CHECK(vector_mul(alpha_hat[k].values, b_k.values, d, {}, temp.values));
-    ICICLE_CHECK(vector_add(b_final.values, temp.values, d, {}, b_final.values));
+    ICICLE_CHECK(vector_mul(&alpha_hat[k], &b_k, 1, {}, &temp));
+    ICICLE_CHECK(vector_add(&final_const.b, &temp, 1, {}, &final_const.b));
   }
-
-  // roll a_final, phi_final, b_final into a single EqualityInstance and put it in the equality_constraints
-  EqualityInstance final_const(r, n, a_final, phi_final, b_final);
 
   equality_constraints = {final_const};
 }
