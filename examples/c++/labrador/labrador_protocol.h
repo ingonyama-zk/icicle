@@ -16,8 +16,8 @@ PolyRing zero()
 struct QuadraticConstraint {
   size_t r;            // Number of witness vectors
   size_t n;            // Dimension of each vector in Tq
-  std::vector<Tq> a;   // a[i][j] matrix over Tq (r x r matrix)
-  std::vector<Tq> phi; // phi[i] vector over Tq (r vectors, each of size n; arranged in row major)
+  std::vector<Tq> a;   // a[i, j] matrix over Tq (r x r matrix)
+  std::vector<Tq> phi; // phi[i,j] vector over Tq (r vectors, each of size n; arranged in row major)
   Tq b;                // Polynomial in Tq
 
   QuadraticConstraint(size_t r, size_t n) : r(r), n(n), a(r * r, zero()), phi(r * n, zero()), b(zero()) {}
@@ -138,7 +138,7 @@ struct LabradorInstance {
     size_t JL_out,
     const std::vector<Tq>& S_hat,
     const std::vector<Tq>& g_hat,
-    const std::vector<Rq>& Q,
+    std::vector<Rq>& Q,
     const std::vector<Zq>& psi,
     const std::vector<Zq>& omega);
 
@@ -237,10 +237,33 @@ struct LabradorVerifier {
   LabradorInstance lab_inst;
 };
 
+// Helper functions:
+
 template <typename Zq>
 int64_t get_q()
 {
   constexpr auto q_storage = Zq::get_modulus();
   const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
   return q;
+}
+
+eIcicleError scale_diagonal_with_mask(
+  const Tq* matrix,  // Input n×n matrix (row-major order)
+  Zq scaling_factor, // Factor to scale diagonal by
+  size_t n,          // Matrix dimension (n×n)
+  const VecOpsConfig& config,
+  Tq* output) // Output matrix
+{
+  // Create scaling mask: diagonal = scaling_factor, off-diagonal = 1
+  size_t d = Tq::d;
+  std::vector<Zq> mask(n * d * n * d, Zq::from(1));
+
+  // Set diagonal elements to scaling factor
+  for (uint64_t i = 0; i < n; i++) {
+    std::fill(&mask[i * n * d + i], &mask[i * n * d + i + d], scaling_factor);
+  }
+
+  // Use vector_mul to apply the mask
+  return vector_mul(
+    reinterpret_cast<const Zq*>(matrix), mask.data(), n * d * n * d, config, reinterpret_cast<Zq*>(output));
 }

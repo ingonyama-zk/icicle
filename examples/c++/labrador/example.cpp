@@ -63,30 +63,14 @@ std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std:
   size_t r = lab_inst.r;
   size_t d = Rq::d;
 
-  // Create stream for async operations
-  VecOpsConfig config = default_vec_ops_config();
-  config.is_async = true;
-
-  std::vector<Zq> p(JL_out, Zq::from(0));
+  std::vector<Zq> p(JL_out);
   size_t JL_i = 0;
+  std::vector<std::byte> jl_seed(seed, seed + seed_len);
   while (true) {
-    std::vector<std::byte> base_jl_seed(seed, seed + seed_len);
-    base_jl_seed.push_back(std::byte(JL_i));
-    std::vector<Zq> s_projection(r * JL_out);
-    // TODO: parallelise this
-    for (size_t j = 0; j < r; j++) {
-      // add byte j to the seed
-      std::vector<std::byte> jl_seed(base_jl_seed);
-      jl_seed.push_back(std::byte(j));
-
-      // create JL projection: P_j*s_j
-      ICICLE_CHECK(jl_projection(
-        reinterpret_cast<const Zq*>(S.data() + j * n), n * d, jl_seed.data(), jl_seed.size(), config,
-        &s_projection[j * JL_out], JL_out));
-    }
-    ICICLE_CHECK(icicle_device_synchronize());
-    // sum s_projections to p
-    ICICLE_CHECK(vector_sum(s_projection.data(), JL_out, {}, p.data()));
+    jl_seed.push_back(std::byte(JL_i));
+    // create JL projection: P*(s_1, s_2, ..., s_r)
+    ICICLE_CHECK(jl_projection(
+      reinterpret_cast<const Zq*>(S.data()), n * r * d, jl_seed.data(), jl_seed.size(), {}, p.data(), JL_out));
     // check norm
     bool JL_check = false;
     double beta = lab_inst.param.beta;
@@ -97,6 +81,7 @@ std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std:
     } else {
       p.assign(p.size(), Zq::from(0));
       JL_i++;
+      jl_seed.pop_back();
     }
   }
   // at the end JL projection is defined by JL_i and p is the projection output
@@ -104,34 +89,29 @@ std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std:
   return std::make_pair(JL_i, p);
 }
 
-/// returns Q: r X JL_out X n matrix such that
-/// Q(i,j,:) is the conjugation of the row of the JL projection viewed as a polynomial vector./
+/// returns Q: JL_out X r X n matrix such that
+/// Q(i,:,:) is the conjugation of the row of the JL projection viewed as a polynomial vector.
+/// So that const(<Q(i,:,:), S(:,:)>) = p_i
 /// JL_i needs to be the same as the one given by select_valid_jl_proj
 std::vector<Rq> compute_Q_poly(size_t n, size_t r, size_t JL_out, std::byte* seed, size_t seed_len, size_t JL_i)
 {
   size_t d = Rq::d;
-  // Create stream for async operations
-  VecOpsConfig config = default_vec_ops_config();
-  config.is_async = true;
 
   // Step 17: Create conjugated polynomial vectors from JL matrix rows
-  std::vector<Rq> Q(r * JL_out * n);
-  for (size_t i = 0; i < r; i++) {
-    // Create seed for P_i matrix (same as in step 12)
-    std::vector<std::byte> base_jl_seed(seed, seed + seed_len);
-    base_jl_seed.push_back(std::byte(JL_i));
-    base_jl_seed.push_back(std::byte(i));
+  std::vector<Rq> Q(JL_out * r * n);
+  // Create seed for P matrix (same as in step 12)
+  std::vector<std::byte> jl_seed(seed, seed + seed_len);
+  jl_seed.push_back(std::byte(JL_i));
 
-    // compute the PI matrix, conjugated in Rq
-    ICICLE_CHECK(get_jl_matrix_rows<Rq>(
-      base_jl_seed.data(), base_jl_seed.size(),
-      n * d,  // row_size (M = n*d)
-      0,      // row_index
-      JL_out, // num_rows
-      true,   // conjugate
-      config, // config
-      Q.data() + i * JL_out * n));
-  }
+  // compute the Pi matrix, conjugated in Rq
+  ICICLE_CHECK(get_jl_matrix_rows<Rq>(
+    jl_seed.data(), jl_seed.size(),
+    r * n * d, // row_size
+    0,         // row_index
+    JL_out,    // num_rows
+    true,      // conjugate
+    {},        // config
+    Q.data()));
   ICICLE_CHECK(icicle_device_synchronize());
   return Q;
 }
@@ -169,82 +149,86 @@ std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
   size_t JL_out,
   const std::vector<Tq>& S_hat,
   const std::vector<Tq>& g_hat,
-  const std::vector<Rq>& Q,
+  std::vector<Rq>& Q,
   const std::vector<Zq>& psi,
   const std::vector<Zq>& omega)
 {
   size_t d = Rq::d;
   const size_t L = const_zero_constraints.size();
 
-  // indexes into a multidim array of dim = r X JL_out X n
-  auto Q_index = [n = this->n, JL_out](size_t i, size_t j, size_t k) { return (i * JL_out * n + j * n + k); };
   // indexes into multidim arrays: psi[k][l] and omega[k][l]
-  auto psi_index = [L](size_t k, size_t l) { return k * L + l; };
-  auto omega_index = [JL_out](size_t k, size_t l) { return k * JL_out + l; };
+  auto psi_index = [num_aggregation_rounds, L](size_t k, size_t l) {
+    assert(l < L);
+    assert(k < num_aggregation_rounds);
+    return k * L + l;
+  };
+  auto omega_index = [num_aggregation_rounds, JL_out](size_t k, size_t l) {
+    assert(l < JL_out);
+    assert(k < num_aggregation_rounds);
+    return k * JL_out + l;
+  };
 
   std::vector<Tq> msg3;
   for (size_t k = 0; k < num_aggregation_rounds; k++) {
     EqualityInstance new_constraint(r, n);
 
     // Compute a''_{ij} = sum_{l=0}^{L-1} psi^{(k)}(l) * a'_{ij}^{(l)}
-    for (size_t i = 0; i < r; i++) {
-      for (size_t j = 0; j < r; j++) {
-        Tq sum = Tq(); // Initialize to zero polynomial
 
-        // TODO vectorize loop
-        for (size_t l = 0; l < L; l++) {
-          // Get psi^{(k)}(l) as scalar
-          Zq psi_scalar = psi[psi_index(k, l)];
+    // For each l do:
+    // const_zero_constraints[l].a[i,j] = psi[k,l]* const_zero_constraints[l].a[i,j]
+    // use async_config to parallelise
+    VecOpsConfig async_config = default_vec_ops_config();
+    async_config.is_async = true;
 
-          // Get a_{ij}^{(l)} from const_zero_constraints
-          Tq a_ij_l = const_zero_constraints[l].a[i * r + j];
+    for (size_t l = 0; l < L; l++) {
+      Zq psi_scalar = psi[psi_index(k, l)];
 
-          // Scalar multiply and add: sum += psi_scalar * a_ij_l
-          // TODO: use vector_mul<Rq,Zq> and vector_sum<Rq> to aggregate in a vectorized way
-          Tq temp;
-          ICICLE_CHECK(scalar_mul_vec(&psi_scalar, a_ij_l.values, d, {}, temp.values));
-          ICICLE_CHECK(vector_add(sum.values, temp.values, d, {}, sum.values));
-        }
-
-        new_constraint.a[r * i + j] = sum;
-      }
+      ICICLE_CHECK(scalar_mul_vec(
+        &psi_scalar, reinterpret_cast<Zq*>(const_zero_constraints[l].a.data()), r * r * d, async_config,
+        reinterpret_cast<Zq*>(const_zero_constraints[l].a.data())));
+    }
+    ICICLE_CHECK(icicle_device_synchronize());
+    // new_constraint.a[i,j] = \sum_l const_zero_constraints[l].a[i,j]
+    for (size_t l = 0; l < L; l++) {
+      ICICLE_CHECK(
+        vector_add(new_constraint.a.data(), const_zero_constraints[l].a.data(), r * r, {}, new_constraint.a.data()));
     }
 
     // Compute varphi'_i^{(k)} = sum_{l=0}^{L-1} psi^{(k)}(l) * phi'_i^{(l)} + sum_{l=0}^{255} omega^{(k)}(l) * q_{il}
-    for (size_t i = 0; i < r; i++) {
-      // First sum: over const_zero_constraints
-      for (size_t l = 0; l < L; l++) {
-        Zq psi_scalar = psi[psi_index(k, l)];
 
-        for (size_t m = 0; m < n; m++) {
-          Tq phi_il_m = const_zero_constraints[l].phi[i * n + m];
+    // For each l do:
+    // const_zero_constraints[l].phi[i,:] = psi[k,l]* const_zero_constraints[l].phi[i,:]
+    // use async_config to parallelise
+    // TODO: can async with a aggregation above- leave for later
+    for (size_t l = 0; l < L; l++) {
+      Zq psi_scalar = psi[psi_index(k, l)];
 
-          // phi_prime[i,m] += psi_scalar * phi_il_m
-          Tq temp;
-          ICICLE_CHECK(scalar_mul_vec(&psi_scalar, phi_il_m.values, d, {}, temp.values));
-          ICICLE_CHECK(
-            vector_add(new_constraint.phi[i * n + m].values, temp.values, d, {}, new_constraint.phi[i * n + m].values));
-        }
-      }
+      ICICLE_CHECK(scalar_mul_vec(
+        &psi_scalar, reinterpret_cast<Zq*>(const_zero_constraints[l].phi.data()), r * n * d, async_config,
+        reinterpret_cast<Zq*>(const_zero_constraints[l].phi.data())));
+    }
+    ICICLE_CHECK(icicle_device_synchronize());
+    // new_constraint.phi[i,:] = \sum_l const_zero_constraints[l].phi[i,:]
+    for (size_t l = 0; l < L; l++) {
+      ICICLE_CHECK(vector_add(
+        new_constraint.phi.data(), const_zero_constraints[l].phi.data(), r * n, {}, new_constraint.phi.data()));
+    }
 
-      // Second sum: over JL projection rows (256 rows)
-      for (size_t l = 0; l < JL_out; l++) { // JL_out = 256
-        Zq omega_scalar = omega[omega_index(k, l)];
+    // For each j do:
+    // Q[j, :, :] = omega[k,j]* Q[j, :, :]
+    // use async_config to parallelise
+    // TODO: can async with a aggregation above- leave for later
+    for (size_t j = 0; j < JL_out; j++) {
+      Zq omega_scalar = psi[psi_index(k, j)];
 
-        // TODO: can vectorize the loop?
-        for (size_t m = 0; m < n; m++) {
-          // q_{il} is stored in Q[i][l][:]
-          Rq q_ilm = Q[Q_index(i, l, m)];
-          Tq q_ilm_hat;
-          ICICLE_CHECK(ntt(&q_ilm, 1, NTTDir::kForward, {}, &q_ilm_hat));
-
-          // phi_i_k[m] += omega_scalar * q_ilm
-          Tq temp;
-          ICICLE_CHECK(scalar_mul_vec(&omega_scalar, q_ilm_hat.values, d, {}, temp.values));
-          ICICLE_CHECK(
-            vector_add(new_constraint.phi[i * n + m].values, temp.values, d, {}, new_constraint.phi[i * n + m].values));
-        }
-      }
+      ICICLE_CHECK(scalar_mul_vec(
+        &omega_scalar, reinterpret_cast<Zq*>(&Q[j * n * r]), r * n * d, async_config,
+        reinterpret_cast<Zq*>(&Q[j * n * r])));
+    }
+    ICICLE_CHECK(icicle_device_synchronize());
+    // new_constraint.phi[i,:] += \sum_j Q[j, i, :]
+    for (size_t j = 0; j < JL_out; j++) {
+      ICICLE_CHECK(vector_add(new_constraint.phi.data(), &Q[j * n * r], r * n, {}, new_constraint.phi.data()));
     }
 
     // Compute B^{(k)} = (sum_{i<j} (a''_{ij}^{(k)} + a''_{ji}^{(k)}) * g_{ij} + sum_i a''_{ii}^{(k)} * g_{ii})
@@ -252,30 +236,21 @@ std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
 
     // First part: sum over g terms
 
-    std::vector<Tq> a_vec;
-    // shape a_vec like g
-    for (size_t i = 0; i < r; i++) {
-      for (size_t j = i; j < r; j++) {
-        if (i == j) {
-          a_vec.push_back(new_constraint.a[i * r + i]);
-        } else {
-          // Off-diagonal: (a''_{ij} + a''_{ji})
-          Tq a_ij = new_constraint.a[i * r + j];
-          Tq a_ji = new_constraint.a[j * r + i];
-          Tq temp;
-          ICICLE_CHECK(vector_add(a_ij.values, a_ji.values, d, {}, temp.values));
-          a_vec.push_back(temp);
-        }
-      }
-    }
+    std::vector<Tq> temp(r * r);
+    // temp = transpose(new_constraint.a)
+    ICICLE_CHECK(matrix_transpose<Tq>(new_constraint.a.data(), r, r, {}, temp.data()));
+    // temp = new_constraint.a + transpose(new_constraint.a)
+    ICICLE_CHECK(vector_add(new_constraint.a.data(), temp.data(), r * r, {}, temp.data()));
+    // rescale diagonal entries by 1/2
+    ICICLE_CHECK(scale_diagonal_with_mask(temp.data(), Zq::inverse(Zq::from(2)), r, {}, temp.data()));
+    std::vector<Tq> a_vec = extract_symm_part(temp.data(), r);
 
     ICICLE_CHECK(matmul(g_hat.data(), 1, g_hat.size(), a_vec.data(), a_vec.size(), 1, {}, &new_constraint.b));
 
     // Second part: sum_i <phi'_i^{(k)}, s_i>
-
     Tq prod;
     ICICLE_CHECK(matmul(new_constraint.phi.data(), 1, r * n, S_hat.data(), r * n, 1, {}, &prod));
-    ICICLE_CHECK(vector_add(new_constraint.b.values, prod.values, d, {}, new_constraint.b.values));
+    ICICLE_CHECK(vector_add(&new_constraint.b, &prod, 1, {}, &new_constraint.b));
 
     // Add the EqualityInstance to LabradorInstance
     add_equality_constraint(new_constraint);
@@ -283,6 +258,7 @@ std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
     // Send B^(k) to the Verifier
     msg3.push_back(new_constraint.b);
   }
+
   // delete the const zero constraints
   const_zero_constraints.clear();
   const_zero_constraints.shrink_to_fit();
@@ -464,8 +440,6 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // Step 17: Create conjugated polynomial vectors from JL matrix rows
   std::vector<Rq> Q = compute_Q_poly(n, r, JL_out, seed1.data(), seed1.size(), JL_i);
-  // indexes into a multidim array of dim = r X JL_out X n
-  auto Q_index = [n, JL_out](size_t i, size_t j, size_t k) { return (i * JL_out * n + j * n + k); };
 
   // Step 18: Let L be the number of constZeroInstance constraints in LabradorInstance.
   // For 0 ≤ k < ceil(128/log(q)), sample the following random vectors:
