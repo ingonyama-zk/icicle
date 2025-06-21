@@ -672,7 +672,7 @@ macro_rules! impl_polynomial_tests {
             assert_eq!(host_mem_large[..coeffs.len()], coeffs);
 
             // read coeffs to device memory
-            let mut device_mem = DeviceVec::<$field>::device_malloc(coeffs.len()).unwrap();
+            let mut device_mem = DeviceVec::<$field>::malloc(coeffs.len());
             f.copy_coeffs(0, &mut device_mem[..]);
             let mut host_coeffs_from_dev = vec![$field::zero(); coeffs.len() as usize];
             device_mem
@@ -755,7 +755,7 @@ macro_rules! impl_polynomial_tests {
             assert_eq!(f.eval(&three), host_evals[2]);
 
             // evaluate to device memory
-            let mut device_evals = DeviceVec::<$field>::device_malloc(domain.len()).unwrap();
+            let mut device_evals = DeviceVec::<$field>::malloc(domain.len());
             f.eval_on_domain(HostSlice::from_slice(&domain), &mut device_evals[..]);
             let mut host_evals_from_device = vec![$field::zero(); domain.len()];
             device_evals
@@ -782,7 +782,7 @@ macro_rules! impl_polynomial_tests {
             let f = randomize_poly(1 << poly_log_size);
 
             // evaluate f on rou domain of size 4n
-            let mut device_evals = DeviceVec::<$field>::device_malloc(1 << domain_log_size).unwrap();
+            let mut device_evals = DeviceVec::<$field>::malloc(1 << domain_log_size);
             f.eval_on_rou_domain(domain_log_size, &mut device_evals[..]);
 
             // construct g from f's evals and assert they are equal

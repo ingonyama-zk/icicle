@@ -4,7 +4,7 @@ use icicle_core::{
     traits::GenerateRandom,
     field::PrimeField
 };
-use icicle_runtime::memory::{DeviceVec, HostSlice};
+use icicle_runtime::memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
 use icicle_runtime::{self, Device};
 
 fn main() {
@@ -38,10 +38,10 @@ fn main() {
     icicle_runtime::set_device(&device_cpu).expect("Failed to set device to CPU");
     initialize_domain(root_of_unity, &ntt::NTTInitDomainConfig::default()).expect("Failed to initialize NTT domain");
     ntt(
-        HostSlice::from_slice(&input_cpu),
+        input_cpu.into_slice(),
         ntt::NTTDir::kForward,
         &ntt_config,
-        HostSlice::from_mut_slice(&mut output_cpu),
+        output_cpu.into_slice_mut(),
     )
     .expect("NTT computation failed on CPU");
     println!("{:?}", output_cpu);
@@ -51,27 +51,30 @@ fn main() {
     icicle_runtime::set_device(&device_gpu).expect("Failed to set device to GPU");
     initialize_domain(root_of_unity, &ntt::NTTInitDomainConfig::default()).expect("Failed to initialize NTT domain");
     ntt(
-        HostSlice::from_slice(&input_cpu),
+        input_cpu.into_slice(),
         ntt::NTTDir::kForward,
         &ntt_config,
-        HostSlice::from_mut_slice(&mut output_cpu),
+        output_cpu.into_slice_mut(),
     )
     .expect("NTT computation failed on GPU");
     println!("{:?}", output_cpu);
 
     // Part 2 (cont.): Compute on GPU (from/to GPU memory)
     println!("Part 2: compute on GPU (from/to GPU memory): ");
-    let mut input_gpu =
-        DeviceVec::<ScalarField>::device_malloc(ntt_size).expect("Failed to allocate device memory for input");
-    let mut output_gpu =
-        DeviceVec::<ScalarField>::device_malloc(ntt_size).expect("Failed to allocate device memory for output");
+    let mut input_gpu = DeviceVec::<ScalarField>::malloc(ntt_size);
+    let mut output_gpu = DeviceVec::<ScalarField>::malloc(ntt_size);
     input_gpu
-        .copy_from_host(HostSlice::from_slice(&input_cpu))
+        .copy_from_host(input_cpu.into_slice())
         .expect("Failed to copy data to GPU");
-    ntt(&input_gpu[..], ntt::NTTDir::kForward, &ntt_config, &mut output_gpu[..])
-        .expect("NTT computation failed on GPU memory");
+    ntt(
+        input_gpu.into_slice(),
+        ntt::NTTDir::kForward,
+        &ntt_config,
+        output_gpu.into_slice_mut(),
+    )
+    .expect("NTT computation failed on GPU memory");
     output_gpu
-        .copy_to_host(HostSlice::from_mut_slice(&mut output_cpu))
+        .copy_to_host(output_cpu.into_slice_mut())
         .expect("Failed to copy data back to CPU");
     println!("{:?}", output_cpu);
 
@@ -82,10 +85,10 @@ fn main() {
     println!("Part 3: compute NTT on GPU (NTT input): ");
     icicle_runtime::set_device(&device_gpu).expect("Failed to set device to GPU");
     ntt(
-        HostSlice::from_slice(&input_cpu),
+        input_cpu.into_slice(),
         ntt::NTTDir::kForward,
         &ntt_config,
-        HostSlice::from_mut_slice(&mut output_cpu),
+        output_cpu.into_slice_mut(),
     )
     .expect("NTT computation failed on GPU");
     println!("{:?}", input_cpu);
@@ -94,10 +97,10 @@ fn main() {
     println!("Part 3: compute INTT on CPU (INTT output): ");
     icicle_runtime::set_device(&device_cpu).expect("Failed to set device to CPU");
     ntt(
-        HostSlice::from_slice(&output_cpu),
+        output_cpu.into_slice(),
         ntt::NTTDir::kInverse,
         &ntt_config,
-        HostSlice::from_mut_slice(&mut output_intt_cpu),
+        output_intt_cpu.into_slice_mut(),
     )
     .expect("INTT computation failed on CPU");
     println!("{:?}", output_intt_cpu);

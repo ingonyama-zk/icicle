@@ -96,7 +96,7 @@ where
     let size = 1 << 10;
     let scalars = F::generate_random(size);
 
-    let mut d_scalars = DeviceVec::device_malloc(size).unwrap();
+    let mut d_scalars = DeviceVec::<F>::malloc(size);
     d_scalars
         .copy_from_host(HostSlice::from_slice(&scalars))
         .unwrap();
@@ -126,7 +126,7 @@ where
     let size = 1 << 10;
 
     let affine_points = C::generate_random_affine_points(size);
-    let mut d_affine = DeviceVec::device_malloc(size).unwrap();
+    let mut d_affine = DeviceVec::<Affine<C>>::malloc(size);
     d_affine
         .copy_from_host(HostSlice::from_slice(&affine_points))
         .unwrap();
@@ -146,7 +146,7 @@ where
     assert_eq!(affine_points, affine_copy);
 
     let proj_points = C::generate_random_projective_points(size);
-    let mut d_proj = DeviceVec::device_malloc(size).unwrap();
+    let mut d_proj = DeviceVec::<Projective<C>>::malloc(size);
     d_proj
         .copy_from_host(HostSlice::from_slice(&proj_points))
         .unwrap();

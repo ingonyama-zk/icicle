@@ -167,7 +167,7 @@ where
 
     let mut device_mle_polys = Vec::with_capacity(nof_mle_poly);
     for i in 0..nof_mle_poly {
-        let mut device_slice = DeviceVec::device_malloc(mle_poly_size).unwrap();
+        let mut device_slice = DeviceVec::malloc(mle_poly_size);
         device_slice
             .copy_from_host(mle_poly_hosts[i])
             .unwrap();

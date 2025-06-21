@@ -138,7 +138,7 @@ pub fn check_fri_proof_serialization<F, S, D, T>(
 
     let merkle_tree_min_layer_to_store = 0;
 
-    let mut scalars_d: DeviceVec<_> = DeviceVec::<F>::device_malloc(SIZE as usize).unwrap();
+    let mut scalars_d: DeviceVec<_> = DeviceVec::<F>::malloc(SIZE as usize);
     scalars_d
         .copy_from_host(HostSlice::from_slice(&scalars))
         .unwrap();

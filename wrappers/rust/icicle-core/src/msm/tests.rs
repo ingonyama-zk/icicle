@@ -112,15 +112,15 @@ pub fn check_msm_batch_shared<C: Curve + MSM<C>>() {
         cfg.precompute_factor = precompute_factor;
         let points = generate_random_affine_points_with_zeroes::<C>(test_size, 10);
         let mut precomputed_points_d =
-            DeviceVec::<Affine<C>>::device_malloc(cfg.precompute_factor as usize * test_size).unwrap();
+            DeviceVec::<Affine<C>>::malloc(cfg.precompute_factor as usize * test_size);
         precompute_bases(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
         for batch_size in batch_sizes {
             let scalars = C::ScalarField::generate_random(test_size * batch_size);
             let scalars_h = HostSlice::from_slice(&scalars);
 
-            let mut msm_results_1 = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
-            let mut msm_results_2 = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
-            let mut points_d = DeviceVec::<Affine<C>>::device_malloc(test_size).unwrap();
+            let mut msm_results_1 = DeviceVec::<Projective<C>>::malloc(batch_size);
+            let mut msm_results_2 = DeviceVec::<Projective<C>>::malloc(batch_size);
+            let mut points_d = DeviceVec::<Affine<C>>::malloc(test_size);
             points_d
                 .copy_from_host_async(HostSlice::from_slice(&points), &stream)
                 .unwrap();
@@ -190,15 +190,15 @@ pub fn check_msm_batch_not_shared<C: Curve + MSM<C>>() {
             let points = generate_random_affine_points_with_zeroes::<C>(test_size * batch_size, 10);
             println!("points len: {}", points.len());
             let mut precomputed_points_d =
-                DeviceVec::<Affine<C>>::device_malloc(cfg.precompute_factor as usize * test_size * batch_size).unwrap();
+                DeviceVec::<Affine<C>>::malloc(cfg.precompute_factor as usize * test_size * batch_size);
             cfg.batch_size = batch_size as i32;
             cfg.are_points_shared_in_batch = false;
             precompute_bases(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
             println!("precomputed points len: {}", (precomputed_points_d).len());
 
-            let mut msm_results_1 = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
-            let mut msm_results_2 = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
-            let mut points_d = DeviceVec::<Affine<C>>::device_malloc(test_size * batch_size).unwrap();
+            let mut msm_results_1 = DeviceVec::<Projective<C>>::malloc(batch_size);
+            let mut msm_results_2 = DeviceVec::<Projective<C>>::malloc(batch_size);
+            let mut points_d = DeviceVec::<Affine<C>>::malloc(test_size * batch_size);
             points_d
                 .copy_from_host_async(HostSlice::from_slice(&points), &stream)
                 .unwrap();

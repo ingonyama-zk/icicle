@@ -395,7 +395,7 @@ where
 
                 for batch_size in batch_sizes {
                     let scalars: Vec<F> = F::generate_random(test_size * batch_size);
-                    let mut scalars_d = DeviceVec::<F>::device_malloc(test_size * batch_size).unwrap();
+                    let mut scalars_d = DeviceVec::<F>::malloc(test_size * batch_size);
                     scalars_d
                         .copy_from_host(HostSlice::from_slice(&scalars))
                         .unwrap();

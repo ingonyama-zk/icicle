@@ -19,7 +19,7 @@ where
 
     for base in bases {
         let digits_per_element = balanced_decomposition::count_digits::<F>(base);
-        let mut decomposed = DeviceVec::<F>::device_malloc((total_size * digits_per_element) as usize).unwrap();
+        let mut decomposed = DeviceVec::<F>::malloc((total_size * digits_per_element) as usize);
 
         balanced_decomposition::decompose::<F>(HostSlice::from_slice(&input), &mut decomposed[..], base, &cfg).unwrap();
         // In C++ tests we also check here that the digits are in the correct range. Skipping this check here.

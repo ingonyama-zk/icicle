@@ -94,10 +94,10 @@ fn main() {
     println!("Executing bn254 NTT on device...");
     let start = Instant::now();
     ntt::ntt(
-        scalars.into_icicle_slice(),
+        scalars.into_slice(),
         ntt::NTTDir::kForward,
         &cfg,
-        ntt_results.into_icicle_slice_mut(),
+        ntt_results.into_slice_mut(),
     )
     .unwrap();
     println!(
@@ -112,7 +112,7 @@ fn main() {
     assert_ne!(host_bn254_results, scalars); // check that the results are not the same as the inputs
 
     ntt::ntt_inplace(
-        scalars.into_icicle_slice_mut(),
+        scalars.into_slice_mut(),
         ntt::NTTDir::kForward,
         &cfg,
     )
@@ -124,10 +124,10 @@ fn main() {
     println!("Executing bls12377 NTT on device...");
     let start = Instant::now();
     ntt::ntt(
-        scalars_bls12377.into_icicle_slice(),
+        scalars_bls12377.into_slice(),
         ntt::NTTDir::kForward,
         &cfg_bls12377,
-        ntt_results_bls12377.into_icicle_slice_mut(),
+        ntt_results_bls12377.into_slice_mut(),
     )
     .unwrap();
     println!(
@@ -141,7 +141,7 @@ fn main() {
     assert_ne!(host_bls12377_results, scalars_bls12377); // check that the results are not the same as the inputs
 
     ntt::ntt_inplace(
-        scalars_bls12377.into_icicle_slice_mut(),
+        scalars_bls12377.into_slice_mut(),
         ntt::NTTDir::kForward,
         &cfg_bls12377,
     )

@@ -4,7 +4,7 @@ use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::Ic
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Sub};
 
-pub trait Curve: Debug + PartialEq + Copy + Clone {
+pub trait Curve: Debug + PartialEq + Copy + Clone + Default {
     type BaseField: PrimeField;
     type ScalarField: PrimeField + MontgomeryConvertible + GenerateRandom;
 
@@ -43,7 +43,7 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
 }
 
 /// A [projective](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) elliptic curve point.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
 pub struct Projective<C: Curve> {
     pub x: C::BaseField,
@@ -52,7 +52,7 @@ pub struct Projective<C: Curve> {
 }
 
 /// An [affine](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) elliptic curve point.
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 #[repr(C)]
 pub struct Affine<C: Curve> {
     pub x: C::BaseField,
@@ -211,7 +211,7 @@ macro_rules! impl_curve {
         $affine_type:ident,
         $projective_type:ident
     ) => {
-        #[derive(Debug, PartialEq, Copy, Clone)]
+        #[derive(Debug, PartialEq, Copy, Clone, Default)]
         pub struct $curve {}
 
         pub type $affine_type = Affine<$curve>;

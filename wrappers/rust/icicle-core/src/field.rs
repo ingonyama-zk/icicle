@@ -82,7 +82,7 @@ macro_rules! impl_field {
         $num_limbs:ident,
         $use_ffi:expr
     ) => {
-        #[derive(Copy, Clone, Default)]
+        #[derive(Copy, Clone)]
         #[repr(C)]
         pub struct $field {
             limbs: [u32; $num_limbs],
@@ -171,6 +171,12 @@ macro_rules! impl_field {
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
                 <Self as PrimeField>::debug_fmt(self, f)
             }
+        }
+
+        impl Default for $field {
+            fn default() -> Self { 
+                Self{limbs:[0u32; $num_limbs]}
+             }
         }
     };
 }

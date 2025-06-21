@@ -37,7 +37,7 @@ where
 
     // Convert Zq -> ZqRns on main device
     test_utilities::test_set_main_device();
-    let mut output_rns_main_d = DeviceVec::<ZqRns>::device_malloc(total_size).unwrap();
+    let mut output_rns_main_d = DeviceVec::<ZqRns>::malloc(total_size);
     let mut output_rns_main_h = vec![ZqRns::zero(); total_size];
     to_rns(HostSlice::from_slice(&input_direct), &mut output_rns_main_d[..], &cfg).unwrap();
 
