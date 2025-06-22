@@ -214,7 +214,6 @@ namespace icicle {
   {
     return ntt(input, size, dir, *config, output);
   }
-  // TEST TODO REMOVE
 #endif // RING
 
 } // namespace icicle
