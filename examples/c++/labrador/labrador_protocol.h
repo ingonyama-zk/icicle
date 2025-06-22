@@ -190,7 +190,7 @@ struct LabradorBaseCaseProof {
   std::vector<Rq> g;
   std::vector<Rq> h;
 
-  LabradorBaseCaseProof(size_t r, size_t n) : final_const(r, n), z_hat(), t(), g(), h() {};
+  LabradorBaseCaseProof(size_t r, size_t n) : final_const(r, n), z_hat(), t(), g(), h(){};
   LabradorBaseCaseProof(
     EqualityInstance final_const, std::vector<Tq> z_hat, std::vector<Tq> t, std::vector<Tq> g, std::vector<Tq> h)
       : final_const(final_const), z_hat(std::move(z_hat)), t(std::move(t)), g(std::move(g)), h(std::move(h))

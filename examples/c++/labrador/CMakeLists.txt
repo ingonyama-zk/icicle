@@ -11,7 +11,7 @@ install(TARGETS example
   ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/")
 target_include_directories(example PRIVATE "../../../icicle/include" "..")
 target_link_directories(example PRIVATE "${CMAKE_SOURCE_DIR}/build/icicle")
-target_link_libraries(example PRIVATE icicle_ring_labrador icicle_device icicle_hash) # TODO Yuval: why link explicitly against icicle_hash?
+target_link_libraries(example PRIVATE icicle_ring_labrador icicle_device)
 
 if(BACKEND_DIR)
   add_compile_definitions(BACKEND_DIR="${BACKEND_DIR}")

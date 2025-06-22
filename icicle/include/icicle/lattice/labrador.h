@@ -1,47 +1,45 @@
 #pragma once
 
 /// @file
-/// @brief Types and APIs for the LaBRADOR protocol.
+/// @brief High-level LaBRADOR APIs and types: NTT, vector ops, JL projection, norm checks, and sampling.
 
 #include "icicle/rings/params/labrador.h" // Zq, Rq, Tq, etc.
-#include "icicle/vec_ops.h"               // VecOpsConfig
-#include "icicle/negacyclic_ntt.h"        // NegacyclicNTTConfig
+
+// TODO(Yuval): Move implementation to source file and reduce header dependencies
+#include "icicle/vec_ops.h"
+#include "icicle/negacyclic_ntt.h"
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
 #include "icicle/norm.h"
-
-// TODO Yuval: cleanup
 
 namespace icicle {
   namespace labrador {
 
     //------------------------------------------------------------------------------
-    // Types
+    // Type Aliases
     //------------------------------------------------------------------------------
 
     using Zq = ::labrador::Zq;
-    // Note that Rq/Tq are the same type, left to the user to convert using NTT, and implicit
-    // The API is using Rq/Tq or PolyRing for clarity but they are the same type
-    using PolyRing = ::labrador::PolyRing; // flat arrays of Zq[d] elements
+    using PolyRing = ::labrador::PolyRing; // Flat arrays of Zq[d]; used as both Rq and Tq
     using Rq = PolyRing;
     using Tq = PolyRing;
 
     //------------------------------------------------------------------------------
-    // NTT: Rq <-> Tq transforms (negacyclic, d-odd roots of -1)
+    // NTT: Rq <-> Tq (Negacyclic, d-odd roots of -1)
     //------------------------------------------------------------------------------
 
-    /// @brief Negacyclic NTT/INTT on Rq elements.
-    /// Transforms input of length `size` between Rq and Tq using `config`.
-    /// @note The transform uses d odd roots of -1, so no zero-padding is needed.
-    eIcicleError ntt(const PolyRing* input, int size, NTTDir dir, const NegacyclicNTTConfig& config, PolyRing* output);
+    /// @brief Negacyclic NTT or INTT on Rq elements.
+    eIcicleError ntt(const PolyRing* input, int size, NTTDir dir, const NegacyclicNTTConfig& config, PolyRing* output)
+    {
+      return icicle::ntt(input, size, dir, config, output);
+    }
 
     //------------------------------------------------------------------------------
-    // Matrix Multiplication in Tq (e.g., Ajtai commitments)
+    // Matrix Multiplication in Tq
     //------------------------------------------------------------------------------
 
-    /// @brief Matrix multiplication in Tq.
-    /// Computes C = A * B for Tq matrices.
-    /// @note Batching is not supported. Output buffer must be sized (A_rows x B_cols).
+    /// @brief Compute matrix product C = A * B in Tq.
+    /// @note No batching supported. Output buffer must be (A_rows × B_cols).
     eIcicleError matmul(
       const Tq* A,
       uint32_t A_nof_rows,
@@ -52,71 +50,48 @@ namespace icicle {
       const VecOpsConfig& config,
       Tq* C)
     {
-      return eIcicleError::API_NOT_IMPLEMENTED; // TODO integrate
+      return icicle::matmul(A, A_nof_rows, A_nof_cols, B, B_nof_rows, B_nof_cols, config, C);
     }
 
     //------------------------------------------------------------------------------
-    // Vector Operations in Zq
+    // Vector Operations: Add/Mul in Rq/Tq
     //------------------------------------------------------------------------------
 
-    // TODO Yuval: maybe I need a cpp file to simplify this header
-    inline eIcicleError vector_add(const Zq* a, const Zq* b, uint64_t size, const VecOpsConfig& config, Zq* output)
+    eIcicleError
+    vector_add(const PolyRing* a, const PolyRing* b, uint64_t size, const VecOpsConfig& config, PolyRing* output)
     {
       return icicle::vector_add(a, b, size, config, output);
     }
-    inline eIcicleError vector_sub(const Zq* a, const Zq* b, uint64_t size, const VecOpsConfig& config, Zq* output)
-    {
-      return icicle::vector_sub(a, b, size, config, output);
-    }
-    inline eIcicleError vector_mul(const Zq* a, const Zq* b, uint64_t size, const VecOpsConfig& config, Zq* output)
+
+    eIcicleError vector_mul(const Tq* a, const Tq* b, uint64_t size, const VecOpsConfig& config, Tq* output)
     {
       return icicle::vector_mul(a, b, size, config, output);
     }
 
-    //------------------------------------------------------------------------------
-    // Vector Operations in Rq/Tq
-    //------------------------------------------------------------------------------
+    eIcicleError vector_mul(const PolyRing* a, const Zq* b, uint64_t size, const VecOpsConfig& config, PolyRing* output)
+    {
+      return icicle::vector_mul(a, b, size, config, output);
+    }
 
-    // TODO Yuval: replace Zq vecops with those
-
-    // vectors <Rq/Tq, Rq/Tq> --> Rq/Tq
-    eIcicleError
-    vector_add(const PolyRing* a, const PolyRing* b, uint64_t size, const VecOpsConfig& config, PolyRing* output);
-    eIcicleError
-    // vectors of <Tq,Tq> --> Tq
-    vector_mul(const Tq* a, const PolyRing* b, uint64_t size, const VecOpsConfig& config, Tq* output);
-    eIcicleError
-    // vectors of <Rq/Tq,Zq> --> Rq/Tq
-    vector_mul(const PolyRing* a, const Zq* b, uint64_t size, const VecOpsConfig& config, PolyRing* output);
+    // TODO: Add optional reduction/sum if required by protocol
 
     //------------------------------------------------------------------------------
-    // Balanced Base Decomposition: Rq -> Rq
+    // Balanced Decomposition: Rq -> Rq (digit-major)
     //------------------------------------------------------------------------------
 
-    /// @brief Decompose input in base-b: Z = Z0 + b * Z1.
-    /// Used to reduce norm of vectors
-    /// Layout: TBD. Output must have elements based on the base.
-    // TODO: I am not sure about this API exactly. It is decompoising Rq^n into Rq^nt think but how exactly? it's not
-    // digits wise on Zq
+    /// @brief Decompose input in base-b: Z = Z₀ + b·Z₁ + ...
+    /// Output layout is digit-major (first all Z₀ polynomials, then Z₁, ...).
     inline eIcicleError decompose(
       const Rq* input, size_t input_size, uint32_t base, const VecOpsConfig& cfg, Rq* output, size_t output_size)
     {
-      return icicle::balanced_decomposition::decompose(input, input_size, base, cfg, output, output_size);
+      return icicle::balanced_decomposition::decompose<Rq>(input, input_size, base, cfg, output, output_size);
     }
-
-    //------------------------------------------------------------------------------
-    // Polynomial conjugation
-    //------------------------------------------------------------------------------
-
-    /// @brief takes input polynomial p and returns its conjugate polynomial
-    Rq conjugate(const Rq& p); // TODO Yuval remove!
 
     //------------------------------------------------------------------------------
     // Johnson–Lindenstrauss Projection
     //------------------------------------------------------------------------------
 
-    /// @brief JL projection from Zqⁿ to Zqᵐ using a seeded pseudo-random matrix.
-    /// Used to compress witness vector Si (flat Zq array) into lower dimension.
+    /// @brief JL projection from Zqⁿ to Zqᵐ using seeded pseudo-random matrix.
     eIcicleError jl_projection(
       const Zq* input,
       size_t input_size,
@@ -124,10 +99,14 @@ namespace icicle {
       size_t seed_len,
       const VecOpsConfig& cfg,
       Zq* output,
-      size_t output_size);
+      size_t output_size)
+    {
+      return icicle::jl_projection<Zq>(input, input_size, seed, seed_len, cfg, output, output_size);
+    }
 
     /// Returns one or more rows of a JL-matrix, as Rq polynomials, optionally conjugated
-    /// TODO: Note in the docs that row_size is measured in Zq
+    /// TODO: Note in the docs that row_size is measured in Zq. TODO Ash: we can make it be in Rq too. Let me know
+    /// please
     eIcicleError get_jl_matrix_rows(
       const std::byte* seed,
       size_t seed_len,
@@ -136,7 +115,10 @@ namespace icicle {
       size_t num_rows,
       bool conjugate,
       const VecOpsConfig& cfg,
-      Rq* output);
+      Rq* output)
+    {
+      return icicle::get_jl_matrix_rows(seed, seed_len, row_size, start_row, num_rows, conjugate, cfg, output);
+    }
 
     //------------------------------------------------------------------------------
     // Norm Bounds
@@ -148,7 +130,10 @@ namespace icicle {
     /// Supports [L2, L∞] norm.
     /// Does the norm_bound have to be uint64_t? What about float? -- could be needed for operatorNorm
     eIcicleError check_norm_bound(
-      const Zq* input, size_t size, eNormType norm, uint64_t norm_bound, const VecOpsConfig& cfg, bool* output);
+      const Zq* input, size_t size, eNormType norm, uint64_t norm_bound, const VecOpsConfig& cfg, bool* output)
+    {
+      return icicle::norm::check_norm_bound<Zq>(input, size, norm, norm_bound, cfg, output);
+    }
 
     //------------------------------------------------------------------------------
     // Sampling
