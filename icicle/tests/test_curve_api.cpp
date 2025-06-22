@@ -283,11 +283,9 @@ TEST_F(CurveApiTest, msm_bitsize) { MSM_bitsize<affine_t, projective_t>(); }
 
   #ifdef G2_ENABLED
 TEST_F(CurveApiTest, msmG2) { MSM_test<g2_affine_t, g2_projective_t>(); }
-TEST_F(CurveApiTest, MontConversionG2Affine) { mont_conversion_test<g2_affine_t, g2_projective_t>(); }
-TEST_F(CurveApiTest, MontConversionG2Projective) { mont_conversion_test<g2_projective_t, g2_projective_t>(); }
-TEST_F(CurveApiTest, msm_bitsize) { MSM_bitsize<g2_affine_t, g2_projective_t>(); }
   #endif // G2
 #endif   // MSM
+
 
 #ifdef G2_ENABLED
 TEST_F(CurveApiTest, MontConversionG2Affine) { mont_conversion_test<g2_affine_t, g2_projective_t>(); }
