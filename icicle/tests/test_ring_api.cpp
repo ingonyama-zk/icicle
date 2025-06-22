@@ -1,4 +1,5 @@
 #include "test_mod_arithmetic_api.h"
+#include "test_matrix_api.h"
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
 #include "icicle/norm.h"
@@ -23,6 +24,35 @@ template <typename T>
 class RingTest : public ModArithTest<T>
 {
 };
+
+// This function performs a negacyclic convolution multiplication
+static PolyRing Rq_mul(const PolyRing& a, const PolyRing& b)
+{
+  PolyRing c;
+  constexpr size_t degree = PolyRing::d;
+  const Zq* a_zq = reinterpret_cast<const Zq*>(&a);
+  const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
+  Zq* c_zq = reinterpret_cast<Zq*>(&c);
+  // zero initialize c
+  for (size_t k = 0; k < degree; ++k)
+    c_zq[k] = Zq::zero();
+
+  // Manual negacyclic convolution: c_k = sum_{i+j ≡ k mod n} a_i * b_j,
+  // with negation when i+j >= n
+  for (size_t i = 0; i < degree; ++i) {
+    for (size_t j = 0; j < degree; ++j) {
+      size_t ij = i + j;
+      size_t k = ij % degree;
+      Zq prod = a_zq[i] * b_zq[j];
+      if (ij >= degree) {
+        c_zq[k] = c_zq[k] - prod; // negacyclic
+      } else {
+        c_zq[k] = c_zq[k] + prod;
+      }
+    }
+  }
+  return c;
+}
 
 using RingTestBase = ModArithTestBase;
 TYPED_TEST_SUITE(RingTest, FTImplementations);
@@ -259,8 +289,9 @@ TEST_F(RingTestBase, BalancedDecompositionPolyRing)
   ICICLE_ASSERT(q > 0) << "Expecting positive modulus q to allow int64 arithmetic";
 
   // Generate a random input polynomial over PolyRing
-  PolyRing input_polynomial;
-  Zq::rand_host_many(reinterpret_cast<Zq*>(&input_polynomial), PolyRing::d);
+  constexpr size_t size = 7;
+  std::vector<PolyRing> input_polynomials(size);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(input_polynomials.data()), size * PolyRing::d);
 
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
@@ -272,33 +303,41 @@ TEST_F(RingTestBase, BalancedDecompositionPolyRing)
     for (uint32_t base : bases) {
       // Compute the number of digits for the given base
       const size_t num_digits = balanced_decomposition::compute_nof_digits<Zq>(base);
-      std::vector<PolyRing> decomposed_polynomials(num_digits);
+      std::vector<PolyRing> decomposed_polynomials(size * num_digits);
 
-      // Perform balanced decomposition into digits (for a single polynomial)
-      ICICLE_CHECK(
-        balanced_decomposition::decompose(&input_polynomial, 1, base, cfg, decomposed_polynomials.data(), num_digits));
+      // Perform balanced decomposition into digits. Output is digit-major
+      ICICLE_CHECK(balanced_decomposition::decompose(
+        input_polynomials.data(), input_polynomials.size(), base, cfg, decomposed_polynomials.data(),
+        decomposed_polynomials.size()));
 
       // Recompose the original polynomial from digits
-      PolyRing recomposed_polynomial;
-      // Generate powers of base: [1, base, base^2, ..., base^{t-1}]
+      std::vector<PolyRing> recomposed(size);
+      memset(recomposed.data(), 0, sizeof(PolyRing) * size);
+      // Generate repeated powers of base: each digit level gets the same base^i for all polynomials
       Zq power = Zq::from(1);
-      std::vector<Zq> powers(num_digits);
-      std::generate(powers.begin(), powers.end(), [&]() {
+      std::vector<Zq> powers(size * num_digits);
+      for (size_t digit_idx = 0; digit_idx < num_digits; ++digit_idx) {
         Zq current = power;
+        for (size_t poly_idx = 0; poly_idx < size; ++poly_idx) {
+          powers[digit_idx * size + poly_idx] = current;
+        }
         power = power * Zq::from(base);
-        return current;
-      });
+      }
 
-      // Scale each decomposed digit (polynomial) by its corresponding base power and sum all PolyRing polynomials:
-      //            P(x) = P₀(x) + b·P₁(x) + b²·P₂(x) + ... + b^{t−1}·P_{t−1}(x)
-      std::vector<PolyRing> scaled_digits(num_digits);
+      // Multiply each decomposed digit by its base power
+      std::vector<PolyRing> scaled_digits(size * num_digits);
       ICICLE_CHECK(
-        vector_mul(decomposed_polynomials.data(), powers.data(), num_digits, VecOpsConfig{}, scaled_digits.data()));
-      // Sum across the digits to reconstruct the original polynomial
-      ICICLE_CHECK(vector_sum(scaled_digits.data(), num_digits, VecOpsConfig{}, &recomposed_polynomial));
+        vector_mul(decomposed_polynomials.data(), powers.data(), size * num_digits, {}, scaled_digits.data()));
+
+      // Accumulate scaled digits into recomposed result
+      for (size_t digit_idx = 0; digit_idx < num_digits; ++digit_idx) {
+        ICICLE_CHECK(vector_add(
+          (const Zq*)recomposed.data(), (const Zq*)(scaled_digits.data() + digit_idx * size), size * PolyRing::d, {},
+          (Zq*)recomposed.data()));
+      }
 
       // Verify recomposed polynomial matches the original input
-      ASSERT_EQ(0, memcmp(&recomposed_polynomial, &input_polynomial, sizeof(PolyRing)));
+      ASSERT_EQ(0, memcmp(recomposed.data(), input_polynomials.data(), size * sizeof(PolyRing)));
     }
   }
 }
@@ -537,10 +576,6 @@ TEST_F(RingTestBase, JLprojectionLemma)
     if (device == "CUDA") continue; // TODO: implement CUDA backend
     ICICLE_CHECK(icicle_set_device(device));
 
-    // Pre-transform input into NTT domain
-    std::vector<PolyRing> input_ntt(input_size);
-    ICICLE_CHECK(ntt(input.data(), input_size, NTTDir::kForward, {}, input_ntt.data()));
-
     // Project using flat Zq view (as if input is Zq vector)
     std::vector<field_t> projected(projected_size);
     ICICLE_CHECK(jl_projection(
@@ -556,18 +591,11 @@ TEST_F(RingTestBase, JLprojectionLemma)
         seed, sizeof(seed), row_size, row_idx, 1, /* 1 row */
         true /* conjugate */, {}, jl_row_conj.data()));
 
-      // Transform conjugated row into NTT domain
-      ICICLE_CHECK(ntt(jl_row_conj.data(), row_size, NTTDir::kForward, {}, jl_row_conj.data()));
-
-      // Compute ⟨JL_row, input⟩ using elementwise multiplication in NTT domain
-      std::vector<PolyRing> mul_result(row_size);
-      ICICLE_CHECK(vector_mul(input_ntt.data(), jl_row_conj.data(), row_size, {}, mul_result.data()));
-
-      PolyRing inner_product_ntt;
-      ICICLE_CHECK(vector_sum(mul_result.data(), row_size, {}, &inner_product_ntt));
-
-      // Inverse NTT to recover polynomial inner product
-      ICICLE_CHECK(ntt(&inner_product_ntt, 1, NTTDir::kInverse, {}, &inner_product_ntt));
+      // compute inner product in Rq domain. Note that we avoid negacyclic-NTT to avoid unnecessary dependency
+      PolyRing inner_product_ntt = {0};
+      for (size_t i = 0; i < row_size; ++i) {
+        inner_product_ntt = inner_product_ntt + Rq_mul(input[i], jl_row_conj[i]);
+      }
 
       // Validate that the constant term equals the Zq projection result
       const field_t constant_term = inner_product_ntt.values[0];
@@ -1003,35 +1031,9 @@ TEST_F(RingTestBase, NormRelativeBatch)
   }
 }
 
+#ifdef NTT
 TEST_F(RingTestBase, NegacyclicNTT)
 {
-  auto PolyRing_multiplication = [](const PolyRing& a, const PolyRing& b) -> PolyRing {
-    PolyRing c;
-    constexpr size_t degree = PolyRing::d;
-    const Zq* a_zq = reinterpret_cast<const Zq*>(&a);
-    const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
-    Zq* c_zq = reinterpret_cast<Zq*>(&c);
-    // zero initialize c
-    for (size_t k = 0; k < degree; ++k)
-      c_zq[k] = Zq::zero();
-
-    // Manual negacyclic convolution: c_k = sum_{i+j ≡ k mod n} a_i * b_j,
-    // with negation when i+j >= n
-    for (size_t i = 0; i < degree; ++i) {
-      for (size_t j = 0; j < degree; ++j) {
-        size_t ij = i + j;
-        size_t k = ij % degree;
-        Zq prod = a_zq[i] * b_zq[j];
-        if (ij >= degree) {
-          c_zq[k] = c_zq[k] - prod; // negacyclic
-        } else {
-          c_zq[k] = c_zq[k] + prod;
-        }
-      }
-    }
-    return c;
-  };
-
   int size = 1 << 15;
   std::vector<PolyRing> a(size);
   std::vector<PolyRing> b(size);
@@ -1069,8 +1071,9 @@ TEST_F(RingTestBase, NegacyclicNTT)
 
     // Verify correctness
     for (int i = 0; i < size; ++i) {
-      PolyRing expected = PolyRing_multiplication(a[i], b[i]);
+      PolyRing expected = Rq_mul(a[i], b[i]);
       EXPECT_EQ(0, memcmp(&expected, &res[i], sizeof(PolyRing)));
     }
   }
 }
+#endif // NTT
