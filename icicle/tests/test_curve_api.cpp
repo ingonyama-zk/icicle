@@ -112,7 +112,7 @@ public:
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
     };
 
-    for (int bitsize = 1; bitsize <= scalar_t::NBITS; bitsize+=1) {
+    for (int bitsize = 1; bitsize <= scalar_t::NBITS; bitsize += 1) {
       config.bitsize = bitsize;
       run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
       run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
@@ -123,7 +123,6 @@ public:
       }
     }
   }
-
 
   template <typename A, typename P>
   void MSM_PRE_COMPUTE_test()

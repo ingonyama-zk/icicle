@@ -172,15 +172,15 @@ private:
   };
 
   // members
-  tf::Taskflow m_taskflow;       // Accumulate tasks
-  tf::Executor m_executor;       // execute all tasks accumulated on multiple threads
-  const int m_msm_size;          // number of scalars in the problem
-  const MSMConfig& m_config;     // extra parameters for the problem
-  bool     m_is_chopped_scalar;       // inidcation if scalar size is smaller than NBITS
-  uint32_t m_scalar_size_with_carry;  // the scalar size that needs to be handles with carry bit from signed operation
-  uint32_t m_scalar_size;        // the number of bits at the scalar
-  uint32_t m_c;                  // the number of bits each bucket module is responsible for
-  uint32_t m_bm_size;            // number of buckets in a single bucket module.
+  tf::Taskflow m_taskflow;           // Accumulate tasks
+  tf::Executor m_executor;           // execute all tasks accumulated on multiple threads
+  const int m_msm_size;              // number of scalars in the problem
+  const MSMConfig& m_config;         // extra parameters for the problem
+  bool m_is_chopped_scalar;          // inidcation if scalar size is smaller than NBITS
+  uint32_t m_scalar_size_with_carry; // the scalar size that needs to be handles with carry bit from signed operation
+  uint32_t m_scalar_size;            // the number of bits at the scalar
+  uint32_t m_c;                      // the number of bits each bucket module is responsible for
+  uint32_t m_bm_size;                // number of buckets in a single bucket module.
   uint32_t m_nof_buckets_module; // number of bucket modules. Each BM contains m_bm_size buckets except for the last one
   uint64_t m_nof_total_buckets;  // total number of buckets across all bucket modules
   uint32_t m_precompute_factor;  // the number of bases precomputed for each scalar
@@ -207,12 +207,12 @@ private:
     m_c = get_optimal_c(m_config, m_msm_size, m_scalar_size, m_precompute_factor, m_nof_workers, m_cpu_vendor);
 
     // if scalar is chopped then the negative scalar trik cannot work and we need to add another bit
-    m_scalar_size_with_carry = m_is_chopped_scalar ? m_scalar_size+1 : m_scalar_size;
-    m_nof_buckets_module = ((m_scalar_size_with_carry - 1) / (m_config.precompute_factor * m_c)) + 1;    
+    m_scalar_size_with_carry = m_is_chopped_scalar ? m_scalar_size + 1 : m_scalar_size;
+    m_nof_buckets_module = ((m_scalar_size_with_carry - 1) / (m_config.precompute_factor * m_c)) + 1;
     m_bm_size = 1 << (m_c - 1);
 
-    const uint64_t last_bm_size = m_bm_size; // TBD can be smaller 
-//      m_precompute_factor > 1 ? m_bm_size : 1 << (m_scalar_size - ((m_nof_buckets_module - 1) * m_c));
+    const uint64_t last_bm_size = m_bm_size; // TBD can be smaller
+    //      m_precompute_factor > 1 ? m_bm_size : 1 << (m_scalar_size - ((m_nof_buckets_module - 1) * m_c));
     m_nof_total_buckets = (m_nof_buckets_module - 1) * m_bm_size + last_bm_size;
 
     // phase 2 properties
