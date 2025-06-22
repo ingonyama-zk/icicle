@@ -151,7 +151,7 @@ jobs:
       if: needs.check-changed-files.outputs.curve == 'true'
       run: |
         FEATURE_FLAGS=""
-        CPP_TEST_REGEX="CurveSanity|ModArith|Symbol|Program"
+        CPP_TEST_REGEX="CurveSanity|CurveApi|ModArith|MatrixTest|Symbol|Program"
         RUST_TEST_FEATURES=""
         GO_TEST_BUILD_TAGS="icicle_exclude_all"
         
@@ -421,7 +421,7 @@ jobs:
       if: needs.check-changed-files.outputs.field == 'true'
       run: |
         FEATURE_FLAGS=""
-        CPP_TEST_REGEX="FieldTest|ModArith|Symbol|Program"
+        CPP_TEST_REGEX="FieldTest|ModArith|MatrixTest|Symbol|Program"
         RUST_TEST_FEATURES=""
         GO_TEST_BUILD_TAGS="icicle_exclude_all"
 
@@ -593,7 +593,7 @@ jobs:
       if: needs.check-changed-files.outputs.ring == 'true'
       run: |
         FEATURE_FLAGS="-DHASH=ON"
-        CPP_TEST_REGEX="ModArith|Symbol|Program"
+        CPP_TEST_REGEX="RingTest|ModArith|MatrixTest|Symbol|Program"
         RUST_TEST_FEATURES=""
         GO_TEST_BUILD_TAGS="icicle_exclude_all"
         

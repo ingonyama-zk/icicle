@@ -24,6 +24,11 @@ namespace icicle {
     static constexpr uint32_t d = degree; ///< Number of coefficients or evaluations
 
     F values[d]; ///< Polynomial data (coeffs or NTT values)
+
+    static void rand_host_many(PolynomialRing* out, int size)
+    {
+      F::rand_host_many(reinterpret_cast<F*>(out), size * d);
+    }
   };
 
 } // namespace icicle
