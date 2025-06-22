@@ -4,14 +4,9 @@ package tests
 
 import (
 	"os"
-	"sync"
 	"testing"
 
-	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/fft"
-	bls12_377 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12377"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
-	"github.com/stretchr/testify/suite"
 )
 
 const (
