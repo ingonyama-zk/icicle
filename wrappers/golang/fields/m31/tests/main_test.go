@@ -1,3 +1,5 @@
+//go:build !ntt
+
 package tests
 
 import (
@@ -14,22 +16,8 @@ const (
 	largestTestSize = 20
 )
 
-func testWrapper(suite *suite.Suite, fn func(*suite.Suite)) func() {
-	return func() {
-		wg := sync.WaitGroup{}
-		wg.Add(1)
-		runtime.RunOnDevice(&test_helpers.REFERENCE_DEVICE, func(args ...any) {
-			defer wg.Done()
-			fn(suite)
-		})
-		wg.Wait()
-	}
-}
-
 func TestMain(m *testing.M) {
 	test_helpers.LOAD_AND_INIT_MAIN_DEVICE()
 
-	exitCode := m.Run()
-
-	os.Exit(exitCode)
+	os.Exit(m.Run())
 }
