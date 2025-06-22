@@ -211,8 +211,7 @@ private:
     m_nof_buckets_module = ((m_scalar_size_with_carry - 1) / (m_config.precompute_factor * m_c)) + 1;
     m_bm_size = 1 << (m_c - 1);
 
-    const uint64_t last_bm_size = m_bm_size; // TBD can be smaller
-    //      m_precompute_factor > 1 ? m_bm_size : 1 << (m_scalar_size - ((m_nof_buckets_module - 1) * m_c));
+    const uint64_t last_bm_size = m_precompute_factor > 1 ? m_bm_size : 1 << (m_scalar_size_with_carry - ((m_nof_buckets_module - 1) * m_c));
     m_nof_total_buckets = (m_nof_buckets_module - 1) * m_bm_size + last_bm_size;
 
     // phase 2 properties
