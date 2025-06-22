@@ -280,6 +280,7 @@ TEST_F(CurveApiTest, MontConversionProjective) { mont_conversion_test<projective
 
   #ifdef G2_ENABLED
 TEST_F(CurveApiTest, msmG2) { MSM_test<g2_affine_t, g2_projective_t>(); }
+TEST_F(CurveApiTest, msm_affine_montgomeryG2) { msm_affine_montgomery<g2_affine_t, g2_projective_t>(); }
   #endif // G2
 #endif   // MSM
 
