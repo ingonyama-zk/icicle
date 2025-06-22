@@ -302,10 +302,10 @@ jobs:
         fi
 
         FEATURES=""
-        if [[ -z ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} ]]; then
+        if [[ -z "${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}" ]]; then
           FEATURES="--no-default-features"
         else
-          FEATURES="--no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}"
+          FEATURES="--no-default-features --features "${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}""
         fi
 
         rustup override set nightly
@@ -537,10 +537,10 @@ jobs:
           export SKIP_RUST_TESTS="${{ matrix.skip-rust-all-fields }} ${{ matrix.field.metal-skip-rust-field-specific }}"
         fi
         FEATURES=""
-        if [[ -z ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} ]]; then
+        if [[ -z "${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}" ]]; then
           FEATURES="--no-default-features"
         else
-          FEATURES="--no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}"
+          FEATURES="--no-default-features --features "${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}""
         fi
 
         rustup override set nightly
@@ -647,7 +647,7 @@ jobs:
         if [[ -z "${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}" ]]; then
           FEATURES="--no-default-features"
         else
-          FEATURES="--no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}"
+          FEATURES="--no-default-features --features "${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}""
         fi
 
         rustup override set nightly
