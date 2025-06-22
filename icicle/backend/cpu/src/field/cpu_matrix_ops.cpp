@@ -328,7 +328,7 @@ namespace {
 REGISTER_MATMUL_BACKEND("CPU", cpu_matmul<scalar_t>);
 REGISTER_MATRIX_TRANSPOSE_BACKEND("CPU", cpu_matrix_transpose<scalar_t>);
 #ifdef EXT_FIELD
-REGISTER_MATMUL_EXT_FIELD_BACKEND("CPU", (cpu_matmul<extension_t>
+REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND("CPU", (cpu_matrix_transpose<extension_t>));
 #endif
 #ifdef RING
 REGISTER_POLY_RING_MATMUL_BACKEND("CPU", (cpu_matmul_polynomial_ring<PolyRing>));
