@@ -566,17 +566,10 @@ TEST_F(RingTestBase, JLprojectionLemma)
         seed, sizeof(seed), row_size, row_idx, 1, /* 1 row */
         true /* conjugate */, {}, jl_row_conj.data()));
 
-      // Transform conjugated row into NTT domain
-      ICICLE_CHECK(ntt(jl_row_conj.data(), row_size, NTTDir::kForward, {}, jl_row_conj.data()));
-
-      // Compute ⟨JL_row, input⟩ using elementwise multiplication in NTT domain
-      std::vector<PolyRing> mul_result(row_size);
-      ICICLE_CHECK(vector_mul(input_ntt.data(), jl_row_conj.data(), row_size, {}, mul_result.data()));
-
+      // Transform conjugated row into NTT domain and compute the inner product
       PolyRing inner_product_ntt;
-      ICICLE_CHECK(vector_sum(mul_result.data(), row_size, {}, &inner_product_ntt));
-
-      // Inverse NTT to recover polynomial inner product
+      ICICLE_CHECK(ntt(jl_row_conj.data(), row_size, NTTDir::kForward, {}, jl_row_conj.data()));
+      ICICLE_CHECK(matmul(input_ntt.data(), 1, row_size, jl_row_conj.data(), row_size, 1, {}, &inner_product_ntt));
       ICICLE_CHECK(ntt(&inner_product_ntt, 1, NTTDir::kInverse, {}, &inner_product_ntt));
 
       // Validate that the constant term equals the Zq projection result
