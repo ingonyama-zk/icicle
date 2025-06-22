@@ -291,7 +291,7 @@ TEST_F(RingTestBase, BalancedDecompositionPolyRing)
   // Generate a random input polynomial over PolyRing
   constexpr size_t size = 7;
   std::vector<PolyRing> input_polynomials(size);
-  Zq::rand_host_many(reinterpret_cast<Zq*>(input_polynomials.data()), size * PolyRing::d);
+  PolyRing::rand_host_many(input_polynomials.data(), size);
 
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
@@ -351,7 +351,6 @@ TEST_F(RingTestBase, BalancedDecompositionPolyRingBatch)
 
   constexpr size_t degree = PolyRing::d;
   constexpr size_t size = 1 << 10; // Number of PolyRing polynomials
-  const size_t total_zq_elements = degree * size;
 
   // Get modulus q as signed integer for arithmetic safety
   constexpr auto q_storage = PolyRing::Base::get_modulus();
@@ -360,7 +359,7 @@ TEST_F(RingTestBase, BalancedDecompositionPolyRingBatch)
 
   // Generate random input polynomials over PolyRing
   std::vector<PolyRing> input(size);
-  Zq::rand_host_many(reinterpret_cast<Zq*>(input.data()), total_zq_elements);
+  PolyRing::rand_host_many(input.data(), size);
 
   std::vector<PolyRing> recomposed(size);
   const std::vector<uint32_t> bases = {2, 3, 16, 155, 1024, static_cast<uint32_t>(std::sqrt(q))};
@@ -564,7 +563,7 @@ TEST_F(RingTestBase, JLprojectionLemma)
 
   // Randomize input polynomials
   std::vector<PolyRing> input(input_size);
-  Zq::rand_host_many(reinterpret_cast<Zq*>(input.data()), input_size * PolyRing::d);
+  PolyRing::rand_host_many(input.data(), input_size);
 
   // Prepare random seed
   std::byte seed[32];
@@ -1037,8 +1036,8 @@ TEST_F(RingTestBase, NegacyclicNTT)
   int size = 1 << 15;
   std::vector<PolyRing> a(size);
   std::vector<PolyRing> b(size);
-  Zq::rand_host_many(reinterpret_cast<Zq*>(a.data()), PolyRing::d * size);
-  Zq::rand_host_many(reinterpret_cast<Zq*>(b.data()), PolyRing::d * size);
+  PolyRing::rand_host_many(a.data(), size);
+  PolyRing::rand_host_many(b.data(), size);
 
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
