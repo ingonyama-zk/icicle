@@ -374,11 +374,11 @@ cpp: &cpp
 
 rust:
   - *cpp
-  - wrappers/rust
+  - wrappers/rust/**/*
 
 go:
   - *cpp
-  - wrappers/golang
+  - wrappers/golang/**/*
   - '!wrappers/golang/README.md'
   - '!wrappers/golang/internal/generator/main.go'
   - '!wrappers/golang/internal/build-libs.go'
