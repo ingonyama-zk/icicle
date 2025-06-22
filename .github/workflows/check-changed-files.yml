@@ -3,34 +3,101 @@ name: Check Changed Files
 on:
   workflow_call:
     outputs:
-      golang:
-        description: "Flag for if GoLang files changed"
-        value: ${{ jobs.check-changed-files.outputs.golang }}
-      rust:
-        description: "Flag for if Rust files changed"
-        value: ${{ jobs.check-changed-files.outputs.rust }}
       cpp:
-        description: "Flag for if C++ files changed"
+        description: "Flag for if C++ code files changed"
         value: ${{ jobs.check-changed-files.outputs.cpp }}
-      examples:
-        description: "Flag for if example files changed"
-        value: ${{ jobs.check-changed-files.outputs.examples }}
+      rust:
+        description: "Flag for if Rust code files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust }}
+      go:
+        description: "Flag for if Go code files changed"
+        value: ${{ jobs.check-changed-files.outputs.go }}
+      cpu-backend:
+        description: "Flag for if CPU backend files changed"
+        value: ${{ jobs.check-changed-files.outputs.cpu-backend }}
+      cuda-pqc-backend:
+        description: "Flag for if CUDA PQC backend files changed"
+        value: ${{ jobs.check-changed-files.outputs.cuda-pqc-backend }}
+      backend-api:
+        description: "Flag for if backend API files changed"
+        value: ${{ jobs.check-changed-files.outputs.backend-api }}
+      curve:
+        description: "Flag for if curve files changed"
+        value: ${{ jobs.check-changed-files.outputs.curve }}
+      field:
+        description: "Flag for if field files changed"
+        value: ${{ jobs.check-changed-files.outputs.field }}
+      ring:
+        description: "Flag for if any (C++, Rust, Go) ring files changed"
+        value: ${{ jobs.check-changed-files.outputs.ring }}
+      hash:
+        description: "Flag for if any (C++, Rust, Go) hash files changed"
+        value: ${{ jobs.check-changed-files.outputs.hash }}
+      runtime:
+        description: "Flag for if C++ runtime files changed"
+        value: ${{ jobs.check-changed-files.outputs.runtime }}
+      pqc:
+        description: "Flag for if PQC files changed"
+        value: ${{ jobs.check-changed-files.outputs.pqc }}
+
+      # Feature specific outputs
+      msm:
+        description: "Flag for if any (C++, Rust, Go) msm files changed"
+        value: ${{ jobs.check-changed-files.outputs.msm }}
+      ntt:
+        description: "Flag for if any (C++, Rust, Go) ntt files changed"
+        value: ${{ jobs.check-changed-files.outputs.ntt }}
+      ecntt:
+        description: "Flag for if any (C++, Rust, Go) ecntt files changed"
+        value: ${{ jobs.check-changed-files.outputs.ecntt }}
+      fri:
+        description: "Flag for if any (C++, Rust, Go) fri files changed"
+        value: ${{ jobs.check-changed-files.outputs.fri }}
+      sumcheck:
+        description: "Flag for if any (C++, Rust, Go) sumcheck files changed"
+        value: ${{ jobs.check-changed-files.outputs.sumcheck }}
+      pairing:
+        description: "Flag for if any (C++, Rust, Go) pairing files changed"
+        value: ${{ jobs.check-changed-files.outputs.pairing }}
+      poseidon:
+        description: "Flag for if any (C++, Rust, Go) poseidon files changed"
+        value: ${{ jobs.check-changed-files.outputs.poseidon }}
+      poseidon2:
+        description: "Flag for if any (C++, Rust, Go) poseidon2 files changed"
+        value: ${{ jobs.check-changed-files.outputs.poseidon2 }}
 
 jobs:
   check-changed-files:
     name: Check Changed Files
     runs-on: ubuntu-22.04
-    outputs:
-      golang: ${{ steps.changed_files.outputs.golang }}
-      rust: ${{ steps.changed_files.outputs.rust }}
+    outputs:      
       cpp: ${{ steps.changed_files.outputs.cpp }}
-      examples: ${{ steps.changed_files.outputs.examples }}
+      rust: ${{ steps.changed_files.outputs.rust }}
+      go: ${{ steps.changed_files.outputs.go }}
+      backend-api: ${{ steps.changed_files.outputs.backend-api }}
+      cpu-backend: ${{ steps.changed_files.outputs.cpu-backend }}
+      curve: ${{ steps.changed_files.outputs.curve }}
+      field: ${{ steps.changed_files.outputs.field }}
+      ring: ${{ steps.changed_files.outputs.ring }}
+      hash: ${{ steps.changed_files.outputs.hash }}
+      runtime: ${{ steps.changed_files.outputs.runtime }}
+      pqc: ${{ steps.changed_files.outputs.pqc }}
+      cuda-pqc-backend: ${{ steps.changed_files.outputs.cuda-pqc-backend }}
+
+      msm: ${{ steps.changed_files.outputs.msm }}
+      ntt: ${{ steps.changed_files.outputs.ntt }}
+      ecntt: ${{ steps.changed_files.outputs.ecntt }}
+      fri: ${{ steps.changed_files.outputs.fri }}
+      sumcheck: ${{ steps.changed_files.outputs.sumcheck }}
+      pairing: ${{ steps.changed_files.outputs.pairing }}
+      poseidon: ${{ steps.changed_files.outputs.poseidon }}
+      poseidon2: ${{ steps.changed_files.outputs.poseidon2 }}
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: Get all changed files
       id: changed-files-yaml
-      uses: tj-actions/changed-files@v39
+      uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c
       # https://github.com/tj-actions/changed-files#input_files_yaml_from_source_file
       with:
         files_yaml_from_source_file: .github/changed-files.yml
@@ -38,7 +105,24 @@ jobs:
       id: changed_files
       # https://github.com/tj-actions/changed-files#outputs-
       run: |
-        echo "golang=${{ steps.changed-files-yaml.outputs.golang_any_modified }}" >> "$GITHUB_OUTPUT"
-        echo "rust=${{ steps.changed-files-yaml.outputs.rust_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "cpp=${{ steps.changed-files-yaml.outputs.cpp_any_modified }}" >> "$GITHUB_OUTPUT"
-        echo "examples=${{ steps.changed-files-yaml.outputs.examples_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust=${{ steps.changed-files-yaml.outputs.rust_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "go=${{ steps.changed-files-yaml.outputs.go_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "cpu-backend=${{ steps.changed-files-yaml.outputs.cpu-backend_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "backend-api=${{ steps.changed-files-yaml.outputs.backend-api_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "curve=${{ steps.changed-files-yaml.outputs.curve_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "field=${{ steps.changed-files-yaml.outputs.field_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "ring=${{ steps.changed-files-yaml.outputs.ring_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "hash=${{ steps.changed-files-yaml.outputs.hash_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "runtime=${{ steps.changed-files-yaml.outputs.runtime_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "pqc=${{ steps.changed-files-yaml.outputs.pqc_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "cuda-pqc-backend=${{ steps.changed-files-yaml.outputs.cuda-pqc-backend_any_modified }}" >> "$GITHUB_OUTPUT"
+        
+        echo "msm=${{ steps.changed-files-yaml.outputs.msm_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "ntt=${{ steps.changed-files-yaml.outputs.ntt_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "ecntt=${{ steps.changed-files-yaml.outputs.ecntt_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "fri=${{ steps.changed-files-yaml.outputs.fri_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "sumcheck=${{ steps.changed-files-yaml.outputs.sumcheck_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "pairing=${{ steps.changed-files-yaml.outputs.pairing_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "poseidon=${{ steps.changed-files-yaml.outputs.poseidon_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "poseidon2=${{ steps.changed-files-yaml.outputs.poseidon2_any_modified }}" >> "$GITHUB_OUTPUT"
