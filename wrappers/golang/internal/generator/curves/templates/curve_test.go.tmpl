@@ -1,3 +1,6 @@
+{{if eq .CurvePrefix "G2" -}}
+//go:build !icicle_exclude_all || g2
+{{end}}
 package tests
 
 import (

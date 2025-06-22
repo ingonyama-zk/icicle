@@ -1,3 +1,8 @@
+use crate::curve::{ScalarCfg, ScalarField};
+use icicle_core::impl_poseidon;
+
+impl_poseidon!("bw6_761", bw6_761, ScalarField, ScalarCfg);
+
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::curve::ScalarField;
