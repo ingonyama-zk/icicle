@@ -701,6 +701,24 @@ namespace icicle {
       }();                                                                                                             \
     }
 
+  using ringPolyRingMatrixOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const PolyRing* in,
+    uint32_t nof_rows,
+    uint32_t nof_cols,
+    const VecOpsConfig& config,
+    PolyRing* out)>;
+
+  void register_poly_ring_matrix_transpose(const std::string& deviceType, ringPolyRingMatrixOpImpl impl);
+
+  #define REGISTER_MATRIX_TRANSPOSE_POLY_RING_BACKEND(DEVICE_TYPE, FUNC)                                               \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_matrix_transpose_poly_ring) = []() -> bool {                                             \
+        register_poly_ring_matrix_transpose(DEVICE_TYPE, FUNC);                                                        \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
   using ringRnsBitReverseOpImpl = std::function<eIcicleError(
     const Device& device, const scalar_rns_t* input, uint64_t size, const VecOpsConfig& config, scalar_rns_t* output)>;
 
