@@ -4,12 +4,12 @@
 #include "icicle/utils/log.h"
 
 #include "icicle/fields/field_config.h"
-#include "tasks_manager.h"
-#include <cstdint>
-
 #include "taskflow/taskflow.hpp"
-#include "icicle/program/program.h"
-#include "cpu_program_executor.h"
+#include <cmath>
+#include <cstdint>
+#include <taskflow/core/executor.hpp>
+#include <taskflow/core/task.hpp>
+#include <taskflow/core/taskflow.hpp>
 
 // Extract number of threads to run from configuration
 int get_nof_workers(const VecOpsConfig& config); // defined in cpu_vec_ops.cpp
@@ -130,10 +130,207 @@ namespace {
     return cpu_matmul_internal<T, 1>(mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, config, mat_out);
   }
 
+  // Matrix-transpose implementation
+
+  template <typename T>
+  eIcicleError out_of_place_matrix_transpose(
+    const Device& device, const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out)
+  {
+    const int nof_workers = get_nof_workers(config);
+    tf::Taskflow taskflow;
+    tf::Executor executor(nof_workers);
+
+    const uint64_t elements_per_matrix = static_cast<uint64_t>(nof_rows) * nof_cols;
+
+    for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+      const T* mat_in_ptr = mat_in + batch_idx * elements_per_matrix;
+      T* mat_out_ptr = mat_out + batch_idx * elements_per_matrix;
+
+      for (uint32_t row = 0; row < nof_rows; ++row) {
+        taskflow.emplace([=]() {
+          for (uint32_t col = 0; col < nof_cols; ++col) {
+            const uint64_t in_idx = row * nof_cols + col;
+            const uint64_t out_idx = col * nof_rows + row;
+            mat_out_ptr[out_idx] = mat_in_ptr[in_idx];
+          }
+        });
+      }
+    }
+
+    executor.run(taskflow).wait();
+    return eIcicleError::SUCCESS;
+  }
+
+  // Euclidean GCD
+  static uint32_t gcd(uint32_t a, uint32_t b)
+  {
+    while (b != 0) {
+      uint32_t temp = b;
+      b = a % b;
+      a = temp;
+    }
+    return a;
+  }
+
+  // Mersenne modulo for rotation within total_bits
+  uint64_t mersenne_mod(uint64_t shifted_idx, uint32_t total_bits)
+  {
+    uint64_t mod = (1ULL << total_bits) - 1;
+    shifted_idx = (shifted_idx & mod) + (shifted_idx >> total_bits);
+    while (shifted_idx >= mod) {
+      shifted_idx = (shifted_idx & mod) + (shifted_idx >> total_bits);
+    }
+    return shifted_idx;
+  }
+
+  // Recursive generation of valid k-ary necklace start indices
+  template <typename T>
+  void gen_necklace(
+    uint32_t t,
+    uint32_t p,
+    uint32_t k,
+    uint32_t length,
+    std::vector<uint32_t>& necklace,
+    std::vector<uint64_t>& task_indices)
+  {
+    if (t > length) {
+      if (
+        length % p == 0 &&
+        !std::all_of(necklace.begin() + 1, necklace.begin() + length + 1, [first = necklace[1]](uint32_t x) {
+          return x == first;
+        })) {
+        uint64_t start_idx = 0;
+        uint64_t multiplier = 1;
+        for (int i = length; i >= 1; --i) {
+          start_idx += necklace[i] * multiplier;
+          multiplier *= k;
+        }
+        task_indices.push_back(start_idx);
+      }
+      return;
+    }
+
+    necklace[t] = necklace[t - p];
+    gen_necklace<T>(t + 1, p, k, length, necklace, task_indices);
+
+    for (uint32_t i = necklace[t - p] + 1; i < k; ++i) {
+      necklace[t] = i;
+      gen_necklace<T>(t + 1, t, k, length, necklace, task_indices);
+    }
+  }
+
+  // Main element replacement logic based on necklace cycle walking
+  template <typename T>
+  void replace_elements(
+    const T* input,
+    uint64_t nof_operations,
+    const std::vector<uint64_t>& start_indices_in_mat,
+    uint64_t start_index,
+    uint32_t log_nof_rows,
+    uint32_t log_nof_cols,
+    T* output)
+  {
+    const uint32_t total_bits = log_nof_rows + log_nof_cols;
+    for (uint64_t i = 0; i < nof_operations; ++i) {
+      const uint64_t start_idx = start_indices_in_mat[start_index + i];
+      uint64_t idx = start_idx;
+      T prev = input[idx];
+      do {
+        uint64_t shifted_idx = idx << log_nof_rows;
+        uint64_t new_idx = mersenne_mod(shifted_idx, total_bits);
+        T next = input[new_idx];
+        output[new_idx] = prev;
+        prev = next;
+        idx = new_idx;
+      } while (idx != start_idx);
+    }
+  }
+
+  // Necklace-based transpose entry point
+  template <typename T>
+  eIcicleError matrix_transpose_necklaces(
+    const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out)
+  {
+    if ((nof_rows & (nof_rows - 1)) != 0 || (nof_cols & (nof_cols - 1)) != 0) {
+      return eIcicleError::INVALID_ARGUMENT; // must be power of 2
+    }
+
+    uint32_t log_nof_rows = static_cast<uint32_t>(std::floor(std::log2(nof_rows)));
+    uint32_t log_nof_cols = static_cast<uint32_t>(std::floor(std::log2(nof_cols)));
+    const uint32_t gcd_value = gcd(log_nof_rows, log_nof_cols);
+    const uint32_t k = 1u << gcd_value;
+    uint32_t length = (log_nof_cols + log_nof_rows) / gcd_value;
+
+    std::vector<uint32_t> necklace(length + 1, 0);
+    std::vector<uint64_t> start_indices_in_mat;
+    gen_necklace<T>(1, 1, k, length, necklace, start_indices_in_mat);
+
+    const int nof_workers = get_nof_workers(config);
+    const uint64_t total_elements_one_mat = static_cast<uint64_t>(nof_rows) * nof_cols;
+    // nof-tasks is a heuristic to balance the workload across workers
+    const int nof_tasks = nof_workers * 2;
+    const uint64_t max_nof_operations = (total_elements_one_mat + nof_tasks - 1) / nof_tasks;
+
+    tf::Taskflow taskflow;
+    tf::Executor executor(nof_workers);
+
+    for (uint64_t i = 0; i < start_indices_in_mat.size(); i += max_nof_operations) {
+      uint64_t nof_ops = std::min(max_nof_operations, start_indices_in_mat.size() - i);
+
+      for (uint64_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+        const T* input_ptr = mat_in + batch_idx * total_elements_one_mat;
+        T* output_ptr = mat_out + batch_idx * total_elements_one_mat;
+
+        taskflow.emplace([=]() {
+          replace_elements<T>(input_ptr, nof_ops, start_indices_in_mat, i, log_nof_rows, log_nof_cols, output_ptr);
+        });
+      }
+    }
+
+    executor.run(taskflow).wait();
+    return eIcicleError::SUCCESS;
+  }
+
+  template <typename T>
+  eIcicleError cpu_matrix_transpose(
+    const Device& device, const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out)
+  {
+    if (!mat_in || !mat_out || nof_rows == 0 || nof_cols == 0) {
+      ICICLE_LOG_ERROR << "Matrix-transpose: Invalid pointer or size";
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+
+    if (config.columns_batch) {
+      ICICLE_LOG_ERROR << "Matrix-transpose does not support columns_batch";
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+
+    // check if the number of rows and columns are powers of 2, if not use the basic transpose
+    bool is_inplace = mat_in == mat_out;
+    if (is_inplace) {
+      bool is_power_of_2 = (nof_rows & (nof_rows - 1)) == 0 && (nof_cols & (nof_cols - 1)) == 0;
+      if (is_power_of_2) {
+        return (matrix_transpose_necklaces<T>(mat_in, nof_rows, nof_cols, config, mat_out));
+      } else {
+        // Copy the input matrix to a temporary vector and compute out-of-place transpose
+        std::vector<T> mat_in_copy(nof_rows * nof_cols * config.batch_size);
+        std::memcpy(mat_in_copy.data(), mat_in, nof_rows * nof_cols * config.batch_size * sizeof(T));
+        return out_of_place_matrix_transpose(device, mat_in_copy.data(), nof_rows, nof_cols, config, mat_out);
+      }
+    }
+
+    return out_of_place_matrix_transpose(device, mat_in, nof_rows, nof_cols, config, mat_out);
+  }
+
 } // namespace
 
 // === Registration with runtime ===
 REGISTER_MATMUL_BACKEND("CPU", cpu_matmul<scalar_t>);
+REGISTER_MATRIX_TRANSPOSE_BACKEND("CPU", cpu_matrix_transpose<scalar_t>);
+#ifdef EXT_FIELD
+REGISTER_MATMUL_EXT_FIELD_BACKEND("CPU", (cpu_matmul<extension_t>
+#endif
 #ifdef RING
 REGISTER_POLY_RING_MATMUL_BACKEND("CPU", (cpu_matmul_polynomial_ring<PolyRing>));
+REGISTER_MATRIX_TRANSPOSE_RING_RNS_BACKEND("CPU", cpu_matrix_transpose<scalar_rns_t>);
 #endif

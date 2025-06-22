@@ -392,100 +392,61 @@ TEST_F(ModArithTestBase, scalarVectorOps)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 
-TYPED_TEST(ModArithTest, matrixAPIsAsync)
+TYPED_TEST(ModArithTest, matrixTranspose)
 {
-  const int R = 1 << rand_uint_32b(2, 9);
-  const int C = 1 << rand_uint_32b(2, 9);
-  const int batch_size = 1 << rand_uint_32b(0, 3);
-  const bool columns_batch = rand_uint_32b(0, 1);
-  const bool is_in_place = IcicleTestBase::is_main_device_available() ? 0 : rand_uint_32b(0, 1);
+  auto transpose_ref_implementation =
+    [](const std::vector<TypeParam>& h_inout, int batch_size, int R, int C, std::vector<TypeParam>& h_out_ref) {
+      const std::vector<TypeParam> h_inout_copy = h_inout; // Copy to support in-place transpose
+      const TypeParam* cur_mat_in = h_inout_copy.data();
+      TypeParam* cur_mat_out = h_out_ref.data();
+      const uint64_t total_elements_one_mat = static_cast<uint64_t>(R) * C;
 
-  ICICLE_LOG_DEBUG << "rows = " << R;
-  ICICLE_LOG_DEBUG << "cols = " << C;
-  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
-  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
+      for (int idx_in_batch = 0; idx_in_batch < batch_size; ++idx_in_batch) {
+        for (int i = 0; i < R; ++i) {
+          for (int j = 0; j < C; ++j) {
+            cur_mat_out[j * R + i] = cur_mat_in[i * C + j];
+          }
+        }
+        cur_mat_in += total_elements_one_mat;
+        cur_mat_out += total_elements_one_mat;
+      }
+    };
 
-  const int total_size = R * C * batch_size;
-  auto h_inout = std::make_unique<TypeParam[]>(total_size);
-  auto h_out_main = std::make_unique<TypeParam[]>(total_size);
-  auto h_out_ref = std::make_unique<TypeParam[]>(total_size);
+  const int nof_rows = 1 << 7;
+  const int nof_cols = 1 << 8;
+  const int batch_size = 3;
 
-  auto run = [&](const std::string& dev_type, TypeParam* h_out, bool measure, const char* msg, int iters) {
-    Device dev = {dev_type, 0};
-    icicle_set_device(dev);
+  const int total_size = nof_rows * nof_cols * batch_size;
+  std::vector<TypeParam> h_inout(total_size);
+  TypeParam::rand_host_many(h_inout.data(), total_size);
 
-    DeviceProperties device_props;
-    icicle_get_device_properties(device_props);
+  for (auto device : IcicleTestBase::s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    std::stringstream timer_label, timer_label_inplace;
+    timer_label << "matrix-transpoes [device=" << device << "]";
+    timer_label_inplace << "matrix-transpose-inplace [device=" << device << "]";
+
+    std::vector<TypeParam> h_out(total_size);
+    std::vector<TypeParam> h_out_ref(total_size);
+
     auto config = default_vec_ops_config();
     config.batch_size = batch_size;
-    config.columns_batch = columns_batch;
-
-    std::ostringstream oss;
-    oss << dev_type << " " << msg;
-
-    // Note: if the device uses host memory, do not allocate device memory and copy
-
-    TypeParam *d_in, *d_out;
-    if (!device_props.using_host_memory) {
-      icicle_create_stream(&config.stream);
-      icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream);
-      icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream);
-      icicle_copy_to_device_async(d_in, h_inout.get(), total_size * sizeof(TypeParam), config.stream);
-
-      config.is_a_on_device = true;
-      config.is_result_on_device = true;
-      config.is_async = false;
-    }
-
-    TypeParam* in = device_props.using_host_memory ? h_inout.get() : d_in;
-    TypeParam* out = device_props.using_host_memory ? h_out : d_out;
 
     START_TIMER(TRANSPOSE)
-    for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(matrix_transpose(in, R, C, config, out));
-    }
-    END_TIMER(TRANSPOSE, oss.str().c_str(), measure);
+    ICICLE_CHECK(matrix_transpose(h_inout.data(), nof_rows, nof_cols, config, h_out.data()));
+    END_TIMER(TRANSPOSE, timer_label.str().c_str(), true);
 
-    if (!device_props.using_host_memory) {
-      icicle_copy_to_host_async(h_out, d_out, total_size * sizeof(TypeParam), config.stream);
-      icicle_stream_synchronize(config.stream);
-      icicle_free_async(d_in, config.stream);
-      icicle_free_async(d_out, config.stream);
-    }
-  };
+    // Run reference transpose and compare results
+    transpose_ref_implementation(h_inout, batch_size, nof_rows, nof_cols, h_out_ref);
+    ASSERT_EQ(0, memcmp(h_out.data(), h_out_ref.data(), total_size * sizeof(TypeParam)));
 
-  TypeParam::rand_host_many(h_inout.get(), total_size);
+    // Repeat for in-place transpose
+    START_TIMER(TRANSPOS_INPLACE)
+    ICICLE_CHECK(matrix_transpose(h_inout.data(), nof_rows, nof_cols, config, h_inout.data()));
+    END_TIMER(TRANSPOS_INPLACE, timer_label_inplace.str().c_str(), true);
 
-  // Reference implementation
-  if (!IcicleTestBase::is_main_device_available()) {
-    const TypeParam* cur_mat_in = h_inout.get();
-    TypeParam* cur_mat_out = h_out_ref.get();
-    uint32_t stride = columns_batch ? batch_size : 1;
-    const uint64_t total_elements_one_mat = static_cast<uint64_t>(R) * C;
-    for (uint32_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-      // Perform the matrix transpose
-      for (uint32_t i = 0; i < R; ++i) {
-        for (uint32_t j = 0; j < C; ++j) {
-          cur_mat_out[stride * (j * R + i)] = cur_mat_in[stride * (i * C + j)];
-        }
-      }
-      cur_mat_in += (columns_batch ? 1 : total_elements_one_mat);
-      cur_mat_out += (columns_batch ? 1 : total_elements_one_mat);
-    }
-  } else {
-    run(
-      IcicleTestBase::reference_device(), (is_in_place ? h_inout.get() : h_out_ref.get()), VERBOSE /*=measure*/,
-      "transpose", ITERS);
-  }
-
-  run(
-    IcicleTestBase::main_device(), (is_in_place ? h_inout.get() : h_out_main.get()), VERBOSE /*=measure*/, "transpose",
-    ITERS);
-
-  if (is_in_place) {
-    ASSERT_EQ(0, memcmp(h_inout.get(), h_out_ref.get(), total_size * sizeof(TypeParam)));
-  } else {
-    ASSERT_EQ(0, memcmp(h_out_main.get(), h_out_ref.get(), total_size * sizeof(TypeParam)));
+    ASSERT_EQ(0, memcmp(h_inout.data(), h_out_ref.data(), total_size * sizeof(TypeParam)));
   }
 }
 
