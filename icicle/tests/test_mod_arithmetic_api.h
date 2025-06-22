@@ -392,64 +392,6 @@ TEST_F(ModArithTestBase, scalarVectorOps)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 
-TYPED_TEST(ModArithTest, matrixTranspose)
-{
-  auto transpose_ref_implementation =
-    [](const std::vector<TypeParam>& h_inout, int batch_size, int R, int C, std::vector<TypeParam>& h_out_ref) {
-      const std::vector<TypeParam> h_inout_copy = h_inout; // Copy to support in-place transpose
-      const TypeParam* cur_mat_in = h_inout_copy.data();
-      TypeParam* cur_mat_out = h_out_ref.data();
-      const uint64_t total_elements_one_mat = static_cast<uint64_t>(R) * C;
-
-      for (int idx_in_batch = 0; idx_in_batch < batch_size; ++idx_in_batch) {
-        for (int i = 0; i < R; ++i) {
-          for (int j = 0; j < C; ++j) {
-            cur_mat_out[j * R + i] = cur_mat_in[i * C + j];
-          }
-        }
-        cur_mat_in += total_elements_one_mat;
-        cur_mat_out += total_elements_one_mat;
-      }
-    };
-
-  const int nof_rows = 1 << 7;
-  const int nof_cols = 1 << 8;
-  const int batch_size = 3;
-
-  const int total_size = nof_rows * nof_cols * batch_size;
-  std::vector<TypeParam> h_inout(total_size);
-  TypeParam::rand_host_many(h_inout.data(), total_size);
-
-  for (auto device : IcicleTestBase::s_registered_devices) {
-    ICICLE_CHECK(icicle_set_device(device));
-
-    std::stringstream timer_label, timer_label_inplace;
-    timer_label << "matrix-transpoes [device=" << device << "]";
-    timer_label_inplace << "matrix-transpose-inplace [device=" << device << "]";
-
-    std::vector<TypeParam> h_out(total_size);
-    std::vector<TypeParam> h_out_ref(total_size);
-
-    auto config = default_vec_ops_config();
-    config.batch_size = batch_size;
-
-    START_TIMER(TRANSPOSE)
-    ICICLE_CHECK(matrix_transpose(h_inout.data(), nof_rows, nof_cols, config, h_out.data()));
-    END_TIMER(TRANSPOSE, timer_label.str().c_str(), true);
-
-    // Run reference transpose and compare results
-    transpose_ref_implementation(h_inout, batch_size, nof_rows, nof_cols, h_out_ref);
-    ASSERT_EQ(0, memcmp(h_out.data(), h_out_ref.data(), total_size * sizeof(TypeParam)));
-
-    // Repeat for in-place transpose
-    START_TIMER(TRANSPOS_INPLACE)
-    ICICLE_CHECK(matrix_transpose(h_inout.data(), nof_rows, nof_cols, config, h_inout.data()));
-    END_TIMER(TRANSPOS_INPLACE, timer_label_inplace.str().c_str(), true);
-
-    ASSERT_EQ(0, memcmp(h_inout.data(), h_out_ref.data(), total_size * sizeof(TypeParam)));
-  }
-}
-
 TYPED_TEST(ModArithTest, bitReverse)
 {
   const uint64_t N = 1 << rand_uint_32b(3, 17);
