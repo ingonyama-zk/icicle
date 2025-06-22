@@ -333,4 +333,5 @@ REGISTER_MATMUL_EXT_FIELD_BACKEND("CPU", (cpu_matmul<extension_t>
 #ifdef RING
 REGISTER_POLY_RING_MATMUL_BACKEND("CPU", (cpu_matmul_polynomial_ring<PolyRing>));
 REGISTER_MATRIX_TRANSPOSE_RING_RNS_BACKEND("CPU", cpu_matrix_transpose<scalar_rns_t>);
+REGISTER_MATRIX_TRANSPOSE_POLY_RING_BACKEND("CPU", cpu_matrix_transpose<PolyRing>);
 #endif

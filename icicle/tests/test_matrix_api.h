@@ -27,16 +27,16 @@ class MatrixTest : public MatrixTestBase
 };
 
 #ifdef EXT_FIELD
-typedef testing::Types<scalar_t, extension_t> FTImplementations;
+typedef testing::Types<scalar_t, extension_t> MatrixTestTypes;
 #elif defined(RING)
-typedef testing::Types<scalar_t, scalar_rns_t> FTImplementations;
+typedef testing::Types<scalar_t, scalar_rns_t, PolyRing> MatrixTestTypes;
 #elif defined(FIELD)
-typedef testing::Types<scalar_t> FTImplementations;
+typedef testing::Types<scalar_t> MatrixTestTypes;
 #else
   #error invalid type for ring and field test
 #endif
 
-TYPED_TEST_SUITE(MatrixTest, FTImplementations);
+TYPED_TEST_SUITE(MatrixTest, MatrixTestTypes);
 
 // Helper function to multiply matrices in O(n^3) time using host math
 template <typename T>
