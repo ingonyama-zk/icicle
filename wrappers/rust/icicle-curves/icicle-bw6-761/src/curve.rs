@@ -22,6 +22,8 @@ impl_curve!(
     G1Affine,
     G1Projective
 );
+
+#[cfg(feature = "g2")]
 impl_curve!(
     "bw6_761_g2",
     bw6_761_g2,
@@ -34,6 +36,7 @@ impl_curve!(
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "g2")]
     use super::G2CurveCfg;
     use super::{CurveCfg, ScalarField, BASE_LIMBS};
     use icicle_core::curve::Curve;
@@ -44,6 +47,7 @@ mod tests {
 
     impl_field_tests!(ScalarField);
     impl_curve_tests!(BASE_LIMBS, CurveCfg);
+    #[cfg(feature = "g2")]
     mod g2 {
         use super::*;
         impl_curve_tests!(BASE_LIMBS, G2CurveCfg);
