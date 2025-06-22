@@ -176,6 +176,8 @@ private:
   tf::Executor m_executor;       // execute all tasks accumulated on multiple threads
   const int m_msm_size;          // number of scalars in the problem
   const MSMConfig& m_config;     // extra parameters for the problem
+  bool     m_is_chopped_scalar;       // inidcation if scalar size is smaller than NBITS
+  uint32_t m_scalar_size_with_carry;  // the scalar size that needs to be handles with carry bit from signed operation
   uint32_t m_scalar_size;        // the number of bits at the scalar
   uint32_t m_c;                  // the number of bits each bucket module is responsible for
   uint32_t m_bm_size;            // number of buckets in a single bucket module.
@@ -199,14 +201,18 @@ private:
     m_precompute_factor = m_config.precompute_factor;
     m_scalar_size = m_config.bitsize != 0 ? m_config.bitsize : scalar_t::NBITS;
     m_nof_workers = get_optimal_nof_workers(m_config, m_msm_size, m_scalar_size, m_precompute_factor);
+    m_is_chopped_scalar = (m_scalar_size != scalar_t::NBITS);
 
     // phase 1 properties
     m_c = get_optimal_c(m_config, m_msm_size, m_scalar_size, m_precompute_factor, m_nof_workers, m_cpu_vendor);
 
-    m_nof_buckets_module = ((m_scalar_size - 1) / (m_config.precompute_factor * m_c)) + 1;
+    // if scalar is chopped then the negative scalar trik cannot work and we need to add another bit
+    m_scalar_size_with_carry = m_is_chopped_scalar ? m_scalar_size+1 : m_scalar_size;
+    m_nof_buckets_module = ((m_scalar_size_with_carry - 1) / (m_config.precompute_factor * m_c)) + 1;    
     m_bm_size = 1 << (m_c - 1);
-    const uint64_t last_bm_size =
-      m_precompute_factor > 1 ? m_bm_size : 1 << (m_scalar_size - ((m_nof_buckets_module - 1) * m_c));
+
+    const uint64_t last_bm_size = m_bm_size; // TBD can be smaller 
+//      m_precompute_factor > 1 ? m_bm_size : 1 << (m_scalar_size - ((m_nof_buckets_module - 1) * m_c));
     m_nof_total_buckets = (m_nof_buckets_module - 1) * m_bm_size + last_bm_size;
 
     // phase 2 properties
@@ -260,16 +266,16 @@ private:
     const int coeff_bit_mask_no_sign_bit = m_bm_size - 1;
     const int coeff_bit_mask_with_sign_bit = (1 << m_c) - 1;
     // NUmber of windows / additions per scalar in case num_bms * precompute_factor exceed scalar width
-    const int num_bms_before_precompute = ((m_scalar_size - 1) / m_c) + 1; // +1 for ceiling
+    const int num_bms_before_precompute = ((m_scalar_size_with_carry - 1) / m_c) + 1; // +1 for ceiling
     int carry = 0;
     for (int i = 0; i < msm_size; i++) {
       carry = 0;
       // Handle required preprocess of scalar
       scalar_t scalar =
         m_config.are_scalars_montgomery_form ? scalar_t::from_montgomery(scalars[i]) : scalars[i]; // TBD: avoid copy
-      bool negate_p_and_s = scalar.get_scalar_digit(m_scalar_size - 1, 1) > 0;
+      bool negate_p_and_s = (!m_is_chopped_scalar) && scalar.get_scalar_bits(m_scalar_size - 1, 1) > 0;
       if (negate_p_and_s) { scalar = scalar_t::neg(scalar); } // TBD: inplace
-
+      int scalar_offset = 0;
       for (int j = 0; j < m_precompute_factor; j++) {
         // Handle required preprocess of base P. Note: no need to convert to montgomery. Projective point handles it)
         const A& base = bases[m_precompute_factor * i + j];
@@ -279,8 +285,9 @@ private:
         for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
           // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
           if (m_nof_buckets_module * j + bm_i >= num_bms_before_precompute) { break; }
-
-          uint32_t curr_coeff = scalar.get_scalar_digit(m_nof_buckets_module * j + bm_i, m_c) + carry;
+          const unsigned coeff_width = std::min(m_c, m_scalar_size - scalar_offset);
+          const uint32_t curr_coeff = scalar.get_scalar_bits(scalar_offset, coeff_width) + carry;
+          uint32_t get_scalar_digit_curr_coeff = scalar.get_scalar_digit(m_nof_buckets_module * j + bm_i, m_c) + carry;
 
           // For the edge case of curr_coeff = c (limb=c-1, carry=1) use the sign bit mask
           if ((curr_coeff & coeff_bit_mask_with_sign_bit) != 0) {
@@ -288,7 +295,6 @@ private:
             carry = curr_coeff > m_bm_size;
             int bkt_idx = carry ? m_bm_size * bm_i + ((-curr_coeff) & coeff_bit_mask_no_sign_bit)
                                 : m_bm_size * bm_i + (curr_coeff & coeff_bit_mask_no_sign_bit);
-
             // Check for collision in that bucket and either dispatch an addition or store the P accordingly.
             if (buckets_busy[bkt_idx]) {
               buckets[bkt_idx].point =
@@ -303,6 +309,7 @@ private:
             // coeff & coeff_mask == 0 but there is a carry to propagate to the next segment
             carry = curr_coeff >> m_c;
           }
+          scalar_offset += m_c;
         }
       }
     }
