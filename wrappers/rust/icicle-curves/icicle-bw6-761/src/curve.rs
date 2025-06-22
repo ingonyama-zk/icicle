@@ -11,7 +11,12 @@ pub(crate) const SCALAR_LIMBS: usize = 12;
 pub(crate) const BASE_LIMBS: usize = 24;
 
 impl_scalar_field!("bw6_761", bw6_761_sf, SCALAR_LIMBS, ScalarField, ScalarCfg);
-impl_field!("bw6_761_g2_base_field", BASE_LIMBS, BaseField, BaseCfg);
+
+// NOTE: Even though both G1 and G2 use the same base field, we define two different field types
+//       to avoid using incorrect FFI functions.
+impl_field!("bw6_761_base_field", BASE_LIMBS, BaseField, BaseCfg);
+#[cfg(feature = "g2")]
+impl_field!("bw6_761_g2_base_field", BASE_LIMBS, G2BaseField, G2BaseCfg);
 
 impl_curve!(
     "bw6_761",
@@ -29,7 +34,7 @@ impl_curve!(
     bw6_761_g2,
     G2CurveCfg,
     ScalarField,
-    BaseField,
+    G2BaseField,
     G2Affine,
     G2Projective
 );
