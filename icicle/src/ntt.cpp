@@ -214,6 +214,8 @@ namespace icicle {
   {
     return ntt(input, size, dir, *config, output);
   }
+
+  // I want to test this
 #endif // RING
 
 } // namespace icicle
