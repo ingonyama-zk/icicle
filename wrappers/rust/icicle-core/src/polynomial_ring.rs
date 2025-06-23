@@ -1,3 +1,7 @@
+use crate::traits::FieldImpl;
+use icicle_runtime::memory::reinterpret::{reinterpret_slice, reinterpret_slice_mut};
+use icicle_runtime::memory::HostOrDeviceSlice;
+
 /// Trait representing a polynomial ring: R = Base[X] / (X^DEGREE - MODULUS_COEFF)
 pub trait PolynomialRing: Sized + Clone + PartialEq + core::fmt::Debug {
     /// Base field type
@@ -20,6 +24,42 @@ pub trait PolynomialRing: Sized + Clone + PartialEq + core::fmt::Debug {
 
     /// Construct from a slice (should panic or assert if length ≠ DEGREE)
     fn from_slice(values: &[Self::Base]) -> Self;
+}
+
+/// Reinterprets a slice of polynomials as a flat slice of their base field elements (read-only).
+///
+/// This is useful for passing polynomial vectors to scalar vectorized operations.
+///
+/// # Safety
+/// - The layout of each `P` must match `[P::Base; DEGREE]` exactly (assumed via `#[repr(C)]`)
+/// - The memory must be properly aligned and valid for reads
+#[inline(always)]
+pub fn flatten_polyring_slice<'a, P>(
+    input: &'a (impl HostOrDeviceSlice<P> + ?Sized),
+) -> impl HostOrDeviceSlice<P::Base> + 'a
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl + 'a,
+{
+    // Note that this can never fail here for a valid P
+    unsafe { reinterpret_slice::<P, P::Base>(input).expect("Internal error") }
+}
+
+/// Reinterprets a mutable slice of polynomials as a flat mutable slice of their base field elements.
+///
+/// # Safety
+/// - The layout of each `P` must match `[P::Base; DEGREE]`
+/// - Caller must ensure exclusive access and valid alignment for mutation
+#[inline(always)]
+pub fn flatten_polyring_slice_mut<'a, P>(
+    input: &'a mut (impl HostOrDeviceSlice<P> + ?Sized),
+) -> impl HostOrDeviceSlice<P::Base> + 'a
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl + 'a,
+{
+    // Note that this can never fail here for a valid P
+    unsafe { reinterpret_slice_mut::<P, P::Base>(input).expect("Internal error") }
 }
 
 #[macro_export]
@@ -101,8 +141,9 @@ macro_rules! test_polynomial_ring {
             }
 
             #[test]
-            fn test_vector_alloc() {
-                check_vector_alloc::<$type>();
+            fn test_flatten_slices() {
+                check_polyring_flatten_host_memory::<$type>();
+                check_polyring_flatten_device_memory::<$type>();
             }
         }
     };

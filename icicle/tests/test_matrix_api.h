@@ -15,42 +15,54 @@
 using namespace field_config;
 using namespace icicle;
 
+// This class is for tests that define a single type
 class MatrixTestBase : public IcicleTestBase
 {
-protected:
-  // Set up logging for matrix tests
-  void SetUp() override
-  {
-    IcicleTestBase::SetUp();
-    Log::set_min_log_level(Log::Verbose); // Enable verbose logging for all matrix tests
-  }
+};
 
-  // Helper function to multiply matrices in O(n^3) time using host math
-  template <typename T>
-  void matmul_ref(
-    const std::vector<T>& a,
-    const std::vector<T>& b,
-    std::vector<T>& out,
-    size_t rows_a,
-    size_t cols_a, // also rows_b
-    size_t cols_b)
-  {
-    // For each element of output matrix
-    for (size_t i = 0; i < rows_a; i++) {
-      for (size_t j = 0; j < cols_b; j++) {
-        // Initialize accumulator for dot product
-        T sum = (a[i * cols_a + 0] * b[0 * cols_b + j]);
+// This class is for tests that should be instantiated for multiple types
+template <typename T>
+class MatrixTest : public MatrixTestBase
+{
+};
 
-        // Compute dot product of row i from A and col j from B
-        for (size_t k = 1; k < cols_a; k++) {
-          sum = sum + (a[i * cols_a + k] * b[k * cols_b + j]);
-        }
+#ifdef EXT_FIELD
+typedef testing::Types<scalar_t, extension_t> MatrixTestTypes;
+#elif defined(RING)
+typedef testing::Types<scalar_t, scalar_rns_t, PolyRing> MatrixTestTypes;
+#elif defined(FIELD)
+typedef testing::Types<scalar_t> MatrixTestTypes;
+#else
+  #error invalid type for ring and field test
+#endif
 
-        out[i * cols_b + j] = sum;
+TYPED_TEST_SUITE(MatrixTest, MatrixTestTypes);
+
+// Helper function to multiply matrices in O(n^3) time using host math
+template <typename T>
+void matmul_ref(
+  const std::vector<T>& a,
+  const std::vector<T>& b,
+  std::vector<T>& out,
+  size_t rows_a,
+  size_t cols_a, // also rows_b
+  size_t cols_b)
+{
+  // For each element of output matrix
+  for (size_t i = 0; i < rows_a; i++) {
+    for (size_t j = 0; j < cols_b; j++) {
+      // Initialize accumulator for dot product
+      T sum = (a[i * cols_a + 0] * b[0 * cols_b + j]);
+
+      // Compute dot product of row i from A and col j from B
+      for (size_t k = 1; k < cols_a; k++) {
+        sum = sum + (a[i * cols_a + k] * b[k * cols_b + j]);
       }
+
+      out[i * cols_b + j] = sum;
     }
   }
-};
+}
 
 // Matrix multiplication with non-square matrices
 TEST_F(MatrixTestBase, MatrixMultiplicationNonSquare)
@@ -364,6 +376,8 @@ PolyRing operator+(const PolyRing& a, const PolyRing& b)
   return c;
 }
 
+// TODO: those can be testing scalar_t too but currently scalar_rns_t doesn't have matmul so
+
 TEST_F(MatrixTestBase, VectorTimesMatrix)
 {
   const size_t N = 4;
@@ -463,6 +477,62 @@ TEST_F(MatrixTestBase, VectorTimesVector)
   }
 }
 
-// TODO Lisa: test with device memory too
-
 #endif
+
+TYPED_TEST(MatrixTest, matrixTranspose)
+{
+  auto transpose_ref_implementation =
+    [](const std::vector<TypeParam>& h_inout, int batch_size, int R, int C, std::vector<TypeParam>& h_out_ref) {
+      const std::vector<TypeParam> h_inout_copy = h_inout; // Copy to support in-place transpose
+      const TypeParam* cur_mat_in = h_inout_copy.data();
+      TypeParam* cur_mat_out = h_out_ref.data();
+      const uint64_t total_elements_one_mat = static_cast<uint64_t>(R) * C;
+
+      for (int idx_in_batch = 0; idx_in_batch < batch_size; ++idx_in_batch) {
+        for (int i = 0; i < R; ++i) {
+          for (int j = 0; j < C; ++j) {
+            cur_mat_out[j * R + i] = cur_mat_in[i * C + j];
+          }
+        }
+        cur_mat_in += total_elements_one_mat;
+        cur_mat_out += total_elements_one_mat;
+      }
+    };
+
+  const int nof_rows = 1 << 7;
+  const int nof_cols = 1 << 8;
+  const int batch_size = 3;
+
+  const int total_size = nof_rows * nof_cols * batch_size;
+  std::vector<TypeParam> h_inout(total_size);
+  TypeParam::rand_host_many(h_inout.data(), total_size);
+
+  for (auto device : IcicleTestBase::s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    std::stringstream timer_label, timer_label_inplace;
+    timer_label << "matrix-transpoes [device=" << device << "]";
+    timer_label_inplace << "matrix-transpose-inplace [device=" << device << "]";
+
+    std::vector<TypeParam> h_out(total_size);
+    std::vector<TypeParam> h_out_ref(total_size);
+
+    auto config = default_vec_ops_config();
+    config.batch_size = batch_size;
+
+    START_TIMER(TRANSPOSE)
+    ICICLE_CHECK(matrix_transpose(h_inout.data(), nof_rows, nof_cols, config, h_out.data()));
+    END_TIMER(TRANSPOSE, timer_label.str().c_str(), true);
+
+    // Run reference transpose and compare results
+    transpose_ref_implementation(h_inout, batch_size, nof_rows, nof_cols, h_out_ref);
+    ASSERT_EQ(0, memcmp(h_out.data(), h_out_ref.data(), total_size * sizeof(TypeParam)));
+
+    // Repeat for in-place transpose
+    START_TIMER(TRANSPOS_INPLACE)
+    ICICLE_CHECK(matrix_transpose(h_inout.data(), nof_rows, nof_cols, config, h_inout.data()));
+    END_TIMER(TRANSPOS_INPLACE, timer_label_inplace.str().c_str(), true);
+
+    ASSERT_EQ(0, memcmp(h_inout.data(), h_out_ref.data(), total_size * sizeof(TypeParam)));
+  }
+}

@@ -26,6 +26,35 @@ class RingTest : public ModArithTest<T>
 {
 };
 
+// This function performs a negacyclic convolution multiplication
+static PolyRing Rq_mul(const PolyRing& a, const PolyRing& b)
+{
+  PolyRing c;
+  constexpr size_t degree = PolyRing::d;
+  const Zq* a_zq = reinterpret_cast<const Zq*>(&a);
+  const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
+  Zq* c_zq = reinterpret_cast<Zq*>(&c);
+  // zero initialize c
+  for (size_t k = 0; k < degree; ++k)
+    c_zq[k] = Zq::zero();
+
+  // Manual negacyclic convolution: c_k = sum_{i+j ≡ k mod n} a_i * b_j,
+  // with negation when i+j >= n
+  for (size_t i = 0; i < degree; ++i) {
+    for (size_t j = 0; j < degree; ++j) {
+      size_t ij = i + j;
+      size_t k = ij % degree;
+      Zq prod = a_zq[i] * b_zq[j];
+      if (ij >= degree) {
+        c_zq[k] = c_zq[k] - prod; // negacyclic
+      } else {
+        c_zq[k] = c_zq[k] + prod;
+      }
+    }
+  }
+  return c;
+}
+
 using RingTestBase = ModArithTestBase;
 TYPED_TEST_SUITE(RingTest, FTImplementations);
 
@@ -263,7 +292,7 @@ TEST_F(RingTestBase, BalancedDecompositionPolyRing)
   // Generate a random input polynomial over PolyRing
   constexpr size_t size = 7;
   std::vector<PolyRing> input_polynomials(size);
-  Zq::rand_host_many(reinterpret_cast<Zq*>(input_polynomials.data()), size * PolyRing::d);
+  PolyRing::rand_host_many(input_polynomials.data(), size);
 
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
@@ -323,7 +352,6 @@ TEST_F(RingTestBase, BalancedDecompositionPolyRingBatch)
 
   constexpr size_t degree = PolyRing::d;
   constexpr size_t size = 1 << 10; // Number of PolyRing polynomials
-  const size_t total_zq_elements = degree * size;
 
   // Get modulus q as signed integer for arithmetic safety
   constexpr auto q_storage = PolyRing::Base::get_modulus();
@@ -332,7 +360,7 @@ TEST_F(RingTestBase, BalancedDecompositionPolyRingBatch)
 
   // Generate random input polynomials over PolyRing
   std::vector<PolyRing> input(size);
-  Zq::rand_host_many(reinterpret_cast<Zq*>(input.data()), total_zq_elements);
+  PolyRing::rand_host_many(input.data(), size);
 
   std::vector<PolyRing> recomposed(size);
   const std::vector<uint32_t> bases = {2, 3, 16, 155, 1024, static_cast<uint32_t>(std::sqrt(q))};
@@ -536,7 +564,7 @@ TEST_F(RingTestBase, JLprojectionLemma)
 
   // Randomize input polynomials
   std::vector<PolyRing> input(input_size);
-  Zq::rand_host_many(reinterpret_cast<Zq*>(input.data()), input_size * PolyRing::d);
+  PolyRing::rand_host_many(input.data(), input_size);
 
   // Prepare random seed
   std::byte seed[32];
@@ -547,10 +575,6 @@ TEST_F(RingTestBase, JLprojectionLemma)
   for (const auto& device : s_registered_devices) {
     if (device == "CUDA") continue; // TODO: implement CUDA backend
     ICICLE_CHECK(icicle_set_device(device));
-
-    // Pre-transform input into NTT domain
-    std::vector<PolyRing> input_ntt(input_size);
-    ICICLE_CHECK(ntt(input.data(), input_size, NTTDir::kForward, {}, input_ntt.data()));
 
     // Project using flat Zq view (as if input is Zq vector)
     std::vector<field_t> projected(projected_size);
@@ -567,18 +591,11 @@ TEST_F(RingTestBase, JLprojectionLemma)
         seed, sizeof(seed), row_size, row_idx, 1, /* 1 row */
         true /* conjugate */, {}, jl_row_conj.data()));
 
-      // Transform conjugated row into NTT domain
-      ICICLE_CHECK(ntt(jl_row_conj.data(), row_size, NTTDir::kForward, {}, jl_row_conj.data()));
-
-      // Compute ⟨JL_row, input⟩ using elementwise multiplication in NTT domain
-      std::vector<PolyRing> mul_result(row_size);
-      ICICLE_CHECK(vector_mul(input_ntt.data(), jl_row_conj.data(), row_size, {}, mul_result.data()));
-
-      PolyRing inner_product_ntt;
-      ICICLE_CHECK(vector_sum(mul_result.data(), row_size, {}, &inner_product_ntt));
-
-      // Inverse NTT to recover polynomial inner product
-      ICICLE_CHECK(ntt(&inner_product_ntt, 1, NTTDir::kInverse, {}, &inner_product_ntt));
+      // compute inner product in Rq domain. Note that we avoid negacyclic-NTT to avoid unnecessary dependency
+      PolyRing inner_product_ntt = {0};
+      for (size_t i = 0; i < row_size; ++i) {
+        inner_product_ntt = inner_product_ntt + Rq_mul(input[i], jl_row_conj[i]);
+      }
 
       // Validate that the constant term equals the Zq projection result
       const field_t constant_term = inner_product_ntt.values[0];
@@ -1014,40 +1031,14 @@ TEST_F(RingTestBase, NormRelativeBatch)
   }
 }
 
+#ifdef NTT
 TEST_F(RingTestBase, NegacyclicNTT)
 {
-  auto PolyRing_multiplication = [](const PolyRing& a, const PolyRing& b) -> PolyRing {
-    PolyRing c;
-    constexpr size_t degree = PolyRing::d;
-    const Zq* a_zq = reinterpret_cast<const Zq*>(&a);
-    const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
-    Zq* c_zq = reinterpret_cast<Zq*>(&c);
-    // zero initialize c
-    for (size_t k = 0; k < degree; ++k)
-      c_zq[k] = Zq::zero();
-
-    // Manual negacyclic convolution: c_k = sum_{i+j ≡ k mod n} a_i * b_j,
-    // with negation when i+j >= n
-    for (size_t i = 0; i < degree; ++i) {
-      for (size_t j = 0; j < degree; ++j) {
-        size_t ij = i + j;
-        size_t k = ij % degree;
-        Zq prod = a_zq[i] * b_zq[j];
-        if (ij >= degree) {
-          c_zq[k] = c_zq[k] - prod; // negacyclic
-        } else {
-          c_zq[k] = c_zq[k] + prod;
-        }
-      }
-    }
-    return c;
-  };
-
   int size = 1 << 15;
   std::vector<PolyRing> a(size);
   std::vector<PolyRing> b(size);
-  Zq::rand_host_many(reinterpret_cast<Zq*>(a.data()), PolyRing::d * size);
-  Zq::rand_host_many(reinterpret_cast<Zq*>(b.data()), PolyRing::d * size);
+  PolyRing::rand_host_many(a.data(), size);
+  PolyRing::rand_host_many(b.data(), size);
 
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
@@ -1080,11 +1071,12 @@ TEST_F(RingTestBase, NegacyclicNTT)
 
     // Verify correctness
     for (int i = 0; i < size; ++i) {
-      PolyRing expected = PolyRing_multiplication(a[i], b[i]);
+      PolyRing expected = Rq_mul(a[i], b[i]);
       EXPECT_EQ(0, memcmp(&expected, &res[i], sizeof(PolyRing)));
     }
   }
 }
+#endif // NTT
 
 TEST_F(RingTestBase, RandomSampling)
 {

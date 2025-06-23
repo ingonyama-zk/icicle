@@ -1,3 +1,5 @@
+//go:build !icicle_exclude_all || ntt
+
 package ntt
 
 // #cgo CFLAGS: -I./include/
