@@ -20,6 +20,9 @@ serial_test = "3.0.0"
 cmake = "0.1.50"
 
 [features]
+default = ["ntt"]
+ntt = []
+
 cuda_backend = ["icicle-runtime/cuda_backend"]
 pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]
 metal_backend = ["icicle-runtime/metal_backend"]

@@ -90,7 +90,8 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
             return Ok(());
         }
         if size > self.len() {
-            panic!("size exceeds slice length");
+            eprintln!("size exceeds slice length");
+            return Err(eIcicleError::CopyFailed);
         }
         unsafe {
             runtime::memset(self.as_mut_ptr() as *mut c_void, value as i32, size).wrap()?;
@@ -103,7 +104,8 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
             return Ok(());
         }
         if size > self.len() {
-            panic!("size exceeds slice length");
+            eprintln!("size exceeds slice length");
+            return Err(eIcicleError::CopyFailed);
         }
         unsafe {
             runtime::memset_async(self.as_mut_ptr() as *mut c_void, value as i32, size, stream.handle).wrap()?;
@@ -148,10 +150,12 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
             return Ok(());
         }
         if size > self.len() {
-            panic!("size exceeds slice length");
+            eprintln!("size exceeds slice length");
+            return Err(eIcicleError::CopyFailed);
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an active device");
+            eprintln!("not allocated on an active device");
+            return Err(eIcicleError::CopyFailed);
         }
 
         let byte_size = size_of::<T>() * size;
@@ -163,10 +167,12 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
             return Ok(());
         }
         if size > self.len() {
-            panic!("size exceeds slice length");
+            eprintln!("size exceeds slice length");
+            return Err(eIcicleError::CopyFailed);
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an active device");
+            eprintln!("not allocated on an active device");
+            return Err(eIcicleError::CopyFailed);
         }
 
         let byte_size = size_of::<T>() * size;
@@ -279,7 +285,8 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an active device");
+            eprintln!("not allocated on an active device");
+            return Err(eIcicleError::CopyFailed);
         }
 
         let size = size_of::<T>() * self.len();
@@ -298,7 +305,8 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an active device");
+            eprintln!("not allocated on an active device");
+            return Err(eIcicleError::CopyFailed);
         }
 
         let size = size_of::<T>() * self.len();
@@ -316,7 +324,8 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an active device");
+            eprintln!("not allocated on an active device");
+            return Err(eIcicleError::CopyFailed);
         }
 
         let size = size_of::<T>() * self.len();
@@ -340,7 +349,8 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an active device");
+            eprintln!("not allocated on an active device");
+            return Err(eIcicleError::CopyFailed);
         }
 
         let size = size_of::<T>() * self.len();
@@ -562,5 +572,186 @@ impl<T> Deref for DeviceVec<T> {
 impl<T> DerefMut for DeviceVec<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self[..]
+    }
+}
+
+// Utility to reinterpret HostOrDeviceSlice via a UnifiedSlice or UnifiedSliceMut that also implement HostOrDeviceSlice.
+pub mod reinterpret {
+    use super::*;
+
+    pub enum UnifiedSlice<'a, T: 'a> {
+        Host(&'a HostSlice<T>),
+        Device(&'a DeviceSlice<T>),
+    }
+
+    pub enum UnifiedSliceMut<'a, T: 'a> {
+        Host(&'a mut HostSlice<T>),
+        Device(&'a mut DeviceSlice<T>),
+    }
+
+    /// SAFETY: Caller must ensure layout compatibility between `From` and `To`.
+    fn compute_output_len<From, To>(len: usize) -> Result<usize, eIcicleError> {
+        let from_size = size_of::<From>();
+        let to_size = size_of::<To>();
+
+        if from_size == 0 || to_size == 0 {
+            return Err(eIcicleError::InvalidArgument);
+        }
+
+        let total_bytes = from_size
+            .checked_mul(len)
+            .ok_or(eIcicleError::InvalidArgument)?;
+
+        if total_bytes % to_size != 0 {
+            return Err(eIcicleError::InvalidArgument);
+        }
+
+        Ok(total_bytes / to_size)
+    }
+
+    /// SAFETY: Caller must ensure layout of P as [P::Base; DEGREE]
+    pub unsafe fn reinterpret_slice<From, To>(
+        input: &(impl HostOrDeviceSlice<From> + ?Sized),
+    ) -> Result<UnifiedSlice<'_, To>, eIcicleError>
+    where
+        From: Sized,
+        To: Sized,
+    {
+        let len = input.len();
+        let flat_len = compute_output_len::<From, To>(len)?;
+        let ptr = input.as_ptr() as *const To;
+
+        if input.is_on_device() {
+            Ok(UnifiedSlice::Device(DeviceSlice::from_raw_parts(ptr, flat_len)))
+        } else {
+            Ok(UnifiedSlice::Host(HostSlice::from_raw_parts(ptr, flat_len)))
+        }
+    }
+
+    pub unsafe fn reinterpret_slice_mut<From, To>(
+        input: &mut (impl HostOrDeviceSlice<From> + ?Sized),
+    ) -> Result<UnifiedSliceMut<'_, To>, eIcicleError>
+    where
+        From: Sized,
+        To: Sized,
+    {
+        let len = input.len();
+        let flat_len = compute_output_len::<From, To>(len)?;
+        let ptr = input.as_mut_ptr() as *mut To;
+
+        if input.is_on_device() {
+            Ok(UnifiedSliceMut::Device(DeviceSlice::from_raw_parts_mut(ptr, flat_len)))
+        } else {
+            Ok(UnifiedSliceMut::Host(HostSlice::from_raw_parts_mut(ptr, flat_len)))
+        }
+    }
+
+    impl<'a, T> HostOrDeviceSlice<T> for UnifiedSlice<'a, T> {
+        fn is_on_device(&self) -> bool {
+            match self {
+                UnifiedSlice::Device(d) => d.is_on_device(),
+                UnifiedSlice::Host(h) => h.is_on_device(),
+            }
+        }
+
+        fn is_on_active_device(&self) -> bool {
+            match self {
+                UnifiedSlice::Device(d) => d.is_on_active_device(),
+                UnifiedSlice::Host(h) => h.is_on_active_device(),
+            }
+        }
+
+        unsafe fn as_ptr(&self) -> *const T {
+            match self {
+                UnifiedSlice::Device(d) => d.as_ptr(),
+                UnifiedSlice::Host(h) => h.as_ptr(),
+            }
+        }
+
+        unsafe fn as_mut_ptr(&mut self) -> *mut T {
+            panic!("Cannot get mutable pointer from immutable UnifiedSlice")
+        }
+
+        fn len(&self) -> usize {
+            match self {
+                UnifiedSlice::Device(d) => d.len(),
+                UnifiedSlice::Host(h) => h.len(),
+            }
+        }
+
+        fn is_empty(&self) -> bool {
+            match self {
+                UnifiedSlice::Device(d) => d.is_empty(),
+                UnifiedSlice::Host(h) => h.is_empty(),
+            }
+        }
+
+        fn memset(&mut self, _: u8, _: usize) -> Result<(), eIcicleError> {
+            eprintln!("Cannot memset immutable UnifiedSlice");
+            Err(eIcicleError::CopyFailed)
+        }
+
+        fn memset_async(&mut self, _: u8, _: usize, _: &IcicleStream) -> Result<(), eIcicleError> {
+            eprintln!("Cannot memset_async immutable UnifiedSlice");
+            Err(eIcicleError::CopyFailed)
+        }
+    }
+
+    impl<'a, T> HostOrDeviceSlice<T> for UnifiedSliceMut<'a, T> {
+        fn is_on_device(&self) -> bool {
+            match self {
+                UnifiedSliceMut::Device(d) => d.is_on_device(),
+                UnifiedSliceMut::Host(h) => h.is_on_device(),
+            }
+        }
+
+        fn is_on_active_device(&self) -> bool {
+            match self {
+                UnifiedSliceMut::Device(d) => d.is_on_active_device(),
+                UnifiedSliceMut::Host(h) => h.is_on_active_device(),
+            }
+        }
+
+        unsafe fn as_ptr(&self) -> *const T {
+            match self {
+                UnifiedSliceMut::Device(d) => d.as_ptr(),
+                UnifiedSliceMut::Host(h) => h.as_ptr(),
+            }
+        }
+
+        unsafe fn as_mut_ptr(&mut self) -> *mut T {
+            match self {
+                UnifiedSliceMut::Device(d) => d.as_mut_ptr(),
+                UnifiedSliceMut::Host(h) => h.as_mut_ptr(),
+            }
+        }
+
+        fn len(&self) -> usize {
+            match self {
+                UnifiedSliceMut::Device(d) => d.len(),
+                UnifiedSliceMut::Host(h) => h.len(),
+            }
+        }
+
+        fn is_empty(&self) -> bool {
+            match self {
+                UnifiedSliceMut::Device(d) => d.is_empty(),
+                UnifiedSliceMut::Host(h) => h.is_empty(),
+            }
+        }
+
+        fn memset(&mut self, value: u8, size: usize) -> Result<(), eIcicleError> {
+            match self {
+                UnifiedSliceMut::Device(d) => d.memset(value, size),
+                UnifiedSliceMut::Host(h) => h.memset(value, size),
+            }
+        }
+
+        fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), eIcicleError> {
+            match self {
+                UnifiedSliceMut::Device(d) => d.memset_async(value, size, stream),
+                UnifiedSliceMut::Host(h) => h.memset_async(value, size, stream),
+            }
+        }
     }
 }
