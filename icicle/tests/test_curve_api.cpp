@@ -83,7 +83,7 @@ public:
   {
     const int logn = 12;
     const int batch = 1;
-    const int N = (1 << logn); // - rand_uint_32b(0, 5 * logn); // make it not always power of two
+    const int N = (1 << logn) - rand_uint_32b(0, 5 * logn); // make it not always power of two
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
@@ -105,11 +105,9 @@ public:
       std::ostringstream oss;
       oss << dev_type << " " << msg;
 
-      START_TIMER(MSM_sync)
       for (int i = 0; i < iters; ++i) {
         ICICLE_CHECK(msm(scalars.get(), bases.get(), N, config, result));
       }
-      END_TIMER(MSM_sync, oss.str().c_str(), measure);
     };
 
     for (int bitsize = 1; bitsize <= scalar_t::NBITS; bitsize += 1) {
