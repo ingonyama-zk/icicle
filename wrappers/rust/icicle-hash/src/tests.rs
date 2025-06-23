@@ -469,7 +469,7 @@ mod tests {
         for elements_per_leaf in [1, 5] {
             // calc tree parameters
             let leaf_size = field_element_size * elements_per_leaf;
-            let mut test_vec = vec![0 as u8; 1 << n];
+            let mut test_vec = vec![0 as u8; field_element_size * (1 << n)];
             rand::thread_rng().fill(&mut test_vec[..]);
             let nof_leafs = (((1 << n) + elements_per_leaf - 1) / elements_per_leaf) as u64;
             let tree_height = if nof_leafs.is_power_of_two() {
