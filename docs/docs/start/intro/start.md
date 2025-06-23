@@ -3,7 +3,7 @@ slug: /
 title: Overview
 ---
 
-# Introduction to ICICLE 
+# Introduction to ICICLE
 
 ICICLE is a versatile cryptography library supporting multiple compute backends—including CUDA, CPU, Metal, and upcoming backends like WebGPU, Vulkan, and ZPU. It enables you to build cryptographic applications with ease, leveraging the best available hardware for your needs.
 
