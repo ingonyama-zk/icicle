@@ -277,7 +277,7 @@ eIcicleError result = icicle_set_device(device);
 // Any call will now execute on GPU-0
 ```
 
-Full details can be found in our [getting started docs](https://dev.ingonyama.com/icicle/getting_started)
+Full details can be found in our [getting started docs](https://dev.ingonyama.com/setup)
 
 ## Contributions
 
@@ -339,7 +339,7 @@ See [LICENSE-MIT][LMIT] for details.
 [googletest]: https://github.com/google/googletest/
 [HOOKS_DOCS]: https://git-scm.com/docs/githooks
 [HOOKS_PATH]: ./scripts/hooks/
-[GOOGLE-COLAB-ICICLE]: https://dev.ingonyama.com/icicle/colab-instructions
+[GOOGLE-COLAB-ICICLE]: https://dev.ingonyama.com/start/integration-&-support/colab-instructions
 [GRANT_PROGRAM]: https://medium.com/@ingonyama/icicle-for-researchers-grants-challenges-9be1f040998e
 [ICICLE-CORE]: ./icicle/
 [ICICLE-RUST]: ./wrappers/rust/
