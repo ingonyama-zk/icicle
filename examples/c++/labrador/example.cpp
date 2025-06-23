@@ -929,6 +929,72 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
 //   return eIcicleError::SUCCESS;
 // }
 
+std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value)
+{
+  std::vector<PolyRing> vec(size);
+  for (auto& x : vec) {
+    for (size_t i = 0; i < PolyRing::d; ++i) {          // randomize each coefficient
+      uint64_t val = rand_uint_32b() % (max_value + 1); // uniform in [0, max_value]
+      x.values[i] = Zq::from(val);
+    }
+  }
+  return vec;
+}
+EqualityInstance create_rand_eq_inst(size_t n, size_t r, std::vector<Rq> S)
+{
+  int64_t q = get_q<Zq>();
+  // set a and phi completely randomly in Tq
+  EqualityInstance eq_inst{r, n, rand_poly_vec(r * r, q), rand_poly_vec(n * r, q), zero()};
+
+  // S_hat = NTT(S)
+  std::vector<Tq> S_hat(r * n);
+  ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
+
+  std::vector<Tq> S_hat_transposed(n * r);
+  ICICLE_CHECK(matrix_transpose<Tq>(S_hat.data(), r, n, {}, S_hat_transposed.data()));
+
+  // G_hat = S@S^t
+  std::vector<Tq> G_hat(r * r);
+  ICICLE_CHECK(matmul(S_hat.data(), r, n, S_hat_transposed.data(), n, r, {}, G_hat.data()));
+
+  Tq G_A_inner_prod, phi_S_inner_prod;
+  // G_A_inner_prod = <G, a>
+  ICICLE_CHECK(matmul(G_hat.data(), 1, r * r, eq_inst.a.data(), r * r, 1, {}, &G_A_inner_prod));
+  // phi_S_inner_prod = <S, phi>
+  ICICLE_CHECK(matmul(S_hat.data(), 1, r * n, eq_inst.phi.data(), r * n, 1, {}, &phi_S_inner_prod));
+
+  // b = -(<G, a> + <S, phi>)
+  ICICLE_CHECK(vector_add(G_A_inner_prod.values, phi_S_inner_prod.values, Rq::d, {}, eq_inst.b.values));
+  Zq minus_1 = Zq::from(-1);
+  ICICLE_CHECK(scalar_mul_vec(&minus_1, eq_inst.b.values, Rq::d, {}, eq_inst.b.values));
+  // Now S is a witness for the equality constraint eq_inst
+  return eq_inst;
+}
+
+ConstZeroInstance create_rand_const_zero_inst(size_t n, size_t r, std::vector<Rq> S)
+{
+  int64_t q = get_q<Zq>();
+  EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
+  // set a, phi equal to the random EqualityInstance
+  ConstZeroInstance const_zero_inst{r, n, eq_inst.a, eq_inst.phi, zero()};
+
+  // For b only set const coeff equal to the one in eq_inst.b
+  // eq_inst_b = INTT(eq_inst.b)
+  Rq eq_inst_b;
+  ICICLE_CHECK(ntt(&eq_inst.b, 1, NTTDir::kInverse, {}, &eq_inst_b));
+
+  Rq rand_b = rand_poly_vec(1, q)[0];
+  // make const coeff of rand_b equal to that of eq_inst_b
+  rand_b.values[0] = eq_inst_b.values[0];
+
+  Tq rand_b_hat;
+  // rand_b_hat = NTT(rand_b)
+  ICICLE_CHECK(ntt(&rand_b, 1, NTTDir::kForward, {}, &rand_b_hat));
+
+  const_zero_inst.b = rand_b_hat;
+  return const_zero_inst;
+}
+
 // === Main driver ===
 
 int main(int argc, char* argv[])
@@ -941,29 +1007,17 @@ int main(int argc, char* argv[])
   // TODO use icicle_malloc() instead of std::vector. Consider a DeviceVector<T> that behaves like std::vector
 
   // randomize the witness Si with low norm
-  const size_t n = 1 << 8;
-  const size_t r = 1 << 8;
+  const size_t n = 1 << 5;
+  const size_t r = 1 << 5;
   constexpr size_t d = Rq::d;
-  std::vector<Rq> S(r * n);
-
-  // TODO: generate dot-product constraints and a witness that solve them for the proof to be valid
-  auto randomize_Rq_vec = [](std::vector<Rq>& vec, int64_t max_value) {
-    for (auto& x : vec) {
-      for (size_t i = 0; i < d; ++i) {                    // randomize each coefficient
-        uint64_t val = rand_uint_32b() % (max_value + 1); // uniform in [0, sqrt_q]
-        x.values[i] = Zq::from(val);
-      }
-    }
-  };
-
-  // generate random values in [0, sqrt(q)]. We assume witness is low norm.
-  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
-  randomize_Rq_vec(S, sqrt_q);
+  std::vector<Rq> S = rand_poly_vec(r * n, 1);
+  EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
+  ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(n, r, S);
 
   // === Call the protocol ===
   // ICICLE_CHECK(prove(/* TODO(Ash): add arguments */));
   // ICICLE_CHECK(verify(/* TODO(Ash): add arguments */));
-
+  std::cout << "Hello\n";
   return 0;
 }
 

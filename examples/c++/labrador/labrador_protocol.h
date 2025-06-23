@@ -22,7 +22,7 @@ struct QuadraticConstraint {
 
   QuadraticConstraint(size_t r, size_t n) : r(r), n(n), a(r * r, zero()), phi(r * n, zero()), b(zero()) {}
   QuadraticConstraint(size_t r, size_t n, std::vector<Tq> a, std::vector<Tq> phi, Tq b)
-      : r(r), n(n), a(std::move(a)), phi(std::move(phi)), b(std::move(b))
+      : r(r), n(n), a(a), phi(phi), b(b)
   {
     // check if the sizes of a and phi are correct
     if (a.size() != r * r || phi.size() != r * n) {
@@ -190,7 +190,7 @@ struct LabradorBaseCaseProof {
   std::vector<Rq> g;
   std::vector<Rq> h;
 
-  LabradorBaseCaseProof(size_t r, size_t n) : final_const(r, n), z_hat(), t(), g(), h(){};
+  LabradorBaseCaseProof(size_t r, size_t n) : final_const(r, n), z_hat(), t(), g(), h() {};
   LabradorBaseCaseProof(
     EqualityInstance final_const, std::vector<Tq> z_hat, std::vector<Tq> t, std::vector<Tq> g, std::vector<Tq> h)
       : final_const(final_const), z_hat(std::move(z_hat)), t(std::move(t)), g(std::move(g)), h(std::move(h))
