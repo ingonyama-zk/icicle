@@ -1,4 +1,4 @@
-//go:build !icicle_exclude_all || msm
+//go:build !icicle_exclude_all || {{if eq .CurvePrefix "G2"}}msm && g2{{else}}msm{{end}}
 
 package tests
 
@@ -334,12 +334,12 @@ type MSM{{.CurvePrefix}}TestSuite struct {
 }
 
 func (s *MSM{{.CurvePrefix}}TestSuite) TestMSM{{.CurvePrefix}}() {
-	s.Run("TestMSM{{.CurvePrefix}}", testWrapper(&s.Suite, testMSM{{.CurvePrefix}}))
-	s.Run("TestMSM{{.CurvePrefix}}Batch", testWrapper(&s.Suite, testMSM{{.CurvePrefix}}Batch))
-	s.Run("TestPrecomputePoints{{.CurvePrefix}}", testWrapper(&s.Suite, testPrecomputePoints{{.CurvePrefix}}))
-	s.Run("TestPrecomputePointsSharedBases{{.CurvePrefix}}", testWrapper(&s.Suite, testPrecomputePointsSharedBases{{.CurvePrefix}}))
-	s.Run("TestMSM{{.CurvePrefix}}SkewedDistribution", testWrapper(&s.Suite, testMSM{{.CurvePrefix}}SkewedDistribution))
-	// s.Run("TestMSM{{.CurvePrefix}}MultiDevice", testWrapper(&s.Suite, testMSM{{.CurvePrefix}}MultiDevice))
+	s.Run("TestMSM{{.CurvePrefix}}", test_helpers.TestWrapper(&s.Suite, testMSM{{.CurvePrefix}}))
+	s.Run("TestMSM{{.CurvePrefix}}Batch", test_helpers.TestWrapper(&s.Suite, testMSM{{.CurvePrefix}}Batch))
+	s.Run("TestPrecomputePoints{{.CurvePrefix}}", test_helpers.TestWrapper(&s.Suite, testPrecomputePoints{{.CurvePrefix}}))
+	s.Run("TestPrecomputePointsSharedBases{{.CurvePrefix}}", test_helpers.TestWrapper(&s.Suite, testPrecomputePointsSharedBases{{.CurvePrefix}}))
+	s.Run("TestMSM{{.CurvePrefix}}SkewedDistribution", test_helpers.TestWrapper(&s.Suite, testMSM{{.CurvePrefix}}SkewedDistribution))
+	// s.Run("TestMSM{{.CurvePrefix}}MultiDevice", test_helpers.TestWrapper(&s.Suite, testMSM{{.CurvePrefix}}MultiDevice))
 }
 
 func TestSuiteMSM{{.CurvePrefix}}(t *testing.T) {
