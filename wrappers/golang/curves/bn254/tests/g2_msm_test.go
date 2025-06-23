@@ -1,4 +1,4 @@
-//go:build !icicle_exclude_all || msm
+//go:build !icicle_exclude_all || (msm && g2)
 
 package tests
 
@@ -334,12 +334,12 @@ type MSMG2TestSuite struct {
 }
 
 func (s *MSMG2TestSuite) TestMSMG2() {
-	s.Run("TestMSMG2", testWrapper(&s.Suite, testMSMG2))
-	s.Run("TestMSMG2Batch", testWrapper(&s.Suite, testMSMG2Batch))
-	s.Run("TestPrecomputePointsG2", testWrapper(&s.Suite, testPrecomputePointsG2))
-	s.Run("TestPrecomputePointsSharedBasesG2", testWrapper(&s.Suite, testPrecomputePointsSharedBasesG2))
-	s.Run("TestMSMG2SkewedDistribution", testWrapper(&s.Suite, testMSMG2SkewedDistribution))
-	// s.Run("TestMSMG2MultiDevice", testWrapper(&s.Suite, testMSMG2MultiDevice))
+	s.Run("TestMSMG2", test_helpers.TestWrapper(&s.Suite, testMSMG2))
+	s.Run("TestMSMG2Batch", test_helpers.TestWrapper(&s.Suite, testMSMG2Batch))
+	s.Run("TestPrecomputePointsG2", test_helpers.TestWrapper(&s.Suite, testPrecomputePointsG2))
+	s.Run("TestPrecomputePointsSharedBasesG2", test_helpers.TestWrapper(&s.Suite, testPrecomputePointsSharedBasesG2))
+	s.Run("TestMSMG2SkewedDistribution", test_helpers.TestWrapper(&s.Suite, testMSMG2SkewedDistribution))
+	// s.Run("TestMSMG2MultiDevice", test_helpers.TestWrapper(&s.Suite, testMSMG2MultiDevice))
 }
 
 func TestSuiteMSMG2(t *testing.T) {
