@@ -118,7 +118,7 @@ struct LabradorInstance {
   // Add an EqualityInstance
   void add_equality_constraint(const EqualityInstance& instance)
   {
-    if (instance.r == r || instance.n == n) {
+    if (instance.r != r || instance.n != n) {
       throw std::invalid_argument("EqualityInstance not compatible with LabradorInstance");
     }
     equality_constraints.push_back(instance);
@@ -127,7 +127,7 @@ struct LabradorInstance {
   // Add a ConstZeroInstance
   void add_const_zero_constraint(const ConstZeroInstance& instance)
   {
-    if (instance.r == r || instance.n == n) {
+    if (instance.r != r || instance.n != n) {
       throw std::invalid_argument("ConstZeroInstance not compatible with LabradorInstance");
     }
     const_zero_constraints.push_back(instance);

@@ -156,7 +156,10 @@ namespace icicle {
     eIcicleError random_sampling(
       const std::byte* seed, size_t seed_len, bool fast_mode, const SamplingConfig& cfg, Zq* output, size_t output_size)
     {
-      return eIcicleError::API_NOT_IMPLEMENTED; // TODO
+      for (uint i = 0; i < output_size; i++) {
+        output[i] = Zq::from(rand_uint_32b());
+      }
+      return eIcicleError::SUCCESS;
     }
 
     eIcicleError random_sampling(

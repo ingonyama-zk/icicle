@@ -106,39 +106,43 @@ std::vector<Rq> compute_Q_poly(size_t n, size_t r, size_t JL_out, std::byte* see
   // compute the Pi matrix, conjugated in Rq
   ICICLE_CHECK(get_jl_matrix_rows<Rq>(
     jl_seed.data(), jl_seed.size(),
-    r * n * d, // row_size
-    0,         // row_index
-    JL_out,    // num_rows
-    true,      // conjugate
-    {},        // config
+    r * n,  // row_size
+    0,      // row_index
+    JL_out, // num_rows
+    true,   // conjugate
+    {},     // config
     Q.data()));
-  ICICLE_CHECK(icicle_device_synchronize());
+
   return Q;
 }
 
+// TODO: Simply returns the polynomial x for every challenge rn
 std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, std::byte* seed, size_t seed_len)
 {
   size_t d = Rq::d;
-  std::vector<Rq> challenge(r);
-  std::vector<size_t> j_ch(r, 0);
-  // TODO: can parallelise the i loop
-  for (size_t i = 0; i < r; i++) {
-    while (true) {
-      std::vector<std::byte> ch_seed(seed, seed + seed_len);
-      ch_seed.push_back(std::byte(i));
-      ch_seed.push_back(std::byte(j_ch[i]));
-      ICICLE_CHECK(sample_challenge_polynomials(ch_seed.data(), ch_seed.size(), {1, 2}, {31, 10}, challenge[i]));
-
-      bool norm_bound = false;
-      ICICLE_CHECK(check_norm_bound(challenge[i].values, d, eNormType::Lop, 15, {}, &norm_bound));
-
-      if (norm_bound) {
-        break;
-      } else {
-        j_ch[i]++;
-      }
-    }
+  std::vector<Rq> challenge(r, zero());
+  for (auto& c : challenge) {
+    c.values[1] = Zq::from(1);
   }
+  // std::vector<size_t> j_ch(r, 0);
+  // // TODO: can parallelise the i loop
+  // for (size_t i = 0; i < r; i++) {
+  //   while (true) {
+  //     std::vector<std::byte> ch_seed(seed, seed + seed_len);
+  //     ch_seed.push_back(std::byte(i));
+  //     ch_seed.push_back(std::byte(j_ch[i]));
+  //     ICICLE_CHECK(sample_challenge_polynomials(ch_seed.data(), ch_seed.size(), {1, 2}, {31, 10}, challenge[i]));
+
+  //     bool norm_bound = false;
+  //     ICICLE_CHECK(check_norm_bound(challenge[i].values, d, eNormType::Lop, 15, {}, &norm_bound));
+
+  //     if (norm_bound) {
+  //       break;
+  //     } else {
+  //       j_ch[i]++;
+  //     }
+  //   }
+  // }
   return challenge;
 }
 
@@ -328,10 +332,13 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   constexpr size_t d = Rq::d;
 
   PartialTranscript trs;
+  std::cout << "Step 1 completed: Initialized variables" << std::endl;
+
   // Step 2: Convert S to the NTT Domain
   std::vector<Tq> S_hat(r * n);
   // Perform negacyclic NTT on the witness S
   ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
+  std::cout << "Step 2 completed: NTT conversion" << std::endl;
 
   // Step 3: S@A = T
   const std::vector<std::byte>& ajtai_seed = lab_inst.param.ajtai_seed;
@@ -341,6 +348,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // Use ajtai_commitment to compute T_hat = S_hat @ A
   size_t kappa = lab_inst.param.kappa;
   std::vector<Tq> T_hat = ajtai_commitment(seed_A.data(), seed_A.size(), n, kappa, S_hat.data(), r * n);
+  std::cout << "Step 3 completed: Ajtai commitment T_hat" << std::endl;
 
   // Step 4: already done
 
@@ -348,12 +356,14 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Rq> T(r * kappa);
   // Perform negacyclic INTT
   ICICLE_CHECK(ntt(T_hat.data(), r * kappa, NTTDir::kInverse, {}, T.data()));
+  std::cout << "Step 5 completed: INTT conversion of T_hat" << std::endl;
 
   // Step 6: decompose T to T_tilde
   size_t base1 = lab_inst.param.base1;
   size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base1);
   std::vector<Rq> T_tilde(l1 * r * kappa);
   ICICLE_CHECK(decompose(T.data(), r * kappa, base1, {}, T_tilde.data(), T_tilde.size()));
+  std::cout << "Step 6 completed: Decomposed T to T_tilde" << std::endl;
 
   // Step 7: compute g
   std::vector<Tq> S_hat_transposed(n * r);
@@ -367,12 +377,14 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Rq> g(r_choose_2);
 
   ICICLE_CHECK(ntt(g_hat.data(), r_choose_2, NTTDir::kInverse, {}, g.data()));
+  std::cout << "Step 7 completed: Computed g" << std::endl;
 
   // Step 8: decompose g to g_tilde
   size_t base2 = lab_inst.param.base2;
   size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base2);
   std::vector<Rq> g_tilde(l2 * g.size());
   ICICLE_CHECK(decompose(g.data(), g.size(), base2, {}, g_tilde.data(), g_tilde.size()));
+  std::cout << "Step 8 completed: Decomposed g to g_tilde" << std::endl;
 
   // Step 9: already done
 
@@ -396,6 +408,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   std::vector<Tq> u1(kappa1);
   vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
+  std::cout << "Step 10 completed: Computed u1" << std::endl;
 
   // Step 11: hash (lab_inst, ajtai_seed, u1) to get seed1
   // hash and get a challenge
@@ -409,10 +422,12 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // add u1 to the trs
   trs.u1 = u1;
   trs.seed1 = seed1;
+  std::cout << "Step 11 completed: Generated seed1" << std::endl;
 
   // Step 12: Select a JL projection
   size_t JL_out = lab_inst.param.JL_out;
   auto [JL_i, p] = select_valid_jl_proj(seed1.data(), seed1.size());
+  std::cout << "Step 12 completed: Selected JL projection" << std::endl;
 
   // Step 13: send (JL_i, p) to the Verifier and get a challenge
   trs.JL_i = JL_i;
@@ -425,12 +440,14 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
     hasher.hash(hash_input, strlen(hash_input), {}, seed2.data());
   }
   trs.seed2 = seed2;
+  std::cout << "Step 13 completed: Generated seed2" << std::endl;
 
   // Step 14: removed
   // Step 15, 16: already done
 
   // Step 17: Create conjugated polynomial vectors from JL matrix rows
   std::vector<Rq> Q = compute_Q_poly(n, r, JL_out, seed1.data(), seed1.size(), JL_i);
+  std::cout << "Step 17 completed: Computed Q polynomial" << std::endl;
 
   // Step 18: Let L be the number of constZeroInstance constraints in LabradorInstance.
   // For 0 ≤ k < ceil(128/log(q)), sample the following random vectors:
@@ -454,10 +471,12 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   trs.psi = psi;
   trs.omega = omega;
+  std::cout << "Step 18 completed: Sampled psi and omega" << std::endl;
 
   // Step 19: Aggregate ConstZeroInstance constraints
   std::vector<Tq> msg3 =
     lab_inst.agg_const_zero_constraints(num_aggregation_rounds, JL_out, S_hat, g_hat, Q, psi, omega);
+  std::cout << "Step 19 completed: Aggregated ConstZeroInstance constraints" << std::endl;
 
   // Step 20: seed3 = hash(seed2, msg3)
   // TODO: add serialization to msg3 and put them in the placeholder
@@ -466,6 +485,8 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   trs.b_agg = msg3;
   trs.seed3 = seed3;
+  std::cout << "Step 20 completed: Generated seed3" << std::endl;
+
   // Step 21: Sample random polynomial vectors α using seed3
   // Let K be the number of EqualityInstances in the LabradorInstance
   const size_t K = lab_inst.equality_constraints.size();
@@ -476,8 +497,11 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   ICICLE_CHECK(random_sampling(alpha_seed.data(), alpha_seed.size(), false, {}, alpha_hat.data(), K));
 
   trs.alpha_hat = alpha_hat;
+  std::cout << "Step 21 completed: Sampled alpha_hat" << std::endl;
+
   // Step 22:
   lab_inst.agg_equality_constraints(alpha_hat);
+  std::cout << "Step 22 completed: Aggregated equality constraints" << std::endl;
 
   // Step 23: For 0 ≤ i ≤ j < r, the Prover computes the matrix multiplication between matrix
   // Phi = (φ'_0|φ'_1|···|φ'_{r-1})^T ∈ R_q^{r×n} and S ∈ R_q^{r×n} defined earlier.
@@ -506,6 +530,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
     &two_inv, reinterpret_cast<Zq*>(Phi_times_St.data()), r * r, {}, reinterpret_cast<Zq*>(Phi_times_St.data())));
 
   std::vector<Rq> H = extract_symm_part(Phi_times_St.data(), r);
+  std::cout << "Step 23 completed: Computed H matrix" << std::endl;
 
   // Step 24: Decompose h
   size_t base3 = lab_inst.param.base3;
@@ -515,6 +540,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   ICICLE_CHECK(decompose(H.data(), H.size(), base3, {}, H_tilde.data(), H_tilde.size()));
   std::vector<Tq> H_tilde_hat(H_tilde.size());
   ICICLE_CHECK(ntt(H_tilde.data(), H_tilde.size(), NTTDir::kForward, {}, H_tilde_hat.data()));
+  std::cout << "Step 24 completed: Decomposed H to H_tilde" << std::endl;
 
   // Step 25: already done
   // Step 26: commit to H_tilde
@@ -524,6 +550,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // u2 = D@H_tilde
   std::vector<Tq> u2 =
     ajtai_commitment(seed_D.data(), seed_D.size(), l3 * r_choose_2, kappa2, H_tilde_hat.data(), H_tilde_hat.size());
+  std::cout << "Step 26 completed: Computed u2 commitment" << std::endl;
 
   // Step 27:
   // add u2 to the trs
@@ -534,12 +561,15 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   hasher.hash("Placeholder4", 12, {}, seed4.data());
 
   trs.seed4 = seed4;
+  std::cout << "Step 27 completed: Generated seed4" << std::endl;
+
   // Step 28: sampling low operator norm challenges
   std::vector<Rq> challenge = sample_low_norm_challenges(n, r, seed4.data(), seed4.size());
 
   std::vector<Tq> challenges_hat(r);
   ICICLE_CHECK(ntt(challenge.data(), challenge.size(), NTTDir::kForward, {}, challenges_hat.data()));
   trs.challenges_hat = challenges_hat;
+  std::cout << "Step 28 completed: Sampled challenges" << std::endl;
 
   // Step 29: Compute z_hat
   std::vector<Tq> z_hat(n);
@@ -552,7 +582,9 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
     }
   }
   LabradorBaseCaseProof final_proof{lab_inst.equality_constraints[0], z_hat, T_tilde, g_tilde, H_tilde};
+  std::cout << "Step 29 completed: Computed z_hat and created final proof" << std::endl;
 
+  std::cout << "base_case_prover completed successfully!" << std::endl;
   return std::make_pair(final_proof, trs);
 }
 
@@ -923,12 +955,6 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
   return std::make_pair(trs, base_proof);
 }
 
-// eIcicleError verify(/*TODO params*/)
-// {
-//   // TODO Ash: labrador verifier
-//   return eIcicleError::SUCCESS;
-// }
-
 std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value)
 {
   std::vector<PolyRing> vec(size);
@@ -940,6 +966,7 @@ std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value)
   }
   return vec;
 }
+
 EqualityInstance create_rand_eq_inst(size_t n, size_t r, std::vector<Rq> S)
 {
   int64_t q = get_q<Zq>();
@@ -1008,15 +1035,29 @@ int main(int argc, char* argv[])
 
   // randomize the witness Si with low norm
   const size_t n = 1 << 5;
-  const size_t r = 1 << 5;
+  const size_t r = 1 << 3;
   constexpr size_t d = Rq::d;
   std::vector<Rq> S = rand_poly_vec(r * n, 1);
   EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
   ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(n, r, S);
+  const char* ajtai_seed = "ajtai_seed";
+  LabradorParam param{
+    {reinterpret_cast<const std::byte*>(ajtai_seed), reinterpret_cast<const std::byte*>(ajtai_seed) + 10},
+    1 << 4,    // kappa
+    1 << 4,    // kappa1
+    1 << 4,    // kappa2,
+    1 << 16,   // base1
+    1 << 16,   // base2
+    1 << 16,   // base3
+    n * r * d, // beta
+  };
+  LabradorInstance lab_inst{r, n, param};
+  lab_inst.add_equality_constraint(eq_inst);
+  lab_inst.add_const_zero_constraint(const_zero_inst);
 
-  // === Call the protocol ===
-  // ICICLE_CHECK(prove(/* TODO(Ash): add arguments */));
-  // ICICLE_CHECK(verify(/* TODO(Ash): add arguments */));
+  LabradorBaseProver base_prover{lab_inst, S};
+  base_prover.base_case_prover();
+
   std::cout << "Hello\n";
   return 0;
 }
