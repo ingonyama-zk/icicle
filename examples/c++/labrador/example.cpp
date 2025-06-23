@@ -153,7 +153,7 @@ std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
   size_t JL_out,
   const std::vector<Tq>& S_hat,
   const std::vector<Tq>& g_hat,
-  std::vector<Rq>& Q,
+  std::vector<Tq>& Q_hat,
   const std::vector<Zq>& psi,
   const std::vector<Zq>& omega)
 {
@@ -219,20 +219,20 @@ std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
     }
 
     // For each j do:
-    // Q[j, :, :] = omega[k,j]* Q[j, :, :]
+    // Q_hat[j, :, :] = omega[k,j]* Q_hat[j, :, :]
     // use async_config to parallelise
     // TODO: can async with a aggregation above- leave for later
     for (size_t j = 0; j < JL_out; j++) {
       Zq omega_scalar = psi[psi_index(k, j)];
 
       ICICLE_CHECK(scalar_mul_vec(
-        &omega_scalar, reinterpret_cast<Zq*>(&Q[j * n * r]), r * n * d, async_config,
-        reinterpret_cast<Zq*>(&Q[j * n * r])));
+        &omega_scalar, reinterpret_cast<Zq*>(&Q_hat[j * n * r]), r * n * d, async_config,
+        reinterpret_cast<Zq*>(&Q_hat[j * n * r])));
     }
     ICICLE_CHECK(icicle_device_synchronize());
-    // new_constraint.phi[i,:] += \sum_j Q[j, i, :]
+    // new_constraint.phi[i,:] += \sum_j Q_hat[j, i, :]
     for (size_t j = 0; j < JL_out; j++) {
-      ICICLE_CHECK(vector_add(new_constraint.phi.data(), &Q[j * n * r], r * n, {}, new_constraint.phi.data()));
+      ICICLE_CHECK(vector_add(new_constraint.phi.data(), &Q_hat[j * n * r], r * n, {}, new_constraint.phi.data()));
     }
 
     // Compute B^{(k)} = (sum_{i<j} (a''_{ij}^{(k)} + a''_{ji}^{(k)}) * g_{ij} + sum_i a''_{ii}^{(k)} * g_{ii})
@@ -474,8 +474,12 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::cout << "Step 18 completed: Sampled psi and omega" << std::endl;
 
   // Step 19: Aggregate ConstZeroInstance constraints
+  std::vector<Tq> Q_hat(JL_out * r * n);
+  // Q_hat = NTT(Q)
+  ICICLE_CHECK(ntt(Q.data(), Q.size(), NTTDir::kForward, {}, Q_hat.data()));
+
   std::vector<Tq> msg3 =
-    lab_inst.agg_const_zero_constraints(num_aggregation_rounds, JL_out, S_hat, g_hat, Q, psi, omega);
+    lab_inst.agg_const_zero_constraints(num_aggregation_rounds, JL_out, S_hat, g_hat, Q_hat, psi, omega);
   std::cout << "Step 19 completed: Aggregated ConstZeroInstance constraints" << std::endl;
 
   // Step 20: seed3 = hash(seed2, msg3)
