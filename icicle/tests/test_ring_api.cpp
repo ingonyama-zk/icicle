@@ -513,7 +513,6 @@ TEST_F(RingTestBase, JLprojectionGetRowsTest)
   const auto cfg = VecOpsConfig{};
 
   for (const auto& device : s_registered_devices) {
-
     ICICLE_CHECK(icicle_set_device(device));
 
     std::stringstream projection_timer_label, generate_timer_label;
@@ -601,7 +600,8 @@ TEST_F(RingTestBase, JLprojectionGetRowsTest)
 
 //   // Compare matrices element by element
 //   for (size_t i = 0; i < output_size * N; ++i) {
-//     ASSERT_EQ(ref_matrix[i], main_matrix[i]) << "Matrix mismatch at index " << i << ": " << reference_device() << " = "
+//     ASSERT_EQ(ref_matrix[i], main_matrix[i]) << "Matrix mismatch at index " << i << ": " << reference_device() << " =
+//     "
 //                                              << ref_matrix[i] << ", " << main_device() << " = " << main_matrix[i];
 //   }
 
@@ -657,7 +657,6 @@ TEST_F(RingTestBase, JLprojectionLemma)
   }
 
   for (const auto& device : s_registered_devices) {
-
     ICICLE_CHECK(icicle_set_device(device));
 
     // Project using flat Zq view (as if input is Zq vector)
