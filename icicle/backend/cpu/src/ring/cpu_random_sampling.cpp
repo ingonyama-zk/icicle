@@ -18,11 +18,11 @@ void fast_mode_random_sampling(
   const size_t size_per_task =
     (size + RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS - 1) / RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS;
 
+  tf::Taskflow taskflow;
+  tf::Executor executor(get_nof_workers(cfg));
   for (uint32_t b = 0; b < cfg.batch_size; ++b) {
     field_t* batch_output = output + b * size;
     HashConfig hash_cfg{};
-    tf::Taskflow taskflow;
-    tf::Executor executor(get_nof_workers(cfg));
     for (uint64_t t = 0; t < RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS; ++t) {
       taskflow.emplace([=]() {
         std::vector<std::byte> hash_input(seed_len + sizeof(b) + sizeof(uint64_t));
@@ -68,10 +68,10 @@ void slow_mode_random_sampling(
   const int nof_workers = std::min((int)(hashes_per_batch), get_nof_workers(cfg));
   const size_t hashes_per_worker = (hashes_per_batch + nof_workers - 1) / nof_workers;
 
+  tf::Taskflow taskflow;
+  tf::Executor executor(nof_workers);
   for (uint32_t b = 0; b < cfg.batch_size; ++b) {
     field_t* batch_output = output + b * size;
-    tf::Taskflow taskflow;
-    tf::Executor executor(nof_workers);
     for (uint32_t w = 0; w < nof_workers; ++w) {
       taskflow.emplace([=]() {
         HashConfig hash_cfg{};
