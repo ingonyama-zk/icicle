@@ -223,7 +223,7 @@ std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
     // use async_config to parallelise
     // TODO: can async with a aggregation above- leave for later
     for (size_t j = 0; j < JL_out; j++) {
-      Zq omega_scalar = psi[psi_index(k, j)];
+      Zq omega_scalar = omega[omega_index(k, j)];
 
       ICICLE_CHECK(scalar_mul_vec(
         &omega_scalar, reinterpret_cast<Zq*>(&Q_hat[j * n * r]), r * n * d, async_config,
@@ -455,9 +455,6 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   const size_t num_aggregation_rounds = std::ceil(128.0 / std::log2(get_q<Zq>()));
 
   std::vector<Zq> psi(num_aggregation_rounds * L), omega(num_aggregation_rounds * JL_out);
-  // indexes into multidim arrays: psi[k][l] and omega[k][l]
-  auto psi_index = [L](size_t k, size_t l) { return k * L + l; };
-  auto omega_index = [JL_out](size_t k, size_t l) { return k * JL_out + l; };
 
   // sample psi
   std::vector<std::byte> psi_seed(seed2);
@@ -836,7 +833,8 @@ LabradorInstance prepare_recursion_instance(
       for (size_t i3 = 0; i3 < l3; i3++) {
         Tq temp;
         ICICLE_CHECK(vector_mul(challenges_hat[i1].values, challenges_hat[i2].values, d, {}, temp.values));
-        Zq multiplier = Zq::from(-1 * std::pow(prev_param.base3, i3));
+        Zq minus_1 = Zq::neg(Zq::from(1));
+        Zq multiplier = minus_1 * Zq::from(std::pow(prev_param.base3, i3));
         if (i1 != i2) { multiplier = Zq::from(2) * multiplier; }
         ICICLE_CHECK(scalar_mul_vec(&multiplier, temp.values, d, {}, temp.values));
         step11_constraint.phi[s11_k1 * n_prime + s11_k2] = temp;
@@ -923,7 +921,8 @@ LabradorInstance prepare_recursion_instance(
       for (size_t i3 = 0; i3 < l2; i3++) {
         Tq temp;
         ICICLE_CHECK(vector_mul(challenges_hat[i1].values, challenges_hat[i2].values, d, {}, temp.values));
-        Zq multiplier = Zq::from(-1 * std::pow(prev_param.base2, i3));
+        Zq minus_1 = Zq::neg(Zq::from(1));
+        Zq multiplier = minus_1 * Zq::from(std::pow(prev_param.base2, i3));
         if (i1 != i2) { multiplier = Zq::from(2) * multiplier; }
         ICICLE_CHECK(scalar_mul_vec(&multiplier, temp.values, d, {}, temp.values));
         step11_constraint.phi[s13_k1 * n_prime + s13_k2] = temp;
@@ -959,6 +958,21 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
   return std::make_pair(trs, base_proof);
 }
 
+// === Fns for testing ===
+
+// print a polynomial
+void print_poly(const PolyRing& poly, const std::string& name = "")
+{
+  if (!name.empty()) { std::cout << name << ": "; }
+  std::cout << "[";
+  for (size_t i = 0; i < PolyRing::d; ++i) {
+    std::cout << poly.values[i];
+    if (i < PolyRing::d - 1) { std::cout << ", "; }
+  }
+  std::cout << "]" << std::endl;
+}
+
+// Generate a random polynomial vector with coefficients bounded by max_value
 std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value)
 {
   std::vector<PolyRing> vec(size);
@@ -971,7 +985,8 @@ std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value)
   return vec;
 }
 
-EqualityInstance create_rand_eq_inst(size_t n, size_t r, std::vector<Rq> S)
+// Generate a random EqualityInstance satisfied by the given witness S
+EqualityInstance create_rand_eq_inst(size_t n, size_t r, const std::vector<Rq>& S)
 {
   int64_t q = get_q<Zq>();
   // set a and phi completely randomly in Tq
@@ -996,13 +1011,14 @@ EqualityInstance create_rand_eq_inst(size_t n, size_t r, std::vector<Rq> S)
 
   // b = -(<G, a> + <S, phi>)
   ICICLE_CHECK(vector_add(G_A_inner_prod.values, phi_S_inner_prod.values, Rq::d, {}, eq_inst.b.values));
-  Zq minus_1 = Zq::from(-1);
+  Zq minus_1 = Zq::neg(Zq::from(1));
   ICICLE_CHECK(scalar_mul_vec(&minus_1, eq_inst.b.values, Rq::d, {}, eq_inst.b.values));
   // Now S is a witness for the equality constraint eq_inst
   return eq_inst;
 }
 
-ConstZeroInstance create_rand_const_zero_inst(size_t n, size_t r, std::vector<Rq> S)
+// Generate a random ConstZeroInstance satisfied by the given witness S
+ConstZeroInstance create_rand_const_zero_inst(size_t n, size_t r, const std::vector<Rq>& S)
 {
   int64_t q = get_q<Zq>();
   EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
@@ -1026,6 +1042,82 @@ ConstZeroInstance create_rand_const_zero_inst(size_t n, size_t r, std::vector<Rq
   return const_zero_inst;
 }
 
+// Check if the given EqualityInstance is satisfied by the witness S or not
+bool witness_legit_eq(const EqualityInstance& eq_inst, const std::vector<Rq>& S)
+{
+  int64_t q = get_q<Zq>();
+  size_t r = eq_inst.r;
+  size_t n = eq_inst.n;
+
+  assert(S.size() == r * n);
+  // S_hat = NTT(S)
+  std::vector<Tq> S_hat(r * n);
+  ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
+
+  std::vector<Tq> S_hat_transposed(n * r);
+  ICICLE_CHECK(matrix_transpose<Tq>(S_hat.data(), r, n, {}, S_hat_transposed.data()));
+
+  // G_hat = S@S^t
+  std::vector<Tq> G_hat(r * r);
+  ICICLE_CHECK(matmul(S_hat.data(), r, n, S_hat_transposed.data(), n, r, {}, G_hat.data()));
+
+  Tq G_A_inner_prod, phi_S_inner_prod, eval_hat;
+  // G_A_inner_prod = <G, a>
+  ICICLE_CHECK(matmul(G_hat.data(), 1, r * r, eq_inst.a.data(), r * r, 1, {}, &G_A_inner_prod));
+  // phi_S_inner_prod = <S, phi>
+  ICICLE_CHECK(matmul(S_hat.data(), 1, r * n, eq_inst.phi.data(), r * n, 1, {}, &phi_S_inner_prod));
+
+  // eval_hat = b + (<G, a> + <S, phi>)
+  ICICLE_CHECK(vector_add(G_A_inner_prod.values, phi_S_inner_prod.values, Rq::d, {}, eval_hat.values));
+  ICICLE_CHECK(vector_add(eval_hat.values, eq_inst.b.values, Rq::d, {}, eval_hat.values));
+
+  // print_poly(eval_hat, "eval_hat");
+  for (size_t i = 0; i < Tq::d; i++) {
+    if (eval_hat.values[i] != Zq::from(0)) { return false; }
+  }
+  return true;
+}
+
+// Check if the given ConstZeroInstance is satisfied by the witness S or not
+bool witness_legit_const_zero(const ConstZeroInstance& cz_inst, const std::vector<Rq>& S)
+{
+  int64_t q = get_q<Zq>();
+  size_t r = cz_inst.r;
+  size_t n = cz_inst.n;
+
+  // S_hat = NTT(S)
+  std::vector<Tq> S_hat(r * n);
+  ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
+
+  std::vector<Tq> S_hat_transposed(n * r);
+  ICICLE_CHECK(matrix_transpose<Tq>(S_hat.data(), r, n, {}, S_hat_transposed.data()));
+
+  // G_hat = S@S^t
+  std::vector<Tq> G_hat(r * r);
+  ICICLE_CHECK(matmul(S_hat.data(), r, n, S_hat_transposed.data(), n, r, {}, G_hat.data()));
+
+  Tq G_A_inner_prod, phi_S_inner_prod, eval_hat;
+  // G_A_inner_prod = <G, a>
+  ICICLE_CHECK(matmul(G_hat.data(), 1, r * r, cz_inst.a.data(), r * r, 1, {}, &G_A_inner_prod));
+  // phi_S_inner_prod = <S, phi>
+  ICICLE_CHECK(matmul(S_hat.data(), 1, r * n, cz_inst.phi.data(), r * n, 1, {}, &phi_S_inner_prod));
+
+  // eval_hat = b + (<G, a> + <S, phi>)
+  ICICLE_CHECK(vector_add(G_A_inner_prod.values, phi_S_inner_prod.values, Rq::d, {}, eval_hat.values));
+  ICICLE_CHECK(vector_add(eval_hat.values, cz_inst.b.values, Rq::d, {}, eval_hat.values));
+
+  // take INTT for eval_hat
+  Rq eval;
+  ICICLE_CHECK(ntt(&eval_hat, 1, NTTDir::kInverse, {}, &eval));
+
+  // print_poly(eval, "cz_eval");
+  if (eval.values[0] == Zq::zero()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 // === Main driver ===
 
 int main(int argc, char* argv[])
@@ -1043,7 +1135,9 @@ int main(int argc, char* argv[])
   constexpr size_t d = Rq::d;
   std::vector<Rq> S = rand_poly_vec(r * n, 1);
   EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
+  assert(witness_legit_eq(eq_inst, S));
   ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(n, r, S);
+  assert(witness_legit_const_zero(const_zero_inst, S));
   const char* ajtai_seed = "ajtai_seed";
   LabradorParam param{
     {reinterpret_cast<const std::byte*>(ajtai_seed), reinterpret_cast<const std::byte*>(ajtai_seed) + 10},
