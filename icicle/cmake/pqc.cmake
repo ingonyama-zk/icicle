@@ -10,6 +10,7 @@ function(setup_pqc_target)
   target_link_libraries(icicle_pqc PUBLIC icicle_device)
 
   install(TARGETS icicle_pqc
+    EXPORT icicle_pqc_targets
     RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
     LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/")
