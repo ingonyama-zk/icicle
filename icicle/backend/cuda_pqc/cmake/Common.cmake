@@ -63,13 +63,13 @@ function(set_gpu_env)
 endfunction()
 
 function(find_cuda_compiler)
-    # Find the CUDA compiler
-    execute_process(
-        COMMAND which nvcc
-        OUTPUT_VARIABLE CUDA_COMPILER_PATH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-
-    # Set the CUDA compiler
-    set(CMAKE_CUDA_COMPILER ${CUDA_COMPILER_PATH} PARENT_SCOPE)    
+    # Only set if it's not already defined
+    if(NOT DEFINED CMAKE_CUDA_COMPILER)
+        execute_process(
+            COMMAND which nvcc
+            OUTPUT_VARIABLE CUDA_COMPILER_PATH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        set(CMAKE_CUDA_COMPILER "${CUDA_COMPILER_PATH}" CACHE FILEPATH "Path to CUDA compiler")
+    endif()
 endfunction()
