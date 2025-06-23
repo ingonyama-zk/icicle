@@ -17,8 +17,7 @@ mod tests {
         device::Device,
         eIcicleError,
         memory::{DeviceVec, HostSlice},
-        runtime,
-        test_utilities,
+        runtime, test_utilities,
     };
     use rand::Rng;
     use std::sync::Once;
