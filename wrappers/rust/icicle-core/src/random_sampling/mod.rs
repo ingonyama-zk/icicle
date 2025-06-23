@@ -1,5 +1,5 @@
-use crate::vec_ops::VecOpsConfig;
 use crate::traits::FieldImpl;
+use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
