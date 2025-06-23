@@ -285,8 +285,8 @@ public:
   HOST_DEVICE_INLINE uint32_t get_scalar_bits(const unsigned lsb_idx, const unsigned width) const
   {
     ICICLE_ASSERT(width <= 8 * sizeof(*(limbs_storage.limbs))) << "get_scalar_bits::width should be < 32";
-    const uint32_t limb_lsb_idx = lsb_idx / (sizeof(*(limbs_storage.limbs)));
-    const uint32_t shift_bits = lsb_idx % (sizeof(*(limbs_storage.limbs)));
+    const uint32_t limb_lsb_idx = lsb_idx / (8 * sizeof(*(limbs_storage.limbs)));
+    const uint32_t shift_bits = lsb_idx % (8 * sizeof(*(limbs_storage.limbs)));
     const uint64_t mask = (1 << width) - 1;
     const uint64_t* rv = reinterpret_cast<const uint64_t*>(&(limbs_storage.limbs[limb_lsb_idx]));
     return (((*rv) >> shift_bits) & mask);
