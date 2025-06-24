@@ -488,6 +488,15 @@ public:
     return reduce(Wide{res}); // finally, use barret reduction
   }
 
+  static constexpr HOST_DEVICE_INLINE Derived reduce_from_bytes(const std::byte* in)
+  {
+    Derived value;
+    memcpy(reinterpret_cast<std::byte*>(value.limbs_storage.limbs), in, TLC * 4);
+    while (lt(Derived{get_modulus()}, value))
+      value = value - Derived{get_modulus()};
+    return value;
+  }
+
   HOST_DEVICE Derived& operator=(Derived const& other)
   {
 #pragma unroll
