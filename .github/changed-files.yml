@@ -18,14 +18,24 @@ cpp-base: &cpp-base
   - icicle/src/matrix_ops.cpp
   - icicle/include/icicle/matrix_ops.h
   - icicle/include/icicle/backend/vec_ops_backend.h
+  - icicle/tests/test_device_api.cpp
 cpp-field: &cpp-field
   - *cpp-base
   - icicle/src/fields/**/*
   - icicle/include/icicle/fields/**/*
+  - icicle/tests/test_field_api.cpp
+  - icicle/tests/test_mod_arithmetic_api.cpp
+  - icicle/tests/test_matrix_api.h
+  - icicle/tests/test_polynomial_api.cpp
 cpp-curve: &cpp-curve
   - *cpp-field
   - icicle/src/curves/**/*
   - icicle/include/icicle/curves/**/*
+  - icicle/tests/test_curve_api.cpp
+  - icicle/tests/test_field_api.cpp
+  - icicle/tests/test_mod_arithmetic_api.cpp
+  - icicle/tests/test_matrix_api.h
+  - icicle/tests/test_polynomial_api.cpp
 cpp-ring: &cpp-ring
   - *cpp-base
   - icicle/src/rings/**/*
@@ -37,9 +47,14 @@ cpp-ring: &cpp-ring
   - icicle/src/norm.cpp
   - icicle/include/icicle/norm.h
   - icicle/include/icicle/negacyclic_ntt.h
+  - icicle/tests/test_ring_api.cpp
+  - icicle/tests/test_mod_arithmetic_api.cpp
+  - icicle/tests/test_matrix_api.h
+  - icicle/tests/test_polynomial_api.cpp
 cpp-pqc: &cpp-pqc
   - icicle/src/pqc/**/*
   - icicle/include/icicle/pqc/**/*
+  - icicle/tests/test_pqc_api.cpp
 
 # C/C++ feature-specific file patterns
 cpp-msm: &cpp-msm
@@ -88,6 +103,7 @@ cpp-hash: &cpp-hash
   - icicle/include/icicle/hash/**/*
   - icicle/include/icicle/backend/hash/**/*
   - icicle/include/icicle/backend/merkle/**/*
+  - icicle/tests/test_hash_api.cpp
   - "!icicle/src/hash/poseidon*"
   - "!icicle/include/icicle/hash/poseidon*"
   - "!icicle/include/icicle/backend/hash/poseidon_backend.h"
