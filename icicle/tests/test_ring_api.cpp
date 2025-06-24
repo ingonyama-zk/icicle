@@ -3,6 +3,7 @@
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
 #include "icicle/norm.h"
+#include "icicle/random_sampling.h"
 #include "icicle/negacyclic_ntt.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
@@ -1076,3 +1077,55 @@ TEST_F(RingTestBase, NegacyclicNTT)
   }
 }
 #endif // NTT
+
+TEST_F(RingTestBase, RandomSampling)
+{
+  size_t size = 1 << 20;
+  size_t seed_len = 32;
+  std::vector<std::byte> seed(seed_len);
+  for (size_t i = 0; i < seed_len; ++i) {
+    seed[i] = static_cast<std::byte>(rand_uint_32b());
+  }
+  std::vector<std::byte> seed_prime(seed);
+  seed_prime[0] = static_cast<std::byte>(uint8_t(seed_prime[0]) + 1); // Make sure the seed is different
+
+  std::vector<std::vector<field_t>> a(s_registered_devices.size());
+  std::vector<std::vector<field_t>> b(s_registered_devices.size());
+  for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+    a[device_index] = std::vector<field_t>(size);
+    b[device_index] = std::vector<field_t>(size);
+  }
+
+  auto test_random_sampling = [&](bool fast_mode) {
+    const int N = 15;
+    for (int i = 0; i < N; ++i) {
+      for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+        ICICLE_CHECK(icicle_set_device(s_registered_devices[device_index]));
+
+        // Different seed inconsistency test
+        ICICLE_CHECK(random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, a[device_index].data()));
+        ICICLE_CHECK(
+          random_sampling(size, fast_mode, seed_prime.data(), seed_len, VecOpsConfig{}, b[device_index].data()));
+        bool equal = true;
+        for (size_t j = 0; j < size; ++j) {
+          if (a[device_index][j] != b[device_index][j]) { equal = false; }
+        }
+        ASSERT_FALSE(equal);
+
+        // Same seed consistency test
+        ICICLE_CHECK(random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, a[device_index].data()));
+        ICICLE_CHECK(random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, b[device_index].data()));
+        for (size_t i = 0; i < size; ++i) {
+          ASSERT_EQ(a[device_index][i], b[device_index][i]);
+        }
+      }
+      for (int j = 0; j < size; ++j) {
+        for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+          ASSERT_EQ(a[device_index][j], b[device_index][j]);
+        }
+      }
+    }
+  };
+  test_random_sampling(true);
+  test_random_sampling(false);
+}
