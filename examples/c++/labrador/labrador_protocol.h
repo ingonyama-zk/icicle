@@ -222,7 +222,7 @@ struct LabradorBaseProver {
     const std::vector<Tq>& S_hat,
     const std::vector<Tq>& g_hat,
     const std::vector<Zq>& p,
-    std::vector<Tq>& Q_hat,
+    const std::vector<Tq>& Q_hat,
     const std::vector<Zq>& psi,
     const std::vector<Zq>& omega);
   std::pair<size_t, std::vector<Zq>> select_valid_jl_proj(std::byte* seed, size_t seed_len) const;

@@ -156,7 +156,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
   const std::vector<Tq>& S_hat,
   const std::vector<Tq>& G_hat,
   const std::vector<Zq>& p,
-  std::vector<Tq>& Q_hat,
+  const std::vector<Tq>& Q_hat,
   const std::vector<Zq>& psi,
   const std::vector<Zq>& omega)
 {
@@ -182,6 +182,8 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
   std::vector<Tq> msg3;
   for (size_t k = 0; k < num_aggregation_rounds; k++) {
     EqualityInstance new_constraint(r, n);
+    std::vector<ConstZeroInstance> temp_const(lab_inst.const_zero_constraints);
+    std::vector<Tq> Q_hat_copy(Q_hat);
 
     // Compute a''_{ij} = sum_{l=0}^{L-1} psi^{(k)}(l) * a'_{ij}^{(l)}
 
@@ -195,14 +197,13 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       Zq psi_scalar = psi[psi_index(k, l)];
 
       ICICLE_CHECK(scalar_mul_vec(
-        &psi_scalar, reinterpret_cast<Zq*>(lab_inst.const_zero_constraints[l].a.data()), r * r * d, async_config,
-        reinterpret_cast<Zq*>(lab_inst.const_zero_constraints[l].a.data())));
+        &psi_scalar, reinterpret_cast<Zq*>(temp_const[l].a.data()), r * r * d, async_config,
+        reinterpret_cast<Zq*>(temp_const[l].a.data())));
     }
     ICICLE_CHECK(icicle_device_synchronize());
     // new_constraint.a[i,j] = \sum_l const_zero_constraints[l].a[i,j]
     for (size_t l = 0; l < L; l++) {
-      ICICLE_CHECK(vector_add(
-        new_constraint.a.data(), lab_inst.const_zero_constraints[l].a.data(), r * r, {}, new_constraint.a.data()));
+      ICICLE_CHECK(vector_add(new_constraint.a.data(), temp_const[l].a.data(), r * r, {}, new_constraint.a.data()));
     }
 
     // Compute varphi'_i^{(k)} = sum_{l=0}^{L-1} psi^{(k)}(l) * phi'_i^{(l)} + sum_{l=0}^{255} omega^{(k)}(l) * q_{il}
@@ -215,15 +216,14 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       Zq psi_scalar = psi[psi_index(k, l)];
 
       ICICLE_CHECK(scalar_mul_vec(
-        &psi_scalar, reinterpret_cast<Zq*>(lab_inst.const_zero_constraints[l].phi.data()), r * n * d, async_config,
-        reinterpret_cast<Zq*>(lab_inst.const_zero_constraints[l].phi.data())));
+        &psi_scalar, reinterpret_cast<Zq*>(temp_const[l].phi.data()), r * n * d, async_config,
+        reinterpret_cast<Zq*>(temp_const[l].phi.data())));
     }
     ICICLE_CHECK(icicle_device_synchronize());
     // new_constraint.phi[i,:] = \sum_l const_zero_constraints[l].phi[i,:]
     for (size_t l = 0; l < L; l++) {
-      ICICLE_CHECK(vector_add(
-        new_constraint.phi.data(), lab_inst.const_zero_constraints[l].phi.data(), r * n, {},
-        new_constraint.phi.data()));
+      ICICLE_CHECK(
+        vector_add(new_constraint.phi.data(), temp_const[l].phi.data(), r * n, {}, new_constraint.phi.data()));
     }
 
     // For each j do:
@@ -234,13 +234,13 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       Zq omega_scalar = omega[omega_index(k, j)];
 
       ICICLE_CHECK(scalar_mul_vec(
-        &omega_scalar, reinterpret_cast<Zq*>(&Q_hat[j * n * r]), r * n * d, async_config,
-        reinterpret_cast<Zq*>(&Q_hat[j * n * r])));
+        &omega_scalar, reinterpret_cast<Zq*>(&Q_hat_copy[j * n * r]), r * n * d, async_config,
+        reinterpret_cast<Zq*>(&Q_hat_copy[j * n * r])));
     }
     ICICLE_CHECK(icicle_device_synchronize());
     // new_constraint.phi[i,:] += \sum_j Q_hat[j, i, :]
     for (size_t j = 0; j < JL_out; j++) {
-      ICICLE_CHECK(vector_add(new_constraint.phi.data(), &Q_hat[j * n * r], r * n, {}, new_constraint.phi.data()));
+      ICICLE_CHECK(vector_add(new_constraint.phi.data(), &Q_hat_copy[j * n * r], r * n, {}, new_constraint.phi.data()));
     }
 
     // Compute B^{(k)} = sum_{ij} a''_{ij}^{(k)}  * g_{ij} + sum_i <phi'_i^{(k)}, s_i>
