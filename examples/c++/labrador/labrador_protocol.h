@@ -192,11 +192,13 @@ struct PartialTranscript {
 ///
 /// h: vector computed in Step 25 (H_tilde in the code)
 struct LabradorBaseCaseProof {
-  EqualityInstance final_const;
   std::vector<Tq> z_hat;
   std::vector<Rq> t;
   std::vector<Rq> g;
   std::vector<Rq> h;
+
+  // TODO: Only for testing. Need to remove this
+  EqualityInstance final_const;
 
   LabradorBaseCaseProof(size_t r, size_t n) : final_const(r, n), z_hat(), t(), g(), h() {};
   LabradorBaseCaseProof(
@@ -295,6 +297,71 @@ eIcicleError scale_diagonal_with_mask(
     reinterpret_cast<const Zq*>(matrix), mask.data(), n * d * n * d, config, reinterpret_cast<Zq*>(output));
 }
 
+/// extracts the symmetric part of a n X n matrix as a n(n+1)/2 size vector
+template <typename T>
+std::vector<T> extract_symm_part(T* mat, size_t n)
+{
+  size_t n_choose_2 = (n * (n + 1)) / 2;
+  std::vector<T> v(n_choose_2);
+  size_t offset = 0;
+
+  // Create stream for async operations
+  icicleStreamHandle stream;
+  icicle_create_stream(&stream);
+
+  for (size_t i = 0; i < n; i++) {
+    icicle_copy_async(&v[offset], &mat[i * n + i], (n - i) * sizeof(T), stream);
+    offset += n - i;
+  }
+
+  // Synchronize to ensure all copies complete before returning
+  icicle_stream_synchronize(stream);
+  icicle_destroy_stream(stream);
+
+  return v;
+}
+
+/// reconstructs a symmetric n × n matrix from its packed upper–triangular
+/// representation produced by extract_symm_part.
+/// The returned matrix is in row-major order and satisfies
+///     v == extract_symm_part(M.data(), n)
+template <typename T>
+std::vector<T> reconstruct_symm_matrix(const std::vector<T>& v, size_t n)
+{
+  // Make sure the caller supplied the right-sized vector
+  assert(v.size() == (n * (n + 1)) / 2 && "Packed vector has wrong length");
+
+  std::vector<T> mat(n * n);
+
+  // Copy the packed upper-triangular part row by row.
+  icicleStreamHandle stream;
+  icicle_create_stream(&stream);
+
+  size_t offset = 0;
+  for (size_t i = 0; i < n; ++i) {
+    size_t len = n - i; // -- elements on and right of the diagonal
+    icicle_copy_async(
+      &mat[i * n + i], // destination start  (row i, col i)
+      &v[offset],      // source start
+      len * sizeof(T), // bytes to copy
+      stream);
+    offset += len;
+  }
+
+  // Wait for the DMA copies to complete before we mirror the data
+  icicle_stream_synchronize(stream);
+  icicle_destroy_stream(stream);
+
+  // Mirror the upper-triangular entries to the lower-triangular part
+  for (size_t i = 0; i < n; ++i) {
+    for (size_t j = i + 1; j < n; ++j) {
+      mat[j * n + i] = mat[i * n + j];
+    }
+  }
+
+  return mat;
+}
+
 // === Fns for testing ===
 
 // print a polynomial
@@ -311,6 +378,22 @@ void print_vec(const Zq* vec, size_t len, const std::string& name = "")
 
 // print a polynomial
 void print_poly(const PolyRing& poly, const std::string& name = "") { print_vec(poly.values, PolyRing::d, name); }
+
+/// @brief Compares two vectors of Tq polynomials element-wise
+/// @param vec1 First vector to compare
+/// @param vec2 Second vector to compare
+/// @param size Number of Tq elements to compare
+/// @return true if vectors are equal, false otherwise
+bool poly_vec_eq(const PolyRing* vec1, const PolyRing* vec2, size_t size)
+{
+  constexpr size_t d = PolyRing::d;
+  for (size_t i = 0; i < size; i++) {
+    for (size_t j = 0; j < d; j++) {
+      if (vec1[i].values[j] != vec2[i].values[j]) { return false; }
+    }
+  }
+  return true;
+}
 
 // Generate a random polynomial vector with coefficients bounded by max_value
 std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value)
@@ -461,4 +544,59 @@ bool lab_witness_legit(const LabradorInstance& lab_inst, const std::vector<Rq>& 
     if (!witness_legit_const_zero(cz_inst, S)) { return false; }
   }
   return true;
+}
+
+void test_jl()
+{
+  size_t n = 100, JL_out = 32;
+  std::vector<Rq> p = rand_poly_vec(n, 8);
+  // y = Pi*p
+  std::vector<Zq> y(JL_out);
+  const char* jl_seed = "RAND";
+  ICICLE_CHECK(jl_projection(
+    reinterpret_cast<const Zq*>(p.data()), n * Rq::d, reinterpret_cast<const std::byte*>(&jl_seed), 4, {}, y.data(),
+    JL_out));
+
+  print_vec(y.data(), y.size(), "y = Pi*p");
+
+  // std::vector<Zq> Pi(JL_out * n * Rq::d);
+  // // compute the Pi matrix, conjugated in Rq
+  // ICICLE_CHECK(get_jl_matrix_rows<Zq>(
+  //   reinterpret_cast<const std::byte*>(&jl_seed), 4,
+  //   n * Rq::d, // row_size
+  //   0,         // row_index
+  //   JL_out,    // num_rows
+  //   false,     // conjugate
+  //   {},        // config
+  //   Pi.data()));
+
+  std::vector<Rq> Q(JL_out * n);
+  // compute the Pi matrix, conjugated in Rq
+  ICICLE_CHECK(get_jl_matrix_rows<Rq>(
+    reinterpret_cast<const std::byte*>(&jl_seed), 4,
+    n,      // row_size
+    0,      // row_index
+    JL_out, // num_rows
+    true,   // conjugate
+    {},     // config
+    Q.data()));
+
+  std::vector<Tq> Q_hat(JL_out * n), p_hat(n), z_hat(JL_out);
+  ICICLE_CHECK(ntt(Q.data(), JL_out * n, NTTDir::kForward, {}, Q_hat.data()));
+  ICICLE_CHECK(ntt(p.data(), n, NTTDir::kForward, {}, p_hat.data()));
+  // z_hat = Q_hat * p_hat
+  ICICLE_CHECK(matmul(Q_hat.data(), JL_out, n, p_hat.data(), n, 1, {}, z_hat.data()));
+  std::vector<Rq> z(JL_out);
+  ICICLE_CHECK(ntt(z_hat.data(), JL_out, NTTDir::kInverse, {}, z.data()));
+
+  bool succ = true;
+  for (int i = 0; i < JL_out; i++) {
+    // const(z) == y
+    if (z[i].values[0] != y[i]) { succ = false; }
+  }
+  if (succ) {
+    std::cout << "Success\n";
+  } else {
+    std::cout << "Fail\n";
+  }
 }

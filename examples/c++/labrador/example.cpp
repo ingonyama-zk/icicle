@@ -31,30 +31,6 @@ std::vector<Tq> ajtai_commitment(
   return comm;
 }
 
-/// extracts the symmetric part of a n X n matrix as a n(n+1)/2 size vector
-template <typename T>
-std::vector<T> extract_symm_part(T* mat, size_t n)
-{
-  size_t n_choose_2 = (n * (n + 1)) / 2;
-  std::vector<T> v(n_choose_2);
-  size_t offset = 0;
-
-  // Create stream for async operations
-  icicleStreamHandle stream;
-  icicle_create_stream(&stream);
-
-  for (size_t i = 0; i < n; i++) {
-    icicle_copy_async(&v[offset], &mat[i * n + i], (n - i) * sizeof(T), stream);
-    offset += n - i;
-  }
-
-  // Synchronize to ensure all copies complete before returning
-  icicle_stream_synchronize(stream);
-  icicle_destroy_stream(stream);
-
-  return v;
-}
-
 /// Prover uses this function to select a valid JL projection for which the norm condition is satisfied .
 /// Returns (JL_i, p) such that [seed, JL_i] is the seed for the valid JL projection
 /// p is the result of applying this JL projection to the witness
@@ -1047,61 +1023,6 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
   return std::make_pair(trs, base_proof);
 }
 
-void test_jl()
-{
-  size_t n = 100, JL_out = 32;
-  std::vector<Rq> p = rand_poly_vec(n, 8);
-  // y = Pi*p
-  std::vector<Zq> y(JL_out);
-  const char* jl_seed = "RAND";
-  ICICLE_CHECK(jl_projection(
-    reinterpret_cast<const Zq*>(p.data()), n * Rq::d, reinterpret_cast<const std::byte*>(&jl_seed), 4, {}, y.data(),
-    JL_out));
-
-  print_vec(y.data(), y.size(), "y = Pi*p");
-
-  // std::vector<Zq> Pi(JL_out * n * Rq::d);
-  // // compute the Pi matrix, conjugated in Rq
-  // ICICLE_CHECK(get_jl_matrix_rows<Zq>(
-  //   reinterpret_cast<const std::byte*>(&jl_seed), 4,
-  //   n * Rq::d, // row_size
-  //   0,         // row_index
-  //   JL_out,    // num_rows
-  //   false,     // conjugate
-  //   {},        // config
-  //   Pi.data()));
-
-  std::vector<Rq> Q(JL_out * n);
-  // compute the Pi matrix, conjugated in Rq
-  ICICLE_CHECK(get_jl_matrix_rows<Rq>(
-    reinterpret_cast<const std::byte*>(&jl_seed), 4,
-    n,      // row_size
-    0,      // row_index
-    JL_out, // num_rows
-    true,   // conjugate
-    {},     // config
-    Q.data()));
-
-  std::vector<Tq> Q_hat(JL_out * n), p_hat(n), z_hat(JL_out);
-  ICICLE_CHECK(ntt(Q.data(), JL_out * n, NTTDir::kForward, {}, Q_hat.data()));
-  ICICLE_CHECK(ntt(p.data(), n, NTTDir::kForward, {}, p_hat.data()));
-  // z_hat = Q_hat * p_hat
-  ICICLE_CHECK(matmul(Q_hat.data(), JL_out, n, p_hat.data(), n, 1, {}, z_hat.data()));
-  std::vector<Rq> z(JL_out);
-  ICICLE_CHECK(ntt(z_hat.data(), JL_out, NTTDir::kInverse, {}, z.data()));
-
-  bool succ = true;
-  for (int i = 0; i < JL_out; i++) {
-    // const(z) == y
-    if (z[i].values[0] != y[i]) { succ = false; }
-  }
-  if (succ) {
-    std::cout << "Success\n";
-  } else {
-    std::cout << "Fail\n";
-  }
-}
-
 bool LabradorBaseVerifier::_verify_base_proof() const
 {
   size_t n = lab_inst.n;
@@ -1114,6 +1035,25 @@ bool LabradorBaseVerifier::_verify_base_proof() const
   auto h_tilde = base_proof.h;
   auto challenges_hat = trs.challenges_hat;
 
+  bool t_tilde_small = true, g_tilde_small = true, h_tilde_small = true;
+  size_t base1 = lab_inst.param.base1;
+  size_t base2 = lab_inst.param.base2;
+  size_t base3 = lab_inst.param.base3;
+  check_norm_bound(
+    reinterpret_cast<Zq*>(t_tilde.data()), t_tilde.size() * d, eNormType::LInfinity, (base1 + 1) / 2, {},
+    &t_tilde_small);
+  check_norm_bound(
+    reinterpret_cast<Zq*>(h_tilde.data()), h_tilde.size() * d, eNormType::LInfinity, (base2 + 1) / 2, {},
+    &h_tilde_small);
+  check_norm_bound(
+    reinterpret_cast<Zq*>(g_tilde.data()), g_tilde.size() * d, eNormType::LInfinity, (base3 + 1) / 2, {},
+    &g_tilde_small);
+  if (!(t_tilde_small && h_tilde_small && g_tilde_small)) {
+    std::cout << "LInfinity norm check failed\n";
+    return false;
+  }
+  // TODO: add L2 norm check
+
   const std::vector<std::byte>& ajtai_seed = lab_inst.param.ajtai_seed;
   std::vector<std::byte> seed_A(ajtai_seed);
   seed_A.push_back(std::byte('0'));
@@ -1122,7 +1062,6 @@ bool LabradorBaseVerifier::_verify_base_proof() const
   size_t kappa = lab_inst.param.kappa;
   std::vector<Tq> zA_hat = ajtai_commitment(seed_A.data(), seed_A.size(), n, kappa, z_hat.data(), n);
 
-  size_t base1 = lab_inst.param.base1;
   std::vector<Rq> t(r * kappa);
   ICICLE_CHECK(recompose(t_tilde.data(), t_tilde.size(), base1, {}, t.data(), t.size()));
   std::vector<Tq> t_hat(r * kappa), ct_hat(kappa);
@@ -1131,13 +1070,64 @@ bool LabradorBaseVerifier::_verify_base_proof() const
   // ct_hat = \sum_i c_i t_i = [c1 c2 ... cr] @ t_hat
   ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, t_hat.data(), r, kappa, {}, ct_hat.data()));
   // zA_hat == \sum_i c_i t_i
-  for (size_t i = 0; i < kappa; i++) {
-    for (size_t j = 0; j < d; j++) {
-      if (zA_hat[i].values[j] != ct_hat[i].values[j]) {
-        std::cout << "_verify_base_proof failed\n";
-        return false;
-      }
-    }
+  if (!(poly_vec_eq(zA_hat.data(), ct_hat.data(), kappa))) {
+    std::cout << "_verify_base_proof failed: zA != cT \n";
+    return false;
+  }
+  size_t r_choose_2 = (r * (r + 1)) / 2;
+  std::vector<Rq> g(r_choose_2);
+  ICICLE_CHECK(recompose(g_tilde.data(), g_tilde.size(), base2, {}, g.data(), g.size()));
+  std::vector<Rq> G = reconstruct_symm_matrix(g, r);
+
+  std::vector<Tq> G_hat(r * r);
+  // G_hat = NTT(G)
+  ICICLE_CHECK(ntt(G.data(), r * r, NTTDir::kForward, {}, G_hat.data()));
+
+  std::vector<Rq> h(r_choose_2);
+  ICICLE_CHECK(recompose(h_tilde.data(), h_tilde.size(), base3, {}, h.data(), h.size()));
+  std::vector<Rq> H = reconstruct_symm_matrix(h, r);
+
+  std::vector<Tq> H_hat(r * r);
+  // H_hat = NTT(H)
+  ICICLE_CHECK(ntt(H.data(), r * r, NTTDir::kForward, {}, H_hat.data()));
+
+  Tq ip_z_z, c_G_c, c_H_c, ip_a_G, c_Phi_z;
+
+  // ip_z_z = <z_hat,z_hat> - inner product of z_hat with itself
+  ICICLE_CHECK(matmul(z_hat.data(), 1, n, z_hat.data(), n, 1, {}, &ip_z_z));
+
+  // c_G_c = challenges_hat^T * G_hat * challenges_hat
+  // First compute G_hat * challenges_hat
+  std::vector<Tq> G_times_c(r);
+  ICICLE_CHECK(matmul(G_hat.data(), r, r, challenges_hat.data(), r, 1, {}, G_times_c.data()));
+  // Then compute challenges_hat^T * (G_hat * challenges_hat)
+  ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, G_times_c.data(), r, 1, {}, &c_G_c));
+
+  // c_H_c = challenges_hat^T * H_hat * challenges_hat
+  // First compute H_hat * challenges_hat
+  std::vector<Tq> H_times_c(r);
+  ICICLE_CHECK(matmul(H_hat.data(), r, r, challenges_hat.data(), r, 1, {}, H_times_c.data()));
+  // Then compute challenges_hat^T * (H_hat * challenges_hat)
+  ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, H_times_c.data(), r, 1, {}, &c_H_c));
+
+  // ip_a_G = <base_proof.final_const.a, G_hat> - inner product of flattened matrices
+  ICICLE_CHECK(matmul(base_proof.final_const.a.data(), 1, r * r, G_hat.data(), r * r, 1, {}, &ip_a_G));
+
+  // c_Phi_z = challenges_hat^T * base_proof.final_const.phi * z_hat
+  // First compute phi * z_hat
+  std::vector<Tq> phi_times_z(r);
+  ICICLE_CHECK(matmul(base_proof.final_const.phi.data(), r, n, z_hat.data(), n, 1, {}, phi_times_z.data()));
+  // Then compute challenges_hat^T * (phi * z_hat)
+  ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, phi_times_z.data(), r, 1, {}, &c_Phi_z));
+
+  if (!(poly_vec_eq(&ip_z_z, &c_G_c, 1))) {
+    std::cout << "_verify_base_proof failed: <z,z> != c^t G c \n";
+    return false;
+  }
+  // TODO: I feel H computation might be wrong in base_prover
+  if (!(poly_vec_eq(&c_Phi_z, &c_H_c, 1))) {
+    std::cout << "_verify_base_proof failed: c^t Phi z != c^t H c\n";
+    return false;
   }
   return true;
 }
