@@ -265,6 +265,8 @@ private:
     std::vector<Bucket>& buckets = m_workers_buckets[worker_idx];
     std::vector<bool>& buckets_busy = m_workers_buckets_busy[worker_idx];
     fill(buckets_busy.begin(), buckets_busy.end(), false);
+    std::vector<int> bucket_idx_arr(m_nof_buckets_module); 
+    std::vector<bool> neg_arr(m_nof_buckets_module);
 
     const int coeff_bit_mask_no_sign_bit = m_bm_size - 1;
     const int coeff_bit_mask_with_sign_bit = (1 << m_c) - 1;
@@ -286,13 +288,14 @@ private:
         const A base_neg = A::neg(base);
 
         // -- [prefetch next bucket for each bucket module] -----------------
-        int p_carry = 0;
+        std::fill(bucket_idx_arr.begin(), bucket_idx_arr.end(), 0);
+        std::fill(neg_arr.begin(), neg_arr.end(), false);
         for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
           if (m_nof_buckets_module * j + bm_i >= num_bms_before_precompute) { break; }
-          uint32_t curr_coeff = scalar.get_scalar_digit(m_nof_buckets_module * j + bm_i, m_c) + p_carry;
+          uint32_t curr_coeff = scalar.get_scalar_digit(m_nof_buckets_module * j + bm_i, m_c) + carry;
           if ((curr_coeff & coeff_bit_mask_with_sign_bit) != 0) {
-            p_carry = curr_coeff > m_bm_size;
-            int bkt_idx = p_carry ? m_bm_size * bm_i + ((-curr_coeff) & coeff_bit_mask_no_sign_bit)
+            carry = curr_coeff > m_bm_size;
+            int bkt_idx = carry ? m_bm_size * bm_i + ((-curr_coeff) & coeff_bit_mask_no_sign_bit)
                                 : m_bm_size * bm_i + (curr_coeff & coeff_bit_mask_no_sign_bit);
             char* ptr = (char *) &buckets[bkt_idx];
             // prefetch into L1
@@ -304,38 +307,24 @@ private:
               __builtin_prefetch(ptr + 64, 1, 3);
               __builtin_prefetch(ptr + 128, 1, 3);
             }
+            bucket_idx_arr[bm_i] = bkt_idx;
+            neg_arr[bm_i] = negate_p_and_s ^ (carry > 0);
           } else {
-            p_carry = curr_coeff >> m_c;
+            carry = curr_coeff >> m_c;
           }
         }
         // -------------------------------------------------------------------
         for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
-          // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
           if (m_nof_buckets_module * j + bm_i >= num_bms_before_precompute) { break; }
-
-          uint32_t curr_coeff = scalar.get_scalar_digit(m_nof_buckets_module * j + bm_i, m_c) + carry;
-
-          // For the edge case of curr_coeff = c (limb=c-1, carry=1) use the sign bit mask
-          if ((curr_coeff & coeff_bit_mask_with_sign_bit) != 0) {
-            // Remove sign to infer the bkt idx.
-            carry = curr_coeff > m_bm_size;
-            int bkt_idx = carry ? m_bm_size * bm_i + ((-curr_coeff) & coeff_bit_mask_no_sign_bit)
-                                : m_bm_size * bm_i + (curr_coeff & coeff_bit_mask_no_sign_bit);
-
-            // Check for collision in that bucket and either dispatch an addition or store the P accordingly.
+          int bkt_idx = bucket_idx_arr[bm_i];
+          bool negate = neg_arr[bm_i];
+          if (bkt_idx != 0) {
             if (buckets_busy[bkt_idx]) {
-              P::accum_prj_aff(buckets[bkt_idx].point, ((negate_p_and_s ^ (carry > 0)) ? base_neg : base));
-              // buckets[bkt_idx].point =
-              //   buckets[bkt_idx].point + ((negate_p_and_s ^ (carry > 0)) ? base_neg : base); // TBD: inplace
+              P::accum_prj_aff(buckets[bkt_idx].point, negate ? base_neg : base);
             } else {
               buckets_busy[bkt_idx] = true;
-              buckets[bkt_idx].point =
-                P::from_affine(((negate_p_and_s ^ (carry > 0)) ? base_neg : base)); // TBD: inplace
+              buckets[bkt_idx].point = P::from_affine(negate ? base_neg : base);
             }
-          } else {
-            // Handle edge case where coeff = 1 << c due to carry overflow which means:
-            // coeff & coeff_mask == 0 but there is a carry to propagate to the next segment
-            carry = curr_coeff >> m_c;
           }
         }
       }
