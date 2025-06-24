@@ -1,11 +1,21 @@
 use clap::Parser;
-
-use icicle_core::polynomial_ring::PolynomialRing;
-use icicle_core::traits::{FieldImpl, GenerateRandom};
-use icicle_labrador::{polynomial_ring::PolyRing, ring::ScalarCfg as ZqCfg, ring::ScalarRing as Zq};
-use icicle_runtime::memory::{DeviceVec, HostSlice};
 use std::time::Instant;
 
+use icicle_core::{
+    balanced_decomposition,
+    negacyclic_ntt::{ntt, ntt_inplace, NegacyclicNtt, NegacyclicNttConfig},
+    ntt::NTTDir,
+    polynomial_ring::PolynomialRing,
+    traits::{FieldImpl, GenerateRandom},
+    vec_ops::VecOpsConfig,
+};
+use icicle_labrador::{
+    polynomial_ring::PolyRing,
+    ring::{ScalarCfg as ZqCfg, ScalarRing as Zq},
+};
+use icicle_runtime::memory::{DeviceVec, HostSlice};
+
+/// Command-line args
 #[derive(Parser, Debug)]
 struct Args {
     /// Device type (e.g., "CPU", "CUDA")
@@ -13,52 +23,49 @@ struct Args {
     device_type: String,
 }
 
-// Load backend and set device
+/// Load runtime backend and select the device
 fn try_load_and_set_backend_device(args: &Args) {
     if args.device_type != "CPU" {
         icicle_runtime::runtime::load_backend_from_env_or_default().unwrap();
     }
-    println!("Setting device {}", args.device_type);
-    let device = icicle_runtime::Device::new(&args.device_type, 0 /* =device_id*/);
+    println!("Setting device: {}", args.device_type);
+    let device = icicle_runtime::Device::new(&args.device_type, 0);
     icicle_runtime::set_device(&device).unwrap();
 }
 
-/// Runs negacyclic NTT on device memory and verifies host-side output.
-/// This function demonstrates both in-place and out-of-place NTT APIs.
-use icicle_core::negacyclic_ntt::{ntt, ntt_inplace, NegacyclicNtt, NegacyclicNttConfig};
-use icicle_core::ntt::NTTDir;
-
+/// Demonstrates in-place and out-of-place NTT for a polynomial ring.
 fn negacyclic_ntt<P>(size: usize)
 where
     P: PolynomialRing + NegacyclicNtt<P> + GenerateRandom<P>,
     P::Base: FieldImpl,
 {
-    // Generate random polynomials on the host
+    // Generate random input on the host
     let input = P::generate_random(size);
 
-    // Allocate and copy to device memory
+    // Allocate and transfer to device memory
     let mut device_input = DeviceVec::<P>::device_malloc(size).unwrap();
     device_input
         .copy_from_host(HostSlice::from_slice(&input))
         .unwrap();
 
-    // Configure NTT
     let cfg = NegacyclicNttConfig::default();
 
-    // ------------------------------
-    // In-place forward NTT (timed)
-    // ------------------------------
+    println!("----------------------------------------------------------------------");
+
+    // ----------------------------------------------------------------------
+    // In-place NTT on device memory (timed)
+    // ----------------------------------------------------------------------
     let start = Instant::now();
     ntt_inplace(&mut device_input, NTTDir::kForward, &cfg).unwrap();
     let duration = start.elapsed();
     println!(
-        "In-place NTT (device) completed in {:.2?} for {} polynomials",
+        "[NTT] In-place forward NTT completed in {:.2?} for {} polynomials",
         duration, size
     );
 
-    // ------------------------------
-    // Out-of-place NTT to host buffer (or a device buffer)
-    // ------------------------------
+    // ----------------------------------------------------------------------
+    // Out-of-place NTT into host buffer (can compute to device or host memory)
+    // ----------------------------------------------------------------------
     let mut output = vec![P::zero(); size];
     ntt(
         &device_input,
@@ -68,61 +75,143 @@ where
     )
     .unwrap();
 
-    println!("Computed forward NTT of {} polynomial elements", size);
+    println!("[NTT] Output vector contains {} transformed elements", output.len());
+}
+
+/// Demonstrates balanced base decomposition and recomposition for polynomial ring elements.
+/// Uses dynamic bases q^(1/t) for t ∈ {2, 4, 8}, and verifies correctness.
+fn balanced_decomposition<P>(size: usize)
+where
+    P: PolynomialRing + balanced_decomposition::BalancedDecomposition<P> + GenerateRandom<P>,
+{
+    let q: usize = 4_289_678_649_214_369_793; // TODO: expose q from P::Base::MODULUS
+
+    // Compute bases: q^(1/t) for t = 2, 4, 8
+    let ts = [2, 4, 8];
+    let bases: Vec<u32> = ts
+        .iter()
+        .map(|t| {
+            (q as f64)
+                .powf(1.0 / *t as f64)
+                .floor() as u32
+        })
+        .collect();
+
+    // Generate input data
+    let input = P::generate_random(size);
+    let mut recomposed = vec![P::zero(); size];
+
+    let cfg = VecOpsConfig::default();
+
+    for (i, base) in bases
+        .iter()
+        .enumerate()
+    {
+        println!("----------------------------------------------------------------------");
+        println!("[Balanced Decomposition] Using [t = {}] Base = {}", ts[i], base);
+
+        let digits_per_elem = balanced_decomposition::count_digits::<P>(*base);
+        let decomposed_len = size * digits_per_elem as usize;
+
+        println!(
+            "Elements: {} ({} digits per element → total = {})",
+            size, digits_per_elem, decomposed_len
+        );
+
+        let mut decomposed = DeviceVec::<P>::device_malloc(decomposed_len).expect("Failed to allocate device memory");
+
+        // ------------------------------
+        // ⏱️ Decompose
+        // ------------------------------
+        let t0 = std::time::Instant::now();
+        balanced_decomposition::decompose::<P>(HostSlice::from_slice(&input), &mut decomposed[..], *base, &cfg)
+            .expect("Decomposition failed");
+        let decompose_time = t0.elapsed();
+        println!("Decomposition completed in {:.2?}", decompose_time);
+
+        // ------------------------------
+        // ⏱️ Recompose
+        // ------------------------------
+        let t1 = std::time::Instant::now();
+        balanced_decomposition::recompose::<P>(
+            &decomposed[..],
+            HostSlice::from_mut_slice(&mut recomposed),
+            *base,
+            &cfg,
+        )
+        .expect("Recomposition failed");
+        let recompose_time = t1.elapsed();
+        println!("Recomposition completed in {:.2?}", recompose_time);
+
+        // ------------------------------
+        // ✅ Verification
+        // ------------------------------
+        assert_eq!(input, recomposed);
+    }
 }
 
 fn main() {
-    println!("---------------------- Lattice Snarks Example ------------------------");
+    println!("==================== Lattice SNARK Example ====================");
+
     let args = Args::parse();
-    println!("{:?}", args);
+    println!("Parsed arguments: {:?}", args);
 
     try_load_and_set_backend_device(&args);
 
-    let size = 1 << 10; // Example vector size (adjustable)
+    let size = 1 << 10; // Adjustable test size
 
-    // -----------------------------------------------------------------------------
-    // (1) Integer ring elements: Zq
-    // -----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------
+    // (1) Integer ring: Zq
+    // ----------------------------------------------------------------------
 
-    // Initialize with zeros
     let _zq_zeros: Vec<Zq> = vec![Zq::zero(); size];
-
-    // Generate random elements using the configured field
     let zq_random: Vec<Zq> = ZqCfg::generate_random(size);
     println!("Generated {} random Zq elements", zq_random.len());
 
-    // Zq elements can also be constructed from u32 values, byte arrays, hex strings, etc.
-    // (See `FieldImpl` trait for full construction options)
-
-    // -----------------------------------------------------------------------------
-    // (2) Polynomial ring elements: PolyRing = Zq[X]/(X^n + 1)
-    // -----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------
+    // (2) Polynomial ring: PolyRing = Zq[X]/(X^n + 1)
+    // ----------------------------------------------------------------------
 
     // Note: `PolyRing` is used for both coefficient-domain (Rq) and NTT-domain (Tq) representations.
-
-    // Initialize with zeros
     let _rq_zeros: Vec<PolyRing> = vec![PolyRing::zero(); size];
-
-    // Generate random polynomials with random coefficients
     let _rq_random: Vec<PolyRing> = PolyRing::generate_random(size);
 
-    // Convert a flat vector of Zq elements into PolyRing polynomials
     let rq_from_slice: Vec<PolyRing> = zq_random
         .chunks(PolyRing::DEGREE)
         .map(PolyRing::from_slice)
         .collect();
-    println!("Generated {} Rq elements from Zq elements", rq_from_slice.len());
+    println!("Converted {} Zq chunks into Rq polynomials", rq_from_slice.len());
 
-    // APIs to demonstrate:
-    // (1) Negacyclic NTT for polynomial rings
+    // ----------------------------------------------------------------------
+    // (3) Negacyclic NTT for polynomial rings
+    // ----------------------------------------------------------------------
+
     negacyclic_ntt::<PolyRing>(size);
-    // (2) Matmul for polynomial rings (Ajtai, dot-products, etc.)
-    // (3) Balanced-decomposition for polynomial rings, with base b (up to 32bits)
-    // (4) Norm check for Integer rings (Zq)
-    // (5) JL-projection for Integer rings (Zq) - including reintepretation of slices
-    // (6) vector-apis for polynomial rings (PolyRing) - show Zq*PolyRing vectors for aggregation and vector-sum
-    // (7) Matrix transpose for polynomial rings (PolyRing)
-    // (8) Random-Sampling of Integer rings (Zq) and Polynomial rings (PolyRing)
-    // (9) Challenge space sampling for polynomial rings (PolyRing) - show how to sample from a challenge space
-    // (10) OpNorm testing for Polynomial rings (PolyRing) - show how to test OpNorms for polynomial rings
+
+    // ----------------------------------------------------------------------
+    // (4) Polynomial Ring Matrix Multiplication
+    //     - Ajtai-style commitments
+    //     - Dot products and vector-matrix ops
+    // ----------------------------------------------------------------------
+
+    // TODO
+
+    // ----------------------------------------------------------------------
+    // (5) Balanced base decomposition for polynomial rings
+    // ----------------------------------------------------------------------
+
+    balanced_decomposition::<PolyRing>(size);
+
+    // ----------------------------------------------------------------------
+    // Remaining APIs (to be implemented):
+    // ----------------------------------------------------------------------
+    // (4) Matmul for polynomial rings (Ajtai, dot-products, etc.)
+    // (5) Balanced decomposition for polynomial rings (base b ≤ 2^32)
+    // (6) Norm check for Zq
+    // (7) JL projection for Zq (with slice reinterpretation)
+    // (8) Vector APIs for PolyRing (Zq × PolyRing aggregation, sum)
+    // (9) Matrix transpose for PolyRing
+    // (10) Random sampling for Zq and PolyRing
+    // (11) Challenge sampling in PolyRing (e.g., sparse {0, ±1, ±2})
+    // (12) Operator norm testing for PolyRing
 }
