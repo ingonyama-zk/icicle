@@ -601,9 +601,8 @@ TEST_F(RingTestBase, JLMatrixRowsDeviceConsistency)
 
     // Compare matrices element by element
     for (size_t i = 0; i < output_size * N; ++i) {
-      ASSERT_EQ(reference_matrix[i], matrix[i])
-        << "Matrix mismatch at index " << i << ": " << reference_device << " = " << reference_matrix[i] << ", "
-        << device << " = " << matrix[i];
+      ASSERT_EQ(reference_matrix[i], matrix[i]) << "Matrix mismatch at index " << i << ": " << reference_device << " = "
+                                                << reference_matrix[i] << ", " << device << " = " << matrix[i];
     }
   }
 
