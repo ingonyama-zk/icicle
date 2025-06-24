@@ -198,20 +198,55 @@ fn main() {
 
     // ----------------------------------------------------------------------
     // (5) Balanced base decomposition for polynomial rings
+    //     - Decompose and recompose using base b ≤ 2³²
     // ----------------------------------------------------------------------
 
     balanced_decomposition::<PolyRing>(size);
 
     // ----------------------------------------------------------------------
-    // Remaining APIs (to be implemented):
+    // (6) Norm Checking for Integer Ring (Zq)
+    //     - ℓ₂ and ℓ∞ norms over Zq vectors
     // ----------------------------------------------------------------------
-    // (4) Matmul for polynomial rings (Ajtai, dot-products, etc.)
-    // (5) Balanced decomposition for polynomial rings (base b ≤ 2^32)
-    // (6) Norm check for Zq
-    // (7) JL projection for Zq (with slice reinterpretation)
-    // (8) Vector APIs for PolyRing (Zq × PolyRing aggregation, sum)
-    // (9) Matrix transpose for PolyRing
-    // (10) Random sampling for Zq and PolyRing
-    // (11) Challenge sampling in PolyRing (e.g., sparse {0, ±1, ±2})
-    // (12) Operator norm testing for PolyRing
+
+    // TODO
+
+    // ----------------------------------------------------------------------
+    // (7) Johnson–Lindenstrauss Projection for Zq
+    //     - Reinterpret Polynomial rings as Zq slices and project
+    // ----------------------------------------------------------------------
+
+    // TODO
+
+    // ----------------------------------------------------------------------
+    // (8) Vector APIs for Polynomial Rings
+    //     - Aggregation, weighted sum, and dot-product ops
+    // ----------------------------------------------------------------------
+
+    // TODO
+
+    // ----------------------------------------------------------------------
+    // (9) Matrix Transpose for Polynomial Rings
+    // ----------------------------------------------------------------------
+
+    // TODO
+
+    // ----------------------------------------------------------------------
+    // (10) Random Sampling for Zq and PolyRing
+    //      - Pseudorandom seeded generation
+    // ----------------------------------------------------------------------
+
+    // TODO
+
+    // ----------------------------------------------------------------------
+    // (11) Challenge Polynomial Sampling in PolyRing
+    //      - Sample sparse polynomials (e.g., ±1, ±2, 0)
+    // ----------------------------------------------------------------------
+
+    // TODO
+
+    // ----------------------------------------------------------------------
+    // (12) Operator Norm Testing for Polynomial Rings
+    // ----------------------------------------------------------------------
+
+    // TODO
 }
