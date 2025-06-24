@@ -571,12 +571,12 @@ TEST_F(RingTestBase, JLMatrixRowsDeviceConsistency)
   // Generate matrix on each device
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
-    
+
     std::vector<field_t> device_matrix(output_size * N);
     std::stringstream timer_label;
     timer_label << "JL-matrix-rows [device=" << device << "]";
     device_timer_labels.push_back(timer_label.str());
-    
+
     START_TIMER(generate);
     ICICLE_CHECK(get_jl_matrix_rows(
       seed, sizeof(seed),
@@ -587,23 +587,23 @@ TEST_F(RingTestBase, JLMatrixRowsDeviceConsistency)
       device_matrix.data() // Output: [num_rows x row_size]
       ));
     END_TIMER(generate, timer_label.str().c_str(), true);
-    
+
     device_matrices.push_back(std::move(device_matrix));
   }
 
   // Compare all device matrices with the first one
   const auto& reference_matrix = device_matrices[0];
   const auto& reference_device = s_registered_devices[0];
-  
+
   for (size_t device_idx = 1; device_idx < device_matrices.size(); ++device_idx) {
     const auto& device_matrix = device_matrices[device_idx];
     const auto& device = s_registered_devices[device_idx];
-    
+
     // Compare matrices element by element
     for (size_t i = 0; i < output_size * N; ++i) {
-      ASSERT_EQ(reference_matrix[i], device_matrix[i]) 
-        << "Matrix mismatch at index " << i << ": " << reference_device << " = " << reference_matrix[i] 
-        << ", " << device << " = " << device_matrix[i];
+      ASSERT_EQ(reference_matrix[i], device_matrix[i])
+        << "Matrix mismatch at index " << i << ": " << reference_device << " = " << reference_matrix[i] << ", "
+        << device << " = " << device_matrix[i];
     }
   }
 
@@ -615,7 +615,7 @@ TEST_F(RingTestBase, JLMatrixRowsDeviceConsistency)
   // Generate partial matrix on each device
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
-    
+
     std::vector<field_t> device_partial(partial_rows * N);
     ICICLE_CHECK(get_jl_matrix_rows(
       seed, sizeof(seed),
@@ -623,17 +623,17 @@ TEST_F(RingTestBase, JLMatrixRowsDeviceConsistency)
       start_row,    // start_row
       partial_rows, // num_rows
       cfg, device_partial.data()));
-    
+
     device_partial_matrices.push_back(std::move(device_partial));
   }
 
   // Compare all partial matrices with the first one
   const auto& reference_partial = device_partial_matrices[0];
-  
+
   for (size_t device_idx = 1; device_idx < device_partial_matrices.size(); ++device_idx) {
     const auto& device_partial = device_partial_matrices[device_idx];
     const auto& device = s_registered_devices[device_idx];
-    
+
     // Compare partial matrices
     for (size_t i = 0; i < partial_rows * N; ++i) {
       ASSERT_EQ(reference_partial[i], device_partial[i])
@@ -1205,32 +1205,33 @@ TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
   // Perform JL projection on each device
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
-    
+
     std::vector<field_t> device_output(output_size);
     std::stringstream timer_label;
     timer_label << "JL-projection [device=" << device << "]";
     device_timer_labels.push_back(timer_label.str());
-    
+
     START_TIMER(projection);
-    ICICLE_CHECK(jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, device_output.data(), device_output.size()));
+    ICICLE_CHECK(
+      jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, device_output.data(), device_output.size()));
     END_TIMER(projection, timer_label.str().c_str(), true);
-    
+
     device_outputs.push_back(std::move(device_output));
   }
 
   // Compare all device outputs with the first one
   const auto& reference_output = device_outputs[0];
   const auto& reference_device = s_registered_devices[0];
-  
+
   for (size_t device_idx = 1; device_idx < device_outputs.size(); ++device_idx) {
     const auto& device_output = device_outputs[device_idx];
     const auto& device = s_registered_devices[device_idx];
-    
+
     // Compare outputs element by element
     for (size_t i = 0; i < output_size; ++i) {
-      ASSERT_EQ(reference_output[i], device_output[i]) 
-        << "Mismatch at index " << i << ": " << reference_device << " = " << reference_output[i] 
-        << ", " << device << " = " << device_output[i];
+      ASSERT_EQ(reference_output[i], device_output[i])
+        << "Mismatch at index " << i << ": " << reference_device << " = " << reference_output[i] << ", " << device
+        << " = " << device_output[i];
     }
   }
 }
