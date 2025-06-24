@@ -565,14 +565,14 @@ TEST_F(RingTestBase, JLMatrixRowsDeviceConsistency)
   const auto cfg = VecOpsConfig{};
 
   // Store matrices from all devices
-  std::vector<std::vector<field_t>> device_matrices;
+  std::vector<std::vector<field_t>> matrices;
   std::vector<std::string> device_timer_labels;
 
   // Generate matrix on each device
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
 
-    std::vector<field_t> device_matrix(output_size * N);
+    std::vector<field_t> matrix(output_size * N);
     std::stringstream timer_label;
     timer_label << "JL-matrix-rows [device=" << device << "]";
     device_timer_labels.push_back(timer_label.str());
@@ -584,33 +584,33 @@ TEST_F(RingTestBase, JLMatrixRowsDeviceConsistency)
       0,           // start_row
       output_size, // num_rows
       cfg,
-      device_matrix.data() // Output: [num_rows x row_size]
+      matrix.data() // Output: [num_rows x row_size]
       ));
     END_TIMER(generate, timer_label.str().c_str(), true);
 
-    device_matrices.push_back(std::move(device_matrix));
+    matrices.push_back(std::move(matrix));
   }
 
   // Compare all device matrices with the first one
-  const auto& reference_matrix = device_matrices[0];
+  const auto& reference_matrix = matrices[0];
   const auto& reference_device = s_registered_devices[0];
 
-  for (size_t device_idx = 1; device_idx < device_matrices.size(); ++device_idx) {
-    const auto& device_matrix = device_matrices[device_idx];
+  for (size_t device_idx = 1; device_idx < matrices.size(); ++device_idx) {
+    const auto& matrix = matrices[device_idx];
     const auto& device = s_registered_devices[device_idx];
 
     // Compare matrices element by element
     for (size_t i = 0; i < output_size * N; ++i) {
-      ASSERT_EQ(reference_matrix[i], device_matrix[i])
+      ASSERT_EQ(reference_matrix[i], matrix[i])
         << "Matrix mismatch at index " << i << ": " << reference_device << " = " << reference_matrix[i] << ", "
-        << device << " = " << device_matrix[i];
+        << device << " = " << matrix[i];
     }
   }
 
   // Additional verification: test with different start_row and num_rows parameters
   const size_t start_row = 10;
   const size_t partial_rows = 50;
-  std::vector<std::vector<field_t>> device_partial_matrices;
+  std::vector<std::vector<field_t>> partial_matrices;
 
   // Generate partial matrix on each device
   for (const auto& device : s_registered_devices) {
@@ -624,21 +624,21 @@ TEST_F(RingTestBase, JLMatrixRowsDeviceConsistency)
       partial_rows, // num_rows
       cfg, device_partial.data()));
 
-    device_partial_matrices.push_back(std::move(device_partial));
+    partial_matrices.push_back(std::move(device_partial));
   }
 
   // Compare all partial matrices with the first one
-  const auto& reference_partial = device_partial_matrices[0];
+  const auto& reference_partial = partial_matrices[0];
 
-  for (size_t device_idx = 1; device_idx < device_partial_matrices.size(); ++device_idx) {
-    const auto& device_partial = device_partial_matrices[device_idx];
+  for (size_t device_idx = 1; device_idx < partial_matrices.size(); ++device_idx) {
+    const auto& partial = partial_matrices[device_idx];
     const auto& device = s_registered_devices[device_idx];
 
     // Compare partial matrices
     for (size_t i = 0; i < partial_rows * N; ++i) {
-      ASSERT_EQ(reference_partial[i], device_partial[i])
+      ASSERT_EQ(reference_partial[i], partial[i])
         << "Partial matrix mismatch at index " << i << " (start_row=" << start_row << ", partial_rows=" << partial_rows
-        << "): " << reference_device << " = " << reference_partial[i] << ", " << device << " = " << device_partial[i];
+        << "): " << reference_device << " = " << reference_partial[i] << ", " << device << " = " << partial[i];
     }
   }
 }
@@ -1168,7 +1168,7 @@ TEST_F(RingTestBase, NegacyclicNTT)
 
 #endif
 
-TEST_F(RingTestBase, JLProjectionCPUCUDAComparisonTest)
+TEST_F(RingTestBase, JLProjectionDeviceConsistency)
 {
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
