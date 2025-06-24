@@ -3,6 +3,7 @@
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
 #include "icicle/norm.h"
+#include "icicle/random_sampling.h"
 #include "icicle/negacyclic_ntt.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
@@ -692,6 +693,74 @@ TEST_F(RingTestBase, JLprojectionLemma)
   }
 }
 
+TEST_F(RingTestBase, JLProjectionDeviceConsistency)
+{
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  const size_t N = (1 << 16) + 1; // Input vector size
+  const size_t output_size = 256; // JL projected size
+
+  // Skip test if fewer than 2 devices are available
+  if (s_registered_devices.size() < 2) { GTEST_SKIP() << "At least 2 devices are required for this test"; }
+
+  std::vector<field_t> input(N);
+
+  // generate random values in [0, sqrt(q)]. We assume input is low norm.
+  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
+  for (auto& x : input) {
+    uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
+    x = field_t::from(val);
+  }
+
+  const auto cfg = VecOpsConfig{};
+
+  // Prepare random seed
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() % 256);
+  }
+
+  // Store outputs from all devices
+  std::vector<std::vector<field_t>> device_outputs;
+  std::vector<std::string> device_timer_labels;
+
+  // Perform JL projection on each device
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    std::vector<field_t> device_output(output_size);
+    std::stringstream timer_label;
+    timer_label << "JL-projection [device=" << device << "]";
+    device_timer_labels.push_back(timer_label.str());
+
+    START_TIMER(projection);
+    ICICLE_CHECK(
+      jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, device_output.data(), device_output.size()));
+    END_TIMER(projection, timer_label.str().c_str(), true);
+
+    device_outputs.push_back(std::move(device_output));
+  }
+
+  // Compare all device outputs with the first one
+  const auto& reference_output = device_outputs[0];
+  const auto& reference_device = s_registered_devices[0];
+
+  for (size_t device_idx = 1; device_idx < device_outputs.size(); ++device_idx) {
+    const auto& device_output = device_outputs[device_idx];
+    const auto& device = s_registered_devices[device_idx];
+
+    // Compare outputs element by element
+    for (size_t i = 0; i < output_size; ++i) {
+      ASSERT_EQ(reference_output[i], device_output[i])
+        << "Mismatch at index " << i << ": " << reference_device << " = " << reference_output[i] << ", " << device
+        << " = " << device_output[i];
+    }
+  }
+}
+
 TEST_F(RingTestBase, NormBounded)
 {
   static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
@@ -1164,73 +1233,56 @@ TEST_F(RingTestBase, NegacyclicNTT)
     }
   }
 }
+#endif // NTT
 
-#endif
-
-TEST_F(RingTestBase, JLProjectionDeviceConsistency)
+TEST_F(RingTestBase, RandomSampling)
 {
-  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
-  constexpr auto q_storage = field_t::get_modulus();
-  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
-  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+  size_t size = 1 << 20;
+  size_t seed_len = 32;
+  std::vector<std::byte> seed(seed_len);
+  for (size_t i = 0; i < seed_len; ++i) {
+    seed[i] = static_cast<std::byte>(rand_uint_32b());
+  }
+  std::vector<std::byte> seed_prime(seed);
+  seed_prime[0] = static_cast<std::byte>(uint8_t(seed_prime[0]) + 1); // Make sure the seed is different
 
-  const size_t N = (1 << 16) + 1; // Input vector size
-  const size_t output_size = 256; // JL projected size
-
-  // Skip test if fewer than 2 devices are available
-  if (s_registered_devices.size() < 2) { GTEST_SKIP() << "At least 2 devices are required for this test"; }
-
-  std::vector<field_t> input(N);
-
-  // generate random values in [0, sqrt(q)]. We assume input is low norm.
-  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
-  for (auto& x : input) {
-    uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
-    x = field_t::from(val);
+  std::vector<std::vector<field_t>> a(s_registered_devices.size());
+  std::vector<std::vector<field_t>> b(s_registered_devices.size());
+  for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+    a[device_index] = std::vector<field_t>(size);
+    b[device_index] = std::vector<field_t>(size);
   }
 
-  const auto cfg = VecOpsConfig{};
+  auto test_random_sampling = [&](bool fast_mode) {
+    const int N = 15;
+    for (int i = 0; i < N; ++i) {
+      for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+        ICICLE_CHECK(icicle_set_device(s_registered_devices[device_index]));
 
-  // Prepare random seed
-  std::byte seed[32];
-  for (auto& b : seed) {
-    b = static_cast<std::byte>(rand_uint_32b() % 256);
-  }
+        // Different seed inconsistency test
+        ICICLE_CHECK(random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, a[device_index].data()));
+        ICICLE_CHECK(
+          random_sampling(size, fast_mode, seed_prime.data(), seed_len, VecOpsConfig{}, b[device_index].data()));
+        bool equal = true;
+        for (size_t j = 0; j < size; ++j) {
+          if (a[device_index][j] != b[device_index][j]) { equal = false; }
+        }
+        ASSERT_FALSE(equal);
 
-  // Store outputs from all devices
-  std::vector<std::vector<field_t>> device_outputs;
-  std::vector<std::string> device_timer_labels;
-
-  // Perform JL projection on each device
-  for (const auto& device : s_registered_devices) {
-    ICICLE_CHECK(icicle_set_device(device));
-
-    std::vector<field_t> device_output(output_size);
-    std::stringstream timer_label;
-    timer_label << "JL-projection [device=" << device << "]";
-    device_timer_labels.push_back(timer_label.str());
-
-    START_TIMER(projection);
-    ICICLE_CHECK(
-      jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, device_output.data(), device_output.size()));
-    END_TIMER(projection, timer_label.str().c_str(), true);
-
-    device_outputs.push_back(std::move(device_output));
-  }
-
-  // Compare all device outputs with the first one
-  const auto& reference_output = device_outputs[0];
-  const auto& reference_device = s_registered_devices[0];
-
-  for (size_t device_idx = 1; device_idx < device_outputs.size(); ++device_idx) {
-    const auto& device_output = device_outputs[device_idx];
-    const auto& device = s_registered_devices[device_idx];
-
-    // Compare outputs element by element
-    for (size_t i = 0; i < output_size; ++i) {
-      ASSERT_EQ(reference_output[i], device_output[i])
-        << "Mismatch at index " << i << ": " << reference_device << " = " << reference_output[i] << ", " << device
-        << " = " << device_output[i];
+        // Same seed consistency test
+        ICICLE_CHECK(random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, a[device_index].data()));
+        ICICLE_CHECK(random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, b[device_index].data()));
+        for (size_t i = 0; i < size; ++i) {
+          ASSERT_EQ(a[device_index][i], b[device_index][i]);
+        }
+      }
+      for (int j = 0; j < size; ++j) {
+        for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+          ASSERT_EQ(a[device_index][j], b[device_index][j]);
+        }
+      }
     }
-  }
+  };
+  test_random_sampling(true);
+  test_random_sampling(false);
 }

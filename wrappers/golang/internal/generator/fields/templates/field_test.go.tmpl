@@ -163,19 +163,19 @@ type {{.FieldPrefix}}FieldTestSuite struct {
 }
 
 func (s *{{.FieldPrefix}}FieldTestSuite) Test{{.FieldPrefix}}Field() {
-	s.Run("Test{{.FieldPrefix}}FieldFromLimbs", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldFromLimbs))
-	s.Run("Test{{.FieldPrefix}}FieldGetLimbs", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldGetLimbs))
-	s.Run("Test{{.FieldPrefix}}FieldOne", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldOne))
-	s.Run("Test{{.FieldPrefix}}FieldZero", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldZero))
-	s.Run("Test{{.FieldPrefix}}FieldSize", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldSize))
-	s.Run("Test{{.FieldPrefix}}FieldAsPointer", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldAsPointer))
-	s.Run("Test{{.FieldPrefix}}FieldFromBytes", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldFromBytes))
-	s.Run("Test{{.FieldPrefix}}FieldToBytes", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldToBytes))
+	s.Run("Test{{.FieldPrefix}}FieldFromLimbs", test_helpers.TestWrapper(&s.Suite, test{{.FieldPrefix}}FieldFromLimbs))
+	s.Run("Test{{.FieldPrefix}}FieldGetLimbs", test_helpers.TestWrapper(&s.Suite, test{{.FieldPrefix}}FieldGetLimbs))
+	s.Run("Test{{.FieldPrefix}}FieldOne", test_helpers.TestWrapper(&s.Suite, test{{.FieldPrefix}}FieldOne))
+	s.Run("Test{{.FieldPrefix}}FieldZero", test_helpers.TestWrapper(&s.Suite, test{{.FieldPrefix}}FieldZero))
+	s.Run("Test{{.FieldPrefix}}FieldSize", test_helpers.TestWrapper(&s.Suite, test{{.FieldPrefix}}FieldSize))
+	s.Run("Test{{.FieldPrefix}}FieldAsPointer", test_helpers.TestWrapper(&s.Suite, test{{.FieldPrefix}}FieldAsPointer))
+	s.Run("Test{{.FieldPrefix}}FieldFromBytes", test_helpers.TestWrapper(&s.Suite, test{{.FieldPrefix}}FieldFromBytes))
+	s.Run("Test{{.FieldPrefix}}FieldToBytes", test_helpers.TestWrapper(&s.Suite, test{{.FieldPrefix}}FieldToBytes))
 	{{if .IsScalar -}}
-	s.Run("Test{{.FieldPrefix}}FieldArithmetic", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldArithmetic))
-	s.Run("Test{{capitalize .Field}}GenerateScalars", testWrapper(&s.Suite, test{{capitalize .Field}}GenerateScalars))
+	s.Run("Test{{.FieldPrefix}}FieldArithmetic", test_helpers.TestWrapper(&s.Suite, test{{.FieldPrefix}}FieldArithmetic))
+	s.Run("Test{{capitalize .Field}}GenerateScalars", test_helpers.TestWrapper(&s.Suite, test{{capitalize .Field}}GenerateScalars))
 	{{- if and (ne .Field "m31") (ne .Field "m31_extension")}}
-	s.Run("Test{{capitalize .Field}}MongtomeryConversion", testWrapper(&s.Suite, test{{capitalize .Field}}MongtomeryConversion)){{end}}
+	s.Run("Test{{capitalize .Field}}MongtomeryConversion", test_helpers.TestWrapper(&s.Suite, test{{capitalize .Field}}MongtomeryConversion)){{end}}
 	{{- end}}
 }
 

@@ -7,9 +7,9 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	goldilocks "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/goldilocks"
-
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/goldilocks/polynomial"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/goldilocks/vecOps"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -235,15 +235,15 @@ type PolynomialTestSuite struct {
 }
 
 func (s *PolynomialTestSuite) TestPolynomial() {
-	s.Run("TestPolyCreateFromCoefficients", testWrapper(&s.Suite, testPolyCreateFromCoefficients))
-	s.Run("TestPolyEval", testWrapper(&s.Suite, testPolyEval))
-	s.Run("TestPolyClone", testWrapper(&s.Suite, testPolyClone))
-	s.Run("TestPolyAddSubMul", testWrapper(&s.Suite, testPolyAddSubMul))
-	s.Run("TestPolyMonomials", testWrapper(&s.Suite, testPolyMonomials))
-	s.Run("TestPolyReadCoeffs", testWrapper(&s.Suite, testPolyReadCoeffs))
-	s.Run("TestPolyOddEvenSlicing", testWrapper(&s.Suite, testPolyOddEvenSlicing))
-	s.Run("TestPolynomialDivision", testWrapper(&s.Suite, testPolynomialDivision))
-	s.Run("TestDivideByVanishing", testWrapper(&s.Suite, testDivideByVanishing))
+	s.Run("TestPolyCreateFromCoefficients", test_helpers.TestWrapper(&s.Suite, testPolyCreateFromCoefficients))
+	s.Run("TestPolyEval", test_helpers.TestWrapper(&s.Suite, testPolyEval))
+	s.Run("TestPolyClone", test_helpers.TestWrapper(&s.Suite, testPolyClone))
+	s.Run("TestPolyAddSubMul", test_helpers.TestWrapper(&s.Suite, testPolyAddSubMul))
+	s.Run("TestPolyMonomials", test_helpers.TestWrapper(&s.Suite, testPolyMonomials))
+	s.Run("TestPolyReadCoeffs", test_helpers.TestWrapper(&s.Suite, testPolyReadCoeffs))
+	s.Run("TestPolyOddEvenSlicing", test_helpers.TestWrapper(&s.Suite, testPolyOddEvenSlicing))
+	s.Run("TestPolynomialDivision", test_helpers.TestWrapper(&s.Suite, testPolynomialDivision))
+	s.Run("TestDivideByVanishing", test_helpers.TestWrapper(&s.Suite, testDivideByVanishing))
 }
 
 func TestSuitePolynomial(t *testing.T) {
