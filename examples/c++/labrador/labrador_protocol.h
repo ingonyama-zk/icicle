@@ -201,7 +201,7 @@ struct LabradorBaseCaseProof {
   LabradorBaseCaseProof(size_t r, size_t n) : final_const(r, n), z_hat(), t(), g(), h() {};
   LabradorBaseCaseProof(
     EqualityInstance final_const, std::vector<Tq> z_hat, std::vector<Tq> t, std::vector<Tq> g, std::vector<Tq> h)
-      : final_const(final_const), z_hat(std::move(z_hat)), t(std::move(t)), g(std::move(g)), h(std::move(h))
+      : final_const(final_const), z_hat(z_hat), t(t), g(g), h(h)
   {
   }
 };
@@ -231,6 +231,16 @@ struct LabradorBaseProver {
 
 struct LabradorBaseVerifier {
   LabradorInstance lab_inst;
+  PartialTranscript trs;
+  LabradorBaseCaseProof base_proof;
+
+  LabradorBaseVerifier(
+    const LabradorInstance& lab_inst, const PartialTranscript& trs, const LabradorBaseCaseProof& base_proof)
+      : lab_inst(lab_inst), trs(trs), base_proof(base_proof)
+  {
+  }
+  bool _verify_base_proof() const;
+  bool verify() const;
 };
 
 struct LabradorProver {

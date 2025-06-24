@@ -11,6 +11,7 @@
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
 #include "icicle/norm.h"
+#include "icicle/hash/keccak.h" // For Hash
 
 namespace icicle {
   namespace labrador {
@@ -87,6 +88,12 @@ namespace icicle {
       return icicle::balanced_decomposition::decompose<Rq>(input, input_size, base, cfg, output, output_size);
     }
 
+    inline eIcicleError recompose(
+      const Rq* input, size_t input_size, uint32_t base, const VecOpsConfig& cfg, Rq* output, size_t output_size)
+    {
+      return icicle::balanced_decomposition::recompose<Rq>(input, input_size, base, cfg, output, output_size);
+    }
+
     //------------------------------------------------------------------------------
     // Johnson–Lindenstrauss Projection
     //------------------------------------------------------------------------------
@@ -154,10 +161,26 @@ namespace icicle {
     /// - **Slow mode** (`fast_mode = false`): each element is sampled independently via hashing (seed || index).
     /// - **Fast mode** (`fast_mode = true`): one base element is sampled and all others are powers of it.
     eIcicleError random_sampling(
-      const std::byte* seed, size_t seed_len, bool fast_mode, const SamplingConfig& cfg, Zq* output, size_t output_size)
+      const std::byte* seed, size_t seed_len, bool /*fast_mode*/, const SamplingConfig&, Zq* output, size_t output_size)
     {
-      for (uint i = 0; i < output_size; i++) {
-        output[i] = Zq::from(rand_uint_32b());
+      // SHA3-256 based deterministic PRNG seeded with (seed || index)
+      icicle::Hash hasher = icicle::Sha3_256::create();
+
+      std::vector<std::byte> buf(seed, seed + seed_len);
+      buf.resize(seed_len + 8); // reserve room for the index
+
+      // modulus q  (fits in 64 bits, see balanced_decomposition.h)
+      constexpr auto q_storage = Zq::get_modulus();
+      const uint64_t q = *reinterpret_cast<const uint64_t*>(&q_storage);
+
+      for (size_t i = 0; i < output_size; ++i) {
+        std::memcpy(buf.data() + seed_len, &i, 8); // append index (LE)
+        std::array<std::byte, 32> digest{};
+        hasher.hash(buf.data(), buf.size(), {}, digest.data());
+
+        uint64_t word;
+        std::memcpy(&word, digest.data(), sizeof(word));
+        output[i] = Zq::from(word % q); // uniform in Z_q
       }
       return eIcicleError::SUCCESS;
     }

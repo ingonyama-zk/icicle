@@ -6,8 +6,8 @@ using namespace icicle::labrador;
 
 constexpr bool TESTING = true;
 
-/// @brief Computes the Ajtai input of the given input S. Views input S as matrix of vectors to be committed. Vectors
-/// are arranged in the row major form.
+/// @brief Computes the Ajtai commitment of the given input S. Views input S as matrix of vectors to be committed.
+/// Vectors are arranged in the row major form. If A is the Ajtai matrix, then this outputs S@A.
 /// @param ajtai_mat_seed seed for calculating entries of random Ajtai commitment matrix
 /// @param seed_len length of ajtai_mat_seed
 /// @param input_len length of vectors to be committed
@@ -269,13 +269,13 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       Rq b_rq;
       ICICLE_CHECK(ntt(&new_constraint.b, 1, NTTDir::kInverse, {}, &b_rq));
 
-      if (verif_test_b0[k] != b_rq.values[0]) {
-        std::cout << "Fail: New constraint b doesn't match verif b for idx" << k << "\n";
-      } else {
-        std::cout << "Pass: New constraint b matches verif b for idx" << k << "\n";
-      }
+      // if (verif_test_b0[k] != b_rq.values[0]) {
+      //   std::cout << "\tFail: New constraint b doesn't match verif b for idx" << k << "\n";
+      // } else {
+      //   std::cout << "\tPass: New constraint b matches verif b for idx" << k << "\n";
+      // }
       if (!witness_legit_const_zero({r, n, new_constraint.a, new_constraint.phi, verif_test_b0[k]}, S)) {
-        std::cout << "Verif test constraint " << k << " failed\n";
+        std::cout << "\tVerif test constraint " << k << " failed\n";
       }
     }
     // Add the EqualityInstance to LabradorInstance
@@ -292,6 +292,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
   return msg3;
 }
 
+// Modifies equality constraints
 void LabradorInstance::agg_equality_constraints(const std::vector<Tq>& alpha_hat)
 { // Step 22: Say the EqualityInstances in LabradorInstance are:
   // [{a_{ij}^{(k)}; 0 ≤ i,j < r} ⊂ T_q, b^{(k)} ∈ T_q, {φ_i^{(k)} : 0 ≤ i < r} ⊂ T_q^n : 0 ≤ k < K]
@@ -308,6 +309,7 @@ void LabradorInstance::agg_equality_constraints(const std::vector<Tq>& alpha_hat
 
   // Compute: equality_constraints[k].a = alpha_hat[k]*equality_constraints[k].a
   for (size_t k = 0; k < K; k++) {
+    // no iterations like agg_const_zero_constraints, so in place modification
     ICICLE_CHECK(matmul(
       &alpha_hat[k], 1, 1, equality_constraints[k].a.data(), 1, r * r, async_config, equality_constraints[k].a.data()));
   }
@@ -354,7 +356,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   constexpr size_t d = Rq::d;
 
   if (TESTING) {
-    std::cout << "Testing witness validity...";
+    std::cout << "\tTesting witness validity...";
     assert(lab_witness_legit(lab_inst, S));
     std::cout << "VALID\n";
   }
@@ -392,6 +394,27 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Rq> T_tilde(l1 * r * kappa);
   ICICLE_CHECK(decompose(T.data(), r * kappa, base1, {}, T_tilde.data(), T_tilde.size()));
   std::cout << "Step 6 completed: Decomposed T to T_tilde" << std::endl;
+
+  if (TESTING) {
+    // Ensure that recompose(T_tilde) == T
+    std::vector<Rq> temp(r * kappa);
+    ICICLE_CHECK(recompose(T_tilde.data(), T_tilde.size(), base1, {}, temp.data(), temp.size()));
+    bool decompose_recompose_correct = true;
+    for (size_t i = 0; i < r * kappa; i++) {
+      for (size_t j = 0; j < d; j++) {
+        if (temp[i].values[j] != T[i].values[j]) {
+          decompose_recompose_correct = false;
+          break;
+        }
+      }
+      if (!decompose_recompose_correct) break;
+    }
+    if (decompose_recompose_correct) {
+      std::cout << "\tDecompose/recompose test passed\n";
+    } else {
+      std::cout << "\tDecompose/recompose test failed\n";
+    }
+  }
 
   // Step 7: compute g
   std::vector<Tq> S_hat_transposed(n * r);
@@ -510,19 +533,19 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
       ConstZeroInstance cz{r, n, a, phi, Zq::neg(p[l])};
       if (!witness_legit_const_zero(cz, S)) {
-        std::cout << "Q-constraint-check fails for " << l << "\n";
+        std::cout << "\tQ-constraint-check fails for " << l << "\n";
         Q_testing = false;
         break;
       };
     }
-    if (Q_testing) { std::cout << "Q-constraint-check passed... " << "\n"; }
+    if (Q_testing) { std::cout << "\tQ-constraint-check passed... " << "\n"; }
   }
 
   std::vector<Tq> msg3 = agg_const_zero_constraints(num_aggregation_rounds, JL_out, S_hat, G_hat, p, Q_hat, psi, omega);
   std::cout << "Step 19 completed: Aggregated ConstZeroInstance constraints" << std::endl;
 
   if (TESTING) {
-    std::cout << "Testing witness validity...";
+    std::cout << "\tTesting witness validity...";
     assert(lab_witness_legit(lab_inst, S));
     std::cout << "VALID\n";
   }
@@ -551,6 +574,11 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // Step 22:
   lab_inst.agg_equality_constraints(alpha_hat);
   std::cout << "Step 22 completed: Aggregated equality constraints" << std::endl;
+  if (TESTING) {
+    std::cout << "\tTesting witness validity...";
+    assert(lab_witness_legit(lab_inst, S));
+    std::cout << "VALID\n";
+  }
 
   // Step 23: For 0 ≤ i ≤ j < r, the Prover computes the matrix multiplication between matrix
   // Phi = (φ'_0|φ'_1|···|φ'_{r-1})^T ∈ R_q^{r×n} and S ∈ R_q^{r×n} defined earlier.
@@ -620,16 +648,29 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   trs.challenges_hat = challenges_hat;
   std::cout << "Step 28 completed: Sampled challenges" << std::endl;
 
-  // Step 29: Compute z_hat
+  // Step 29: Compute z_hat[:] = \sum_i c_i * S[i,:] = [c1 c2 ... cr] @ S
   std::vector<Tq> z_hat(n);
-  // TODO: vectorise this
-  for (size_t i = 0; i < n; i++) {
-    for (size_t j = 0; j < r; j++) {
-      Tq temp;
-      ICICLE_CHECK(vector_mul(challenges_hat[j].values, S_hat[j * n + i].values, d, {}, temp.values));
-      ICICLE_CHECK(vector_add(z_hat[i].values, temp.values, d, {}, z_hat[i].values));
+  ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, S_hat.data(), r, n, {}, z_hat.data()));
+
+  if (TESTING) {
+    std::vector<Tq> ct_hat(kappa);
+    ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, T_hat.data(), r, kappa, {}, ct_hat.data()));
+    std::vector<Tq> zA_hat = ajtai_commitment(seed_A.data(), seed_A.size(), n, kappa, z_hat.data(), n);
+
+    // zA_hat == \sum_i c_i t_i
+    bool succ = true;
+    for (size_t i = 0; i < kappa; i++) {
+      for (size_t j = 0; j < d; j++) {
+        if (zA_hat[i].values[j] != ct_hat[i].values[j]) {
+          succ = false;
+          std::cout << "\tbase_prover zA = ct failed\n";
+          break;
+        }
+      }
     }
+    if (succ) { std::cout << "\tbase_prover zA = ct passed\n"; }
   }
+
   LabradorBaseCaseProof final_proof{lab_inst.equality_constraints[0], z_hat, T_tilde, g_tilde, H_tilde};
   std::cout << "Step 29 completed: Computed z_hat and created final proof" << std::endl;
 
@@ -1061,6 +1102,46 @@ void test_jl()
   }
 }
 
+bool LabradorBaseVerifier::_verify_base_proof() const
+{
+  size_t n = lab_inst.n;
+  size_t r = lab_inst.r;
+  size_t d = Rq::d;
+
+  auto z_hat = base_proof.z_hat;
+  auto t_tilde = base_proof.t;
+  auto g_tilde = base_proof.g;
+  auto h_tilde = base_proof.h;
+  auto challenges_hat = trs.challenges_hat;
+
+  const std::vector<std::byte>& ajtai_seed = lab_inst.param.ajtai_seed;
+  std::vector<std::byte> seed_A(ajtai_seed);
+  seed_A.push_back(std::byte('0'));
+
+  // Use ajtai_commitment to compute z_hat @ A
+  size_t kappa = lab_inst.param.kappa;
+  std::vector<Tq> zA_hat = ajtai_commitment(seed_A.data(), seed_A.size(), n, kappa, z_hat.data(), n);
+
+  size_t base1 = lab_inst.param.base1;
+  std::vector<Rq> t(r * kappa);
+  ICICLE_CHECK(recompose(t_tilde.data(), t_tilde.size(), base1, {}, t.data(), t.size()));
+  std::vector<Tq> t_hat(r * kappa), ct_hat(kappa);
+  // t_hat = NTT(t)
+  ICICLE_CHECK(ntt(t.data(), r * kappa, NTTDir::kForward, {}, t_hat.data()));
+  // ct_hat = \sum_i c_i t_i = [c1 c2 ... cr] @ t_hat
+  ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, t_hat.data(), r, kappa, {}, ct_hat.data()));
+  // zA_hat == \sum_i c_i t_i
+  for (size_t i = 0; i < kappa; i++) {
+    for (size_t j = 0; j < d; j++) {
+      if (zA_hat[i].values[j] != ct_hat[i].values[j]) {
+        std::cout << "_verify_base_proof failed\n";
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 // === Main driver ===
 
 int main(int argc, char* argv[])
@@ -1097,7 +1178,20 @@ int main(int argc, char* argv[])
   lab_inst.add_const_zero_constraint(const_zero_inst);
 
   LabradorBaseProver base_prover{lab_inst, S};
-  base_prover.base_case_prover();
+  auto [base_proof, trs] = base_prover.base_case_prover();
+
+  LabradorInstance verif_lab_inst{r, n, param};
+  verif_lab_inst.add_equality_constraint(eq_inst);
+  verif_lab_inst.add_const_zero_constraint(const_zero_inst);
+
+  LabradorBaseVerifier base_verifier{verif_lab_inst, trs, base_proof};
+  bool verification_result = base_verifier._verify_base_proof();
+
+  if (verification_result) {
+    std::cout << "Base proof verification passed\n";
+  } else {
+    std::cout << "Base proof verification failed\n";
+  }
 
   std::cout << "Hello\n";
   return 0;
