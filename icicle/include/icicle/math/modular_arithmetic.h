@@ -303,6 +303,30 @@ public:
 public:
   ff_storage limbs_storage;
 
+  HOST_DEVICE_INLINE uint32_t* export_limbs() { return (uint32_t*)limbs_storage.limbs; }
+
+  HOST_DEVICE_INLINE unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
+  {
+    const uint32_t limb_lsb_idx = (digit_num * digit_width) / 32;
+    const uint32_t shift_bits = (digit_num * digit_width) % 32;
+    unsigned rv = limbs_storage.limbs[limb_lsb_idx] >> shift_bits;
+    if ((shift_bits + digit_width > 32) && (limb_lsb_idx + 1 < TLC)) {
+      rv += limbs_storage.limbs[limb_lsb_idx + 1] << (32 - shift_bits);
+    }
+    rv &= ((1 << digit_width) - 1);
+    return rv;
+  }
+  HOST_DEVICE_INLINE uint32_t get_scalar_bits(const unsigned lsb_idx, const unsigned width) const
+  {
+    ICICLE_ASSERT(width <= 8 * sizeof(*(limbs_storage.limbs)))
+      << "get_scalar_bits::width(" << width << ") should be < 32";
+    const uint32_t limb_lsb_idx = lsb_idx / (8 * sizeof(*(limbs_storage.limbs)));
+    const uint32_t shift_bits = lsb_idx % (8 * sizeof(*(limbs_storage.limbs)));
+    const uint64_t mask = (1 << width) - 1;
+    const uint64_t* rv = reinterpret_cast<const uint64_t*>(&(limbs_storage.limbs[limb_lsb_idx]));
+    return (((*rv) >> shift_bits) & mask);
+  }
+
   template <unsigned NLIMBS>
   static HOST_INLINE storage<NLIMBS> rand_storage(unsigned non_zero_limbs = NLIMBS)
   {
