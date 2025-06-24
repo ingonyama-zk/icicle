@@ -288,43 +288,44 @@ private:
         const A base_neg = A::neg(base);
 
         // -- [prefetch next bucket for each bucket module] -----------------
-        std::fill(bucket_idx_arr.begin(), bucket_idx_arr.end(), 0);
+        std::fill(bucket_idx_arr.begin(), bucket_idx_arr.end(), -1);
         std::fill(neg_arr.begin(), neg_arr.end(), false);
+        int p_carry = 0;
         for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
-          if (m_nof_buckets_module * j + bm_i >= num_bms_before_precompute) { break; }
-          uint32_t curr_coeff = scalar.get_scalar_digit(m_nof_buckets_module * j + bm_i, m_c) + carry;
-          if ((curr_coeff & coeff_bit_mask_with_sign_bit) != 0) {
-            carry = curr_coeff > m_bm_size;
-            int bkt_idx = carry ? m_bm_size * bm_i + ((-curr_coeff) & coeff_bit_mask_no_sign_bit)
-                                : m_bm_size * bm_i + (curr_coeff & coeff_bit_mask_no_sign_bit);
-            char* ptr = (char *) &buckets[bkt_idx];
-            // prefetch into L1
+          if (size_t(m_nof_buckets_module) * j + bm_i >= num_bms_before_precompute) { break; }
+          uint32_t curr = scalar.get_scalar_digit(m_nof_buckets_module * j + bm_i, m_c) + p_carry;
+          bool sign = (curr & coeff_bit_mask_with_sign_bit) != 0;
+          int next_carry = sign ? (curr > uint32_t(m_bm_size)) : (curr >> m_c);
+          if (sign) {
+            int idx = next_carry
+              ? (m_bm_size * bm_i + ((-int32_t(curr)) & coeff_bit_mask_no_sign_bit))
+              : (m_bm_size * bm_i + ( int32_t(curr)  & coeff_bit_mask_no_sign_bit));
+            bucket_idx_arr[bm_i] = idx;
+            neg_arr[bm_i] = (negate_p_and_s ^ (next_carry > 0));
+
+            char* ptr = reinterpret_cast<char*>(&buckets[idx]);
             if constexpr (sizeof(Bucket) == 96) {
-              __builtin_prefetch(ptr, 1, 3);
-              __builtin_prefetch(ptr + 64, 1, 3);
+              __builtin_prefetch(ptr,    1, 3);
+              __builtin_prefetch(ptr+64, 1, 3);
             } else if constexpr (sizeof(Bucket) == 192) {
-              __builtin_prefetch(ptr, 1, 3);
-              __builtin_prefetch(ptr + 64, 1, 3);
-              __builtin_prefetch(ptr + 128, 1, 3);
+              __builtin_prefetch(ptr,     1, 3);
+              __builtin_prefetch(ptr+64,  1, 3);
+              __builtin_prefetch(ptr+128, 1, 3);
             }
-            bucket_idx_arr[bm_i] = bkt_idx;
-            neg_arr[bm_i] = negate_p_and_s ^ (carry > 0);
-          } else {
-            carry = curr_coeff >> m_c;
           }
+          p_carry = next_carry;
         }
-        // -------------------------------------------------------------------
+
         for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
-          if (m_nof_buckets_module * j + bm_i >= num_bms_before_precompute) { break; }
-          int bkt_idx = bucket_idx_arr[bm_i];
-          bool negate = neg_arr[bm_i];
-          if (bkt_idx != 0) {
-            if (buckets_busy[bkt_idx]) {
-              P::accum_prj_aff(buckets[bkt_idx].point, negate ? base_neg : base);
-            } else {
-              buckets_busy[bkt_idx] = true;
-              buckets[bkt_idx].point = P::from_affine(negate ? base_neg : base);
-            }
+          if (size_t(m_nof_buckets_module) * j + bm_i >= num_bms_before_precompute) { break; }
+          int idx = bucket_idx_arr[bm_i];
+          if (idx < 0) { continue; }
+          bool is_neg = neg_arr[bm_i];
+          if (buckets_busy[idx]) {
+            P::accum_prj_aff(buckets[idx].point, is_neg ? base_neg : base);
+          } else {
+            buckets_busy[idx] = true;
+            buckets[idx].point = P::from_affine(is_neg ? base_neg : base);
           }
         }
       }
