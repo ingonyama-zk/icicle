@@ -1,0 +1,14 @@
+[package]
+name = "lattice-snarks"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+icicle-runtime = { path = "../../../wrappers/rust/icicle-runtime" }
+icicle-core = { path = "../../../wrappers/rust/icicle-core" }
+icicle-labrador = { path = "../../../wrappers/rust/icicle-rings/icicle-labrador" }
+
+clap = { version = "<=4.4.12", features = ["derive"] }
+
+[features]
+cuda = ["icicle-runtime/cuda_backend", "icicle-labrador/cuda_backend"]
