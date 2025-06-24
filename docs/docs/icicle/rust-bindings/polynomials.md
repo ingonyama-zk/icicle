@@ -232,7 +232,7 @@ f.eval_on_domain(HostSlice::from_slice(&domain), HostSlice::from_mut_slice(&mut 
 // Evaluate on roots-of-unity-domain
 let domain_log_size = 4;
 let mut device_evals = DeviceVec::<ScalarField>::malloc(1 << domain_log_size);
-f.eval_on_rou_domain(domain_log_size, &mut device_evals[..]);
+f.eval_on_rou_domain(domain_log_size, device_evals.into_slice_mut());
 ```
 
 ### Read coefficients
@@ -244,7 +244,7 @@ let x_squared_coeff = f.get_coeff(2);  // Coefficient of x^2
 
 // Copy coefficients to a device-specific memory space
 let mut device_mem = DeviceVec::<Field>::malloc(coeffs.len());
-f.copy_coeffs(0, &mut device_mem[..]);
+f.copy_coeffs(0, device_mem.into_slice_mut());
 ```
 
 ### Polynomial Degree

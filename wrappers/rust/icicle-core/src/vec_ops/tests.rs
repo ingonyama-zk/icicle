@@ -422,12 +422,9 @@ where
     let input = input_vec.into_slice();
     let mut intermediate = DeviceVec::<F>::malloc(TEST_SIZE);
     let cfg = VecOpsConfig::default();
-    bit_reverse(input, &cfg, &mut intermediate[..]).unwrap();
+    bit_reverse(input, &cfg, intermediate.into_slice_mut()).unwrap();
 
-    let mut intermediate_host = vec![F::one(); TEST_SIZE];
-    intermediate
-        .copy_to_host(intermediate_host.into_slice_mut())
-        .unwrap();
+    let intermediate_host = intermediate.to_host_vec();
     let index_reverser = |i: usize| i.reverse_bits() >> (usize::BITS - LOG_SIZE);
     intermediate_host
         .iter()

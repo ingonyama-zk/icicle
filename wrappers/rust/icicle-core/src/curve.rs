@@ -328,7 +328,7 @@ macro_rules! impl_curve {
                 let mut res = vec![$projective_type::zero(); size];
                 unsafe {
                     $curve_prefix_ident::generate_projective_points(
-                        &mut res[..] as *mut _ as *mut $projective_type,
+                        res.into_slice_mut() as *mut _ as *mut $projective_type,
                         size,
                     )
                 };

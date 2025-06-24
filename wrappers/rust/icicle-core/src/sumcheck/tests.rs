@@ -3,7 +3,7 @@ use crate::hash::Hasher;
 use crate::program::{PreDefinedProgram, ReturningValueProgram};
 use crate::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
 use crate::traits::GenerateRandom;
-use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
+use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice, IntoIcicleSlice};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -176,7 +176,7 @@ where
 
     let mle_polys_device: Vec<&DeviceSlice<<SW as Sumcheck>::Field>> = device_mle_polys
         .iter()
-        .map(|s| &s[..])
+        .map(|s| s.into_slice())
         .collect();
     let device_mle_polys_slice = mle_polys_device.as_slice();
 
@@ -340,7 +340,7 @@ where
     /****** Begin CPU Proof ******/
     let mle_poly_hosts = mle_polys
         .iter()
-        .map(|poly| HostSlice::from_slice(poly))
+        .map(|poly| poly.into_slice())
         .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
 
     let sumcheck = SW::new().unwrap();

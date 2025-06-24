@@ -251,10 +251,10 @@ fn main() {
 
     let mut msm_results = vec![G1Projective::zero(); 1];
     msm::msm(
-        HostSlice::from_slice(&scalars),
-        HostSlice::from_slice(&points),
+        scalars.into_slice(),
+        points.into_slice(),
         &MSMConfig::default(),
-        HostSlice::from_mut_slice(&mut msm_results[..]),
+        msm_results.into_slice_mut(),
     )
     .unwrap();
     println!("MSM result = {:?}", msm_results);

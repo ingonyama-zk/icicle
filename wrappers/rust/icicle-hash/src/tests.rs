@@ -35,7 +35,7 @@ mod tests {
         let batch = 3;
 
         let mut input = vec![0 as u8; single_hash_input_size * batch];
-        rand::thread_rng().fill(&mut input[..]);
+        rand::thread_rng().fill(input.as_mut_slice());
         let mut output_ref = vec![0 as u8; 64 * batch]; // 64B (=512b) is the output size of Keccak512,
         let mut output_main = vec![0 as u8; 64 * batch];
 
@@ -60,7 +60,7 @@ mod tests {
         let batch = 11;
 
         let mut input = vec![0 as u8; single_hash_input_size * batch];
-        rand::thread_rng().fill(&mut input[..]);
+        rand::thread_rng().fill(input.as_mut_slice());
         let mut output_ref = vec![0 as u8; 32 * batch]; // 32B (=256b) is the output size of blake2s
         let mut output_main = vec![0 as u8; 32 * batch];
 
@@ -85,7 +85,7 @@ mod tests {
         let batch = 11;
 
         let mut input = vec![0 as u8; single_hash_input_size * batch];
-        rand::thread_rng().fill(&mut input[..]);
+        rand::thread_rng().fill(input.as_mut_slice());
         let mut output_ref = vec![0 as u8; 32 * batch]; // 32B (=256b) is the output size of blake3
         let mut output_main = vec![0 as u8; 32 * batch];
 
@@ -136,7 +136,7 @@ mod tests {
     fn sha3_hashing() {
         initialize();
         let mut input = vec![0 as u8; 1153];
-        rand::thread_rng().fill(&mut input[..]);
+        rand::thread_rng().fill(input.as_mut_slice());
         let mut output_main = vec![0 as u8; 32];
         let mut output_ref = vec![0 as u8; 32];
 
@@ -183,7 +183,7 @@ mod tests {
 
         // Create a vector of random bytes efficiently
         let mut input: Vec<u8> = vec![0; leaf_element_size as usize * num_elements];
-        rand::thread_rng().fill(&mut input[..]); // Fill the vector with random data
+        rand::thread_rng().fill(input.as_mut_slice()); // Fill the vector with random data
 
         merkle_tree
             .build(input.into_slice(), &MerkleTreeConfig::default())

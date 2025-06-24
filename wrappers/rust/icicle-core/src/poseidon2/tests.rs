@@ -156,7 +156,7 @@ where
     let t = 4;
     let nof_layers = 4;
     let num_elements = 4_u32.pow(nof_layers);
-    let mut leaves: Vec<F> = (0..num_elements)
+    let leaves: Vec<F> = (0..num_elements)
         .map(|i| F::from_u32(i))
         .collect();
 
@@ -164,15 +164,15 @@ where
     let layer_hashes: Vec<&Hasher> = (0..nof_layers)
         .map(|_| &hasher)
         .collect();
-    let merkle_tree = MerkleTree::new(&layer_hashes[..], mem::size_of::<F>() as u64, 0).unwrap();
+    let merkle_tree = MerkleTree::new(layer_hashes.as_slice(), mem::size_of::<F>() as u64, 0).unwrap();
     merkle_tree
-        .build((&mut leaves).into_slice(), &MerkleTreeConfig::default())
+        .build(leaves.into_slice(), &MerkleTreeConfig::default())
         .unwrap();
 
     let leaf_idx_to_open = num_elements >> 1;
     let merkle_proof: MerkleProof = merkle_tree
         .get_proof(
-            (&leaves).into_slice(),
+            leaves.into_slice(),
             leaf_idx_to_open as u64,
             true, /*=pruned */
             &MerkleTreeConfig::default(),
