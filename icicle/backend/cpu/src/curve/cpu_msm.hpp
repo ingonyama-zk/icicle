@@ -287,8 +287,6 @@ private:
           if (m_nof_buckets_module * j + bm_i >= num_bms_before_precompute) { break; }
           const unsigned coeff_width = std::min(m_c, m_scalar_size - scalar_offset);
           const uint32_t curr_coeff = scalar.get_scalar_bits(scalar_offset, coeff_width) + carry;
-          uint32_t get_scalar_digit_curr_coeff = scalar.get_scalar_digit(m_nof_buckets_module * j + bm_i, m_c) + carry;
-
           // For the edge case of curr_coeff = c (limb=c-1, carry=1) use the sign bit mask
           if ((curr_coeff & coeff_bit_mask_with_sign_bit) != 0) {
             // Remove sign to infer the bkt idx.
