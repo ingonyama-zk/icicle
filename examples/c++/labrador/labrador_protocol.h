@@ -13,30 +13,47 @@ PolyRing zero()
   return z;
 }
 
-struct QuadraticConstraint {
+struct EqualityInstance {
   size_t r;            // Number of witness vectors
   size_t n;            // Dimension of each vector in Tq
   std::vector<Tq> a;   // a[i, j] matrix over Tq (r x r matrix)
   std::vector<Tq> phi; // phi[i,j] vector over Tq (r vectors, each of size n; arranged in row major)
   Tq b;                // Polynomial in Tq
 
-  QuadraticConstraint(size_t r, size_t n) : r(r), n(n), a(r * r, zero()), phi(r * n, zero()), b(zero()) {}
-  QuadraticConstraint(size_t r, size_t n, std::vector<Tq> a, std::vector<Tq> phi, Tq b)
+  EqualityInstance(size_t r, size_t n) : r(r), n(n), a(r * r, zero()), phi(r * n, zero()), b(zero()) {}
+  EqualityInstance(size_t r, size_t n, const std::vector<Tq>& a, const std::vector<Tq>& phi, Tq b)
       : r(r), n(n), a(a), phi(phi), b(b)
   {
     // check if the sizes of a and phi are correct
     if (a.size() != r * r || phi.size() != r * n) {
-      throw std::invalid_argument("QuadraticConstraint: Incorrect sizes for 'a' or 'phi'");
+      throw std::invalid_argument("EqualityInstance: Incorrect sizes for 'a' or 'phi'");
     }
   }
 
   // Copy constructor
-  QuadraticConstraint(const QuadraticConstraint& other) : r(other.r), n(other.n), a(other.a), phi(other.phi), b(other.b)
-  {
-  }
+  EqualityInstance(const EqualityInstance& other) : r(other.r), n(other.n), a(other.a), phi(other.phi), b(other.b) {}
 };
-using ConstZeroInstance = QuadraticConstraint;
-using EqualityInstance = QuadraticConstraint;
+
+struct ConstZeroInstance {
+  size_t r;            // Number of witness vectors
+  size_t n;            // Dimension of each vector in Tq
+  std::vector<Tq> a;   // a[i, j] matrix over Tq (r x r matrix)
+  std::vector<Tq> phi; // phi[i,j] vector over Tq (r vectors, each of size n; arranged in row major)
+  Zq b;                // Such that \sum_ij a[i,j]<s[i], s[j]> + \sum_i <phi[i], s[i]> + b has 0 const coeff
+
+  ConstZeroInstance(size_t r, size_t n) : r(r), n(n), a(r * r, zero()), phi(r * n, zero()), b(Zq::zero()) {}
+  ConstZeroInstance(size_t r, size_t n, const std::vector<Tq>& a, const std::vector<Tq>& phi, Zq b)
+      : r(r), n(n), a(a), phi(phi), b(b)
+  {
+    // check if the sizes of a and phi are correct
+    if (a.size() != r * r || phi.size() != r * n) {
+      throw std::invalid_argument("EqualityInstance: Incorrect sizes for 'a' or 'phi'");
+    }
+  }
+
+  // Copy constructor
+  ConstZeroInstance(const ConstZeroInstance& other) : r(other.r), n(other.n), a(other.a), phi(other.phi), b(other.b) {}
+};
 
 struct LabradorParam {
   // Seed to calculate Ajtai Matrix
@@ -133,15 +150,6 @@ struct LabradorInstance {
     const_zero_constraints.push_back(instance);
   }
 
-  std::vector<Tq> agg_const_zero_constraints(
-    size_t num_aggregation_rounds,
-    size_t JL_out,
-    const std::vector<Tq>& S_hat,
-    const std::vector<Tq>& g_hat,
-    std::vector<Rq>& Q,
-    const std::vector<Zq>& psi,
-    const std::vector<Zq>& omega);
-
   void agg_equality_constraints(const std::vector<Tq>& alpha_hat);
 };
 
@@ -208,6 +216,15 @@ struct LabradorBaseProver {
     if (S.size() != lab_inst.r * lab_inst.n) { throw std::invalid_argument("S must have size r * n"); }
   }
 
+  std::vector<Tq> agg_const_zero_constraints(
+    size_t num_aggregation_rounds,
+    size_t JL_out,
+    const std::vector<Tq>& S_hat,
+    const std::vector<Tq>& g_hat,
+    const std::vector<Zq>& p,
+    std::vector<Tq>& Q_hat,
+    const std::vector<Zq>& psi,
+    const std::vector<Zq>& omega);
   std::pair<size_t, std::vector<Zq>> select_valid_jl_proj(std::byte* seed, size_t seed_len) const;
   std::pair<LabradorBaseCaseProof, PartialTranscript> base_case_prover();
 };
@@ -266,4 +283,172 @@ eIcicleError scale_diagonal_with_mask(
   // Use vector_mul to apply the mask
   return vector_mul(
     reinterpret_cast<const Zq*>(matrix), mask.data(), n * d * n * d, config, reinterpret_cast<Zq*>(output));
+}
+
+// === Fns for testing ===
+
+// print a polynomial
+void print_vec(const Zq* vec, size_t len, const std::string& name = "")
+{
+  if (!name.empty()) { std::cout << name << ": "; }
+  std::cout << "[";
+  for (size_t i = 0; i < len; ++i) {
+    std::cout << vec[i];
+    if (i < len - 1) { std::cout << ", "; }
+  }
+  std::cout << "]" << std::endl;
+}
+
+// print a polynomial
+void print_poly(const PolyRing& poly, const std::string& name = "") { print_vec(poly.values, PolyRing::d, name); }
+
+// Generate a random polynomial vector with coefficients bounded by max_value
+std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value)
+{
+  std::vector<PolyRing> vec(size);
+  for (auto& x : vec) {
+    for (size_t i = 0; i < PolyRing::d; ++i) {          // randomize each coefficient
+      uint64_t val = rand_uint_32b() % (max_value + 1); // uniform in [0, max_value]
+      x.values[i] = Zq::from(val);
+    }
+  }
+  return vec;
+}
+
+// Generate a random EqualityInstance satisfied by the given witness S
+EqualityInstance create_rand_eq_inst(size_t n, size_t r, const std::vector<Rq>& S)
+{
+  int64_t q = get_q<Zq>();
+  // set a and phi completely randomly in Tq
+  EqualityInstance eq_inst{r, n, rand_poly_vec(r * r, q), rand_poly_vec(n * r, q), zero()};
+
+  // S_hat = NTT(S)
+  std::vector<Tq> S_hat(r * n);
+  ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
+
+  std::vector<Tq> S_hat_transposed(n * r);
+  ICICLE_CHECK(matrix_transpose<Tq>(S_hat.data(), r, n, {}, S_hat_transposed.data()));
+
+  // G_hat = S@S^t
+  std::vector<Tq> G_hat(r * r);
+  ICICLE_CHECK(matmul(S_hat.data(), r, n, S_hat_transposed.data(), n, r, {}, G_hat.data()));
+
+  Tq G_A_inner_prod, phi_S_inner_prod;
+  // G_A_inner_prod = <G, a>
+  ICICLE_CHECK(matmul(G_hat.data(), 1, r * r, eq_inst.a.data(), r * r, 1, {}, &G_A_inner_prod));
+  // phi_S_inner_prod = <S, phi>
+  ICICLE_CHECK(matmul(S_hat.data(), 1, r * n, eq_inst.phi.data(), r * n, 1, {}, &phi_S_inner_prod));
+
+  // b = -(<G, a> + <S, phi>)
+  ICICLE_CHECK(vector_add(G_A_inner_prod.values, phi_S_inner_prod.values, Rq::d, {}, eq_inst.b.values));
+  Zq minus_1 = Zq::neg(Zq::from(1));
+  ICICLE_CHECK(scalar_mul_vec(&minus_1, eq_inst.b.values, Rq::d, {}, eq_inst.b.values));
+  // Now S is a witness for the equality constraint eq_inst
+  return eq_inst;
+}
+
+// Generate a random ConstZeroInstance satisfied by the given witness S
+ConstZeroInstance create_rand_const_zero_inst(size_t n, size_t r, const std::vector<Rq>& S)
+{
+  int64_t q = get_q<Zq>();
+  EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
+  // set a, phi equal to the random EqualityInstance
+  ConstZeroInstance const_zero_inst{r, n, eq_inst.a, eq_inst.phi, Zq::zero()};
+
+  // For b only set const coeff equal to the one in eq_inst.b
+  // eq_inst_b = INTT(eq_inst.b)
+  Rq eq_inst_b;
+  ICICLE_CHECK(ntt(&eq_inst.b, 1, NTTDir::kInverse, {}, &eq_inst_b));
+
+  Rq rand_b = rand_poly_vec(1, q)[0];
+  // make const coeff of rand_b equal to that of eq_inst_b
+
+  const_zero_inst.b = eq_inst_b.values[0];
+  return const_zero_inst;
+}
+
+// Check if the given EqualityInstance is satisfied by the witness S or not
+bool witness_legit_eq(const EqualityInstance& eq_inst, const std::vector<Rq>& S)
+{
+  int64_t q = get_q<Zq>();
+  size_t r = eq_inst.r;
+  size_t n = eq_inst.n;
+
+  assert(S.size() == r * n);
+  // S_hat = NTT(S)
+  std::vector<Tq> S_hat(r * n);
+  ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
+
+  std::vector<Tq> S_hat_transposed(n * r);
+  ICICLE_CHECK(matrix_transpose<Tq>(S_hat.data(), r, n, {}, S_hat_transposed.data()));
+
+  // G_hat = S@S^t
+  std::vector<Tq> G_hat(r * r);
+  ICICLE_CHECK(matmul(S_hat.data(), r, n, S_hat_transposed.data(), n, r, {}, G_hat.data()));
+
+  Tq G_A_inner_prod, phi_S_inner_prod, eval_hat;
+  // G_A_inner_prod = <G, a>
+  ICICLE_CHECK(matmul(G_hat.data(), 1, r * r, eq_inst.a.data(), r * r, 1, {}, &G_A_inner_prod));
+  // phi_S_inner_prod = <S, phi>
+  ICICLE_CHECK(matmul(S_hat.data(), 1, r * n, eq_inst.phi.data(), r * n, 1, {}, &phi_S_inner_prod));
+
+  // eval_hat = b + (<G, a> + <S, phi>)
+  ICICLE_CHECK(vector_add(G_A_inner_prod.values, phi_S_inner_prod.values, Rq::d, {}, eval_hat.values));
+  ICICLE_CHECK(vector_add(eval_hat.values, eq_inst.b.values, Rq::d, {}, eval_hat.values));
+
+  // print_poly(eval_hat, "eval_hat");
+  for (size_t i = 0; i < Tq::d; i++) {
+    if (eval_hat.values[i] != Zq::from(0)) { return false; }
+  }
+  return true;
+}
+
+// Check if the given ConstZeroInstance is satisfied by the witness S or not
+bool witness_legit_const_zero(const ConstZeroInstance& cz_inst, const std::vector<Rq>& S)
+{
+  int64_t q = get_q<Zq>();
+  size_t r = cz_inst.r;
+  size_t n = cz_inst.n;
+
+  // S_hat = NTT(S)
+  std::vector<Tq> S_hat(r * n);
+  ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
+
+  std::vector<Tq> S_hat_transposed(n * r);
+  ICICLE_CHECK(matrix_transpose<Tq>(S_hat.data(), r, n, {}, S_hat_transposed.data()));
+
+  // G_hat = S@S^t
+  std::vector<Tq> G_hat(r * r);
+  ICICLE_CHECK(matmul(S_hat.data(), r, n, S_hat_transposed.data(), n, r, {}, G_hat.data()));
+
+  Tq G_A_inner_prod, phi_S_inner_prod, eval_hat;
+  // G_A_inner_prod = <G, a>
+  ICICLE_CHECK(matmul(G_hat.data(), 1, r * r, cz_inst.a.data(), r * r, 1, {}, &G_A_inner_prod));
+  // phi_S_inner_prod = <S, phi>
+  ICICLE_CHECK(matmul(S_hat.data(), 1, r * n, cz_inst.phi.data(), r * n, 1, {}, &phi_S_inner_prod));
+
+  // eval_hat = (<G, a> + <S, phi>)
+  ICICLE_CHECK(vector_add(G_A_inner_prod.values, phi_S_inner_prod.values, Rq::d, {}, eval_hat.values));
+
+  // take INTT for eval_hat
+  Rq eval;
+  ICICLE_CHECK(ntt(&eval_hat, 1, NTTDir::kInverse, {}, &eval));
+
+  // print_poly(eval, "cz_eval");
+  if (eval.values[0] + cz_inst.b == Zq::zero()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool lab_witness_legit(const LabradorInstance& lab_inst, const std::vector<Rq>& S)
+{
+  for (auto& eq_inst : lab_inst.equality_constraints) {
+    if (!witness_legit_eq(eq_inst, S)) { return false; }
+  }
+  for (auto& cz_inst : lab_inst.const_zero_constraints) {
+    if (!witness_legit_const_zero(cz_inst, S)) { return false; }
+  }
+  return true;
 }
