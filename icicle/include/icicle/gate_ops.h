@@ -65,6 +65,7 @@ namespace icicle {
     const int32_t* rotations;        // Rotations array
     uint32_t num_rotations;        // Number of rotations
     const T* previous_value;
+    bool is_prev_zero;
     uint32_t num_calculations;      // Number of calculations
     uint32_t num_intermediates;     // Number of intermediate values
     uint32_t num_elements;

@@ -67,7 +67,7 @@ eIcicleError gate_evaluation_op(
             case 7: return gate_data.gamma[0];
             case 8: return gate_data.theta[0];
             case 9: return gate_data.y[0];
-            case 10: return calc_data.previous_value[column_index];
+            case 10: return calc_data.is_prev_zero ? E::zero() : calc_data.previous_value[column_index];
             default: return E::zero();
         }
     };
