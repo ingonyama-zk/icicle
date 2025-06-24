@@ -9,6 +9,7 @@ icicle-core = { path = "../../../wrappers/rust/icicle-core" }
 icicle-labrador = { path = "../../../wrappers/rust/icicle-rings/icicle-labrador" }
 
 clap = { version = "<=4.4.12", features = ["derive"] }
+rand = { version = "*" }
 
 [features]
 cuda = ["icicle-runtime/cuda_backend", "icicle-labrador/cuda_backend"]

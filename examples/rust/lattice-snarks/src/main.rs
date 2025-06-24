@@ -1,11 +1,13 @@
 use clap::Parser;
+use rand::Rng;
 use std::time::Instant;
 
 use icicle_core::{
     balanced_decomposition,
+    jl_projection::{jl_projection, JLProjection},
     negacyclic_ntt::{ntt, ntt_inplace, NegacyclicNtt, NegacyclicNttConfig},
     ntt::NTTDir,
-    polynomial_ring::PolynomialRing,
+    polynomial_ring::{flatten_polyring_slice, PolynomialRing},
     traits::{FieldImpl, GenerateRandom},
     vec_ops::VecOpsConfig,
 };
@@ -34,7 +36,7 @@ fn try_load_and_set_backend_device(args: &Args) {
 }
 
 /// Demonstrates in-place and out-of-place NTT for a polynomial ring.
-fn negacyclic_ntt<P>(size: usize)
+fn negacyclic_ntt_example<P>(size: usize)
 where
     P: PolynomialRing + NegacyclicNtt<P> + GenerateRandom<P>,
     P::Base: FieldImpl,
@@ -80,7 +82,7 @@ where
 
 /// Demonstrates balanced base decomposition and recomposition for polynomial ring elements.
 /// Uses dynamic bases q^(1/t) for t ∈ {2, 4, 8}, and verifies correctness.
-fn balanced_decomposition<P>(size: usize)
+fn balanced_decomposition_example<P>(size: usize)
 where
     P: PolynomialRing + balanced_decomposition::BalancedDecomposition<P> + GenerateRandom<P>,
 {
@@ -150,6 +152,53 @@ where
     }
 }
 
+/// Demonstrates JL projection for Zq vectors and polynomial ring vectors by reinterpretation.
+/// Projects a PolyRing vector (flattened as scalars), copies it to device memory,
+/// runs JL projection on the device slice, and times the operation.
+fn jl_projection_example<P>(size: usize, projection_dim: usize)
+where
+    P: PolynomialRing + GenerateRandom<P>,
+    P::Base: FieldImpl,
+    <P::Base as FieldImpl>::Config: JLProjection<P::Base>,
+{
+    println!("----------------------------------------------------------------------");
+    println!(
+        "[JL Projection] Projecting {} PolyRing elements ({} scalars), output dim = {}",
+        size,
+        size * P::DEGREE,
+        projection_dim
+    );
+
+    let cfg = VecOpsConfig::default();
+    let mut seed = [0u8; 32];
+    rand::thread_rng().fill(&mut seed);
+
+    // === Generate input polynomials
+    let host_input: Vec<P> = P::generate_random(size);
+
+    // === Copy to device memory
+    let mut device_input = DeviceVec::<P>::device_malloc(size).unwrap();
+    device_input
+        .copy_from_host(HostSlice::from_slice(&host_input))
+        .unwrap();
+
+    // === Flatten device buffer (Zq view)
+    let zq_device_slice = flatten_polyring_slice(&device_input);
+    let mut device_output = DeviceVec::<P::Base>::device_malloc(projection_dim).unwrap();
+
+    // === Run JL projection and time it
+    let start = std::time::Instant::now();
+    jl_projection(&zq_device_slice, &seed, &cfg, &mut device_output).expect("JL projection failed on device");
+    let duration = start.elapsed();
+
+    println!(
+        "✓ JL projection succeeded in {:.2?} ({} → {} scalars)",
+        duration,
+        size * P::DEGREE,
+        projection_dim
+    );
+}
+
 fn main() {
     println!("==================== Lattice SNARK Example ====================");
 
@@ -186,7 +235,7 @@ fn main() {
     // (3) Negacyclic NTT for polynomial rings
     // ----------------------------------------------------------------------
 
-    negacyclic_ntt::<PolyRing>(size);
+    negacyclic_ntt_example::<PolyRing>(size);
 
     // ----------------------------------------------------------------------
     // (4) Polynomial Ring Matrix Multiplication
@@ -201,7 +250,7 @@ fn main() {
     //     - Decompose and recompose using base b ≤ 2³²
     // ----------------------------------------------------------------------
 
-    balanced_decomposition::<PolyRing>(size);
+    balanced_decomposition_example::<PolyRing>(size);
 
     // ----------------------------------------------------------------------
     // (6) Norm Checking for Integer Ring (Zq)
@@ -215,7 +264,7 @@ fn main() {
     //     - Reinterpret Polynomial rings as Zq slices and project
     // ----------------------------------------------------------------------
 
-    // TODO
+    jl_projection_example::<PolyRing>(size, 256 /*projection dimension */);
 
     // ----------------------------------------------------------------------
     // (8) Vector APIs for Polynomial Rings
