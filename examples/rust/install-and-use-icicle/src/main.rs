@@ -4,7 +4,7 @@ use icicle_core::{
     traits::GenerateRandom,
     field::PrimeField
 };
-use icicle_runtime::memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
+use icicle_runtime::memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut};
 use icicle_runtime::{self, Device};
 
 fn main() {
@@ -61,11 +61,8 @@ fn main() {
 
     // Part 2 (cont.): Compute on GPU (from/to GPU memory)
     println!("Part 2: compute on GPU (from/to GPU memory): ");
-    let mut input_gpu = DeviceVec::<ScalarField>::malloc(ntt_size);
     let mut output_gpu = DeviceVec::<ScalarField>::malloc(ntt_size);
-    input_gpu
-        .copy_from_host(input_cpu.into_slice())
-        .expect("Failed to copy data to GPU");
+    let input_gpu = DeviceVec::<ScalarField>::from_host_vec(&input_cpu);
     ntt(
         input_gpu.into_slice(),
         ntt::NTTDir::kForward,
@@ -73,9 +70,8 @@ fn main() {
         output_gpu.into_slice_mut(),
     )
     .expect("NTT computation failed on GPU memory");
-    output_gpu
-        .copy_to_host(output_cpu.into_slice_mut())
-        .expect("Failed to copy data back to CPU");
+    let output_cpu = output_gpu.to_host_vec();
+
     println!("{:?}", output_cpu);
 
     // Part 3: Using both CPU and GPU to compute NTT (GPU) and inverse INTT (CPU)

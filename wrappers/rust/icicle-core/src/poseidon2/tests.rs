@@ -5,7 +5,10 @@ use crate::{
     poseidon2::{Poseidon2, Poseidon2Hasher},
     traits::GenerateRandom,
 };
-use icicle_runtime::{memory::HostSlice, test_utilities};
+use icicle_runtime::{
+    memory::{IntoIcicleSlice, IntoIcicleSliceMut},
+    test_utilities,
+};
 use std::mem;
 
 pub fn check_poseidon2_hash<F: PrimeField>()
@@ -34,9 +37,9 @@ where
 
             poseidon_hasher_main
                 .hash(
-                    HostSlice::from_slice(&inputs),
+                    inputs.into_slice(),
                     &HashConfig::default(),
-                    HostSlice::from_mut_slice(&mut outputs_main),
+                    outputs_main.into_slice_mut(),
                 )
                 .unwrap();
 
@@ -45,9 +48,9 @@ where
 
             poseidon_hasher_ref
                 .hash(
-                    HostSlice::from_slice(&inputs),
+                    inputs.into_slice(),
                     &HashConfig::default(),
-                    HostSlice::from_mut_slice(&mut outputs_ref),
+                    outputs_ref.into_slice_mut(),
                 )
                 .unwrap();
 
@@ -76,9 +79,9 @@ where
 
         let main_device_err = poseidon_hasher_main
             .hash(
-                HostSlice::from_slice(&inputs),
+                inputs.into_slice(),
                 &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut outputs_main),
+                outputs_main.into_slice_mut(),
             )
             .unwrap();
 
@@ -87,9 +90,9 @@ where
 
         let ref_device_err = poseidon_hasher_ref
             .hash(
-                HostSlice::from_slice(&inputs),
+                inputs.into_slice(),
                 &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut outputs_ref),
+                outputs_ref.into_slice_mut(),
             )
             .unwrap();
 
@@ -112,9 +115,9 @@ where
 
     poseidon_hasher_ref
         .hash(
-            HostSlice::from_slice(&inputs),
+            inputs.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs_ref),
+            outputs_ref.into_slice_mut(),
         )
         .unwrap();
 
@@ -127,9 +130,9 @@ where
     // test device 1
     poseidon_hasher_main_dev_1
         .hash(
-            HostSlice::from_slice(&inputs),
+            inputs.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs_main_1),
+            outputs_main_1.into_slice_mut(),
         )
         .unwrap();
     assert_eq!(outputs_ref, outputs_main_1);
@@ -138,9 +141,9 @@ where
     test_utilities::test_set_main_device_with_id(0);
     poseidon_hasher_main_dev_0
         .hash(
-            HostSlice::from_slice(&inputs),
+            inputs.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs_main_0),
+            outputs_main_0.into_slice_mut(),
         )
         .unwrap();
     assert_eq!(outputs_ref, outputs_main_0);
@@ -163,13 +166,13 @@ where
         .collect();
     let merkle_tree = MerkleTree::new(&layer_hashes[..], mem::size_of::<F>() as u64, 0).unwrap();
     merkle_tree
-        .build(HostSlice::from_slice(&mut leaves), &MerkleTreeConfig::default())
+        .build((&mut leaves).into_slice(), &MerkleTreeConfig::default())
         .unwrap();
 
     let leaf_idx_to_open = num_elements >> 1;
     let merkle_proof: MerkleProof = merkle_tree
         .get_proof(
-            HostSlice::from_slice(&leaves),
+            (&leaves).into_slice(),
             leaf_idx_to_open as u64,
             true, /*=pruned */
             &MerkleTreeConfig::default(),

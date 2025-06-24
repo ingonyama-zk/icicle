@@ -421,9 +421,29 @@ impl<T> DeviceVec<T> {
         T: Copy + Default,
     {
         let mut host_vec = vec![T::default(); self.len()];
-        let host_slice   = HostSlice::from_mut_slice(&mut host_vec);
-        self.copy_to_host(host_slice).unwrap();
+        let host_slice = HostSlice::from_mut_slice(&mut host_vec);
+        self.copy_to_host(host_slice)
+            .unwrap();
         host_vec
+    }
+
+    /// Convenience constructor: allocate a new `DeviceVec` on the active device, copy the
+    /// contents of a host slice into it, and return the populated vector.
+    ///
+    /// Example:
+    /// ```
+    /// let host_data = vec![1u32, 2, 3, 4];
+    /// let device_buf = DeviceVec::<u32>::from_host_vec(&host_data);
+    /// ```
+    pub fn from_host_vec(src: &[T]) -> Self
+    where
+        T: Copy,
+    {
+        let mut device_vec = Self::malloc(src.len());
+        device_vec
+            .copy_from_host(HostSlice::from_slice(src))
+            .unwrap();
+        device_vec
     }
 }
 
@@ -581,54 +601,96 @@ impl<T> DerefMut for DeviceVec<T> {
 
 pub trait IntoIcicleSlice<'a, T: 'a> {
     type Out: HostOrDeviceSlice<T> + ?Sized + 'a;
-    fn into_slice(self) -> &'a Self::Out;
+    fn into_slice(&'a self) -> &'a Self::Out;
 }
 
 pub trait IntoIcicleSliceMut<'a, T: 'a> {
     type Out: HostOrDeviceSlice<T> + ?Sized + 'a;
-    fn into_slice_mut(self) -> &'a mut Self::Out;
+    fn into_slice_mut(&'a mut self) -> &'a mut Self::Out;
 }
 
 // Host buffer implementations
 impl<'a, T> IntoIcicleSlice<'a, T> for &'a [T] {
     type Out = HostSlice<T>;
-    fn into_slice(self) -> &'a HostSlice<T> {
+    fn into_slice(&'a self) -> &'a HostSlice<T> {
         HostSlice::from_slice(self)
     }
 }
 
 impl<'a, T> IntoIcicleSlice<'a, T> for &'a Vec<T> {
     type Out = HostSlice<T>;
-    fn into_slice(self) -> &'a HostSlice<T> {
+    fn into_slice(&'a self) -> &'a HostSlice<T> {
         HostSlice::from_slice(self.as_slice())
+    }
+}
+
+impl<'a, T: 'a> IntoIcicleSlice<'a, T> for Vec<T> {
+    type Out = HostSlice<T>;
+    fn into_slice(&'a self) -> &'a HostSlice<T> {
+        HostSlice::from_slice(self.as_slice())
+    }
+}
+
+impl<'a, T: 'a, const N: usize> IntoIcicleSlice<'a, T> for [T; N] {
+    type Out = HostSlice<T>;
+    fn into_slice(&'a self) -> &'a HostSlice<T> {
+        HostSlice::from_slice(self)
     }
 }
 
 impl<'a, T> IntoIcicleSliceMut<'a, T> for &'a mut [T] {
     type Out = HostSlice<T>;
-    fn into_slice_mut(self) -> &'a mut HostSlice<T> {
+    fn into_slice_mut(&'a mut self) -> &'a mut HostSlice<T> {
         HostSlice::from_mut_slice(self)
     }
 }
 
 impl<'a, T> IntoIcicleSliceMut<'a, T> for &'a mut Vec<T> {
     type Out = HostSlice<T>;
-    fn into_slice_mut(self) -> &'a mut HostSlice<T> {
+    fn into_slice_mut(&'a mut self) -> &'a mut HostSlice<T> {
         HostSlice::from_mut_slice(self.as_mut_slice())
+    }
+}
+
+impl<'a, T: 'a> IntoIcicleSliceMut<'a, T> for Vec<T> {
+    type Out = HostSlice<T>;
+    fn into_slice_mut(&'a mut self) -> &'a mut HostSlice<T> {
+        HostSlice::from_mut_slice(self.as_mut_slice())
+    }
+}
+
+impl<'a, T: 'a, const N: usize> IntoIcicleSliceMut<'a, T> for [T; N] {
+    type Out = HostSlice<T>;
+    fn into_slice_mut(&'a mut self) -> &'a mut HostSlice<T> {
+        HostSlice::from_mut_slice(self)
     }
 }
 
 // Device buffer implementations
 impl<'a, T> IntoIcicleSlice<'a, T> for &'a DeviceVec<T> {
     type Out = DeviceSlice<T>;
-    fn into_slice(self) -> &'a DeviceSlice<T> {
+    fn into_slice(&'a self) -> &'a DeviceSlice<T> {
         &**self
     }
 }
 
 impl<'a, T> IntoIcicleSliceMut<'a, T> for &'a mut DeviceVec<T> {
     type Out = DeviceSlice<T>;
-    fn into_slice_mut(self) -> &'a mut DeviceSlice<T> {
+    fn into_slice_mut(&'a mut self) -> &'a mut DeviceSlice<T> {
+        &mut **self
+    }
+}
+
+impl<'a, T: 'a> IntoIcicleSlice<'a, T> for DeviceVec<T> {
+    type Out = DeviceSlice<T>;
+    fn into_slice(&'a self) -> &'a DeviceSlice<T> {
+        &**self
+    }
+}
+
+impl<'a, T: 'a> IntoIcicleSliceMut<'a, T> for DeviceVec<T> {
+    type Out = DeviceSlice<T>;
+    fn into_slice_mut(&'a mut self) -> &'a mut DeviceSlice<T> {
         &mut **self
     }
 }

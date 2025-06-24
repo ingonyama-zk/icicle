@@ -174,9 +174,11 @@ macro_rules! impl_field {
         }
 
         impl Default for $field {
-            fn default() -> Self { 
-                Self{limbs:[0u32; $num_limbs]}
-             }
+            fn default() -> Self {
+                Self {
+                    limbs: [0u32; $num_limbs],
+                }
+            }
         }
     };
 }

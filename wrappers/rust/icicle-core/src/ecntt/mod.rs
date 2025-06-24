@@ -171,7 +171,7 @@ macro_rules! impl_ecntt_bench {
         use icicle_runtime::{
             device::Device,
             get_active_device, is_device_available,
-            memory::{HostOrDeviceSlice, HostSlice},
+            memory::{HostOrDeviceSlice, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
             runtime::load_backend_from_env_or_default,
             set_device,
         };
@@ -237,9 +237,9 @@ macro_rules! impl_ecntt_bench {
                     }
 
                     let points = C::generate_random_projective_points(test_size);
-                    let points = HostSlice::from_slice(&points);
+                    let points = points.into_slice();
                     let mut batch_ntt_result = vec![Projective::<C>::zero(); full_size];
-                    let batch_ntt_result = HostSlice::from_mut_slice(&mut batch_ntt_result);
+                    let batch_ntt_result = batch_ntt_result.into_slice_mut();
                     let mut config = NTTConfig::default();
                     config.ordering = Ordering::kNN;
                     config.batch_size = batch_size as i32;

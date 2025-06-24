@@ -5,7 +5,7 @@ use crate::{
     vec_ops::{VecOps, VecOpsConfig},
 };
 use icicle_runtime::{
-    memory::{DeviceVec, HostSlice},
+    memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut},
     test_utilities,
 };
 
@@ -28,22 +28,17 @@ where
     // Convert Zq -> ZqRns on reference device
     test_utilities::test_set_ref_device();
     let mut output_rns_ref = vec![ZqRns::zero(); total_size];
-    to_rns(
-        HostSlice::from_slice(&input_direct),
-        HostSlice::from_mut_slice(&mut output_rns_ref),
-        &cfg,
-    )
-    .unwrap();
+    to_rns(input_direct.into_slice(), output_rns_ref.into_slice_mut(), &cfg).unwrap();
 
     // Convert Zq -> ZqRns on main device
     test_utilities::test_set_main_device();
     let mut output_rns_main_d = DeviceVec::<ZqRns>::malloc(total_size);
     let mut output_rns_main_h = vec![ZqRns::zero(); total_size];
-    to_rns(HostSlice::from_slice(&input_direct), &mut output_rns_main_d[..], &cfg).unwrap();
+    to_rns(input_direct.into_slice(), output_rns_main_d.into_slice_mut(), &cfg).unwrap();
 
     // Ensure reference and main device implementations produce identical results
     output_rns_main_d
-        .copy_to_host(HostSlice::from_mut_slice(&mut output_rns_main_h))
+        .copy_to_host(output_rns_main_h.into_slice_mut())
         .unwrap();
 
     assert_eq!(output_rns_ref, output_rns_main_h);
@@ -56,8 +51,8 @@ where
     );
 
     from_rns(
-        &mut output_rns_main_d[..],
-        HostSlice::from_mut_slice(&mut converted_back_from_rns),
+        output_rns_main_d.into_slice(),
+        converted_back_from_rns.into_slice_mut(),
         &cfg,
     )
     .unwrap();
@@ -99,35 +94,18 @@ where
     let mut c_rns = vec![ZqRns::zero(); size];
 
     // Compute in Zq: c = a * b
-    mul_scalars(
-        HostSlice::from_slice(&a),
-        HostSlice::from_slice(&b),
-        HostSlice::from_mut_slice(&mut c),
-        &cfg,
-    )
-    .unwrap();
+    mul_scalars(a.into_slice(), b.into_slice(), c.into_slice_mut(), &cfg).unwrap();
 
     // Convert a, b to RNS representation (a_rns, b_rns)
-    Zq::to_rns(HostSlice::from_slice(&a), HostSlice::from_mut_slice(&mut a_rns), &cfg).unwrap();
-    Zq::to_rns(HostSlice::from_slice(&b), HostSlice::from_mut_slice(&mut b_rns), &cfg).unwrap();
+    Zq::to_rns(a.into_slice(), a_rns.into_slice_mut(), &cfg).unwrap();
+    Zq::to_rns(b.into_slice(), b_rns.into_slice_mut(), &cfg).unwrap();
 
     // Compute in RNS domain: c_rns = a_rns * b_rns
-    mul_scalars(
-        HostSlice::from_slice(&a_rns),
-        HostSlice::from_slice(&b_rns),
-        HostSlice::from_mut_slice(&mut c_rns),
-        &cfg,
-    )
-    .unwrap();
+    mul_scalars(a_rns.into_slice(), b_rns.into_slice(), c_rns.into_slice_mut(), &cfg).unwrap();
 
     // Convert c_rns back to Zq: c_from_rns = from_rns(c_rns)
     let mut c_from_rns = vec![Zq::zero(); size];
-    Zq::from_rns(
-        HostSlice::from_slice(&c_rns),
-        HostSlice::from_mut_slice(&mut c_from_rns),
-        &cfg,
-    )
-    .unwrap();
+    Zq::from_rns(c_rns.into_slice(), c_from_rns.into_slice_mut(), &cfg).unwrap();
 
     // Verify consistency: c (computed in Zq) == c_from_rns (computed via RNS)
     assert_eq!(c, c_from_rns, "Mismatch between direct and RNS computation results.");

@@ -12,7 +12,11 @@ mod tests {
         hash::{HashConfig, Hasher},
         merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
     };
-    use icicle_runtime::{eIcicleError, memory::HostSlice, test_utilities};
+    use icicle_runtime::{
+        eIcicleError,
+        memory::{IntoIcicleSlice, IntoIcicleSliceMut},
+        test_utilities,
+    };
     use rand::Rng;
     use std::sync::Once;
 
@@ -38,21 +42,13 @@ mod tests {
         test_utilities::test_set_ref_device();
         let keccak_hasher = Keccak512::new(0 /*default chunk size */).unwrap();
         keccak_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_ref),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_ref.into_slice_mut())
             .unwrap();
 
         test_utilities::test_set_main_device();
         let keccak_hasher = Keccak512::new(0 /*default chunk size */).unwrap();
         keccak_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_main),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_main.into_slice_mut())
             .unwrap();
         assert_eq!(output_ref, output_main);
     }
@@ -71,21 +67,13 @@ mod tests {
         test_utilities::test_set_ref_device();
         let blake2s_hasher = Blake2s::new(0 /*default chunk size */).unwrap();
         blake2s_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_ref),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_ref.into_slice_mut())
             .unwrap();
 
         test_utilities::test_set_main_device();
         let blake2s_hasher = Blake2s::new(0 /*default chunk size */).unwrap();
         blake2s_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_main),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_main.into_slice_mut())
             .unwrap();
         assert_eq!(output_ref, output_main);
     }
@@ -104,21 +92,13 @@ mod tests {
         test_utilities::test_set_ref_device();
         let blake3_hasher = Blake3::new(0 /*default chunk size */).unwrap();
         blake3_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_ref),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_ref.into_slice_mut())
             .unwrap();
 
         test_utilities::test_set_main_device();
         let blake3_hasher = Blake3::new(0 /*default chunk size */).unwrap();
         blake3_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_main),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_main.into_slice_mut())
             .unwrap();
         assert_eq!(output_ref, output_main);
     }
@@ -135,11 +115,7 @@ mod tests {
         test_utilities::test_set_ref_device();
         let blake3_hasher = Blake3::new(0 /*default chunk size */).unwrap();
         blake3_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_ref),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_ref.into_slice_mut())
             .unwrap();
 
         // Convert output_ref to hex for comparison
@@ -167,21 +143,13 @@ mod tests {
         test_utilities::test_set_ref_device();
         let sha3_hasher = Sha3_256::new(0 /*default chunk size */).unwrap();
         sha3_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_ref),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_ref.into_slice_mut())
             .unwrap();
 
         test_utilities::test_set_main_device();
         let sha3_hasher = Sha3_256::new(0 /*default chunk size */).unwrap();
         sha3_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_main),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_main.into_slice_mut())
             .unwrap();
 
         assert_eq!(output_ref, output_main);
@@ -218,12 +186,12 @@ mod tests {
         rand::thread_rng().fill(&mut input[..]); // Fill the vector with random data
 
         merkle_tree
-            .build(HostSlice::from_slice(&input), &MerkleTreeConfig::default())
+            .build(input.into_slice(), &MerkleTreeConfig::default())
             .unwrap();
 
         let merkle_proof: MerkleProof = merkle_tree
             .get_proof(
-                HostSlice::from_slice(&input),
+                input.into_slice(),
                 1,
                 false, /*=pruned*/
                 &MerkleTreeConfig::default(),
@@ -249,12 +217,12 @@ mod tests {
             .collect();
         let merkle_tree = MerkleTree::new(&layer_hashes[..], leaf_element_size as u64, 0).unwrap();
         merkle_tree
-            .build(HostSlice::from_slice(&input), &MerkleTreeConfig::default())
+            .build(input.into_slice(), &MerkleTreeConfig::default())
             .unwrap();
 
         let merkle_proof: MerkleProof = merkle_tree
             .get_proof(
-                HostSlice::from_slice(&input),
+                input.into_slice(),
                 1,
                 false, /*=pruned*/
                 &MerkleTreeConfig::default(),
@@ -286,7 +254,7 @@ mod tests {
         let input: [u8; 32] = [20; 32];
         let golden_nonce: u64 = 40825909;
         let golden_hash: u64 = 364385878471;
-        let input_host = HostSlice::from_slice(&input);
+        let input_host = input.into_slice();
         let cfg = PowConfig::default();
 
         let mut gpu_found = false;
@@ -367,7 +335,7 @@ mod tests {
         const BITS: u8 = 25;
         let input: [u8; 21] = [20; 21];
 
-        let input_host = HostSlice::from_slice(&input);
+        let input_host = input.into_slice();
         let mut cfg = PowConfig::default();
         cfg.padding_size = 3;
 

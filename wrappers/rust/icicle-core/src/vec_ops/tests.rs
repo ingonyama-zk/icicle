@@ -9,7 +9,7 @@ use crate::vec_ops::{
     sum_scalars, transpose_matrix, MixedVecOps, VecOps, VecOpsConfig,
 };
 use icicle_runtime::device::Device;
-use icicle_runtime::memory::{DeviceVec, HostOrDeviceSlice, HostSlice};
+use icicle_runtime::memory::{DeviceVec, HostOrDeviceSlice, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
 use icicle_runtime::{runtime, stream::IcicleStream, test_utilities};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
@@ -73,10 +73,10 @@ where
     let mut result_main = vec![F::zero(); test_size];
     let mut result_ref = vec![F::zero(); test_size];
 
-    let a_main = HostSlice::from_slice(&a_main);
-    let b = HostSlice::from_slice(&b);
-    let result_main = HostSlice::from_mut_slice(&mut result_main);
-    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+    let a_main = a_main.into_slice();
+    let b = b.into_slice();
+    let result_main = result_main.into_slice_mut();
+    let result_ref = result_ref.into_slice_mut();
 
     let cfg = VecOpsConfig::default();
 
@@ -98,10 +98,10 @@ where
     let mut result_main = vec![F::zero(); test_size];
     let mut result_ref = vec![F::zero(); test_size];
 
-    let a_main = HostSlice::from_slice(&a_main);
-    let b = HostSlice::from_slice(&b);
-    let result_main = HostSlice::from_mut_slice(&mut result_main);
-    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+    let a_main = a_main.into_slice();
+    let b = b.into_slice();
+    let result_main = result_main.into_slice_mut();
+    let result_ref = result_ref.into_slice_mut();
 
     let cfg = VecOpsConfig::default();
 
@@ -123,10 +123,10 @@ where
     let mut result_main = vec![F::zero(); test_size];
     let mut result_ref = vec![F::zero(); test_size];
 
-    let a_main = HostSlice::from_slice(&a_main);
-    let b = HostSlice::from_slice(&b);
-    let result_main = HostSlice::from_mut_slice(&mut result_main);
-    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+    let a_main = a_main.into_slice();
+    let b = b.into_slice();
+    let result_main = result_main.into_slice_mut();
+    let result_ref = result_ref.into_slice_mut();
 
     let cfg = VecOpsConfig::default();
 
@@ -148,10 +148,10 @@ where
     let mut result_main = vec![F::zero(); test_size];
     let mut result_ref = vec![F::zero(); test_size];
 
-    let a_main = HostSlice::from_slice(&a_main);
-    let b = HostSlice::from_slice(&b);
-    let result_main = HostSlice::from_mut_slice(&mut result_main);
-    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+    let a_main = a_main.into_slice();
+    let b = b.into_slice();
+    let result_main = result_main.into_slice_mut();
+    let result_ref = result_ref.into_slice_mut();
 
     let cfg = VecOpsConfig::default();
 
@@ -176,11 +176,11 @@ where
     let mut result_ref = vec![F::one(); test_size];
     let mut result = vec![F::one(); test_size];
 
-    let a = HostSlice::from_slice(&a);
-    let inv = HostSlice::from_mut_slice(&mut inv);
-    let result_main = HostSlice::from_mut_slice(&mut result_main);
-    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
-    let result = HostSlice::from_mut_slice(&mut result);
+    let a = a.into_slice();
+    let inv = inv.into_slice_mut();
+    let result_main = result_main.into_slice_mut();
+    let result_ref = result_ref.into_slice_mut();
+    let result = result.into_slice_mut();
 
     test_utilities::test_set_main_device();
     inv_scalars(a, inv, &cfg).unwrap();
@@ -205,9 +205,9 @@ where
     let mut result_main = vec![F::zero(); batch_size];
     let mut result_ref = vec![F::zero(); batch_size];
 
-    let a_main = HostSlice::from_slice(&a_main);
-    let result_main = HostSlice::from_mut_slice(&mut result_main);
-    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+    let a_main = a_main.into_slice();
+    let result_main = result_main.into_slice_mut();
+    let result_ref = result_ref.into_slice_mut();
 
     test_utilities::test_set_main_device();
     sum_scalars(a_main, result_main, &cfg).unwrap();
@@ -229,9 +229,9 @@ where
     let mut result_main = vec![F::zero(); batch_size];
     let mut result_ref = vec![F::zero(); batch_size];
 
-    let a_main = HostSlice::from_slice(&a_main);
-    let result_main = HostSlice::from_mut_slice(&mut result_main);
-    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+    let a_main = a_main.into_slice();
+    let result_main = result_main.into_slice_mut();
+    let result_ref = result_ref.into_slice_mut();
 
     test_utilities::test_set_main_device();
     product_scalars(a_main, result_main, &cfg).unwrap();
@@ -254,10 +254,10 @@ where
     let mut result_main = vec![F::zero(); test_size * batch_size as usize];
     let mut result_ref = vec![F::zero(); test_size * batch_size as usize];
 
-    let a_main = HostSlice::from_slice(&a_main);
-    let b = HostSlice::from_slice(&b);
-    let result_main = HostSlice::from_mut_slice(&mut result_main);
-    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+    let a_main = a_main.into_slice();
+    let b = b.into_slice();
+    let result_main = result_main.into_slice_mut();
+    let result_ref = result_ref.into_slice_mut();
 
     test_utilities::test_set_main_device();
     scalar_add(a_main, b, result_main, &cfg).unwrap();
@@ -280,10 +280,10 @@ where
     let mut result_main = vec![F::zero(); test_size * batch_size];
     let mut result_ref = vec![F::zero(); test_size * batch_size];
 
-    let a_main = HostSlice::from_slice(&a_main);
-    let b = HostSlice::from_slice(&b);
-    let result_main = HostSlice::from_mut_slice(&mut result_main);
-    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+    let a_main = a_main.into_slice();
+    let b = b.into_slice();
+    let result_main = result_main.into_slice_mut();
+    let result_ref = result_ref.into_slice_mut();
 
     test_utilities::test_set_main_device();
     scalar_sub(a_main, b, result_main, &cfg).unwrap();
@@ -306,10 +306,10 @@ where
     let mut result_main = vec![F::zero(); test_size * batch_size];
     let mut result_ref = vec![F::zero(); test_size * batch_size];
 
-    let a_main = HostSlice::from_slice(&a_main);
-    let b = HostSlice::from_slice(&b);
-    let result_main = HostSlice::from_mut_slice(&mut result_main);
-    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+    let a_main = a_main.into_slice();
+    let b = b.into_slice();
+    let result_main = result_main.into_slice_mut();
+    let result_ref = result_ref.into_slice_mut();
 
     test_utilities::test_set_main_device();
     scalar_mul(a_main, b, result_main, &cfg).unwrap();
@@ -329,9 +329,9 @@ where
 
     let mut a_clone = a_main.clone();
 
-    let a_main_slice = HostSlice::from_mut_slice(&mut a_main);
-    let b_slice = HostSlice::from_slice(&b);
-    let a_clone_slice = HostSlice::from_mut_slice(&mut a_clone);
+    let a_main_slice = a_main.into_slice_mut();
+    let b_slice = b.into_slice();
+    let a_clone_slice = a_clone.into_slice_mut();
 
     let cfg = VecOpsConfig::default();
 
@@ -359,24 +359,10 @@ where
     let mut result_ref = vec![F::zero(); test_size];
 
     test_utilities::test_set_main_device();
-    transpose_matrix(
-        HostSlice::from_slice(&input_matrix),
-        r,
-        c,
-        HostSlice::from_mut_slice(&mut result_main),
-        &cfg,
-    )
-    .unwrap();
+    transpose_matrix(input_matrix.into_slice(), r, c, result_main.into_slice_mut(), &cfg).unwrap();
 
     test_utilities::test_set_ref_device();
-    transpose_matrix(
-        HostSlice::from_slice(&input_matrix),
-        r,
-        c,
-        HostSlice::from_mut_slice(&mut result_ref),
-        &cfg,
-    )
-    .unwrap();
+    transpose_matrix(input_matrix.into_slice(), r, c, result_ref.into_slice_mut(), &cfg).unwrap();
 
     assert_eq!(result_main, result_ref);
 }
@@ -399,25 +385,25 @@ where
 
     test_utilities::test_set_main_device();
     slice(
-        HostSlice::from_slice(&input_matrix),
+        input_matrix.into_slice(),
         offset,
         stride,
         size_in,
         size_out,
         &cfg,
-        HostSlice::from_mut_slice(&mut result_main),
+        result_main.into_slice_mut(),
     )
     .unwrap();
 
     test_utilities::test_set_ref_device();
     slice(
-        HostSlice::from_slice(&input_matrix),
+        input_matrix.into_slice(),
         offset,
         stride,
         size_in,
         size_out,
         &cfg,
-        HostSlice::from_mut_slice(&mut result_ref),
+        result_ref.into_slice_mut(),
     )
     .unwrap();
 
@@ -433,14 +419,14 @@ where
     const LOG_SIZE: u32 = 20;
     const TEST_SIZE: usize = 1 << LOG_SIZE;
     let input_vec = F::generate_random(TEST_SIZE);
-    let input = HostSlice::from_slice(&input_vec);
+    let input = input_vec.into_slice();
     let mut intermediate = DeviceVec::<F>::malloc(TEST_SIZE);
     let cfg = VecOpsConfig::default();
     bit_reverse(input, &cfg, &mut intermediate[..]).unwrap();
 
     let mut intermediate_host = vec![F::one(); TEST_SIZE];
     intermediate
-        .copy_to_host(HostSlice::from_mut_slice(&mut intermediate_host[..]))
+        .copy_to_host(intermediate_host.into_slice_mut())
         .unwrap();
     let index_reverser = |i: usize| i.reverse_bits() >> (usize::BITS - LOG_SIZE);
     intermediate_host
@@ -449,9 +435,9 @@ where
         .for_each(|(i, val)| assert_eq!(val, &input_vec[index_reverser(i)]));
 
     let mut result = vec![F::one(); TEST_SIZE];
-    let result = HostSlice::from_mut_slice(&mut result);
+    let result = result.into_slice_mut();
     let cfg = VecOpsConfig::default();
-    bit_reverse(&intermediate[..], &cfg, result).unwrap();
+    bit_reverse(intermediate.into_slice(), &cfg, result).unwrap();
     assert_eq!(input.as_slice(), result.as_slice());
 }
 
@@ -464,17 +450,17 @@ where
     const LOG_SIZE: u32 = 20;
     const TEST_SIZE: usize = 1 << LOG_SIZE;
     let input_vec = F::generate_random(TEST_SIZE);
-    let input = HostSlice::from_slice(&input_vec);
+    let input = input_vec.into_slice();
     let mut intermediate = DeviceVec::<F>::malloc(TEST_SIZE);
     intermediate
-        .copy_from_host(&input)
+        .copy_from_host(input)
         .unwrap();
     let cfg = VecOpsConfig::default();
-    bit_reverse_inplace(&mut intermediate[..], &cfg).unwrap();
+    bit_reverse_inplace(intermediate.into_slice_mut(), &cfg).unwrap();
 
     let mut intermediate_host = vec![F::one(); TEST_SIZE];
     intermediate
-        .copy_to_host(HostSlice::from_mut_slice(&mut intermediate_host[..]))
+        .copy_to_host(intermediate_host.into_slice_mut())
         .unwrap();
     let index_reverser = |i: usize| i.reverse_bits() >> (usize::BITS - LOG_SIZE);
     intermediate_host
@@ -482,10 +468,10 @@ where
         .enumerate()
         .for_each(|(i, val)| assert_eq!(val, &input_vec[index_reverser(i)]));
 
-    bit_reverse_inplace(&mut intermediate[..], &cfg).unwrap();
+    bit_reverse_inplace(intermediate.into_slice_mut(), &cfg).unwrap();
     let mut result_host = vec![F::one(); TEST_SIZE];
     intermediate
-        .copy_to_host(HostSlice::from_mut_slice(&mut result_host[..]))
+        .copy_to_host(result_host.into_slice_mut())
         .unwrap();
     assert_eq!(input.as_slice(), result_host.as_slice());
 }
@@ -515,13 +501,13 @@ where
     let var4 = vec![F::zero(); TEST_SIZE];
     let var5 = vec![F::zero(); TEST_SIZE];
     let var6 = vec![F::zero(); TEST_SIZE];
-    let a_slice = HostSlice::from_slice(&a);
-    let b_slice = HostSlice::from_slice(&b);
-    let c_slice = HostSlice::from_slice(&c);
-    let eq_slice = HostSlice::from_slice(&eq);
-    let var4_slice = HostSlice::from_slice(&var4);
-    let var5_slice = HostSlice::from_slice(&var5);
-    let var6_slice = HostSlice::from_slice(&var6);
+    let a_slice = a.into_slice();
+    let b_slice = b.into_slice();
+    let c_slice = c.into_slice();
+    let eq_slice = eq.into_slice();
+    let var4_slice = var4.into_slice();
+    let var5_slice = var5.into_slice();
+    let var6_slice = var6.into_slice();
     let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice, var5_slice, var6_slice];
 
     let program = Prog::new(example_lambda, 7).unwrap();
@@ -556,11 +542,11 @@ where
     let c = F::generate_random(TEST_SIZE);
     let eq = F::generate_random(TEST_SIZE);
     let var4 = vec![F::zero(); TEST_SIZE];
-    let a_slice = HostSlice::from_slice(&a);
-    let b_slice = HostSlice::from_slice(&b);
-    let c_slice = HostSlice::from_slice(&c);
-    let eq_slice = HostSlice::from_slice(&eq);
-    let var4_slice = HostSlice::from_slice(&var4);
+    let a_slice = a.into_slice();
+    let b_slice = b.into_slice();
+    let c_slice = c.into_slice();
+    let eq_slice = eq.into_slice();
+    let var4_slice = var4.into_slice();
     let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice];
 
     let program = Prog::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
@@ -588,10 +574,10 @@ where
     let mut result_main = vec![F::zero(); test_size];
     let mut result_ref = vec![F::zero(); test_size];
 
-    let a_main = HostSlice::from_slice(&a_main);
-    let b = HostSlice::from_slice(&b);
-    let result_main = HostSlice::from_mut_slice(&mut result_main);
-    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+    let a_main = a_main.into_slice();
+    let b = b.into_slice();
+    let result_main = result_main.into_slice_mut();
+    let result_ref = result_ref.into_slice_mut();
 
     let cfg = VecOpsConfig::default();
 

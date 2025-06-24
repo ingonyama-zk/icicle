@@ -5,7 +5,11 @@ use crate::{
     poseidon::{Poseidon, PoseidonHasher},
     traits::GenerateRandom,
 };
-use icicle_runtime::{errors::eIcicleError, memory::HostSlice, test_utilities};
+use icicle_runtime::{
+    errors::eIcicleError,
+    memory::{IntoIcicleSlice, IntoIcicleSliceMut},
+    test_utilities,
+};
 use std::mem;
 
 pub fn check_poseidon_hash<F: PrimeField>()
@@ -29,9 +33,9 @@ where
 
             poseidon_hasher_main
                 .hash(
-                    HostSlice::from_slice(&inputs),
+                    inputs.into_slice(),
                     &HashConfig::default(),
-                    HostSlice::from_mut_slice(&mut outputs_main),
+                    outputs_main.into_slice_mut(),
                 )
                 .unwrap();
 
@@ -40,9 +44,9 @@ where
 
             poseidon_hasher_ref
                 .hash(
-                    HostSlice::from_slice(&inputs),
+                    inputs.into_slice(),
                     &HashConfig::default(),
-                    HostSlice::from_mut_slice(&mut outputs_ref),
+                    outputs_ref.into_slice_mut(),
                 )
                 .unwrap();
 
@@ -65,9 +69,9 @@ where
 
         poseidon_hasher_main
             .hash(
-                HostSlice::from_slice(&inputs),
+                inputs.into_slice(),
                 &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut outputs_main),
+                outputs_main.into_slice_mut(),
             )
             .unwrap();
 
@@ -76,9 +80,9 @@ where
         let poseidon_hasher_ref = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
         let err = poseidon_hasher_ref.hash(
-            HostSlice::from_slice(&inputs),
+            inputs.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs_ref),
+            outputs_ref.into_slice_mut(),
         );
         assert_eq!(err, Err(eIcicleError::InvalidArgument));
     }
@@ -99,9 +103,9 @@ where
 
     poseidon_hasher_ref
         .hash(
-            HostSlice::from_slice(&inputs),
+            inputs.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs_ref),
+            outputs_ref.into_slice_mut(),
         )
         .unwrap();
 
@@ -114,9 +118,9 @@ where
     // test device 1
     poseidon_hasher_main_dev_1
         .hash(
-            HostSlice::from_slice(&inputs),
+            inputs.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs_main_1),
+            outputs_main_1.into_slice_mut(),
         )
         .unwrap();
     assert_eq!(outputs_ref, outputs_main_1);
@@ -125,9 +129,9 @@ where
     test_utilities::test_set_main_device_with_id(0);
     poseidon_hasher_main_dev_0
         .hash(
-            HostSlice::from_slice(&inputs),
+            inputs.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs_main_0),
+            outputs_main_0.into_slice_mut(),
         )
         .unwrap();
     assert_eq!(outputs_ref, outputs_main_0);
@@ -140,7 +144,7 @@ where
     let t = 9;
     let nof_layers = 4;
     let num_elements = 9_u32.pow(nof_layers);
-    let mut leaves: Vec<F> = (0..num_elements)
+    let leaves: Vec<F> = (0..num_elements)
         .map(|i| F::from_u32(i))
         .collect();
 
@@ -148,15 +152,15 @@ where
     let layer_hashes: Vec<&Hasher> = (0..nof_layers)
         .map(|_| &hasher)
         .collect();
-    let merkle_tree = MerkleTree::new(&layer_hashes[..], mem::size_of::<F>() as u64, 0).unwrap();
+    let merkle_tree = MerkleTree::new(layer_hashes.as_slice(), mem::size_of::<F>() as u64, 0).unwrap();
     merkle_tree
-        .build(HostSlice::from_slice(&mut leaves), &MerkleTreeConfig::default())
+        .build(leaves.into_slice(), &MerkleTreeConfig::default())
         .unwrap();
 
     let leaf_idx_to_open = num_elements >> 1;
     let merkle_proof: MerkleProof = merkle_tree
         .get_proof(
-            HostSlice::from_slice(&leaves),
+            leaves.into_slice(),
             leaf_idx_to_open as u64,
             true, /*=pruned */
             &MerkleTreeConfig::default(),

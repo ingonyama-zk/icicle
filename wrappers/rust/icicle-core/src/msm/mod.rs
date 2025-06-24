@@ -325,7 +325,7 @@ macro_rules! impl_msm_bench {
         use icicle_runtime::{
             device::Device,
             get_active_device, is_device_available,
-            memory::{DeviceVec, HostOrDeviceSlice, HostSlice},
+            memory::{DeviceVec, HostOrDeviceSlice, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
             runtime::{load_backend_from_env_or_default, warmup},
             set_device,
             stream::IcicleStream,
@@ -422,7 +422,7 @@ macro_rules! impl_msm_bench {
                         );
 
                         group.bench_function(&bench_descr, |b| {
-                            b.iter(|| msm(scalars_h, &precomputed_points_d[..], &cfg, &mut msm_results[..]))
+                            b.iter(|| msm(scalars_h, precomputed_points_d.into_slice(), &cfg, msm_results.into_slice_mut())) // TODO: use into_slice_mut
                         });
 
                         stream
