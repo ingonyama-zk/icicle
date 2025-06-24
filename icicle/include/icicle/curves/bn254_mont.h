@@ -314,13 +314,8 @@ struct bn254_mont_t {
         mp_256_t r = {r2[0], r2[1], r3[0], r3[1]};
 
         const uint8_t top_bits = r[3] >> 62;
-        if (top_bits == 0b11) {
-            r = sub(r, P3);
-        } else if (top_bits == 0b10) {
-            r = sub(r, P2);
-        } else if (top_bits == 0b01) {
-            r = sub(r, P);
-        }
+        const mp_256_t LUT[4] = {ZERO, P, P2, P3};
+        r = sub(r, LUT[top_bits]);
         auto [rr, cc] = subc(r, P);
         r = cc ? r : rr;
 
@@ -337,13 +332,8 @@ struct bn254_mont_t {
         s = add(s, mp);
         mp_256_t r = {s[1], s[2], s[3], s[4]};
         const uint8_t top_bits = r[3] >> 62;
-        if (top_bits == 0b11) {
-            r = sub(r, P3);
-        } else if (top_bits == 0b10) {
-            r = sub(r, P2);
-        } else if (top_bits == 0b01) {
-            r = sub(r, P);
-        }
+        const mp_256_t LUT[4] = {ZERO, P, P2, P3};
+        r = sub(r, LUT[top_bits]);
         auto [rr, cc] = subc(r, P);
         r = cc ? r : rr;
 
@@ -360,13 +350,8 @@ struct bn254_mont_t {
         s = add(s, mp);
         mp_256_t r = {s[1], s[2], s[3], s[4]};
         const uint8_t top_bits = r[3] >> 62;
-        if (top_bits == 0b11) {
-            r = sub(r, P3);
-        } else if (top_bits == 0b10) {
-            r = sub(r, P2);
-        } else if (top_bits == 0b01) {
-            r = sub(r, P);
-        }
+        const mp_256_t LUT[4] = {ZERO, P, P2, P3};
+        r = sub(r, LUT[top_bits]);
         auto [rr, cc] = subc(r, P);
         r = cc ? r : rr;
 
