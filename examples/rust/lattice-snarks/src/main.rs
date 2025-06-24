@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use icicle_core::{
     balanced_decomposition,
-    jl_projection::{jl_projection, JLProjection},
+    jl_projection::{get_jl_matrix_rows_as_polyring, jl_projection, JLProjection, JLProjectionPolyRing},
     negacyclic_ntt::{ntt, ntt_inplace, NegacyclicNtt, NegacyclicNttConfig},
     ntt::NTTDir,
     polynomial_ring::{flatten_polyring_slice, PolynomialRing},
@@ -153,13 +153,15 @@ where
 }
 
 /// Demonstrates JL projection for Zq vectors and polynomial ring vectors by reinterpretation.
-/// Projects a PolyRing vector (flattened as scalars), copies it to device memory,
-/// runs JL projection on the device slice, and times the operation.
+/// - Projects a `PolyRing` vector (flattened as scalars) on the device
+/// - Times the JL projection
+/// - Retrieves conjugated JL matrix rows as `PolyRing` polynomials
 fn jl_projection_example<P>(size: usize, projection_dim: usize)
 where
     P: PolynomialRing + GenerateRandom<P>,
     P::Base: FieldImpl,
     <P::Base as FieldImpl>::Config: JLProjection<P::Base>,
+    P: JLProjectionPolyRing<P>,
 {
     println!("----------------------------------------------------------------------");
     println!(
@@ -173,30 +175,62 @@ where
     let mut seed = [0u8; 32];
     rand::thread_rng().fill(&mut seed);
 
-    // === Generate input polynomials
-    let host_input: Vec<P> = P::generate_random(size);
+    // ----------------------------------------------------------------------
+    // (1) Generate input and copy to device
+    // ----------------------------------------------------------------------
 
-    // === Copy to device memory
+    let host_input: Vec<P> = P::generate_random(size);
     let mut device_input = DeviceVec::<P>::device_malloc(size).unwrap();
     device_input
         .copy_from_host(HostSlice::from_slice(&host_input))
         .unwrap();
 
-    // === Flatten device buffer (Zq view)
+    // ----------------------------------------------------------------------
+    // (2) JL projection on flattened device memory
+    // ----------------------------------------------------------------------
+
+    // Reinterpret `PolyRing` as a slice of its base field elements becaues the projection operates on scalars.
     let zq_device_slice = flatten_polyring_slice(&device_input);
     let mut device_output = DeviceVec::<P::Base>::device_malloc(projection_dim).unwrap();
 
-    // === Run JL projection and time it
-    let start = std::time::Instant::now();
+    let t_start = std::time::Instant::now();
     jl_projection(&zq_device_slice, &seed, &cfg, &mut device_output).expect("JL projection failed on device");
-    let duration = start.elapsed();
+    let t_elapsed = t_start.elapsed();
 
     println!(
-        "✓ JL projection succeeded in {:.2?} ({} → {} scalars)",
-        duration,
+        "JL projection succeeded in {:.2?} ({} → {} scalars)",
+        t_elapsed,
         size * P::DEGREE,
         projection_dim
     );
+
+    // ----------------------------------------------------------------------
+    // (3) Retrieve conjugated JL matrix rows as PolyRing polynomials
+    // ----------------------------------------------------------------------
+
+    let row_size = size; // number of input polynomials per row
+    let num_rows = 1; // how many rows to extract (can be increased)
+    let mut jl_rows = DeviceVec::<P>::device_malloc(num_rows * row_size).unwrap();
+
+    let t_start = std::time::Instant::now();
+    get_jl_matrix_rows_as_polyring(
+        &seed,
+        row_size,
+        0,
+        num_rows,
+        true, // conjugated = true
+        &cfg,
+        &mut jl_rows,
+    )
+    .expect("Failed to retrieve JL matrix rows as conjugated PolyRing");
+    let t_elapsed = t_start.elapsed();
+
+    println!(
+        "Retrieved {} conjugated JL matrix row(s) as PolyRing in {:.2?}",
+        num_rows, t_elapsed
+    );
+
+    // Note: to access raw {0, ±1} scalar matrix rows, use `get_jl_matrix_rows`.
 }
 
 fn main() {
@@ -262,6 +296,8 @@ fn main() {
     // ----------------------------------------------------------------------
     // (7) Johnson–Lindenstrauss Projection for Zq
     //     - Reinterpret Polynomial rings as Zq slices and project
+    //     - Retrieve conjugated JL matrix rows as (conjugated) PolyRing polynomials
+    //     - This is useful when proving the projection is computed correctly
     // ----------------------------------------------------------------------
 
     jl_projection_example::<PolyRing>(size, 256 /*projection dimension */);
