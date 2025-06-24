@@ -3,7 +3,8 @@ use clap::Parser;
 use icicle_core::polynomial_ring::PolynomialRing;
 use icicle_core::traits::{FieldImpl, GenerateRandom};
 use icicle_labrador::{polynomial_ring::PolyRing, ring::ScalarCfg as ZqCfg, ring::ScalarRing as Zq};
-use icicle_runtime::memory::{DeviceSlice, DeviceVec};
+use icicle_runtime::memory::{DeviceVec, HostSlice};
+use std::time::Instant;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -20,6 +21,54 @@ fn try_load_and_set_backend_device(args: &Args) {
     println!("Setting device {}", args.device_type);
     let device = icicle_runtime::Device::new(&args.device_type, 0 /* =device_id*/);
     icicle_runtime::set_device(&device).unwrap();
+}
+
+/// Runs negacyclic NTT on device memory and verifies host-side output.
+/// This function demonstrates both in-place and out-of-place NTT APIs.
+use icicle_core::negacyclic_ntt::{ntt, ntt_inplace, NegacyclicNtt, NegacyclicNttConfig};
+use icicle_core::ntt::NTTDir;
+
+fn negacyclic_ntt<P>(size: usize)
+where
+    P: PolynomialRing + NegacyclicNtt<P> + GenerateRandom<P>,
+    P::Base: FieldImpl,
+{
+    // Generate random polynomials on the host
+    let input = P::generate_random(size);
+
+    // Allocate and copy to device memory
+    let mut device_input = DeviceVec::<P>::device_malloc(size).unwrap();
+    device_input
+        .copy_from_host(HostSlice::from_slice(&input))
+        .unwrap();
+
+    // Configure NTT
+    let cfg = NegacyclicNttConfig::default();
+
+    // ------------------------------
+    // In-place forward NTT (timed)
+    // ------------------------------
+    let start = Instant::now();
+    ntt_inplace(&mut device_input, NTTDir::kForward, &cfg).unwrap();
+    let duration = start.elapsed();
+    println!(
+        "In-place NTT (device) completed in {:.2?} for {} polynomials",
+        duration, size
+    );
+
+    // ------------------------------
+    // Out-of-place NTT to host buffer (or a device buffer)
+    // ------------------------------
+    let mut output = vec![P::zero(); size];
+    ntt(
+        &device_input,
+        NTTDir::kForward,
+        &cfg,
+        HostSlice::from_mut_slice(&mut output),
+    )
+    .unwrap();
+
+    println!("Computed forward NTT of {} polynomial elements", size);
 }
 
 fn main() {
@@ -66,6 +115,7 @@ fn main() {
 
     // APIs to demonstrate:
     // (1) Negacyclic NTT for polynomial rings
+    negacyclic_ntt::<PolyRing>(size);
     // (2) Matmul for polynomial rings (Ajtai, dot-products, etc.)
     // (3) Balanced-decomposition for polynomial rings, with base b (up to 32bits)
     // (4) Norm check for Integer rings (Zq)
