@@ -1,3 +1,5 @@
+mod tests;
+
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
