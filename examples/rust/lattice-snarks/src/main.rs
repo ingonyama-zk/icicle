@@ -3,12 +3,10 @@ use rand::Rng;
 use std::time::Instant;
 
 use icicle_core::{
-    balanced_decomposition,
-    jl_projection::{get_jl_matrix_rows_as_polyring, jl_projection, JLProjection, JLProjectionPolyRing},
-    negacyclic_ntt::{ntt, ntt_inplace, NegacyclicNtt, NegacyclicNttConfig},
-    norm,
+    balanced_decomposition, jl_projection, negacyclic_ntt, norm,
     ntt::NTTDir,
     polynomial_ring::{flatten_polyring_slice, PolynomialRing},
+    random_sampling,
     traits::{FieldImpl, GenerateRandom},
     vec_ops::VecOpsConfig,
 };
@@ -39,7 +37,7 @@ fn try_load_and_set_backend_device(args: &Args) {
 /// Demonstrates in-place and out-of-place NTT for a polynomial ring.
 fn negacyclic_ntt_example<P>(size: usize)
 where
-    P: PolynomialRing + NegacyclicNtt<P> + GenerateRandom<P>,
+    P: PolynomialRing + negacyclic_ntt::NegacyclicNtt<P> + GenerateRandom<P>,
     P::Base: FieldImpl,
 {
     // Generate random input on the host
@@ -51,7 +49,7 @@ where
         .copy_from_host(HostSlice::from_slice(&input))
         .unwrap();
 
-    let cfg = NegacyclicNttConfig::default();
+    let cfg = negacyclic_ntt::NegacyclicNttConfig::default();
 
     println!("----------------------------------------------------------------------");
 
@@ -59,7 +57,7 @@ where
     // In-place NTT on device memory (timed)
     // ----------------------------------------------------------------------
     let start = Instant::now();
-    ntt_inplace(&mut device_input, NTTDir::kForward, &cfg).unwrap();
+    negacyclic_ntt::ntt_inplace(&mut device_input, NTTDir::kForward, &cfg).unwrap();
     let duration = start.elapsed();
     println!(
         "[NTT] In-place forward NTT completed in {:.2?} for {} polynomials",
@@ -70,7 +68,7 @@ where
     // Out-of-place NTT into host buffer (can compute to device or host memory)
     // ----------------------------------------------------------------------
     let mut output = vec![P::zero(); size];
-    ntt(
+    negacyclic_ntt::ntt(
         &device_input,
         NTTDir::kForward,
         &cfg,
@@ -162,8 +160,8 @@ fn jl_projection_example<P>(size: usize, projection_dim: usize)
 where
     P: PolynomialRing + GenerateRandom<P>,
     P::Base: FieldImpl,
-    <P::Base as FieldImpl>::Config: JLProjection<P::Base>,
-    P: JLProjectionPolyRing<P>,
+    <P::Base as FieldImpl>::Config: jl_projection::JLProjection<P::Base>,
+    P: jl_projection::JLProjectionPolyRing<P>,
 {
     println!("----------------------------------------------------------------------");
     println!(
@@ -196,7 +194,8 @@ where
     let mut device_output = DeviceVec::<P::Base>::device_malloc(projection_dim).unwrap();
 
     let t_start = std::time::Instant::now();
-    jl_projection(&zq_device_slice, &seed, &cfg, &mut device_output).expect("JL projection failed on device");
+    jl_projection::jl_projection(&zq_device_slice, &seed, &cfg, &mut device_output)
+        .expect("JL projection failed on device");
     let t_elapsed = t_start.elapsed();
 
     println!(
@@ -215,7 +214,7 @@ where
     let mut jl_rows = DeviceVec::<P>::device_malloc(num_rows * row_size).unwrap();
 
     let t_start = std::time::Instant::now();
-    get_jl_matrix_rows_as_polyring(
+    jl_projection::get_jl_matrix_rows_as_polyring(
         &seed,
         row_size, // Rq polynomials per row
         0,
@@ -428,12 +427,7 @@ fn main() {
     // ----------------------------------------------------------------------
     // (11) Challenge Polynomial Sampling in PolyRing
     //      - Sample sparse polynomials (e.g., ±1, ±2, 0)
-    // ----------------------------------------------------------------------
-
-    // TODO
-
-    // ----------------------------------------------------------------------
-    // (12) Operator Norm Testing for Polynomial Rings
+    //      - Sample polynomials with bound OpNorm (for Labrdaor and similar usecases)
     // ----------------------------------------------------------------------
 
     // TODO
