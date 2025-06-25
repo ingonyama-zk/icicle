@@ -18,18 +18,23 @@ cpp-base: &cpp-base
   - icicle/src/matrix_ops.cpp
   - icicle/include/icicle/matrix_ops.h
   - icicle/include/icicle/backend/vec_ops_backend.h
+  - icicle/tests/test_mod_arithmetic_api.cpp
+  - icicle/tests/test_matrix_api.h
 cpp-field: &cpp-field
   - *cpp-base
   - icicle/src/fields/**/*
   - icicle/include/icicle/fields/**/*
+  - icicle/tests/test_field_api.cpp
 cpp-curve: &cpp-curve
   - *cpp-field
   - icicle/src/curves/**/*
   - icicle/include/icicle/curves/**/*
+  - icicle/tests/test_curve_api.cpp
 cpp-ring: &cpp-ring
   - *cpp-base
   - icicle/src/rings/**/*
   - icicle/include/icicle/rings/**/*
+  - icicle/tests/test_ring_api.cpp
   - icicle/src/balanced_decomposition.cpp
   - icicle/include/icicle/balanced_decomposition.h
   - icicle/src/jl_projection.cpp
@@ -40,6 +45,7 @@ cpp-ring: &cpp-ring
 cpp-pqc: &cpp-pqc
   - icicle/src/pqc/**/*
   - icicle/include/icicle/pqc/**/*
+  - icicle/tests/test_pqc_api.cpp
 
 # C/C++ feature-specific file patterns
 cpp-msm: &cpp-msm
@@ -51,6 +57,7 @@ cpp-ntt: &cpp-ntt
   - icicle/src/ntt.cpp
   - icicle/include/icicle/ntt.h
   - icicle/src/polynomials/**/*
+  - icicle/tests/test_polynomial_api.cpp
   - icicle/include/icicle/polynomials/**/*
   - icicle/include/icicle/backend/ntt_backend.h
   - icicle/include/icicle/backend/ntt_config.h
@@ -88,6 +95,7 @@ cpp-hash: &cpp-hash
   - icicle/include/icicle/hash/**/*
   - icicle/include/icicle/backend/hash/**/*
   - icicle/include/icicle/backend/merkle/**/*
+  - icicle/tests/test_hash_api.cpp
   - "!icicle/src/hash/poseidon*"
   - "!icicle/include/icicle/hash/poseidon*"
   - "!icicle/include/icicle/backend/hash/poseidon_backend.h"
@@ -97,6 +105,7 @@ cpp-hash: &cpp-hash
 cpp-runtime: &cpp-runtime
   - icicle/src/runtime.cpp
   - icicle/include/icicle/runtime.h
+  - icicle/tests/test_device_api.cpp
 
 # Rust file feature mappings
 rust-program: &rust-program
@@ -150,7 +159,7 @@ rust-hash: &rust-hash
   - wrappers/rust/icicle-hash/**/*.rs
 rust-runtime: &rust-runtime
   - wrappers/rust/icicle-runtime/**/*.rs
-  
+
 # Go file feature mappings
 go-program: &go-program
   - wrappers/golang/internal/generator/program/**/*.go
@@ -317,7 +326,7 @@ curve:
   - *msm
   - *ecntt
   - *pairing
-  
+
 ring:
   - *cpp-ring
   - *rust-ring
