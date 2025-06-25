@@ -8,7 +8,8 @@ use icicle_core::{
     polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut, PolynomialRing},
     random_sampling,
     traits::{FieldImpl, GenerateRandom},
-    vec_ops::VecOpsConfig,
+    vec_ops,
+    vec_ops::{poly_vecops, VecOpsConfig},
 };
 use icicle_labrador::{
     polynomial_ring::PolyRing,
@@ -384,6 +385,74 @@ where
     println!("Rq sampling (as Zq coefficients) completed in {:?}", duration);
 }
 
+/// Demonstrates vectorized polynomial ring operations over device memory.
+///
+/// This example shows how to compute a random aggregation of polynomials:
+/// - Randomize a vector of polynomials (`P`) and a vector of scalar field elements (`P::Base`)
+/// - Perform pointwise multiplication of polynomials and scalars using `polyvec_mul_by_scalar`
+/// - Reduce the resulting vector into a single polynomial with `polyvec_sum_reduce`
+/// - Time both operations individually
+///
+/// Supported operations in `vecops` also include:
+/// - `polyvec_add`, `polyvec_sub`, `polyvec_mul` for `<P, P>` element-wise operations
+/// - `polyvec_mul_by_scalar` for `<P, P::Base>`
+/// - `polyvec_sum_reduce` for reducing a polynomial vector into a single `P`
+pub fn polynomial_vecops_example<P>(size: usize)
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl,
+    <P::Base as FieldImpl>::Config: vec_ops::VecOps<P::Base> + random_sampling::RandomSampling<P::Base>,
+{
+    use rand::RngCore;
+    use std::time::Instant;
+
+    println!("----------------------------------------------------------------------");
+    println!("Demonstrating vectorized polynomial operations for {} elements", size);
+
+    let cfg = VecOpsConfig::default();
+    let fast_mode = true;
+
+    // Generate a random seed
+    let mut seed = [0u8; 32];
+    rand::thread_rng().fill_bytes(&mut seed);
+
+    // Allocate and sample a vector of polynomials
+    let mut polyvec = DeviceVec::<P>::device_malloc(size).expect("Failed to allocate polyvec");
+    {
+        // Temporarily flatten polyvec to sample its base field coefficients
+        let mut polyvec_flat = flatten_polyring_slice_mut(&mut polyvec);
+        random_sampling::random_sampling(fast_mode, &seed, &cfg, &mut polyvec_flat)
+            .expect("Random sampling for polyvec failed");
+    }
+
+    // Allocate and sample a vector of scalars
+    let mut scalarvec = DeviceVec::<P::Base>::device_malloc(size).expect("Failed to allocate scalarvec");
+    random_sampling::random_sampling(fast_mode, &seed, &cfg, &mut scalarvec)
+        .expect("Random sampling for scalarvec failed");
+
+    // Allocate result buffer for the pointwise multiplication
+    let mut mul_result = DeviceVec::<P>::device_malloc(size).expect("Failed to allocate result buffer");
+
+    println!("Performing polyvec_mul_by_scalar...");
+    let start = Instant::now();
+    poly_vecops::polyvec_mul_by_scalar(&polyvec, &scalarvec, &mut mul_result, &cfg)
+        .expect("polyvec_mul_by_scalar failed");
+    println!("polyvec_mul_by_scalar completed in {:?}", start.elapsed());
+
+    // Allocate output for sum-reduction into a single polynomial
+    let mut reduced = DeviceVec::<P>::device_malloc(1).expect("Failed to allocate reduction output");
+
+    println!("Reducing with polyvec_sum_reduce...");
+    let start = Instant::now();
+    poly_vecops::polyvec_sum_reduce(&mul_result, &mut reduced, &cfg).expect("polyvec_sum_reduce failed");
+    println!("polyvec_sum_reduce completed in {:?}", start.elapsed());
+
+    println!("\nOther supported operations in `vecops` include:");
+    println!("- polyvec_add, polyvec_sub, polyvec_mul for <P, P>");
+    println!("- polyvec_mul_by_scalar for <P, P::Base>");
+    println!("- polyvec_sum_reduce to collapse a polyvec into a single polynomial");
+}
+
 fn main() {
     println!("==================== Lattice SNARK Example ====================");
 
@@ -458,7 +527,7 @@ fn main() {
     //     - Aggregation, weighted sum, and dot-product ops
     // ----------------------------------------------------------------------
 
-    // TODO
+    polynomial_vecops_example::<PolyRing>(size);
 
     // ----------------------------------------------------------------------
     // (9) Matrix Transpose for Polynomial Rings
