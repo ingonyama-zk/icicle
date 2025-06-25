@@ -5,7 +5,7 @@ use std::time::Instant;
 use icicle_core::{
     balanced_decomposition, jl_projection, negacyclic_ntt, norm,
     ntt::NTTDir,
-    polynomial_ring::{flatten_polyring_slice, PolynomialRing},
+    polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut, PolynomialRing},
     random_sampling,
     traits::{FieldImpl, GenerateRandom},
     vec_ops::VecOpsConfig,
@@ -335,6 +335,55 @@ where
     );
 }
 
+/// Demonstrates pseudorandom sampling of `Zq` and `Rq` elements on the device.
+///
+/// - Allocates device buffers for `Zq` scalars and `Rq` polynomials (as `P`)
+/// - Generates a random 32-byte seed for reproducible sampling
+/// - Performs fast-mode pseudorandom sampling into a flat `Zq` buffer
+/// - Reinterprets an `Rq` buffer as `Zq` coefficients and samples into it
+/// - Measures and prints execution time for both cases
+fn random_sampling_example<P>(size: usize)
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl,
+    <P::Base as FieldImpl>::Config: random_sampling::RandomSampling<P::Base>,
+{
+    use rand::RngCore;
+    use std::time::Instant;
+
+    println!("----------------------------------------------------------------------");
+    println!(
+        "Generating {} pseudorandom elements in Zq and Rq using device sampling...",
+        size
+    );
+
+    // Generate a non-zero 32-byte random seed
+    let mut seed = [0u8; 32];
+    rand::thread_rng().fill_bytes(&mut seed);
+
+    let fast_mode = true;
+    let cfg = VecOpsConfig::default();
+
+    // Sample Zq elements
+    let mut output_zq =
+        DeviceVec::<P::Base>::device_malloc(size).expect("Failed to allocate device memory for Zq elements");
+
+    let start = Instant::now();
+    random_sampling::random_sampling(fast_mode, &seed, &cfg, &mut output_zq).expect("Zq sampling failed");
+    let duration = start.elapsed();
+    println!("Zq sampling completed in {:?}", duration);
+
+    // Sample Rq polynomials by reinterpreting as Zq elements
+    let mut output_rq =
+        DeviceVec::<P>::device_malloc(size).expect("Failed to allocate device memory for Rq polynomials");
+    let mut output_rq_coeffs = flatten_polyring_slice_mut(&mut output_rq);
+
+    let start = Instant::now();
+    random_sampling::random_sampling(fast_mode, &seed, &cfg, &mut output_rq_coeffs).expect("Rq sampling failed");
+    let duration = start.elapsed();
+    println!("Rq sampling (as Zq coefficients) completed in {:?}", duration);
+}
+
 fn main() {
     println!("==================== Lattice SNARK Example ====================");
 
@@ -422,7 +471,7 @@ fn main() {
     //      - Pseudorandom seeded generation
     // ----------------------------------------------------------------------
 
-    // TODO
+    random_sampling_example::<PolyRing>(size);
 
     // ----------------------------------------------------------------------
     // (11) Challenge Polynomial Sampling in PolyRing

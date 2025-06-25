@@ -7,7 +7,6 @@ pub mod tests;
 /// Trait for random sampling operations on group elements.
 pub trait RandomSampling<T: FieldImpl> {
     fn random_sampling(
-        size: usize,
         fast_mode: bool,
         seed: &[u8],
         cfg: &VecOpsConfig,
@@ -16,7 +15,6 @@ pub trait RandomSampling<T: FieldImpl> {
 }
 
 pub fn random_sampling<T>(
-    size: usize,
     fast_mode: bool,
     seed: &[u8],
     cfg: &VecOpsConfig,
@@ -26,7 +24,7 @@ where
     T: FieldImpl,
     T::Config: RandomSampling<T>,
 {
-    T::Config::random_sampling(size, fast_mode, seed, cfg, output)
+    T::Config::random_sampling(fast_mode, seed, cfg, output)
 }
 
 /// Implements RandomSampling for a scalar ring type using FFI.
@@ -52,7 +50,6 @@ macro_rules! impl_random_sampling {
 
         impl RandomSampling<$scalar_type> for $implement_for {
             fn random_sampling(
-                size: usize,
                 fast_mode: bool,
                 seed: &[u8],
                 cfg: &VecOpsConfig,
@@ -68,7 +65,7 @@ macro_rules! impl_random_sampling {
 
                 unsafe {
                     random_sampling_ffi(
-                        size,
+                        output.len(),
                         fast_mode,
                         seed.as_ptr(),
                         seed.len(),
