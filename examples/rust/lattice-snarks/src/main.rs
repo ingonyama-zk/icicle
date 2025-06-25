@@ -81,16 +81,19 @@ where
 }
 
 /// Demonstrates balanced base decomposition and recomposition for polynomial ring elements.
-/// Uses dynamic bases q^(1/t) for t ∈ {2, 4, 8}, and verifies correctness.
-/// TODO Yuval: explain the layout, and support small output sizes (by computing only the first few digits).
+/// Uses dynamic bases q^(1/t) for t ∈ {2, 4, 6}, and verifies correctness.
+/// - The output vector has length `n * d`.
+/// - Digits are grouped **by digit index**, not by element:
+///     - The first `n` entries are the **first digit** of all elements.
+///     - The next `n` entries are the **second digit** of all elements.
+///     - And so on, until all `d` digits are emitted.
 fn balanced_decomposition_example<P>(size: usize)
 where
     P: PolynomialRing + balanced_decomposition::BalancedDecomposition<P> + GenerateRandom<P>,
 {
     let q: usize = 4_289_678_649_214_369_793; // TODO: expose q from P::Base::MODULUS
 
-    // Compute bases: q^(1/t) for t = 2, 4, 8 // TODO Yuval: make it 6
-    let ts = [2, 4, 8];
+    let ts = [2, 4, 6];
     let bases: Vec<u32> = ts
         .iter()
         .map(|t| {
