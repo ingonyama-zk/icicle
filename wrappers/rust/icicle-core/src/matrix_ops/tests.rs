@@ -9,7 +9,7 @@ use icicle_runtime::{
     test_utilities,
 };
 
-/// Ensure hostmemory and devicememory behaviour matches.
+/// Ensure host memory and device memory behaviour matches.
 /// Correctness is already ensured by the C++ tests.
 pub fn test_matmul_device_memory<P: PolynomialRing + MatrixOps<P>>()
 where
@@ -48,7 +48,7 @@ where
 
         // (2) matmul host memory inputs -> device memory output
         let mut output_device = vec![P::zero(); out_size];
-        let mut device_mem_output = unsafe { DeviceSlice::<P>::from_mut_slice(&mut output_device) };
+        let device_mem_output = unsafe { DeviceSlice::<P>::from_mut_slice(&mut output_device) };
 
         P::matmul(
             HostSlice::from_slice(&input_a),
@@ -70,7 +70,7 @@ where
         assert_eq!(output_host, host_buffer);
 
         // (3) matmul device memory inputs, host memory outputs
-        let mut device_mem_output = unsafe { DeviceSlice::<P>::from_mut_slice(&mut output_device) };
+        let _device_mem_output = unsafe { DeviceSlice::<P>::from_mut_slice(&mut output_device) };
         let device_mem_a = unsafe { DeviceSlice::<P>::from_slice(&input_a) };
         let device_mem_b = unsafe { DeviceSlice::<P>::from_slice(&input_b) };
         let mut output_host_2 = output_host.clone();
@@ -91,7 +91,7 @@ where
 
         // (4) matmul device memory inputs, device memory output
         let mut output_device = vec![P::zero(); out_size];
-        let mut device_mem_output = unsafe { DeviceSlice::<P>::from_mut_slice(&mut output_device) };
+        let device_mem_output = unsafe { DeviceSlice::<P>::from_mut_slice(&mut output_device) };
 
         device_mem_output
             .copy_to_host(HostSlice::from_mut_slice(&mut host_buffer))
@@ -112,7 +112,7 @@ where
         assert_eq!(output_host, host_buffer);
         // (5) mamtmul mixed memory model for inputs, host memory output
         let mut device_mem_output = unsafe { DeviceSlice::<P>::from_mut_slice(&mut output_device) };
-        let device_mem_a = unsafe { DeviceSlice::<P>::from_slice(&input_a) };
+        let _device_mem_a = unsafe { DeviceSlice::<P>::from_slice(&input_a) };
         let mut output_host_3 = output_host.clone();
         P::matmul(
             HostSlice::from_slice(&input_a),
