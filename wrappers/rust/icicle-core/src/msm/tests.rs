@@ -2,11 +2,11 @@ use crate::curve::{Affine, Curve, Projective};
 use crate::field::PrimeField;
 use crate::msm::{msm, precompute_bases, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR, MSM};
 use crate::traits::{GenerateRandom, MontgomeryConvertible};
-use icicle_runtime::{memory::HostOrDeviceSlice, test_utilities};
 use icicle_runtime::{
-    memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut},
+    memory::{DeviceVec, HostSlice, HostOrDeviceSlice, IntoIcicleSlice, IntoIcicleSliceMut},
     runtime,
     stream::IcicleStream,
+    test_utilities,
 };
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
@@ -138,8 +138,15 @@ pub fn check_msm_batch_shared<C: Curve + MSM<C>>() {
             )
             .unwrap();
 
-            let msm_host_result_1 = msm_results_1.to_host_vec();
-            let msm_host_result_2 = msm_results_2.to_host_vec();
+            let mut msm_host_result_1 = vec![Projective::<C>::zero(); batch_size];
+            let mut msm_host_result_2 = vec![Projective::<C>::zero(); batch_size];
+            msm_results_1
+                .copy_to_host_async(HostSlice::from_mut_slice(&mut msm_host_result_1), &stream)
+                .unwrap();
+            msm_results_2
+                .copy_to_host_async(HostSlice::from_mut_slice(&mut msm_host_result_2), &stream)
+                .unwrap();
+
             stream
                 .synchronize()
                 .unwrap();

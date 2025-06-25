@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::config::ConfigExtension;
-    use crate::memory::{DeviceVec, HostOrDeviceSlice, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
+    use crate::memory::{DeviceVec, HostOrDeviceSlice, IntoIcicleSlice, IntoIcicleSliceMut};
     use crate::stream::IcicleStream;
     use crate::test_utilities;
     use crate::*;
