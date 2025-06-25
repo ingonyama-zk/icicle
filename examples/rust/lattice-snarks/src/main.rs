@@ -219,7 +219,8 @@ where
     // (2) JL projection on flattened device memory
     // ----------------------------------------------------------------------
 
-    // Reinterpret `PolyRing` as a slice of its base field elements becaues the projection operates on scalars.
+    // Reinterpret `PolyRing` as a flat slice of base field elements (`Zq`),
+    // since the projection operates on individual scalars rather than polynomials.
     let zq_device_slice = flatten_polyring_slice(&device_input);
     let mut device_output = DeviceVec::<P::Base>::device_malloc(projection_dim).unwrap();
 
