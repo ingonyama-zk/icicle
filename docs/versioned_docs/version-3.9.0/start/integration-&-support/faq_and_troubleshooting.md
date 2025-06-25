@@ -1,9 +1,5 @@
-# FAQ and troubleshooting
+# Frequently Asked Questions
 
-## Frequently asked questions
+import Accordion from '@site/src/components/Accordion';
 
-This page is coming soon and will be updated shortly. We're actively working on the content and will publish it here as soon as it's ready. Stay tuned!
-
-## Troubleshooting
-
-""""
+<Accordion />
