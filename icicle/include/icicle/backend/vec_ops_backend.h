@@ -559,12 +559,13 @@ namespace icicle {
     uint32_t twos,
     const VecOpsConfig& cfg,
     Rq* output)>;
-  void register_challenge_space_polynomials_sampling(const std::string& deviceType, challengeSpacePolynomialsSamplingImpl);
+  void
+  register_challenge_space_polynomials_sampling(const std::string& deviceType, challengeSpacePolynomialsSamplingImpl);
 
-  #define REGISTER_CHALLENGE_SPACE_POLYNOMIALS_SAMPLING_BACKEND(DEVICE_TYPE, FUNC)                                \
+  #define REGISTER_CHALLENGE_SPACE_POLYNOMIALS_SAMPLING_BACKEND(DEVICE_TYPE, FUNC)                                     \
     namespace {                                                                                                        \
-      static bool UNIQUE(_reg_challenge_space_polynomials_sampling) = []() -> bool {                              \
-        register_challenge_space_polynomials_sampling(DEVICE_TYPE, FUNC);                                               \
+      static bool UNIQUE(_reg_challenge_space_polynomials_sampling) = []() -> bool {                                   \
+        register_challenge_space_polynomials_sampling(DEVICE_TYPE, FUNC);                                              \
         return true;                                                                                                   \
       }();                                                                                                             \
     }

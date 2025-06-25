@@ -27,7 +27,8 @@ namespace icicle {
    * @brief Sample Labrador Rq challenge polynomials from challenge space C.
    *
    * This function samples challenge polynomials with specific coefficient patterns. The sampling process:
-   * 1. Initializes a polynomial with coefficients consisting of m1 number of a1s, m2 number of a2s, ..., mN number of aNs
+   * 1. Initializes a polynomial with coefficients consisting of m1 number of a1s, m2 number of a2s, ..., mN number of
+   * aNs
    * 2. Randomly flips the signs of the coefficients
    * 3. Permutes the coefficients randomly
    *
@@ -46,5 +47,11 @@ namespace icicle {
    */
   template <typename T>
   eIcicleError sample_challenge_space_polynomials(
-    const std::byte* seed, size_t seed_len, size_t size, uint32_t ones, uint32_t twos, const VecOpsConfig& config, T* output);
+    const std::byte* seed,
+    size_t seed_len,
+    size_t size,
+    uint32_t ones,
+    uint32_t twos,
+    const VecOpsConfig& config,
+    T* output);
 } // namespace icicle

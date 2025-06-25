@@ -1306,7 +1306,8 @@ TEST_F(RingTestBase, ChallengePolynomialsSampling)
   for (int i = 0; i < N; ++i) {
     for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
       ICICLE_CHECK(icicle_set_device(s_registered_devices[device_index]));
-      ICICLE_CHECK(sample_challenge_space_polynomials(seed.data(), seed_len, size, 31, 10, VecOpsConfig{}, outputs[device_index].data()));
+      ICICLE_CHECK(sample_challenge_space_polynomials(
+        seed.data(), seed_len, size, 31, 10, VecOpsConfig{}, outputs[device_index].data()));
     }
   }
 

@@ -28,7 +28,10 @@ namespace icicle {
     return RandomSamplingRingDispatcher::execute(size, fast_mode, seed, seed_len, config, output);
   }
 
-  ICICLE_DISPATCHER_INST(ChallengeSpacePolynomialsSamplingDispatcher, challenge_space_polynomials_sampling, challengeSpacePolynomialsSamplingImpl);
+  ICICLE_DISPATCHER_INST(
+    ChallengeSpacePolynomialsSamplingDispatcher,
+    challenge_space_polynomials_sampling,
+    challengeSpacePolynomialsSamplingImpl);
   extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sample_challenge_space_polynomials)(
     const std::byte* seed,
     uint64_t seed_len,

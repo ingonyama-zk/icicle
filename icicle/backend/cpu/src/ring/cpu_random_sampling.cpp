@@ -134,49 +134,53 @@ eIcicleError cpu_random_sampling(
 REGISTER_RING_ZQ_RANDOM_SAMPLING_BACKEND("CPU", cpu_random_sampling);
 
 struct RandomBitIterator {
-    uint64_t keccak_buffer[8];
-    size_t limb_idx = 0;
-    size_t bit_idx = 0;
-    uint64_t lfsr_state = 0;
+  uint64_t keccak_buffer[8];
+  size_t limb_idx = 0;
+  size_t bit_idx = 0;
+  uint64_t lfsr_state = 0;
 
-    // Initialize with Keccak output (must be at least 8 uint64_t)
-    RandomBitIterator(const std::vector<uint64_t>& keccak_output) {
-        for (int i = 0; i < 8; ++i) keccak_buffer[i] = keccak_output[i];
-        limb_idx = 0;
-        bit_idx = 0;
-        lfsr_state = keccak_buffer[7]; // Seed LFSR from last Keccak word
-    }
+  // Initialize with Keccak output (must be at least 8 uint64_t)
+  RandomBitIterator(const std::vector<uint64_t>& keccak_output)
+  {
+    for (int i = 0; i < 8; ++i)
+      keccak_buffer[i] = keccak_output[i];
+    limb_idx = 0;
+    bit_idx = 0;
+    lfsr_state = keccak_buffer[7]; // Seed LFSR from last Keccak word
+  }
 
-    inline uint64_t lfsr64(uint64_t x) {
-        uint64_t lsb = x & 1;
-        x >>= 1;
-        if (lsb) x ^= 0xD800000000000000ULL;
-        return x;
-    }
+  inline uint64_t lfsr64(uint64_t x)
+  {
+    uint64_t lsb = x & 1;
+    x >>= 1;
+    if (lsb) x ^= 0xD800000000000000ULL;
+    return x;
+  }
 
-    int next_bit() {
-        int bit;
-        if (limb_idx < 8) {
-            bit = (keccak_buffer[limb_idx] >> bit_idx) & 1;
-        } else {
-            bit = (lfsr_state >> bit_idx) & 1;
-        }
-        ++bit_idx;
-        if (bit_idx == 64) {
-            bit_idx = 0;
-            ++limb_idx;
-            if (limb_idx >= 8) {
-                lfsr_state = lfsr64(lfsr_state);
-            }
-        }
-        return bit;
+  int next_bit()
+  {
+    int bit;
+    if (limb_idx < 8) {
+      bit = (keccak_buffer[limb_idx] >> bit_idx) & 1;
+    } else {
+      bit = (lfsr_state >> bit_idx) & 1;
     }
+    ++bit_idx;
+    if (bit_idx == 64) {
+      bit_idx = 0;
+      ++limb_idx;
+      if (limb_idx >= 8) { lfsr_state = lfsr64(lfsr_state); }
+    }
+    return bit;
+  }
 };
 
 // Cross shuffles two adjecent ranges of an array as described in the paper
 // https://arxiv.org/pdf/1508.03167
 template <typename T>
-void merge_shuffle(T* array, uint32_t size_a, uint32_t size_b, uint32_t index_bits, RandomBitIterator& random_bit_iterator) {
+void merge_shuffle(
+  T* array, uint32_t size_a, uint32_t size_b, uint32_t index_bits, RandomBitIterator& random_bit_iterator)
+{
   int i = 0;
   int j = size_a;
   int n = size_a + size_b;
@@ -243,8 +247,9 @@ eIcicleError cpu_challenge_space_polynomials_sampling(
 
   for (size_t w = 0; w < nof_workers; ++w) {
     taskflow.emplace([=]() {
-      for (size_t hash_idx = w * hashes_per_worker; hash_idx < (w + 1) * hashes_per_worker && hash_idx * polynomials_per_hash < size; hash_idx++) {
-        Rq *output_polynomials = output + hash_idx * polynomials_per_hash;
+      for (size_t hash_idx = w * hashes_per_worker;
+           hash_idx < (w + 1) * hashes_per_worker && hash_idx * polynomials_per_hash < size; hash_idx++) {
+        Rq* output_polynomials = output + hash_idx * polynomials_per_hash;
         size_t compute_polynomials = std::min(polynomials_per_hash, size - hash_idx * polynomials_per_hash);
 
         // Setup the random bits iterator
@@ -273,9 +278,12 @@ eIcicleError cpu_challenge_space_polynomials_sampling(
 
         for (uint32_t i = 0; i < compute_polynomials; ++i) {
           // Do merge shuffle of 1s and 2s
-          merge_shuffle(output_polynomials[i].values, ones, twos, std::ceil(std::log2(ones + twos)), random_bit_iterator);
+          merge_shuffle(
+            output_polynomials[i].values, ones, twos, std::ceil(std::log2(ones + twos)), random_bit_iterator);
           // Do merge shuffle of shuffled 1s and 2s and zeroes
-          merge_shuffle(output_polynomials[i].values, ones + twos, Rq::d - ones - twos, std::ceil(std::log2(Rq::d)), random_bit_iterator);
+          merge_shuffle(
+            output_polynomials[i].values, ones + twos, Rq::d - ones - twos, std::ceil(std::log2(Rq::d)),
+            random_bit_iterator);
         }
       }
     });
