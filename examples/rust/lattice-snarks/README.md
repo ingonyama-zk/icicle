@@ -1,41 +1,38 @@
 # Lattice SNARK Example — Types and APIs
 
-This Rust example demonstrates core types and APIs used in lattice-based SNARK constructions. It is designed to serve as a reference and playground for key abstractions such as polynomial rings, NTTs, and norm-based operations.
+This Rust example showcases core types and APIs used in lattice-based SNARK constructions.  
+It serves as both a reference and a playground for key abstractions such as polynomial rings, number-theoretic transforms (NTTs), and norm-based operations.
 
-## Types
+## Core Types
 
-1. **`Zq`** — Integer ring modulo `q`.
-2. **`Rq/Tq`** — Polynomial ring `Zq[X]/(Xⁿ + 1)` (same type used for both `Tq`, the NTT domain representation).
+- **`Zq`** — Integer ring modulo `q`.
+- **`Rq` / `Tq`** — Polynomial ring `Zq[X]/(Xⁿ + 1)`; `Tq` refers to the same type in the NTT (frequency) domain.
 
 ## Demonstrated APIs
 
-1. **Negacyclic NTT**  
-   Forward and inverse Number-Theoretic Transforms for polynomials in `Rq`.
+- **Negacyclic NTT**  
+  Forward and inverse Number-Theoretic Transforms over `Rq`.
 
-2. **Polynomial Ring Matrix Multiplication**  
-   Matrix and vector multiplication over `Rq`, including Ajtai-commitment and dot products.
+- **Polynomial Ring Matrix Multiplication**  
+  Matrix and vector multiplication over `Rq`, including Ajtai-style commitments and dot products.
 
-3. **Balanced Decomposition**  
-   Decomposition of `Rq` elements into base-`b` digits using balanced representations.
+- **Balanced Decomposition**  
+  Decomposition of `Rq` elements into base-`b` digits using a balanced digit representation.
 
-4. **Norm Checking (`Zq`)**  
-   Compute and verify ℓ₂ and ℓ-infinitiy norms of integer ring vectors.
+- **Norm Checking (`Zq`)**  
+  Computation and verification of ℓ₂ and ℓ∞ norms over vectors in `Zq`.
 
-5. **Johnson–Lindenstrauss Projection (`Zq`)**  
-   Apply JL projections to `Zq` vectors using pseudorandom matrices
+- **Johnson–Lindenstrauss Projection (`Zq`)**  
+  Projection of `Zq` vectors into lower dimensions using pseudorandom JL matrices.
 
-6. **Vector APIs for `Rq`**  
-   Support for vectors of polynomials, including aggregation and vector-wise summation.
+- **Vector APIs for `Rq`**  
+  Operations over vectors of polynomials, including aggregation and element-wise summation.
 
-7. **Matrix Transpose (`Rq`)**  
-   Efficient transposition of `Rq`-based matrices.
+- **Matrix Transpose (`Rq`)**  
+  Efficient transposition of matrices over `Rq`.
 
-8. **Random Sampling**  
-   Seeded random generation of `Zq` and `Rq` elements.
+- **Random Sampling**  
+  Seeded random generation of elements in `Zq` and `Rq`.
 
-9. **Challenge Space Sampling (`Rq`)**  
-   Sample challenge polynomials with constraints (e.g., `{0, ±1, ±2}`).
-
-10. **Operator Norm Testing (`Rq`)**  
-    Evaluate operator norm of `Rq` polynomials.
-
+- **Challenge Space Sampling (`Rq`)**  
+  Sampling of challenge polynomials with constrained coefficients (e.g., `{0, ±1, ±2}`).
