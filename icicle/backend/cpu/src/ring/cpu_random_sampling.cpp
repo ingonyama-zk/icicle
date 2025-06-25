@@ -175,7 +175,7 @@ struct RandomBitIterator {
   }
 };
 
-// Cross shuffles two adjecent ranges of an array as described in the paper
+// Cross shuffles two adjacent ranges of an array as described in the paper
 // https://arxiv.org/pdf/1508.03167
 template <typename T>
 void merge_shuffle(
