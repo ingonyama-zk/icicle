@@ -7,7 +7,7 @@ use icicle_core::{
     ntt::NTTDir,
     polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut, PolynomialRing},
     random_sampling,
-    traits::{FieldImpl, GenerateRandom},
+    traits::{Arithmetic, FieldImpl, GenerateRandom},
     vec_ops,
     vec_ops::{poly_vecops, VecOpsConfig},
 };
@@ -80,6 +80,24 @@ where
     println!("[NTT] Output vector contains {} transformed elements", output.len());
 }
 
+/// Computes the modulus of a field element type `T` as `usize`.
+fn modulus<T>() -> usize
+where
+    T: FieldImpl + Arithmetic,
+{
+    let q_bytes = icicle_core::field::modulus::<T>();
+
+    assert!(
+        q_bytes.len() <= std::mem::size_of::<usize>(),
+        "Modulus minus one byte array should fit in 8 bytes"
+    );
+
+    // Convert the byte array to u64 (pad with zeros if needed)
+    let mut padded = [0u8; std::mem::size_of::<usize>()];
+    padded[..q_bytes.len()].copy_from_slice(&q_bytes);
+    usize::from_le_bytes(padded)
+}
+
 /// Demonstrates balanced base decomposition and recomposition for polynomial ring elements.
 /// Uses dynamic bases q^(1/t) for t ∈ {2, 4, 6}, and verifies correctness.
 /// - The output vector has length `n * d`.
@@ -90,8 +108,11 @@ where
 fn balanced_decomposition_example<P>(size: usize)
 where
     P: PolynomialRing + balanced_decomposition::BalancedDecomposition<P> + GenerateRandom<P>,
+    P::Base: FieldImpl + Arithmetic,
 {
-    let q: usize = 4_289_678_649_214_369_793; // TODO: expose q from P::Base::MODULUS
+    println!("----------------------------------------------------------------------");
+    let q = modulus::<P::Base>();
+    println!("[Balanced Decomposition] q: {:#x}", q);
 
     let ts = [2, 4, 6];
     let bases: Vec<u32> = ts
@@ -113,14 +134,13 @@ where
         .iter()
         .enumerate()
     {
-        println!("----------------------------------------------------------------------");
         println!("[Balanced Decomposition] Using [t = {}] Base = {}", ts[i], base);
 
         let digits_per_elem = balanced_decomposition::count_digits::<P>(*base);
         let decomposed_len = size * digits_per_elem as usize;
 
         println!(
-            "Elements: {} ({} digits per element → total = {})",
+            "[Balanced Decomposition] Elements: {} ({} digits per element → total = {})",
             size, digits_per_elem, decomposed_len
         );
 
@@ -133,7 +153,10 @@ where
         balanced_decomposition::decompose::<P>(HostSlice::from_slice(&input), &mut decomposed[..], *base, &cfg)
             .expect("Decomposition failed");
         let decompose_time = t0.elapsed();
-        println!("Decomposition completed in {:.2?}", decompose_time);
+        println!(
+            "[Balanced Decomposition] Decomposition completed in {:.2?}",
+            decompose_time
+        );
 
         // ------------------------------
         // ⏱️ Recompose
@@ -147,7 +170,10 @@ where
         )
         .expect("Recomposition failed");
         let recompose_time = t1.elapsed();
-        println!("Recomposition completed in {:.2?}", recompose_time);
+        println!(
+            "[Balanced Decomposition] Recomposition completed in {:.2?}",
+            recompose_time
+        );
 
         // ------------------------------
         // ✅ Verification
@@ -203,7 +229,7 @@ where
     let t_elapsed = t_start.elapsed();
 
     println!(
-        "JL projection succeeded in {:.2?} ({} → {} scalars)",
+        "[JL Projection] succeeded in {:.2?} ({} → {} scalars)",
         t_elapsed,
         size * P::DEGREE,
         projection_dim
@@ -231,7 +257,7 @@ where
     let t_elapsed = t_start.elapsed();
 
     println!(
-        "Retrieved {} conjugated JL matrix row(s) as PolyRing in {:.2?}",
+        "[JL Projection] Retrieved {} conjugated JL matrix row(s) as PolyRing in {:.2?}",
         num_rows, t_elapsed
     );
 
@@ -256,7 +282,7 @@ where
 
     println!("----------------------------------------------------------------------");
     println!(
-        "Generating {} random elements in [0, 2^30] and checking norm bounds...",
+        "[Norm Bound check] Generating {} random elements in [0, 2^30] and checking norm bounds...",
         size
     );
 
@@ -275,8 +301,8 @@ where
         .collect();
 
     let l2_norm: u64 = l2_squared.isqrt() as u64;
-    println!("Estimated ℓ₂ norm bound: {}", l2_norm);
-    println!("Computed ℓ∞ (max) norm: {}", l_infinity_norm);
+    println!("[Norm Bound check] Estimated ℓ₂ norm bound: {}", l2_norm);
+    println!("[Norm Bound check] Computed ℓ∞ (max) norm: {}", l_infinity_norm);
 
     // Upload to device
     let mut device_input = DeviceVec::<T>::device_malloc(size).expect("Failed to allocate device memory");
@@ -289,7 +315,10 @@ where
     // ℓ₂ norm check — upper bound (should pass)
     let mut output = vec![false; 1];
     let upper_bound = l2_norm + 1;
-    println!("Checking ℓ₂ norm with upper bound {} (should pass)", upper_bound);
+    println!(
+        "[Norm Bound check] Checking ℓ₂ norm with upper bound {} (should pass)",
+        upper_bound
+    );
     let start = Instant::now();
     norm::check_norm_bound(
         &device_input,
@@ -299,12 +328,15 @@ where
         HostSlice::from_mut_slice(&mut output),
     )
     .expect("ℓ₂ norm bound check failed");
-    println!("ℓ₂ norm (pass case) took {:?}", start.elapsed());
+    println!("[Norm Bound check] ℓ₂ norm (pass case) took {:?}", start.elapsed());
     assert!(output[0], "ℓ₂ norm check failed unexpectedly");
 
     // ℓ₂ norm check — tight bound (should fail)
     let lower_bound = l2_norm;
-    println!("Checking ℓ₂ norm with tight bound {} (should fail)", lower_bound);
+    println!(
+        "[Norm Bound check] Checking ℓ₂ norm with tight bound {} (should fail)",
+        lower_bound
+    );
     let start = Instant::now();
     norm::check_norm_bound(
         &device_input,
@@ -314,13 +346,16 @@ where
         HostSlice::from_mut_slice(&mut output),
     )
     .expect("ℓ₂ norm bound check failed");
-    println!("ℓ₂ norm (fail case) took {:?}", start.elapsed());
+    println!("[Norm Bound check] ℓ₂ norm (fail case) took {:?}", start.elapsed());
     assert!(!output[0], "ℓ₂ norm check unexpectedly passed");
 
     // ℓ∞ norm check for batch vectors
     let batch = 4;
     let mut output = vec![false; batch];
-    println!("Checking ℓ∞ norm with bound {}, batch-size {}", l_infinity_norm, batch);
+    println!(
+        "[Norm Bound check] Checking ℓ∞ norm with bound {}, batch-size {}",
+        l_infinity_norm, batch
+    );
     let start = Instant::now();
     norm::check_norm_bound(
         &device_input,
@@ -330,7 +365,7 @@ where
         HostSlice::from_mut_slice(&mut output),
     )
     .expect("ℓ∞ norm bound check failed");
-    println!("ℓ∞ norm check took {:?}", start.elapsed());
+    println!("[Norm Bound check] ℓ∞ norm check took {:?}", start.elapsed());
     assert!(
         output
             .iter()
@@ -357,7 +392,7 @@ where
 
     println!("----------------------------------------------------------------------");
     println!(
-        "Generating {} pseudorandom elements in Zq and Rq using device sampling...",
+        "[Random Sampling] Generating {} pseudorandom elements in Zq and Rq using device sampling...",
         size
     );
 
@@ -375,7 +410,7 @@ where
     let start = Instant::now();
     random_sampling::random_sampling(fast_mode, &seed, &cfg, &mut output_zq).expect("Zq sampling failed");
     let duration = start.elapsed();
-    println!("Zq sampling completed in {:?}", duration);
+    println!("[Random Sampling] Zq sampling completed in {:?}", duration);
 
     // Sample Rq polynomials by reinterpreting as Zq elements
     let mut output_rq =
@@ -385,7 +420,10 @@ where
     let start = Instant::now();
     random_sampling::random_sampling(fast_mode, &seed, &cfg, &mut output_rq_coeffs).expect("Rq sampling failed");
     let duration = start.elapsed();
-    println!("Rq sampling (as Zq coefficients) completed in {:?}", duration);
+    println!(
+        "[Random Sampling] Rq sampling (as Zq coefficients) completed in {:?}",
+        duration
+    );
 }
 
 /// Demonstrates vectorized polynomial ring operations over device memory.
@@ -410,7 +448,10 @@ where
     use std::time::Instant;
 
     println!("----------------------------------------------------------------------");
-    println!("Demonstrating vectorized polynomial operations for {} elements", size);
+    println!(
+        "[Vector Ops] Demonstrating vectorized polynomial operations for {} elements",
+        size
+    );
 
     let cfg = VecOpsConfig::default();
     let fast_mode = true;
@@ -436,19 +477,19 @@ where
     // Allocate result buffer for the pointwise multiplication
     let mut mul_result = DeviceVec::<P>::device_malloc(size).expect("Failed to allocate result buffer");
 
-    println!("Performing polyvec_mul_by_scalar...");
+    println!("[Vector Ops] Performing polyvec_mul_by_scalar...");
     let start = Instant::now();
     poly_vecops::polyvec_mul_by_scalar(&polyvec, &scalarvec, &mut mul_result, &cfg)
         .expect("polyvec_mul_by_scalar failed");
-    println!("polyvec_mul_by_scalar completed in {:?}", start.elapsed());
+    println!("[Vector Ops] polyvec_mul_by_scalar completed in {:?}", start.elapsed());
 
     // Allocate output for sum-reduction into a single polynomial
     let mut reduced = DeviceVec::<P>::device_malloc(1).expect("Failed to allocate reduction output");
 
-    println!("Reducing with polyvec_sum_reduce...");
+    println!("[Vector Ops] Reducing with polyvec_sum_reduce...");
     let start = Instant::now();
     poly_vecops::polyvec_sum_reduce(&mul_result, &mut reduced, &cfg).expect("polyvec_sum_reduce failed");
-    println!("polyvec_sum_reduce completed in {:?}", start.elapsed());
+    println!("[Vector Ops] polyvec_sum_reduce completed in {:?}", start.elapsed());
 
     println!("\nOther supported operations in `vecops` include:");
     println!("- polyvec_add, polyvec_sub, polyvec_mul for <P, P>");
@@ -469,15 +510,16 @@ fn main() {
     // ----------------------------------------------------------------------
     // (1) Integer ring: Zq
     // ----------------------------------------------------------------------
-
+    println!("----------------------------------------------------------------------");
     let _zq_zeros: Vec<Zq> = vec![Zq::zero(); size];
     let zq_random: Vec<Zq> = ZqCfg::generate_random(size);
-    println!("Generated {} random Zq elements", zq_random.len());
+    println!("[Integer ring Zq] Generated {} random Zq elements", zq_random.len());
 
     // ----------------------------------------------------------------------
     // (2) Polynomial ring: PolyRing = Zq[X]/(X^n + 1)
     // ----------------------------------------------------------------------
 
+    println!("----------------------------------------------------------------------");
     // Note: `PolyRing` is used for both coefficient-domain (Rq) and NTT-domain (Tq) representations.
     let _rq_zeros: Vec<PolyRing> = vec![PolyRing::zero(); size];
     let _rq_random: Vec<PolyRing> = PolyRing::generate_random(size);
@@ -486,7 +528,10 @@ fn main() {
         .chunks(PolyRing::DEGREE)
         .map(PolyRing::from_slice)
         .collect();
-    println!("Converted {} Zq chunks into Rq polynomials", rq_from_slice.len());
+    println!(
+        "[Polynomial Ring Rq] Converted {} Zq chunks into Rq polynomials",
+        rq_from_slice.len()
+    );
 
     // ----------------------------------------------------------------------
     // (3) Negacyclic NTT for polynomial rings
