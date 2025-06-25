@@ -3,6 +3,7 @@
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
 #include "icicle/norm.h"
+#include "icicle/random_sampling.h"
 #include "icicle/negacyclic_ntt.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
@@ -464,7 +465,6 @@ TEST_F(RingTestBase, JLProjectionTest)
 
   const auto cfg = VecOpsConfig{};
   for (auto device : s_registered_devices) {
-    if (device != "CPU") continue; // TODO implement for CUDA too
     ICICLE_CHECK(icicle_set_device(device));
     std::stringstream timer_label;
     timer_label << "JL-projection [device=" << device << "]";
@@ -514,8 +514,6 @@ TEST_F(RingTestBase, JLprojectionGetRowsTest)
   const auto cfg = VecOpsConfig{};
 
   for (const auto& device : s_registered_devices) {
-    if (device != "CPU") continue; // TODO: Extend to CUDA
-
     ICICLE_CHECK(icicle_set_device(device));
 
     std::stringstream projection_timer_label, generate_timer_label;
@@ -552,6 +550,99 @@ TEST_F(RingTestBase, JLprojectionGetRowsTest)
   }
 }
 
+TEST_F(RingTestBase, JLMatrixRowsDeviceConsistency)
+{
+  const size_t N = 1 << 10;       // Input vector size (row size)
+  const size_t output_size = 256; // Number of JL projection rows
+
+  // Skip test if fewer than 2 devices are available
+  if (s_registered_devices.size() < 2) { GTEST_SKIP() << "At least 2 devices are required for this test"; }
+
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() % 256);
+  }
+
+  const auto cfg = VecOpsConfig{};
+
+  // Store matrices from all devices
+  std::vector<std::vector<field_t>> matrices;
+  std::vector<std::string> device_timer_labels;
+
+  // Generate matrix on each device
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    std::vector<field_t> matrix(output_size * N);
+    std::stringstream timer_label;
+    timer_label << "JL-matrix-rows [device=" << device << "]";
+    device_timer_labels.push_back(timer_label.str());
+
+    START_TIMER(generate);
+    ICICLE_CHECK(get_jl_matrix_rows(
+      seed, sizeof(seed),
+      N,           // row_size = input dimension
+      0,           // start_row
+      output_size, // num_rows
+      cfg,
+      matrix.data() // Output: [num_rows x row_size]
+      ));
+    END_TIMER(generate, timer_label.str().c_str(), true);
+
+    matrices.push_back(std::move(matrix));
+  }
+
+  // Compare all device matrices with the first one
+  const auto& reference_matrix = matrices[0];
+  const auto& reference_device = s_registered_devices[0];
+
+  for (size_t device_idx = 1; device_idx < matrices.size(); ++device_idx) {
+    const auto& matrix = matrices[device_idx];
+    const auto& device = s_registered_devices[device_idx];
+
+    // Compare matrices element by element
+    for (size_t i = 0; i < output_size * N; ++i) {
+      ASSERT_EQ(reference_matrix[i], matrix[i]) << "Matrix mismatch at index " << i << ": " << reference_device << " = "
+                                                << reference_matrix[i] << ", " << device << " = " << matrix[i];
+    }
+  }
+
+  // Additional verification: test with different start_row and num_rows parameters
+  const size_t start_row = 10;
+  const size_t partial_rows = 50;
+  std::vector<std::vector<field_t>> partial_matrices;
+
+  // Generate partial matrix on each device
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    std::vector<field_t> device_partial(partial_rows * N);
+    ICICLE_CHECK(get_jl_matrix_rows(
+      seed, sizeof(seed),
+      N,            // row_size
+      start_row,    // start_row
+      partial_rows, // num_rows
+      cfg, device_partial.data()));
+
+    partial_matrices.push_back(std::move(device_partial));
+  }
+
+  // Compare all partial matrices with the first one
+  const auto& reference_partial = partial_matrices[0];
+
+  for (size_t device_idx = 1; device_idx < partial_matrices.size(); ++device_idx) {
+    const auto& partial = partial_matrices[device_idx];
+    const auto& device = s_registered_devices[device_idx];
+
+    // Compare partial matrices
+    for (size_t i = 0; i < partial_rows * N; ++i) {
+      ASSERT_EQ(reference_partial[i], partial[i])
+        << "Partial matrix mismatch at index " << i << " (start_row=" << start_row << ", partial_rows=" << partial_rows
+        << "): " << reference_device << " = " << reference_partial[i] << ", " << device << " = " << partial[i];
+    }
+  }
+}
+
 // This test verifies the JL-projection lemma: projecting an input vector of Rq polynomials
 // via Zq yields the same value as the constant term of an inner product in Rq with conjugated rows.
 TEST_F(RingTestBase, JLprojectionLemma)
@@ -572,7 +663,6 @@ TEST_F(RingTestBase, JLprojectionLemma)
   }
 
   for (const auto& device : s_registered_devices) {
-    if (device == "CUDA") continue; // TODO: implement CUDA backend
     ICICLE_CHECK(icicle_set_device(device));
 
     // Project using flat Zq view (as if input is Zq vector)
@@ -599,6 +689,74 @@ TEST_F(RingTestBase, JLprojectionLemma)
       // Validate that the constant term equals the Zq projection result
       const field_t constant_term = inner_product_ntt.values[0];
       EXPECT_EQ(constant_term, projected[row_idx]) << "Mismatch at row " << row_idx;
+    }
+  }
+}
+
+TEST_F(RingTestBase, JLProjectionDeviceConsistency)
+{
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  const size_t N = (1 << 16) + 1; // Input vector size
+  const size_t output_size = 256; // JL projected size
+
+  // Skip test if fewer than 2 devices are available
+  if (s_registered_devices.size() < 2) { GTEST_SKIP() << "At least 2 devices are required for this test"; }
+
+  std::vector<field_t> input(N);
+
+  // generate random values in [0, sqrt(q)]. We assume input is low norm.
+  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
+  for (auto& x : input) {
+    uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
+    x = field_t::from(val);
+  }
+
+  const auto cfg = VecOpsConfig{};
+
+  // Prepare random seed
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() % 256);
+  }
+
+  // Store outputs from all devices
+  std::vector<std::vector<field_t>> device_outputs;
+  std::vector<std::string> device_timer_labels;
+
+  // Perform JL projection on each device
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    std::vector<field_t> device_output(output_size);
+    std::stringstream timer_label;
+    timer_label << "JL-projection [device=" << device << "]";
+    device_timer_labels.push_back(timer_label.str());
+
+    START_TIMER(projection);
+    ICICLE_CHECK(
+      jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, device_output.data(), device_output.size()));
+    END_TIMER(projection, timer_label.str().c_str(), true);
+
+    device_outputs.push_back(std::move(device_output));
+  }
+
+  // Compare all device outputs with the first one
+  const auto& reference_output = device_outputs[0];
+  const auto& reference_device = s_registered_devices[0];
+
+  for (size_t device_idx = 1; device_idx < device_outputs.size(); ++device_idx) {
+    const auto& device_output = device_outputs[device_idx];
+    const auto& device = s_registered_devices[device_idx];
+
+    // Compare outputs element by element
+    for (size_t i = 0; i < output_size; ++i) {
+      ASSERT_EQ(reference_output[i], device_output[i])
+        << "Mismatch at index " << i << ": " << reference_device << " = " << reference_output[i] << ", " << device
+        << " = " << device_output[i];
     }
   }
 }
@@ -1076,3 +1234,55 @@ TEST_F(RingTestBase, NegacyclicNTT)
   }
 }
 #endif // NTT
+
+TEST_F(RingTestBase, RandomSampling)
+{
+  size_t size = 1 << 20;
+  size_t seed_len = 32;
+  std::vector<std::byte> seed(seed_len);
+  for (size_t i = 0; i < seed_len; ++i) {
+    seed[i] = static_cast<std::byte>(rand_uint_32b());
+  }
+  std::vector<std::byte> seed_prime(seed);
+  seed_prime[0] = static_cast<std::byte>(uint8_t(seed_prime[0]) + 1); // Make sure the seed is different
+
+  std::vector<std::vector<field_t>> a(s_registered_devices.size());
+  std::vector<std::vector<field_t>> b(s_registered_devices.size());
+  for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+    a[device_index] = std::vector<field_t>(size);
+    b[device_index] = std::vector<field_t>(size);
+  }
+
+  auto test_random_sampling = [&](bool fast_mode) {
+    const int N = 15;
+    for (int i = 0; i < N; ++i) {
+      for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+        ICICLE_CHECK(icicle_set_device(s_registered_devices[device_index]));
+
+        // Different seed inconsistency test
+        ICICLE_CHECK(random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, a[device_index].data()));
+        ICICLE_CHECK(
+          random_sampling(size, fast_mode, seed_prime.data(), seed_len, VecOpsConfig{}, b[device_index].data()));
+        bool equal = true;
+        for (size_t j = 0; j < size; ++j) {
+          if (a[device_index][j] != b[device_index][j]) { equal = false; }
+        }
+        ASSERT_FALSE(equal);
+
+        // Same seed consistency test
+        ICICLE_CHECK(random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, a[device_index].data()));
+        ICICLE_CHECK(random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, b[device_index].data()));
+        for (size_t i = 0; i < size; ++i) {
+          ASSERT_EQ(a[device_index][i], b[device_index][i]);
+        }
+      }
+      for (int j = 0; j < size; ++j) {
+        for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+          ASSERT_EQ(a[device_index][j], b[device_index][j]);
+        }
+      }
+    }
+  };
+  test_random_sampling(true);
+  test_random_sampling(false);
+}
