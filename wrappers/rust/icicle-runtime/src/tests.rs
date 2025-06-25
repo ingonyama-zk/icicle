@@ -132,6 +132,7 @@ mod tests {
 
         // H -> D -> D -> H
         {
+            let h_output = output.into_slice_mut();
             let mut d_mem1 = DeviceVec::<u8>::malloc(input.len());
             d_mem1
                 .copy(h_input)
@@ -142,11 +143,9 @@ mod tests {
                 .copy(&d_mem1)
                 .unwrap();
 
-            let h_output = output.into_slice_mut();
             h_output
                 .copy(&d_mem2[0..input.len()])
                 .unwrap();
-
             assert_eq!(input, output);
         }
 
@@ -156,7 +155,6 @@ mod tests {
             h_output
                 .copy(h_input2)
                 .unwrap();
-
             assert_eq!(input2, output);
         }
     }
