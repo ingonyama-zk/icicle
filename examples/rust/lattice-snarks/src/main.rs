@@ -360,7 +360,7 @@ where
     norm::check_norm_bound(
         &device_input,
         norm::NormType::LInfinity,
-        l_infinity_norm as u64,
+        l_infinity_norm as u64 + 1, // upper bound
         &cfg,
         HostSlice::from_mut_slice(&mut output),
     )
