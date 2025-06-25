@@ -7,6 +7,7 @@
 #include "icicle/negacyclic_ntt.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
+#include <chrono>
 
 using namespace field_config;
 using namespace icicle;
@@ -1128,4 +1129,33 @@ TEST_F(RingTestBase, RandomSampling)
   };
   test_random_sampling(true);
   test_random_sampling(false);
+}
+
+TEST_F(RingTestBase, ChallengePolynomialsSampling)
+{
+  size_t size = 1 << 20;
+  size_t seed_len = 32;
+  std::vector<std::byte> seed(seed_len);
+  for (size_t i = 0; i < seed_len; ++i) {
+    seed[i] = static_cast<std::byte>(i);
+  }
+
+  std::vector<std::vector<Rq>> outputs(s_registered_devices.size());
+  for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+    outputs[device_index] = std::vector<Rq>(size);
+  }
+
+  const int N = 4;
+  for (int i = 0; i < N; ++i) {
+    for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+      ICICLE_CHECK(icicle_set_device(s_registered_devices[device_index]));
+      ICICLE_CHECK(sample_challenge_space_polynomials(seed.data(), seed_len, size, 31, 10, VecOpsConfig{}, outputs[device_index].data()));
+    }
+  }
+
+  for (size_t device_index = 1; device_index < s_registered_devices.size(); ++device_index) {
+    for (size_t i = 0; i < size; ++i) {
+      ASSERT_EQ(outputs[device_index][i], outputs[0][i]);
+    }
+  }
 }

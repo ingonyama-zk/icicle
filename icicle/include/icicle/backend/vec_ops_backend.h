@@ -522,10 +522,11 @@ namespace icicle {
 #endif // EXT_FIELD
 
 #ifdef RING
+  // for Zq type
+
   // This should be the same for all the devices to get a deterministic result
   const uint64_t RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS = 256;
 
-  // for Zq type
   using ringZqRandomSamplingImpl = std::function<eIcicleError(
     const Device& device,
     uint64_t size,
@@ -540,6 +541,30 @@ namespace icicle {
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_ring_zq_random_sampling) = []() -> bool {                                                \
         register_ring_zq_random_sampling(DEVICE_TYPE, FUNC);                                                           \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  // for Rq type
+
+  // This should be the same for all the devices to get a deterministic result
+  const size_t CHALLENGE_SPACE_POLYNOMIALS_SAMPLING_POLYNOMIALS_PER_HASH = 8;
+
+  using challengeSpacePolynomialsSamplingImpl = std::function<eIcicleError(
+    const Device& device,
+    const std::byte* seed,
+    uint64_t seed_len,
+    size_t size,
+    uint32_t ones,
+    uint32_t twos,
+    const VecOpsConfig& cfg,
+    Rq* output)>;
+  void register_challenge_space_polynomials_sampling(const std::string& deviceType, challengeSpacePolynomialsSamplingImpl);
+
+  #define REGISTER_CHALLENGE_SPACE_POLYNOMIALS_SAMPLING_BACKEND(DEVICE_TYPE, FUNC)                                \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_challenge_space_polynomials_sampling) = []() -> bool {                              \
+        register_challenge_space_polynomials_sampling(DEVICE_TYPE, FUNC);                                               \
         return true;                                                                                                   \
       }();                                                                                                             \
     }

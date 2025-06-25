@@ -27,4 +27,30 @@ namespace icicle {
   {
     return RandomSamplingRingDispatcher::execute(size, fast_mode, seed, seed_len, config, output);
   }
+
+  ICICLE_DISPATCHER_INST(ChallengeSpacePolynomialsSamplingDispatcher, challenge_space_polynomials_sampling, challengeSpacePolynomialsSamplingImpl);
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sample_challenge_space_polynomials)(
+    const std::byte* seed,
+    uint64_t seed_len,
+    size_t size,
+    uint32_t ones,
+    uint32_t twos,
+    const VecOpsConfig* config,
+    Rq* output)
+  {
+    return ChallengeSpacePolynomialsSamplingDispatcher::execute(seed, seed_len, size, ones, twos, *config, output);
+  }
+
+  template <>
+  eIcicleError sample_challenge_space_polynomials(
+    const std::byte* seed,
+    uint64_t seed_len,
+    size_t size,
+    uint32_t ones,
+    uint32_t twos,
+    const VecOpsConfig& config,
+    Rq* output)
+  {
+    return ChallengeSpacePolynomialsSamplingDispatcher::execute(seed, seed_len, size, ones, twos, config, output);
+  }
 } // namespace icicle
