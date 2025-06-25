@@ -3,7 +3,7 @@ use crate::field::PrimeField;
 use crate::msm::{msm, precompute_bases, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR, MSM};
 use crate::traits::{GenerateRandom, MontgomeryConvertible};
 use icicle_runtime::{
-    memory::{DeviceVec, HostSlice, HostOrDeviceSlice, IntoIcicleSlice, IntoIcicleSliceMut},
+    memory::{DeviceVec, HostOrDeviceSlice, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
     runtime,
     stream::IcicleStream,
     test_utilities,

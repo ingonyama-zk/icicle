@@ -142,23 +142,21 @@ mod tests {
                 .copy(&d_mem1)
                 .unwrap();
 
-            {
-                let h_output = output.into_slice_mut();
-                h_output
-                    .copy(&d_mem2[0..input.len()])
-                    .unwrap();
-            }
+            let h_output = output.into_slice_mut();
+            h_output
+                .copy(&d_mem2[0..input.len()])
+                .unwrap();
+
             assert_eq!(input, output);
         }
 
         // H -> H
         {
-            {
-                let h_output = output.into_slice_mut();
-                h_output
-                    .copy(h_input2)
-                    .unwrap();
-            }
+            let h_output = output.into_slice_mut();
+            h_output
+                .copy(h_input2)
+                .unwrap();
+
             assert_eq!(input2, output);
         }
     }
