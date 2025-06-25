@@ -169,49 +169,74 @@ public:
       return {bn254_mont_t::reduce(a.re), bn254_mont_t::reduce(a.im)};
   }
 
+
+  INLINE static mp_256_t xx3_lut(const mp_256_t &xx) {
+      auto xx_2 = bn254_mont_t::reduce_top_2_bits(bn254_mont_t::add(xx, xx));  // 1.7P
+      auto xx_3 = bn254_mont_t::reduce_top_2_bits(bn254_mont_t::add(xx_2, xx));// 3.4P
+      return xx_3;
+  }
+
+  INLINE static mp_256_t zz3_lut(const mp_256_t &x) {
+      auto x_2 = bn254_mont_t::reduce_top_2_bits(bn254_mont_t::add(x, x));
+      auto x_4 = bn254_mont_t::reduce_top_2_bits(bn254_mont_t::add(x_2, x_2));
+      auto x_8 = bn254_mont_t::reduce_top_2_bits(bn254_mont_t::add(x_4, x_4));
+      auto x_9 = bn254_mont_t::reduce_4p(bn254_mont_t::add(x_8, x));
+      return x_9;
+  }
+
+  INLINE static mp_256_t bb3_lut(const mp_256_t &x) {
+      auto x_2 = bn254_mont_t::reduce_top_2_bits(bn254_mont_t::add(x, x));
+      auto x_4 = bn254_mont_t::reduce_top_2_bits(bn254_mont_t::add(x_2, x_2));
+      auto x_8 = bn254_mont_t::reduce_top_2_bits(bn254_mont_t::add(x_4, x_4));
+      auto x_9 = bn254_mont_t::reduce_4p(bn254_mont_t::add(x_8, x));
+      return x_9;
+  }
+
   static HOST_DEVICE void accum_prj_aff(Projective &p1, const Affine<FF>& p2) {
     if constexpr (std::is_same_v<Gen, bn254::G1>) {
-      const mp_256_t &X1 = reinterpret_cast<mp_256_t &>(p1.x);
-      const mp_256_t &Y1 = reinterpret_cast<mp_256_t &>(p1.y);
-      const mp_256_t &Z1 = reinterpret_cast<mp_256_t &>(p1.z);
-      const mp_256_t &X2 = reinterpret_cast<const mp_256_t &>(p2.x);
-      const mp_256_t &Y2 = reinterpret_cast<const mp_256_t &>(p2.y);
-      const mp_256_t t00 = bn254_mont_t::mul(X1, X2);
-      const mp_256_t t01 = bn254_mont_t::mul(Y1, Y2);
-      const mp_256_t t02 = bn254_mont_t::reduce(Z1);
-      const mp_256_t t03 = bn254_mont_t::add(X1, Y1);
-      const mp_256_t t04 = bn254_mont_t::add(X2, Y2);
-      const mp_256_t t05 = bn254_mont_t::mul(t03, t04);
-      const mp_256_t t06 = bn254_mont_t::add_red(t00, t01);
-      const mp_256_t t07 = bn254_mont_t::sub_red(t05, t06);
-      const mp_256_t t08 = bn254_mont_t::add(Y1, Z1);
-      const mp_256_t t09 = bn254_mont_t::add(Y2, {1, 0, 0, 0});
-      const mp_256_t t10 = bn254_mont_t::mul(t08, t09);
-      const mp_256_t t11 = bn254_mont_t::add_red(t01, t02);
-      const mp_256_t t12 = bn254_mont_t::sub_red(t10, t11);
-      const mp_256_t t13 = bn254_mont_t::add(X1, Z1);
-      const mp_256_t t14 = bn254_mont_t::add(X2, {1, 0, 0, 0});
-      const mp_256_t t15 = bn254_mont_t::mul(t13, t14);
-      const mp_256_t t16 = bn254_mont_t::add_red(t00, t02);
-      const mp_256_t t17 = bn254_mont_t::sub_red(t15, t16);
-      const mp_256_t t18 = bn254_mont_t::add_red(t00, t00);
-      const mp_256_t t19 = bn254_mont_t::add_red(t18, t00);
-      const mp_256_t t20 = mul_b3(t02);
-      const mp_256_t t21 = bn254_mont_t::add_red(t01, t20);
-      const mp_256_t t22 = bn254_mont_t::sub_red(t01, t20);
-      const mp_256_t t23 = mul_b3(t17);
-      const auto t24 = bn254_mont_t::schoolbook_mul(t12, t23);
-      const auto t25 = bn254_mont_t::schoolbook_mul(t07, t22);
-      const mp_256_t X3 = bn254_mont_t::reduce(bn254_mont_t::sub_red(t25, t24));
-      const auto t27 = bn254_mont_t::schoolbook_mul(t23, t19);
-      const auto t28 = bn254_mont_t::schoolbook_mul(t22, t21);
-      const mp_256_t Y3 = bn254_mont_t::reduce(bn254_mont_t::add(t28, t27));
-      const auto t30 = bn254_mont_t::schoolbook_mul(t19, t07);
-      const auto t31 = bn254_mont_t::schoolbook_mul(t21, t12);
-      const mp_256_t Z3 = bn254_mont_t::reduce(bn254_mont_t::add(t31, t30));
-      p1.x = reinterpret_cast<const FF &>(X3);
-      p1.y = reinterpret_cast<const FF &>(Y3);
-      p1.z = reinterpret_cast<const FF &>(Z3);
+      mp_256_t &Xa = reinterpret_cast<mp_256_t &>(p1.x);
+      mp_256_t &Ya = reinterpret_cast<mp_256_t &>(p1.y);
+      mp_256_t &Za = reinterpret_cast<mp_256_t &>(p1.z);
+      const mp_256_t &Xb = reinterpret_cast<const mp_256_t &>(p2.x);
+      const mp_256_t &Yb = reinterpret_cast<const mp_256_t &>(p2.y);
+
+      const mp_256_t XaXb = bn254_mont_t::mul_no_final_red(Xa, Xb);
+      const mp_256_t YaYb = bn254_mont_t::mul_no_final_red(Ya, Yb);
+      const mp_256_t ZaZb = bn254_mont_t::mul_no_final_red(Za, {1, 0, 0, 0});
+      const mp_256_t XaYa = bn254_mont_t::add(Xa, Ya);
+      const mp_256_t XbYb = bn254_mont_t::add(Xb, Yb);
+      const mp_256_t XaZa = bn254_mont_t::add(Xa, Za);
+      const mp_256_t XbZb = bn254_mont_t::add(Xb, {1, 0, 0, 0});
+      const mp_256_t YaZa = bn254_mont_t::add(Ya, Za);
+      const mp_256_t YbZb = bn254_mont_t::add(Yb, {1, 0, 0, 0});
+
+      const mp_256_t XaXbYaYb = bn254_mont_t::reduce_4p(bn254_mont_t::add(XaXb, YaYb));
+      const mp_256_t XaXbZaZb = bn254_mont_t::reduce_4p(bn254_mont_t::add(XaXb, ZaZb));
+      const mp_256_t YaYbZaZb = bn254_mont_t::reduce_4p(bn254_mont_t::add(YaYb, ZaZb));
+      const mp_256_t XaYaXbYb = bn254_mont_t::mul_no_final_red(XaYa, XbYb);
+      const mp_256_t XaZaXbZb = bn254_mont_t::mul_no_final_red(XaZa, XbZb);
+      const mp_256_t YaZaYbZb = bn254_mont_t::mul_no_final_red(YaZa, YbZb);
+
+      const mp_256_t CC = bn254_mont_t::sub_red(XaYaXbYb, XaXbYaYb);
+      const mp_256_t BB = bn254_mont_t::sub_red(XaZaXbZb, XaXbZaZb);
+      const mp_256_t AA = bn254_mont_t::sub_red(YaZaYbZb, YaYbZaZb);
+
+      const mp_256_t XX3 = xx3_lut(XaXb);
+      const mp_256_t ZZ3 = zz3_lut(ZaZb);
+      const mp_256_t BB3 = bb3_lut(BB);
+
+      const mp_256_t EE = bn254_mont_t::add(ZZ3, YaYb);
+      const mp_256_t DD = bn254_mont_t::sub_red(YaYb, ZZ3);
+
+      const mp_512_t FFF = bn254_mont_t::schoolbook_mul(DD, CC);
+      const mp_512_t GG = bn254_mont_t::schoolbook_mul(BB3, AA);
+      const mp_512_t II = bn254_mont_t::schoolbook_mul(EE, DD);
+      const mp_512_t JJ = bn254_mont_t::schoolbook_mul(XX3, BB3);
+      const mp_512_t KK = bn254_mont_t::schoolbook_mul(EE, AA);
+      const mp_512_t LL = bn254_mont_t::schoolbook_mul(XX3, CC);
+      Xa = bn254_mont_t::reduce(bn254_mont_t::sub_red(FFF, GG));
+      Ya = bn254_mont_t::reduce(bn254_mont_t::add(II, JJ));
+      Za = bn254_mont_t::reduce(bn254_mont_t::add(KK, LL));
     } else if constexpr (std::is_same_v<Gen, bn254::G2>) {
       const c_bn254_t X1 = reinterpret_cast<const c_bn254_t &>(p1.x);    //                   < 2
       const c_bn254_t Y1 = reinterpret_cast<const c_bn254_t &>(p1.y);    //                   < 2
