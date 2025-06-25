@@ -6,6 +6,7 @@ use icicle_core::{
     balanced_decomposition,
     jl_projection::{get_jl_matrix_rows_as_polyring, jl_projection, JLProjection, JLProjectionPolyRing},
     negacyclic_ntt::{ntt, ntt_inplace, NegacyclicNtt, NegacyclicNttConfig},
+    norm,
     ntt::NTTDir,
     polynomial_ring::{flatten_polyring_slice, PolynomialRing},
     traits::{FieldImpl, GenerateRandom},
@@ -89,7 +90,7 @@ where
 {
     let q: usize = 4_289_678_649_214_369_793; // TODO: expose q from P::Base::MODULUS
 
-    // Compute bases: q^(1/t) for t = 2, 4, 8
+    // Compute bases: q^(1/t) for t = 2, 4, 8 // TODO Yuval: make it 6
     let ts = [2, 4, 8];
     let bases: Vec<u32> = ts
         .iter()
@@ -234,6 +235,107 @@ where
     // Note: to access raw {0, ±1} scalar matrix rows, use `get_jl_matrix_rows`.
 }
 
+/// Demonstrates and benchmarks norm bound checks for random `Zq` vectors on the device.
+///
+/// - Generates a random `Zq` vector with values in `[0, 2³⁰]`
+/// - Computes estimated ℓ₂ and ℓ∞ norms
+/// - Uploads the vector to the device and verifies:
+///   - ℓ₂ norm bound passes when set just above the true norm
+///   - ℓ₂ norm bound fails when set tightly to the computed norm
+///   - ℓ∞ norm bound passes when interpreted as a batch of vectors
+/// - Times each norm check call individually
+fn norm_checking_example<T>(size: usize)
+where
+    T: FieldImpl,
+    <T as FieldImpl>::Config: norm::Norm<T> + GenerateRandom<T>,
+{
+    use std::time::Instant;
+
+    println!("----------------------------------------------------------------------");
+    println!(
+        "Generating {} random elements in [0, 2^30] and checking norm bounds...",
+        size
+    );
+
+    let max_val: u32 = 1 << 30;
+    let mut l2_squared: u128 = 0;
+    let mut l_infinity_norm: u32 = 0;
+
+    // Generate random input and compute norms
+    let input: Vec<T> = (0..size)
+        .map(|_| {
+            let rand_val: u32 = rand::thread_rng().gen_range(0..=max_val);
+            l2_squared += (rand_val as u128) * (rand_val as u128);
+            l_infinity_norm = l_infinity_norm.max(rand_val);
+            T::from_u32(rand_val)
+        })
+        .collect();
+
+    let l2_norm: u64 = l2_squared.isqrt() as u64;
+    println!("Estimated ℓ₂ norm bound: {}", l2_norm);
+    println!("Computed ℓ∞ (max) norm: {}", l_infinity_norm);
+
+    // Upload to device
+    let mut device_input = DeviceVec::<T>::device_malloc(size).expect("Failed to allocate device memory");
+    device_input
+        .copy_from_host(HostSlice::from_slice(&input))
+        .expect("Failed to copy input to device");
+
+    let cfg = VecOpsConfig::default();
+
+    // ℓ₂ norm check — upper bound (should pass)
+    let mut output = vec![false; 1];
+    let upper_bound = l2_norm + 1;
+    println!("Checking ℓ₂ norm with upper bound {} (should pass)", upper_bound);
+    let start = Instant::now();
+    norm::check_norm_bound(
+        &device_input,
+        norm::NormType::L2,
+        upper_bound,
+        &cfg,
+        HostSlice::from_mut_slice(&mut output),
+    )
+    .expect("ℓ₂ norm bound check failed");
+    println!("ℓ₂ norm (pass case) took {:?}", start.elapsed());
+    assert!(output[0], "ℓ₂ norm check failed unexpectedly");
+
+    // ℓ₂ norm check — tight bound (should fail)
+    let lower_bound = l2_norm;
+    println!("Checking ℓ₂ norm with tight bound {} (should fail)", lower_bound);
+    let start = Instant::now();
+    norm::check_norm_bound(
+        &device_input,
+        norm::NormType::L2,
+        lower_bound,
+        &cfg,
+        HostSlice::from_mut_slice(&mut output),
+    )
+    .expect("ℓ₂ norm bound check failed");
+    println!("ℓ₂ norm (fail case) took {:?}", start.elapsed());
+    assert!(!output[0], "ℓ₂ norm check unexpectedly passed");
+
+    // ℓ∞ norm check for batch vectors
+    let batch = 4;
+    let mut output = vec![false; batch];
+    println!("Checking ℓ∞ norm with bound {}, batch-size {}", l_infinity_norm, batch);
+    let start = Instant::now();
+    norm::check_norm_bound(
+        &device_input,
+        norm::NormType::LInfinity,
+        l_infinity_norm as u64,
+        &cfg,
+        HostSlice::from_mut_slice(&mut output),
+    )
+    .expect("ℓ∞ norm bound check failed");
+    println!("ℓ∞ norm check took {:?}", start.elapsed());
+    assert!(
+        output
+            .iter()
+            .all(|&x| x),
+        "ℓ∞ norm check failed for one or more vectors in the batch"
+    );
+}
+
 fn main() {
     println!("==================== Lattice SNARK Example ====================");
 
@@ -292,7 +394,7 @@ fn main() {
     //     - ℓ₂ and ℓ∞ norms over Zq vectors
     // ----------------------------------------------------------------------
 
-    // TODO
+    norm_checking_example::<Zq>(size);
 
     // ----------------------------------------------------------------------
     // (7) Johnson–Lindenstrauss Projection for Zq
