@@ -96,7 +96,7 @@ where
 ///
 /// # Parameters
 /// - `seed`: Seed used to deterministically generate matrix content.
-/// - `row_size`: Number of elements in each row (input dimensionality).
+/// - `row_size`: Number of T elements in each row (input dimensionality).
 /// - `start_row`: Index of the first row to generate.
 /// - `num_rows`: Number of rows to generate.
 /// - `cfg`: Vector operations configuration (e.g., backend and device preferences).
@@ -241,6 +241,17 @@ macro_rules! impl_jl_projection {
                     return Err(eIcicleError::InvalidArgument);
                 }
 
+                if output_rows.len() != row_size * num_rows {
+                    eprintln!(
+                        "JL projection error: output_rows has length {}, but expected {} (row_size * num_rows = {} * {})",
+                        output_rows.len(),
+                        row_size * num_rows,
+                        row_size,
+                        num_rows
+                    );
+                    return Err(eIcicleError::InvalidArgument);
+                }
+
                 let mut cfg_clone = cfg.clone();
                 cfg_clone.is_result_on_device = output_rows.is_on_device();
 
@@ -296,6 +307,17 @@ macro_rules! impl_jl_projection_as_polyring {
                     return Err(eIcicleError::InvalidArgument);
                 }
 
+if output_rows.len() != row_size * num_rows {
+    eprintln!(
+        "JL projection error: output_rows has length {}, but expected {} (row_size * num_rows = {} * {})",
+        output_rows.len(),
+        row_size * num_rows,
+        row_size,
+        num_rows
+    );
+    return Err(eIcicleError::InvalidArgument);
+}
+
                 let mut cfg_clone = cfg.clone();
                 cfg_clone.is_result_on_device = output_rows.is_on_device();
 
@@ -336,8 +358,7 @@ macro_rules! impl_jl_projection_tests {
             fn test_jl_projection() {
                 initialize();
                 test_utilities::test_set_main_device();
-                // TODO uncomment when implemented for CUDA
-                // check_jl_projection::<$implemented_for, $scalar_type>();
+                check_jl_projection::<$scalar_type>();
                 test_utilities::test_set_ref_device();
                 check_jl_projection::<$scalar_type>();
             }

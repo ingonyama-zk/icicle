@@ -82,6 +82,7 @@ where
 
 /// Demonstrates balanced base decomposition and recomposition for polynomial ring elements.
 /// Uses dynamic bases q^(1/t) for t ∈ {2, 4, 8}, and verifies correctness.
+/// TODO Yuval: explain the layout, and support small output sizes (by computing only the first few digits).
 fn balanced_decomposition_example<P>(size: usize)
 where
     P: PolynomialRing + balanced_decomposition::BalancedDecomposition<P> + GenerateRandom<P>,
@@ -215,7 +216,7 @@ where
     let t_start = std::time::Instant::now();
     get_jl_matrix_rows_as_polyring(
         &seed,
-        row_size,
+        row_size, // Rq polynomials per row
         0,
         num_rows,
         true, // conjugated = true
