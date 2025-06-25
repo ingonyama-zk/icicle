@@ -674,10 +674,7 @@ macro_rules! impl_polynomial_tests {
             // read coeffs to device memory
             let mut device_mem = DeviceVec::<$field>::malloc(coeffs.len());
             f.copy_coeffs(0, device_mem.into_slice_mut());
-            let mut host_coeffs_from_dev = vec![$field::zero(); coeffs.len() as usize];
-            device_mem
-                .copy_to_host(HostSlice::from_mut_slice(&mut host_coeffs_from_dev))
-                .unwrap();
+            let host_coeffs_from_dev = device_mem.to_host_vec();
 
             assert_eq!(host_mem, host_coeffs_from_dev);
 
@@ -841,10 +838,7 @@ macro_rules! impl_polynomial_tests {
             // let g = &f + &f; // cannot borrow here since s is a mutable slice of f
 
             // copy to host and check equality
-            let mut coeffs_copied_from_slice = vec![$field::zero(); coeffs_slice_dev.len()];
-            coeffs_slice_dev
-                .copy_to_host(coeffs_copied_from_slice.into_slice_mut())
-                .unwrap();
+            let coeffs_copied_from_slice = coeffs_slice_dev.to_host_vec();
             assert_eq!(coeffs_copied_from_slice, coeffs);
 
             // or can use the memory directly
@@ -854,7 +848,7 @@ macro_rules! impl_polynomial_tests {
                 coeffs_slice_dev,
                 NTTDir::kForward,
                 &config,
-                HostSlice::from_mut_slice(&mut ntt_result),
+                ntt_result.into_slice_mut(),
             )
             .unwrap();
             // ntt[0] is f(one) because it's the sum of coeffs

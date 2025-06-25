@@ -138,10 +138,7 @@ where
         .wrap()
         .unwrap();
 
-    let mut affine_copy = vec![Affine::<C>::zero(); size];
-    d_affine
-        .copy_to_host(HostSlice::from_mut_slice(&mut affine_copy))
-        .unwrap();
+    let affine_copy = d_affine.to_host_vec();
 
     assert_eq!(affine_points, affine_copy);
 
@@ -158,10 +155,7 @@ where
         .wrap()
         .unwrap();
 
-    let mut projective_copy = vec![Projective::<C>::zero(); size];
-    d_proj
-        .copy_to_host(HostSlice::from_mut_slice(&mut projective_copy))
-        .unwrap();
+    let projective_copy = d_proj.to_host_vec();
 
     assert_eq!(proj_points, projective_copy);
 }

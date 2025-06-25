@@ -346,6 +346,21 @@ impl<T> DeviceSlice<T> {
             .wrap()
         }
     }
+
+    /// Copy the contents of the device slice back to the host and return them as `Vec<T>`.
+    /// Convenience method to avoid the boilerplate of allocating a host buffer and calling
+    /// `copy_to_host` manually. Requires `T: Copy + Default` so that we can cheaply create a
+    /// zero-initialised host vector.
+    pub fn to_host_vec(&self) -> Vec<T>
+    where
+        T: Copy + Default,
+    {
+        let mut host_vec = vec![T::default(); self.len()];
+        let host_slice = HostSlice::from_mut_slice(&mut host_vec);
+        self.copy_to_host(host_slice)
+            .unwrap();
+        host_vec
+    }
 }
 
 impl<T> DeviceVec<T> {

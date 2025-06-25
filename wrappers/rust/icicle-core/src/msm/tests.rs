@@ -64,10 +64,8 @@ pub fn check_msm<C: Curve + MSM<C>>() {
                 )
                 .unwrap();
 
-                let mut msm_host_result = vec![Projective::<C>::zero(); 1];
-                msm_results
-                    .copy_to_host(msm_host_result.into_slice_mut())
-                    .unwrap();
+                let msm_host_result = msm_results.to_host_vec();
+                
                 stream
                     .synchronize()
                     .unwrap();
@@ -140,14 +138,8 @@ pub fn check_msm_batch_shared<C: Curve + MSM<C>>() {
             )
             .unwrap();
 
-            let mut msm_host_result_1 = vec![Projective::<C>::zero(); batch_size];
-            let mut msm_host_result_2 = vec![Projective::<C>::zero(); batch_size];
-            msm_results_1
-                .copy_to_host_async(msm_host_result_1.into_slice_mut(), &stream)
-                .unwrap();
-            msm_results_2
-                .copy_to_host_async(msm_host_result_2.into_slice_mut(), &stream)
-                .unwrap();
+            let msm_host_result_1 = msm_results_1.to_host_vec();
+            let msm_host_result_2 = msm_results_2.to_host_vec();
             stream
                 .synchronize()
                 .unwrap();
@@ -225,14 +217,8 @@ pub fn check_msm_batch_not_shared<C: Curve + MSM<C>>() {
             cfg.precompute_factor = 1;
             msm(scalars_h, points_d.into_slice(), &cfg, msm_results_2.into_slice_mut()).unwrap();
 
-            let mut msm_host_result_1 = vec![Projective::<C>::zero(); batch_size];
-            let mut msm_host_result_2 = vec![Projective::<C>::zero(); batch_size];
-            msm_results_1
-                .copy_to_host_async(msm_host_result_1.into_slice_mut(), &stream)
-                .unwrap();
-            msm_results_2
-                .copy_to_host_async(msm_host_result_2.into_slice_mut(), &stream)
-                .unwrap();
+            let msm_host_result_1 = msm_results_1.to_host_vec();
+            let msm_host_result_2 = msm_results_2.to_host_vec();
             stream
                 .synchronize()
                 .unwrap();

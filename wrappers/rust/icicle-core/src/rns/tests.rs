@@ -33,13 +33,10 @@ where
     // Convert Zq -> ZqRns on main device
     test_utilities::test_set_main_device();
     let mut output_rns_main_d = DeviceVec::<ZqRns>::malloc(total_size);
-    let mut output_rns_main_h = vec![ZqRns::zero(); total_size];
     to_rns(input_direct.into_slice(), output_rns_main_d.into_slice_mut(), &cfg).unwrap();
 
     // Ensure reference and main device implementations produce identical results
-    output_rns_main_d
-        .copy_to_host(output_rns_main_h.into_slice_mut())
-        .unwrap();
+    let output_rns_main_h = output_rns_main_d.to_host_vec();
 
     assert_eq!(output_rns_ref, output_rns_main_h);
 

@@ -455,10 +455,7 @@ where
     let cfg = VecOpsConfig::default();
     bit_reverse_inplace(intermediate.into_slice_mut(), &cfg).unwrap();
 
-    let mut intermediate_host = vec![F::one(); TEST_SIZE];
-    intermediate
-        .copy_to_host(intermediate_host.into_slice_mut())
-        .unwrap();
+    let intermediate_host = intermediate.to_host_vec();
     let index_reverser = |i: usize| i.reverse_bits() >> (usize::BITS - LOG_SIZE);
     intermediate_host
         .iter()
@@ -466,10 +463,7 @@ where
         .for_each(|(i, val)| assert_eq!(val, &input_vec[index_reverser(i)]));
 
     bit_reverse_inplace(intermediate.into_slice_mut(), &cfg).unwrap();
-    let mut result_host = vec![F::one(); TEST_SIZE];
-    intermediate
-        .copy_to_host(result_host.into_slice_mut())
-        .unwrap();
+    let result_host = intermediate.to_host_vec();
     assert_eq!(input.as_slice(), result_host.as_slice());
 }
 
