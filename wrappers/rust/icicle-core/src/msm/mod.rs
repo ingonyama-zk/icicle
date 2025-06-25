@@ -319,13 +319,13 @@ macro_rules! impl_msm_bench {
       $curve:ident
     ) => {
         use criterion::{criterion_group, criterion_main, Criterion};
-        use icicle_core::curve::{Affine, Curve, Projective};
+        use icicle_core::curve::{Curve, Projective};
         use icicle_core::msm::{msm, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR, MSM};
         use icicle_core::traits::GenerateRandom;
         use icicle_runtime::{
             device::Device,
             get_active_device, is_device_available,
-            memory::{DeviceVec, HostOrDeviceSlice, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
+            memory::{DeviceVec, HostOrDeviceSlice, IntoIcicleSlice, IntoIcicleSliceMut},
             runtime::{load_backend_from_env_or_default, warmup},
             set_device,
             stream::IcicleStream,
@@ -399,7 +399,7 @@ macro_rules! impl_msm_bench {
                 for precompute_factor in [1, 4, 8] {
                     let mut precomputed_points_d = DeviceVec::malloc(precompute_factor * test_size);
                     cfg.precompute_factor = precompute_factor as i32;
-                    precompute_bases(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
+                    precompute_bases(points.into_slice(), &cfg, &mut precomputed_points_d).unwrap();
                     for batch_size_log2 in [0, 4, 7] {
                         let batch_size = 1 << batch_size_log2;
                         let full_size = batch_size * test_size;
@@ -409,10 +409,7 @@ macro_rules! impl_msm_bench {
                         }
 
                         let mut scalars = C::ScalarField::generate_random(full_size);
-                        let scalars = C::ScalarField::generate_random(full_size);
-                        // a version of batched msm without using `cfg.points_size`, requires copying bases
-
-                        let scalars_h = HostSlice::from_slice(&scalars);
+                        let scalars_h = scalars.into_slice();
 
                         let mut msm_results = DeviceVec::<Projective<C>>::malloc(batch_size);
 
@@ -429,7 +426,7 @@ macro_rules! impl_msm_bench {
                                     &cfg,
                                     msm_results.into_slice_mut(),
                                 )
-                            }) // TODO: use into_slice_mut
+                            })
                         });
 
                         stream

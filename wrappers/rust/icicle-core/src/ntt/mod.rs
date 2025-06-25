@@ -1,5 +1,8 @@
 use icicle_runtime::{
-    config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
+    config::ConfigExtension,
+    errors::eIcicleError,
+    memory::HostOrDeviceSlice,
+    stream::IcicleStreamHandle,
 };
 
 use crate::field::PrimeField;
@@ -453,7 +456,7 @@ macro_rules! impl_ntt_bench {
     ) => {
         use std::{env, sync::OnceLock};
         use criterion::{black_box, criterion_group, criterion_main, Criterion};
-        use icicle_runtime::{memory::{HostSlice,HostOrDeviceSlice},device::Device,is_device_available,  get_active_device, set_device, runtime::load_backend_from_env_or_default};
+        use icicle_runtime::{memory::{HostOrDeviceSlice, IntoIcicleSlice, IntoIcicleSliceMut}, device::Device, is_device_available, get_active_device, set_device, runtime::load_backend_from_env_or_default};
         use icicle_core::{
             ntt::{NTTConfig, NTTInitDomainConfig, NTTDir, NttAlgorithm, Ordering, NTTDomain, ntt, NTT},
             traits::GenerateRandom,
@@ -524,10 +527,10 @@ macro_rules! impl_ntt_bench {
                     }
 
                     let scalars = F::generate_random(full_size);
-                    let input = HostSlice::from_slice(&scalars);
+                    let input = scalars.into_slice();
 
                     let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
-                    let batch_ntt_result = HostSlice::from_mut_slice(&mut batch_ntt_result);
+                    let batch_ntt_result = batch_ntt_result.into_slice_mut();
                     let mut config = NTTConfig::<F>::default();
                     for dir in [NTTDir::kForward, NTTDir::kInverse ] {
                         for ordering in [

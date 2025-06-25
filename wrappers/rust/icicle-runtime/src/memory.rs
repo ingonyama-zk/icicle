@@ -448,9 +448,9 @@ impl<T> DeviceVec<T> {
     /// Example:
     /// ```
     /// let host_data = vec![1u32, 2, 3, 4];
-    /// let device_buf = DeviceVec::<u32>::from_host_vec(&host_data);
+    /// let device_buf = DeviceVec::<u32>::from_host_slice(&host_data);
     /// ```
-    pub fn from_host_vec(src: &[T]) -> Self
+    pub fn from_host_slice(src: &[T]) -> Self
     where
         T: Copy,
     {

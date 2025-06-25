@@ -91,7 +91,7 @@ where
     /****** Begin CPU Proof ******/
     let mle_poly_hosts = mle_polys
         .iter()
-        .map(|poly| HostSlice::from_slice(poly))
+        .map(|poly| poly.into_slice())
         .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
 
     let sumcheck = SW::new().unwrap();
@@ -162,7 +162,7 @@ where
 
     let mle_poly_hosts = mle_polys
         .iter()
-        .map(|poly| HostSlice::from_slice(poly))
+        .map(|poly| poly.into_slice())
         .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
 
     let mut device_mle_polys = Vec::with_capacity(nof_mle_poly);
@@ -257,7 +257,7 @@ where
     /****** Begin CPU Proof ******/
     let mle_poly_hosts = mle_polys
         .iter()
-        .map(|poly| HostSlice::from_slice(poly))
+        .map(|poly| poly.into_slice())
         .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
 
     let sumcheck = SW::new().unwrap();

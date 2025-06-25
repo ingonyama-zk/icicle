@@ -62,7 +62,7 @@ fn main() {
     // Part 2 (cont.): Compute on GPU (from/to GPU memory)
     println!("Part 2: compute on GPU (from/to GPU memory): ");
     let mut output_gpu = DeviceVec::<ScalarField>::malloc(ntt_size);
-    let input_gpu = DeviceVec::<ScalarField>::from_host_vec(&input_cpu);
+    let input_gpu = DeviceVec::<ScalarField>::from_host_slice(&input_cpu);
     ntt(
         input_gpu.into_slice(),
         ntt::NTTDir::kForward,

@@ -8,7 +8,7 @@ use crate::{
     traits::GenerateRandom,
 };
 use icicle_runtime::{memory::DeviceVec, stream::IcicleStream};
-use icicle_runtime::{memory::HostSlice, test_utilities};
+use icicle_runtime::{memory::IntoIcicleSlice, test_utilities};
 
 pub fn check_fri<F: FriMerkleTree + GenerateRandom>(
     merkle_tree_leaves_hash: &Hasher,
@@ -27,7 +27,7 @@ pub fn check_fri<F: FriMerkleTree + GenerateRandom>(
         let fri_proof = F::fri_merkle_tree_prove(
             &fri_config,
             &transcript_config,
-            HostSlice::from_slice(&scalars),
+            scalars.into_slice(),
             &merkle_tree_leaves_hash,
             &merkle_tree_compress_hash,
             merkle_tree_min_layer_to_store,
@@ -80,13 +80,13 @@ pub fn check_fri_on_device<F: FriMerkleTree + GenerateRandom>(
 
         let mut scalars_d: DeviceVec<_> = DeviceVec::<F>::device_malloc_async(SIZE as usize, &stream).unwrap();
         scalars_d
-            .copy_from_host_async(HostSlice::from_slice(&scalars), &stream)
+            .copy_from_host_async(scalars.into_slice(), &stream)
             .unwrap();
 
         let fri_proof = fri_merkle_tree_prove::<F>(
             &fri_config,
             &transcript_config,
-            HostSlice::from_slice(&scalars),
+            scalars.into_slice(),
             &merkle_tree_leaves_hash,
             &merkle_tree_compress_hash,
             merkle_tree_min_layer_to_store,
@@ -140,13 +140,13 @@ pub fn check_fri_proof_serialization<F, S, D, T>(
 
     let mut scalars_d: DeviceVec<_> = DeviceVec::<F>::malloc(SIZE as usize);
     scalars_d
-        .copy_from_host(HostSlice::from_slice(&scalars))
+        .copy_from_host(scalars.into_slice())
         .unwrap();
 
     let fri_proof = fri_merkle_tree_prove::<F>(
         &fri_config,
         &transcript_config,
-        HostSlice::from_slice(&scalars),
+        scalars.into_slice(),
         &merkle_tree_leaves_hash,
         &merkle_tree_compress_hash,
         merkle_tree_min_layer_to_store,

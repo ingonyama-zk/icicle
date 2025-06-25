@@ -496,13 +496,7 @@ macro_rules! impl_polynomial_tests {
             let mut result = [$field::zero()];
 
             let cfg = VecOpsConfig::default();
-            add_scalars(
-                HostSlice::from_slice(&a),
-                HostSlice::from_slice(&b),
-                HostSlice::from_mut_slice(&mut result),
-                &cfg,
-            )
-            .unwrap();
+            add_scalars(a.into_slice(), b.into_slice(), result.into_slice_mut(), &cfg).unwrap();
             result[0]
         }
 
@@ -512,13 +506,7 @@ macro_rules! impl_polynomial_tests {
             let mut result = [$field::zero()];
 
             let cfg = VecOpsConfig::default();
-            sub_scalars(
-                HostSlice::from_slice(&a),
-                HostSlice::from_slice(&b),
-                HostSlice::from_mut_slice(&mut result),
-                &cfg,
-            )
-            .unwrap();
+            sub_scalars(a.into_slice(), b.into_slice(), result.into_slice_mut(), &cfg).unwrap();
             result[0]
         }
 
@@ -528,19 +516,13 @@ macro_rules! impl_polynomial_tests {
             let mut result = [$field::zero()];
 
             let cfg = VecOpsConfig::default();
-            mul_scalars(
-                HostSlice::from_slice(&a),
-                HostSlice::from_slice(&b),
-                HostSlice::from_mut_slice(&mut result),
-                &cfg,
-            )
-            .unwrap();
+            mul_scalars(a.into_slice(), b.into_slice(), result.into_slice_mut(), &cfg).unwrap();
             result[0]
         }
 
         fn randomize_poly(size: usize) -> Poly {
             let coeffs = randomize_coeffs::<$field>(size);
-            Poly::from_coeffs(HostSlice::from_slice(&coeffs), size)
+            Poly::from_coeffs(coeffs.into_slice(), size)
         }
 
         static INIT: Once = Once::new();
@@ -564,7 +546,7 @@ macro_rules! impl_polynomial_tests {
 
             // testing correct evaluation of f(8) for f(x)=4x^2+2x+5
             let coeffs = [$field::from_u32(5), $field::from_u32(2), $field::from_u32(4)];
-            let f = Poly::from_coeffs(HostSlice::from_slice(&coeffs), coeffs.len());
+            let f = Poly::from_coeffs(coeffs.into_slice(), coeffs.len());
             let x = $field::from_u32(8);
             let f_x = f.eval(&x);
             assert_eq!(f_x, $field::from_u32(277));
@@ -635,7 +617,7 @@ macro_rules! impl_polynomial_tests {
 
             // f(x) = 1+2x^2
             let coeffs = [one, zero, two];
-            let mut f = Poly::from_coeffs(HostSlice::from_slice(&coeffs), coeffs.len());
+            let mut f = Poly::from_coeffs(coeffs.into_slice(), coeffs.len());
             let x = rand();
             let fx = f.eval(&x);
 
@@ -659,16 +641,16 @@ macro_rules! impl_polynomial_tests {
             let four = $field::from_u32(4);
 
             let coeffs = [one, two, three, four];
-            let mut f = Poly::from_coeffs(HostSlice::from_slice(&coeffs), coeffs.len());
+            let mut f = Poly::from_coeffs(coeffs.into_slice(), coeffs.len());
 
             // read coeffs to host memory
             let mut host_mem = vec![$field::zero(); coeffs.len()];
-            f.copy_coeffs(0, HostSlice::from_mut_slice(&mut host_mem));
+            f.copy_coeffs(0, host_mem.into_slice_mut());
             assert_eq!(host_mem, coeffs);
 
             // read into larger buffer
             let mut host_mem_large = vec![$field::zero(); coeffs.len() + 10];
-            f.copy_coeffs(0, HostSlice::from_mut_slice(&mut host_mem_large));
+            f.copy_coeffs(0, host_mem_large.into_slice_mut());
             assert_eq!(host_mem_large[..coeffs.len()], coeffs);
 
             // read coeffs to device memory
@@ -714,7 +696,7 @@ macro_rules! impl_polynomial_tests {
 
             let f = randomize_poly(1 << 12);
             let v_coeffs = [minus_one, zero, zero, zero, one]; // x^4-1
-            let v = Poly::from_coeffs(HostSlice::from_slice(&v_coeffs), v_coeffs.len());
+            let v = Poly::from_coeffs(v_coeffs.into_slice(), v_coeffs.len());
 
             let fv = &f * &v;
             let deg_f = f.degree();
@@ -741,10 +723,7 @@ macro_rules! impl_polynomial_tests {
 
             // evaluate to host memory
             let mut host_evals = vec![$field::zero(); domain.len()];
-            f.eval_on_domain(
-                HostSlice::from_slice(&domain),
-                HostSlice::from_mut_slice(&mut host_evals),
-            );
+            f.eval_on_domain(domain.into_slice(), host_evals.into_slice_mut());
 
             // check eval on domain agrees with eval() method
             assert_eq!(f.eval(&one), host_evals[0]);

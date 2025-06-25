@@ -311,10 +311,7 @@ fn main() {
     }
 
     // transfer points to device
-    let mut d_icicle_affine_points = DeviceVec::<IcicleAffine>::malloc(icicle_affine_points.len());
-    d_icicle_affine_points
-        .copy_from_host(icicle_affine_points.into_slice())
-        .unwrap();
+    let d_icicle_affine_points = DeviceVec::<IcicleAffine>::from_host_slice(&icicle_affine_points);
 
     let start = Instant::now();
     msm(
