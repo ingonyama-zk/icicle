@@ -568,41 +568,42 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   ICICLE_CHECK(matmul(phi_final, r, n, S_hat_transposed.data(), n, r, {}, Phi_times_St_hat.data()));
 
   // Convert back to Rq domain
-  std::vector<Rq> Phi_times_St(r * r), Phi_times_St_transposed(r * r);
-  ICICLE_CHECK(ntt(Phi_times_St_hat.data(), r * r, NTTDir::kInverse, {}, Phi_times_St.data()));
+  std::vector<Rq> H(r * r), Phi_times_St_transposed(r * r);
+  // H = Phi @ S^t
+  ICICLE_CHECK(ntt(Phi_times_St_hat.data(), r * r, NTTDir::kInverse, {}, H.data()));
   // transpose matrix
-  ICICLE_CHECK(matrix_transpose<Tq>(Phi_times_St.data(), r, r, {}, Phi_times_St_transposed.data()));
+  ICICLE_CHECK(matrix_transpose<Tq>(H.data(), r, r, {}, Phi_times_St_transposed.data()));
 
   // Compute H = 2^{-1}(LS + (LS)^T)
   Zq two_inv = Zq::inverse(Zq::from(2)); // 2^{-1} in Z_q
 
-  // Phi_times_St = Phi_times_St + Phi_times_St_transposed
-  ICICLE_CHECK(vector_add(Phi_times_St.data(), Phi_times_St_transposed.data(), r * r, {}, Phi_times_St.data()));
-  // Phi_times_St = 1/2 * Phi_times_St
-  ICICLE_CHECK(scalar_mul_vec(
-    &two_inv, reinterpret_cast<Zq*>(Phi_times_St.data()), r * r, {}, reinterpret_cast<Zq*>(Phi_times_St.data())));
+  // H = H + Phi_times_St_transposed = Phi@S^t + Phi_times_St_transposed
+  ICICLE_CHECK(vector_add(H.data(), Phi_times_St_transposed.data(), r * r, {}, H.data()));
+  // H = 1/2 * H
+  ICICLE_CHECK(
+    scalar_mul_vec(&two_inv, reinterpret_cast<Zq*>(H.data()), r * r * d, {}, reinterpret_cast<Zq*>(H.data())));
 
-  std::vector<Rq> H = extract_symm_part(Phi_times_St.data(), r);
-  std::cout << "Step 23 completed: Computed H matrix" << std::endl;
+  std::vector<Rq> h = extract_symm_part(H.data(), r);
+  std::cout << "Step 23 completed: Computed h vector" << std::endl;
 
   // Step 24: Decompose h
   size_t base3 = lab_inst.param.base3;
   size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base3);
 
-  std::vector<Rq> H_tilde(l3 * H.size());
-  ICICLE_CHECK(decompose(H.data(), H.size(), base3, {}, H_tilde.data(), H_tilde.size()));
-  std::vector<Tq> H_tilde_hat(H_tilde.size());
-  ICICLE_CHECK(ntt(H_tilde.data(), H_tilde.size(), NTTDir::kForward, {}, H_tilde_hat.data()));
-  std::cout << "Step 24 completed: Decomposed H to H_tilde" << std::endl;
+  std::vector<Rq> h_tilde(l3 * h.size());
+  ICICLE_CHECK(decompose(h.data(), h.size(), base3, {}, h_tilde.data(), h_tilde.size()));
+  std::vector<Tq> h_tilde_hat(h_tilde.size());
+  ICICLE_CHECK(ntt(h_tilde.data(), h_tilde.size(), NTTDir::kForward, {}, h_tilde_hat.data()));
+  std::cout << "Step 24 completed: Decomposed h to H_tilde" << std::endl;
 
   // Step 25: already done
-  // Step 26: commit to H_tilde
+  // Step 26: commit to h_tilde
   size_t kappa2 = lab_inst.param.kappa2;
   std::vector<std::byte> seed_D(ajtai_seed);
   seed_D.push_back(std::byte('3'));
-  // u2 = D@H_tilde
+  // u2 = D@h_tilde
   std::vector<Tq> u2 =
-    ajtai_commitment(seed_D.data(), seed_D.size(), l3 * r_choose_2, kappa2, H_tilde_hat.data(), H_tilde_hat.size());
+    ajtai_commitment(seed_D.data(), seed_D.size(), l3 * r_choose_2, kappa2, h_tilde_hat.data(), h_tilde_hat.size());
   std::cout << "Step 26 completed: Computed u2 commitment" << std::endl;
 
   // Step 27:
@@ -647,7 +648,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
     if (succ) { std::cout << "\tbase_prover zA = ct passed\n"; }
   }
 
-  LabradorBaseCaseProof final_proof{lab_inst.equality_constraints[0], z_hat, T_tilde, g_tilde, H_tilde};
+  LabradorBaseCaseProof final_proof{lab_inst.equality_constraints[0], z_hat, T_tilde, g_tilde, h_tilde};
   std::cout << "Step 29 completed: Computed z_hat and created final proof" << std::endl;
 
   std::cout << "base_case_prover completed successfully!" << std::endl;
@@ -1023,6 +1024,8 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
   return std::make_pair(trs, base_proof);
 }
 
+// TODO: maybe make BaseProof more consistent by making everything Rq, since we have to convert z_hat to Rq before norm
+// check anyway
 bool LabradorBaseVerifier::_verify_base_proof() const
 {
   size_t n = lab_inst.n;
@@ -1039,24 +1042,88 @@ bool LabradorBaseVerifier::_verify_base_proof() const
   size_t base1 = lab_inst.param.base1;
   size_t base2 = lab_inst.param.base2;
   size_t base3 = lab_inst.param.base3;
-  check_norm_bound(
+
+  // 1. LInfinity checks: check t_tilde, g_tilde, h_tilde are small- correctly decomposed
+
+  ICICLE_CHECK(check_norm_bound(
     reinterpret_cast<Zq*>(t_tilde.data()), t_tilde.size() * d, eNormType::LInfinity, (base1 + 1) / 2, {},
-    &t_tilde_small);
-  check_norm_bound(
+    &t_tilde_small));
+  ICICLE_CHECK(check_norm_bound(
     reinterpret_cast<Zq*>(h_tilde.data()), h_tilde.size() * d, eNormType::LInfinity, (base2 + 1) / 2, {},
-    &h_tilde_small);
-  check_norm_bound(
+    &h_tilde_small));
+  ICICLE_CHECK(check_norm_bound(
     reinterpret_cast<Zq*>(g_tilde.data()), g_tilde.size() * d, eNormType::LInfinity, (base3 + 1) / 2, {},
-    &g_tilde_small);
+    &g_tilde_small));
+
+  // Fail if any of the LInfinity are large
   if (!(t_tilde_small && h_tilde_small && g_tilde_small)) {
     std::cout << "LInfinity norm check failed\n";
     return false;
   }
-  // TODO: add L2 norm check
+
+  // 2. L2 checks
+
+  // TODO: LInfinity for t,g,h already checked. Do we need to do a L2 check for them too?
+  bool z_small = true;
+  // z = INTT(z_hat)
+  std::vector<Rq> z(z_hat.size());
+  ICICLE_CHECK(ntt(z_hat.data(), z_hat.size(), NTTDir::kInverse, {}, z.data()));
+
+  uint64_t op_norm_bound = lab_inst.param.op_norm_bound;
+  double beta = lab_inst.param.beta;
+  // Check ||z|| < op_norm*beta*sqrt(r)
+  ICICLE_CHECK(check_norm_bound(
+    reinterpret_cast<Zq*>(z.data()), z.size() * d, eNormType::L2, op_norm_bound * beta * sqrt(r), {}, &z_small));
+
+  if (!z_small) {
+    std::cout << "L2 norm check for z failed\n";
+    return false;
+  }
+
+  // 3. Check u1, u2 commitment openings
+
+  // compute NTTs of t_tilde, g_tilde, h_tilde
+  std::vector<Tq> t_tilde_hat(t_tilde.size()), g_tilde_hat(g_tilde.size()), h_tilde_hat(h_tilde.size());
+  ICICLE_CHECK(ntt(t_tilde.data(), t_tilde.size(), NTTDir::kForward, {}, t_tilde_hat.data()));
+  ICICLE_CHECK(ntt(g_tilde.data(), g_tilde.size(), NTTDir::kForward, {}, g_tilde_hat.data()));
+  ICICLE_CHECK(ntt(h_tilde.data(), h_tilde.size(), NTTDir::kForward, {}, h_tilde_hat.data()));
 
   const std::vector<std::byte>& ajtai_seed = lab_inst.param.ajtai_seed;
-  std::vector<std::byte> seed_A(ajtai_seed);
+  std::vector<std::byte> seed_A(ajtai_seed), seed_B(ajtai_seed), seed_C(ajtai_seed), seed_D(ajtai_seed);
   seed_A.push_back(std::byte('0'));
+  seed_B.push_back(std::byte('1'));
+  seed_C.push_back(std::byte('2'));
+  seed_D.push_back(std::byte('3'));
+
+  size_t kappa1 = lab_inst.param.kappa1;
+  // v1 = B@T_tilde
+  std::vector<Tq> v1 =
+    ajtai_commitment(seed_B.data(), seed_B.size(), t_tilde_hat.size(), kappa1, t_tilde_hat.data(), t_tilde_hat.size());
+  // v2 = C@g_tilde
+  std::vector<Tq> v2 =
+    ajtai_commitment(seed_C.data(), seed_C.size(), g_tilde_hat.size(), kappa1, g_tilde_hat.data(), g_tilde_hat.size());
+  // u1 = v1+v2
+  std::vector<Tq> u1(kappa1);
+  vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
+
+  // check t_tilde, g_tilde open u1 in trs
+  if (!(poly_vec_eq(u1.data(), trs.u1.data(), kappa1))) {
+    std::cout << "t_tilde, g_tilde don't open u1 \n";
+    return false;
+  }
+
+  size_t kappa2 = lab_inst.param.kappa2;
+  // u2 = D@h_tilde
+  std::vector<Tq> u2 =
+    ajtai_commitment(seed_D.data(), seed_D.size(), h_tilde_hat.size(), kappa2, h_tilde_hat.data(), h_tilde_hat.size());
+
+  // check h_tilde opens to u2 in trs
+  if (!(poly_vec_eq(u2.data(), trs.u2.data(), kappa2))) {
+    std::cout << "h_tilde doesn't open u2 \n";
+    return false;
+  }
+
+  // 4. Check Az = \sum_i c_i*t_i
 
   // Use ajtai_commitment to compute z_hat @ A
   size_t kappa = lab_inst.param.kappa;
@@ -1074,6 +1141,9 @@ bool LabradorBaseVerifier::_verify_base_proof() const
     std::cout << "_verify_base_proof failed: zA != cT \n";
     return false;
   }
+
+  // Compute relevant matrix, vectors for the rest of the checks
+
   size_t r_choose_2 = (r * (r + 1)) / 2;
   std::vector<Rq> g(r_choose_2);
   ICICLE_CHECK(recompose(g_tilde.data(), g_tilde.size(), base2, {}, g.data(), g.size()));
@@ -1091,7 +1161,7 @@ bool LabradorBaseVerifier::_verify_base_proof() const
   // H_hat = NTT(H)
   ICICLE_CHECK(ntt(H.data(), r * r, NTTDir::kForward, {}, H_hat.data()));
 
-  Tq ip_z_z, c_G_c, c_H_c, ip_a_G, c_Phi_z;
+  Tq ip_z_z, c_G_c, c_H_c, ip_a_G, c_Phi_z, trace_H;
 
   // ip_z_z = <z_hat,z_hat> - inner product of z_hat with itself
   ICICLE_CHECK(matmul(z_hat.data(), 1, n, z_hat.data(), n, 1, {}, &ip_z_z));
@@ -1120,13 +1190,33 @@ bool LabradorBaseVerifier::_verify_base_proof() const
   // Then compute challenges_hat^T * (phi * z_hat)
   ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, phi_times_z.data(), r, 1, {}, &c_Phi_z));
 
+  // compute trace_H = \sum_i H_ii
+  ICICLE_CHECK(compute_matrix_trace(H_hat.data(), r, &trace_H));
+
+  // c = challenges
+  // 5. Ensure: <z,z> == c^t G c
   if (!(poly_vec_eq(&ip_z_z, &c_G_c, 1))) {
     std::cout << "_verify_base_proof failed: <z,z> != c^t G c \n";
     return false;
   }
-  // TODO: I feel H computation might be wrong in base_prover
+  // 6. Ensure: c^t Phi z == c^t H c
   if (!(poly_vec_eq(&c_Phi_z, &c_H_c, 1))) {
     std::cout << "_verify_base_proof failed: c^t Phi z != c^t H c\n";
+    return false;
+  }
+
+  // 7. Ensure: \sum_ij a_ij G_ij + \sum_i h_ii + b == 0
+  // \sum_ij a_ij G_ij + \sum_i h_ii
+  Tq ip_a_G_plus_trace_H;
+  ICICLE_CHECK(vector_add(&ip_a_G, &trace_H, 1, {}, &ip_a_G_plus_trace_H));
+
+  Tq ip_a_G_plus_trace_H_plus_b;
+  ICICLE_CHECK(vector_add(&ip_a_G_plus_trace_H, &base_proof.final_const.b, 1, {}, &ip_a_G_plus_trace_H_plus_b));
+
+  Tq zero_poly(zero());
+  // Check \sum_ij a_ij G_ij + \sum_i h_ii + b == 0
+  if (!(poly_vec_eq(&ip_a_G_plus_trace_H_plus_b, &zero_poly, 1))) {
+    std::cout << "_verify_base_proof failed: sum_ij a_ij G_ij + sum_i h_ii + b !=0\n";
     return false;
   }
   return true;
@@ -1152,9 +1242,15 @@ int main(int argc, char* argv[])
   assert(witness_legit_eq(eq_inst, S));
   ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(n, r, S);
   assert(witness_legit_const_zero(const_zero_inst, S));
-  const char* ajtai_seed = "ajtai_seed";
+
+  // Use current time (milliseconds since epoch) as a unique Ajtai seed
+  auto now = std::chrono::system_clock::now();
+  auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+  std::string ajtai_seed_str = std::to_string(millis);
+  std::cout << "Ajtai seed = " << ajtai_seed_str << std::endl;
   LabradorParam param{
-    {reinterpret_cast<const std::byte*>(ajtai_seed), reinterpret_cast<const std::byte*>(ajtai_seed) + 10},
+    {reinterpret_cast<const std::byte*>(ajtai_seed_str.data()),
+     reinterpret_cast<const std::byte*>(ajtai_seed_str.data()) + ajtai_seed_str.size()},
     1 << 4,    // kappa
     1 << 4,    // kappa1
     1 << 4,    // kappa2,

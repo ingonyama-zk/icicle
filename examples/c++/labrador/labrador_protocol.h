@@ -600,3 +600,57 @@ void test_jl()
     std::cout << "Fail\n";
   }
 }
+
+// ----------- Generic helper (works for Zq etc.) ------------------
+template <typename T>
+eIcicleError compute_matrix_trace(const T* matrix, size_t n, T* trace_result)
+{
+  // 1. grab the diagonal
+  std::vector<T> diagonal(n);
+  eIcicleError err = slice(
+    matrix,
+    /*offset */ 0,
+    /*stride*/ n + 1,
+    /*size_in */ n * n,
+    /*size_out*/ n, {}, diagonal.data());
+  if (err != eIcicleError::SUCCESS) return err;
+
+  // 2. sum it
+  return vector_sum(diagonal.data(), n, {}, trace_result);
+}
+
+// -----------------------------------------------------------------------------
+//  PolyRing overload – treats the n×n polynomial matrix as an
+//  (n×n)*d Zq-matrix and re-uses slice / vector_sum on Zq.
+// -----------------------------------------------------------------------------
+inline eIcicleError compute_matrix_trace(const PolyRing* matrix, size_t n, PolyRing* trace_result)
+{
+  constexpr size_t d = PolyRing::d;
+
+  const Zq* flat = reinterpret_cast<const Zq*>(matrix);
+  Zq* out = reinterpret_cast<Zq*>(trace_result);
+
+  const size_t stride = (n + 1) * d; // jump between diagonal coefficients
+  const size_t size_in = n * n * d;  // total #Zq words
+
+  std::vector<Zq> diag_coeff(d * n);
+
+  VecOpsConfig async_config = default_vec_ops_config();
+  async_config.is_async = true;
+
+  for (size_t coeff = 0; coeff < d; ++coeff) {
+    // collect the `coeff`-th coefficient from every diagonal polynomial
+    eIcicleError err = slice(
+      flat,
+      /*offset */ coeff,
+      /*stride*/ stride, size_in, n, async_config, &diag_coeff[coeff * n]);
+    if (err != eIcicleError::SUCCESS) return err;
+  }
+
+  VecOpsConfig sum_config = default_vec_ops_config();
+  sum_config.batch_size = d; // d independent vectors of length n
+  eIcicleError err = vector_sum(diag_coeff.data(), n, sum_config, out);
+
+  if (err != eIcicleError::SUCCESS) return err;
+  return eIcicleError::SUCCESS;
+}
