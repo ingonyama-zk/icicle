@@ -5,13 +5,13 @@ use crate::{
 };
 
 use icicle_runtime::{
-    memory::{DeviceSlice, DeviceVec, HostSlice},
+    memory::{DeviceSlice, HostSlice},
     test_utilities,
 };
 
 /// Ensure hostmemory and devicememory behaviour matches.
 /// Correctness is already ensured by the C++ tests.
-pub fn test_matmul_devicememory<P: PolynomialRing + MatrixOps<P>>()
+pub fn test_matmul_device_memory<P: PolynomialRing + MatrixOps<P>>()
 where
     P::Base: FieldImpl,
     P: GenerateRandom<P>,
@@ -110,7 +110,7 @@ where
         .unwrap();
 
         assert_eq!(output_host, host_buffer);
-        // (5) mamtmul mixed memory model for inputs, host memory ouput
+        // (5) mamtmul mixed memory model for inputs, host memory output
         let mut device_mem_output = unsafe { DeviceSlice::<P>::from_mut_slice(&mut output_device) };
         let device_mem_a = unsafe { DeviceSlice::<P>::from_slice(&input_a) };
         let mut output_host_3 = output_host.clone();

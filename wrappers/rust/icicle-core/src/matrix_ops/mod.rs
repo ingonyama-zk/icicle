@@ -1,4 +1,4 @@
-mod tests;
+pub mod tests;
 
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
@@ -15,7 +15,6 @@ pub trait MatrixOps<T> {
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> Result<(), eIcicleError>;
 
-    //TODO Lisa: Transpose
 }
 
 pub fn matmul<T>(
@@ -85,6 +84,30 @@ macro_rules! impl_matmul {
                     }
                 }
             }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_matmul_device_tests {
+    ($poly:ty) => {
+        #[cfg(test)]
+        mod matmul_device_memory_tests {
+            use super::*;
+            use icicle_runtime::test_utilities;
+            use tests::test_matmul_device_memory;
+            use crate::matrix_ops::tests::test_matmul_device_memory;
+
+            pub fn initialize() {
+                test_utilities::test_load_and_init_devices();
+                test_utilities::test_set_main_device();
+            }
+
+            #[test]
+            fn matmul_device_memory_test(){
+                test_matmul_device_memory::<$poly>();
+            }
+            
         }
     };
 }
