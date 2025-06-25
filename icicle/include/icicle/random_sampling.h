@@ -27,8 +27,8 @@ namespace icicle {
    * @brief Sample Labrador Rq challenge polynomials from challenge space C.
    *
    * This function samples challenge polynomials with specific coefficient patterns. The sampling process:
-   * 1. Initializes a polynomial with coefficients consisting of m1 number of a1s, m2 number of a2s, ..., mN number of
-   * aNs
+   * 1. Initializes a polynomial with coefficients consisting of "ones" number of 1s, "twos" number of 2s, and the rest
+   * of the coefficients are 0s.
    * 2. Randomly flips the signs of the coefficients
    * 3. Permutes the coefficients randomly
    *
