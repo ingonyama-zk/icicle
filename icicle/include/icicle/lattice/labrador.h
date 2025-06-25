@@ -30,7 +30,8 @@ namespace icicle {
     //------------------------------------------------------------------------------
 
     /// @brief Negacyclic NTT or INTT on Rq elements.
-    eIcicleError ntt(const PolyRing* input, int size, NTTDir dir, const NegacyclicNTTConfig& config, PolyRing* output)
+    inline eIcicleError
+    ntt(const PolyRing* input, int size, NTTDir dir, const NegacyclicNTTConfig& config, PolyRing* output)
     {
       return icicle::ntt(input, size, dir, config, output);
     }
@@ -41,7 +42,7 @@ namespace icicle {
 
     /// @brief Compute matrix product C = A * B in Tq.
     /// @note No batching supported. Output buffer must be (A_rows × B_cols).
-    eIcicleError matmul(
+    inline eIcicleError matmul(
       const Tq* A,
       uint32_t A_nof_rows,
       uint32_t A_nof_cols,
@@ -58,18 +59,19 @@ namespace icicle {
     // Vector Operations: Add/Mul in Rq/Tq
     //------------------------------------------------------------------------------
 
-    eIcicleError
+    inline eIcicleError
     vector_add(const PolyRing* a, const PolyRing* b, uint64_t size, const VecOpsConfig& config, PolyRing* output)
     {
       return icicle::vector_add(a, b, size, config, output);
     }
 
-    eIcicleError vector_mul(const Tq* a, const Tq* b, uint64_t size, const VecOpsConfig& config, Tq* output)
+    inline eIcicleError vector_mul(const Tq* a, const Tq* b, uint64_t size, const VecOpsConfig& config, Tq* output)
     {
       return icicle::vector_mul(a, b, size, config, output);
     }
 
-    eIcicleError vector_mul(const PolyRing* a, const Zq* b, uint64_t size, const VecOpsConfig& config, PolyRing* output)
+    inline eIcicleError
+    vector_mul(const PolyRing* a, const Zq* b, uint64_t size, const VecOpsConfig& config, PolyRing* output)
     {
       return icicle::vector_mul(a, b, size, config, output);
     }
@@ -99,7 +101,7 @@ namespace icicle {
     //------------------------------------------------------------------------------
 
     /// @brief JL projection from Zqⁿ to Zqᵐ using seeded pseudo-random matrix.
-    eIcicleError jl_projection(
+    inline eIcicleError jl_projection(
       const Zq* input,
       size_t input_size,
       const std::byte* seed,
@@ -114,7 +116,7 @@ namespace icicle {
     /// Returns one or more rows of a JL-matrix, as Rq polynomials, optionally conjugated
     /// TODO: Note in the docs that row_size is measured in Zq. TODO Ash: we can make it be in Rq too. Let me know
     /// please
-    eIcicleError get_jl_matrix_rows(
+    inline eIcicleError get_jl_matrix_rows(
       const std::byte* seed,
       size_t seed_len,
       size_t row_size,
@@ -136,7 +138,7 @@ namespace icicle {
     /// @brief Check whether the norm of a vector is under the bound.
     /// Supports [L2, L∞] norm.
     /// Does the norm_bound have to be uint64_t? What about float? -- could be needed for operatorNorm
-    eIcicleError check_norm_bound(
+    inline eIcicleError check_norm_bound(
       const Zq* input, size_t size, eNormType norm, uint64_t norm_bound, const VecOpsConfig& cfg, bool* output)
     {
       return icicle::norm::check_norm_bound<Zq>(input, size, norm, norm_bound, cfg, output);
@@ -160,7 +162,7 @@ namespace icicle {
     /// Supports two modes of operation:
     /// - **Slow mode** (`fast_mode = false`): each element is sampled independently via hashing (seed || index).
     /// - **Fast mode** (`fast_mode = true`): one base element is sampled and all others are powers of it.
-    eIcicleError random_sampling(
+    inline eIcicleError random_sampling(
       const std::byte* seed, size_t seed_len, bool /*fast_mode*/, const SamplingConfig&, Zq* output, size_t output_size)
     {
       // SHA3-256 based deterministic PRNG seeded with (seed || index)
@@ -185,7 +187,7 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
 
-    eIcicleError random_sampling(
+    inline eIcicleError random_sampling(
       const std::byte* seed, size_t seed_len, bool fast_mode, const SamplingConfig& cfg, Tq* output, size_t output_size)
     {
       return random_sampling(seed, seed_len, fast_mode, cfg, (Zq*)output, output_size * Tq::d);
@@ -203,7 +205,7 @@ namespace icicle {
     /// Finally, you need to permute the coefficients randomly
 
     // TODO Yuval: update this based on Roman's API. Cannot use std::vectors
-    eIcicleError sample_challenge_polynomials(
+    inline eIcicleError sample_challenge_polynomials(
       const std::byte* seed, size_t seed_len, std::vector<size_t> coeff_val, std::vector<size_t> num_occur, Rq output)
     {
       return eIcicleError::API_NOT_IMPLEMENTED; // TODO
