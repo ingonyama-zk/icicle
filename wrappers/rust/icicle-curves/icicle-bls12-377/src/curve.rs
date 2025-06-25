@@ -5,7 +5,11 @@ use icicle_core::{
     impl_curve, impl_field, impl_field_arithmetic, impl_generate_random, impl_montgomery_convertible,
     vec_ops::VecOpsConfig,
 };
-use icicle_runtime::{eIcicleError, memory::{HostOrDeviceSlice, IntoIcicleSliceMut}, stream::IcicleStream};
+use icicle_runtime::{
+    eIcicleError,
+    memory::{HostOrDeviceSlice, IntoIcicleSliceMut},
+    stream::IcicleStream,
+};
 use std::fmt::{Debug, Display};
 use std::ops::{Add, Mul, Sub};
 

@@ -338,7 +338,10 @@ macro_rules! impl_curve {
             fn generate_random_affine_points(size: usize) -> Vec<$affine_type> {
                 let mut res = vec![$affine_type::zero(); size];
                 unsafe {
-                    $curve_prefix_ident::generate_affine_points(res.into_slice_mut() as *mut _ as *mut $affine_type, size)
+                    $curve_prefix_ident::generate_affine_points(
+                        res.into_slice_mut() as *mut _ as *mut $affine_type,
+                        size,
+                    )
                 };
                 res
             }

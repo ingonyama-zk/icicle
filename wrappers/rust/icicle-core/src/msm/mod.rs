@@ -422,7 +422,14 @@ macro_rules! impl_msm_bench {
                         );
 
                         group.bench_function(&bench_descr, |b| {
-                            b.iter(|| msm(scalars_h, precomputed_points_d.into_slice(), &cfg, msm_results.into_slice_mut())) // TODO: use into_slice_mut
+                            b.iter(|| {
+                                msm(
+                                    scalars_h,
+                                    precomputed_points_d.into_slice(),
+                                    &cfg,
+                                    msm_results.into_slice_mut(),
+                                )
+                            }) // TODO: use into_slice_mut
                         });
 
                         stream

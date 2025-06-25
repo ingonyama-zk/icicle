@@ -1,12 +1,7 @@
 use crate::ntt::{NttAlgorithm, Ordering, CUDA_NTT_ALGORITHM, CUDA_NTT_FAST_TWIDDLES_MODE};
 use crate::vec_ops::{transpose_matrix, VecOps, VecOpsConfig};
 use icicle_runtime::memory::{IntoIcicleSlice, IntoIcicleSliceMut};
-use icicle_runtime::{
-    memory::DeviceVec,
-    runtime,
-    stream::IcicleStream,
-    test_utilities,
-};
+use icicle_runtime::{memory::DeviceVec, runtime, stream::IcicleStream, test_utilities};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
@@ -78,20 +73,10 @@ where
             // compute INTT on main and reference devices, inplace, and compare
 
             test_utilities::test_set_main_device();
-            ntt_inplace(
-                ntt_result_main.into_slice_mut(),
-                NTTDir::kInverse,
-                &config,
-            )
-            .unwrap();
+            ntt_inplace(ntt_result_main.into_slice_mut(), NTTDir::kInverse, &config).unwrap();
 
             test_utilities::test_set_ref_device();
-            ntt_inplace(
-                ntt_result_ref.into_slice_mut(),
-                NTTDir::kInverse,
-                &config,
-            )
-            .unwrap();
+            ntt_inplace(ntt_result_ref.into_slice_mut(), NTTDir::kInverse, &config).unwrap();
 
             assert_eq!(ntt_result_main, ntt_result_ref);
         }
@@ -195,26 +180,14 @@ where
             test_utilities::test_set_ref_device();
             let mut intt_result_ref = vec![F::zero(); test_size];
             let intt_result_ref = intt_result_ref.into_slice_mut();
-            ntt(
-                scalars.into_slice(),
-                NTTDir::kInverse,
-                &config,
-                intt_result_ref,
-            )
-            .unwrap();
+            ntt(scalars.into_slice(), NTTDir::kInverse, &config, intt_result_ref).unwrap();
 
             // (2) coset-ntt (compute coset evals)
             config.coset_gen = coset_gen;
             config.ordering = Ordering::kMN;
             test_utilities::test_set_main_device();
             let mut coset_evals = vec![F::zero(); test_size];
-            ntt(
-                intt_result,
-                NTTDir::kForward,
-                &config,
-                coset_evals.into_slice_mut(),
-            )
-            .unwrap();
+            ntt(intt_result, NTTDir::kForward, &config, coset_evals.into_slice_mut()).unwrap();
 
             test_utilities::test_set_ref_device();
             let mut coset_evals_ref = vec![F::zero(); test_size];
@@ -309,13 +282,7 @@ where
                             config
                                 .ext
                                 .set_int(CUDA_NTT_ALGORITHM, alg as i32);
-                            ntt(
-                                scalars,
-                                is_inverse,
-                                &config,
-                                batch_ntt_result.into_slice_mut(),
-                            )
-                            .unwrap();
+                            ntt(scalars, is_inverse, &config, batch_ntt_result.into_slice_mut()).unwrap();
                             config.batch_size = 1;
                             let mut one_ntt_result = vec![F::one(); test_size];
                             for i in 0..batch_size {
@@ -412,8 +379,7 @@ where
                             // compute the ntt on ref device
                             let mut scalars_clone = scalars.clone();
                             test_utilities::test_set_ref_device();
-                            ntt_inplace(scalars_clone.into_slice_mut(), NTTDir::kForward, &config)
-                                .unwrap();
+                            ntt_inplace(scalars_clone.into_slice_mut(), NTTDir::kForward, &config).unwrap();
 
                             test_utilities::test_set_main_device_with_id(device_id);
                             config.is_async = true;

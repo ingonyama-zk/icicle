@@ -23,7 +23,8 @@ where
 
         balanced_decomposition::decompose::<F>(input.into_slice(), decomposed.into_slice_mut(), base, &cfg).unwrap();
         // In C++ tests we also check here that the digits are in the correct range. Skipping this check here.
-        balanced_decomposition::recompose::<F>(decomposed.into_slice(), recomposed.into_slice_mut(), base, &cfg).unwrap();
+        balanced_decomposition::recompose::<F>(decomposed.into_slice(), recomposed.into_slice_mut(), base, &cfg)
+            .unwrap();
         assert_eq!(input, recomposed);
     }
 }

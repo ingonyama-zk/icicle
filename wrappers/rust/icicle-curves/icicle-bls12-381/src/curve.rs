@@ -6,7 +6,11 @@ use icicle_core::{
     traits::GenerateRandom,
     vec_ops::VecOpsConfig,
 };
-use icicle_runtime::{eIcicleError, memory::{HostOrDeviceSlice, IntoIcicleSliceMut}, stream::IcicleStream};
+use icicle_runtime::{
+    eIcicleError,
+    memory::{HostOrDeviceSlice, IntoIcicleSliceMut},
+    stream::IcicleStream,
+};
 use std::fmt::{Debug, Display};
 use std::ops::{Add, Mul, Sub};
 

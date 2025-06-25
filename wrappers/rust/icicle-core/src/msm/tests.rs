@@ -65,7 +65,7 @@ pub fn check_msm<C: Curve + MSM<C>>() {
                 .unwrap();
 
                 let msm_host_result = msm_results.to_host_vec();
-                
+
                 stream
                     .synchronize()
                     .unwrap();
