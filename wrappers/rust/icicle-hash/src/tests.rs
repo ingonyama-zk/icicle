@@ -167,7 +167,7 @@ mod tests {
             let hasher_l0 = Keccak256::new(2 * leaf_element_size /*input chunk size*/).unwrap();
             let hasher_l1 = Sha3_256::new(2 * 32 /*input chunk size*/).unwrap();
             let layer_hashes = [&hasher_l0, &hasher_l1];
-            let _merkle_tree = MerkleTree::new(&layer_hashes[..], leaf_element_size as u64, 0).unwrap();
+            let _merkle_tree = MerkleTree::new(layer_hashes.as_slice(), leaf_element_size as u64, 0).unwrap();
         }
 
         // or any way that ends up with &[&Hashers]
@@ -179,7 +179,7 @@ mod tests {
         let layer_hashes: Vec<&Hasher> = (0..nof_layers)
             .map(|_| &hasher)
             .collect();
-        let merkle_tree = MerkleTree::new(&layer_hashes[..], leaf_element_size as u64, 0).unwrap();
+        let merkle_tree = MerkleTree::new(layer_hashes.as_slice(), leaf_element_size as u64, 0).unwrap();
 
         // Create a vector of random bytes efficiently
         let mut input: Vec<u8> = vec![0; leaf_element_size as usize * num_elements];
@@ -215,7 +215,7 @@ mod tests {
         let layer_hashes: Vec<&Hasher> = (0..nof_layers)
             .map(|_| &hasher)
             .collect();
-        let merkle_tree = MerkleTree::new(&layer_hashes[..], leaf_element_size as u64, 0).unwrap();
+        let merkle_tree = MerkleTree::new(layer_hashes.as_slice(), leaf_element_size as u64, 0).unwrap();
         merkle_tree
             .build(input.into_slice(), &MerkleTreeConfig::default())
             .unwrap();

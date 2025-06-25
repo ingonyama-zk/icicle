@@ -56,9 +56,9 @@ pub(crate) mod tests {
                 .collect();
 
             let ntt_cfg: NTTConfig<ScalarField> = NTTConfig::default();
-            ntt_inplace(HostSlice::from_mut_slice(&mut scalars[..]), NTTDir::kForward, &ntt_cfg).unwrap();
+            ntt_inplace(scalars.into_slice_mut(), NTTDir::kForward, &ntt_cfg).unwrap();
 
-            let poly = Polynomial::new(&scalars_lw[..]);
+            let poly = Polynomial::new(scalars_lw.into_slice());
             let evaluations = Polynomial::evaluate_fft::<Stark252PrimeField>(&poly, 1, None).unwrap();
 
             for (s1, s2) in scalars

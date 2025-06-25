@@ -48,10 +48,10 @@ pub(crate) mod tests {
                 .collect();
 
             let ntt_cfg: NTTConfig<ScalarField> = NTTConfig::default();
-            ntt_inplace(HostSlice::from_mut_slice(&mut scalars[..]), NTTDir::kForward, &ntt_cfg).unwrap();
+            ntt_inplace(scalars.into_slice_mut(), NTTDir::kForward, &ntt_cfg).unwrap();
 
-            risc0_zkp::core::ntt::bit_reverse(&mut scalars_risc0[..]);
-            risc0_zkp::core::ntt::evaluate_ntt::<Elem, Elem>(&mut scalars_risc0[..], ntt_size);
+            risc0_zkp::core::ntt::bit_reverse(scalars_risc0.into_slice_mut());
+            risc0_zkp::core::ntt::evaluate_ntt::<Elem, Elem>(scalars_risc0.into_slice(), ntt_size);
 
             for (s1, s2) in scalars
                 .iter()
@@ -67,14 +67,14 @@ pub(crate) mod tests {
                 .collect();
 
             ntt_inplace(
-                HostSlice::from_mut_slice(&mut ext_scalars[..]),
+                ext_scalars.into_slice_mut(),
                 NTTDir::kForward,
                 &ntt_cfg,
             )
             .unwrap();
 
-            risc0_zkp::core::ntt::bit_reverse(&mut ext_scalars_risc0[..]);
-            risc0_zkp::core::ntt::evaluate_ntt::<Elem, ExtElem>(&mut ext_scalars_risc0[..], ntt_size);
+            risc0_zkp::core::ntt::bit_reverse(ext_scalars_risc0.into_slice_mut());
+            risc0_zkp::core::ntt::evaluate_ntt::<Elem, ExtElem>(ext_scalars_risc0.into_slice(), ntt_size);
 
             for (s1, s2) in ext_scalars
                 .iter()

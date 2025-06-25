@@ -357,7 +357,7 @@ macro_rules! impl_generate_random {
                 }
 
                 let mut res = vec![$field::zero(); size];
-                unsafe { $generate_random_function_name(&mut res[..] as *mut _ as *mut $field, size) };
+                unsafe { $generate_random_function_name(res.into_slice_mut() as *mut _ as *mut $field, size) };
                 res
             }
         }
