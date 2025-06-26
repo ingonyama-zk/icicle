@@ -112,7 +112,8 @@ pub fn check_msm_batch_shared<C: Curve + MSM<C>>() {
         let mut precomputed_points_d = DeviceVec::<Affine<C>>::malloc(cfg.precompute_factor as usize * test_size);
         precompute_bases(points.into_slice(), &cfg, precomputed_points_d.into_slice_mut()).unwrap();
         for batch_size in batch_sizes {
-            let scalars_h = C::ScalarField::generate_random(test_size);
+            let scalars_h = C::ScalarField::generate_random(test_size * batch_size);
+            let scalars_h = scalars_h.into_slice();
 
             let mut msm_results_1 = DeviceVec::<Projective<C>>::malloc(batch_size);
             let mut msm_results_2 = DeviceVec::<Projective<C>>::malloc(batch_size);
@@ -123,7 +124,7 @@ pub fn check_msm_batch_shared<C: Curve + MSM<C>>() {
 
             cfg.precompute_factor = precompute_factor;
             msm(
-                scalars_h.into_slice(),
+                scalars_h,
                 precomputed_points_d.into_slice(),
                 &cfg,
                 msm_results_1.into_slice_mut(),
@@ -131,7 +132,7 @@ pub fn check_msm_batch_shared<C: Curve + MSM<C>>() {
             .unwrap();
             cfg.precompute_factor = 1;
             msm(
-                scalars_h.into_slice(),
+                scalars_h,
                 points_d.into_slice(),
                 &cfg,
                 msm_results_2.into_slice_mut(),
@@ -157,7 +158,7 @@ pub fn check_msm_batch_shared<C: Curve + MSM<C>>() {
             let mut ref_msm_config = MSMConfig::default();
             ref_msm_config.c = 4;
             msm(
-                scalars_h.into_slice(),
+                scalars_h,
                 points.into_slice(),
                 &MSMConfig::default(),
                 msm_ref_result.into_slice_mut(),
