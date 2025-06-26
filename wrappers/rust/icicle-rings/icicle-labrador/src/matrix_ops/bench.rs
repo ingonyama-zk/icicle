@@ -14,7 +14,7 @@ use icicle_runtime::{
     test_utilities,
 };
 
-static devices : [&str; 2] = ["ref", "main"];
+static devices: [&str; 2] = ["ref", "main"];
 // static devices: [&str; 1] = ["ref"];
 
 fn xR_N_R_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom<P>>(c: &mut Criterion) {
