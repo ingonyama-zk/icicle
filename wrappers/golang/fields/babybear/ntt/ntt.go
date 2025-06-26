@@ -1,3 +1,5 @@
+//go:build !icicle_exclude_all || ntt
+
 package ntt
 
 // #cgo CFLAGS: -I./include/
@@ -38,9 +40,11 @@ func GetDefaultNttConfig() core.NTTConfig[[babybear.SCALAR_LIMBS]uint32] {
 }
 
 func GetRootOfUnity(size uint64) babybear.ScalarField {
-	cRes := C.babybear_get_root_of_unity((C.size_t)(size))
 	var res babybear.ScalarField
-	res.FromLimbs(*(*[]uint32)(unsafe.Pointer(cRes)))
+	cErr := C.babybear_get_root_of_unity((C.size_t)(size), (*C.scalar_t)(unsafe.Pointer(&res)))
+	if runtime.EIcicleError(cErr) != runtime.Success {
+		panic("Failed to get root of unity")
+	}
 	return res
 }
 

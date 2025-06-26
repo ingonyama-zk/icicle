@@ -994,8 +994,12 @@ TEST_F(HashApiTest, MerkleTreeLastValuePaddingLeavesOnDevice)
     const std::vector<int> test_cases_nof_input_leaves = {1,  8,  16, 17,
                                                           32, 70, 99, 100}; // those cases will be tested with padding
     constexpr int input_size = nof_leaves * leaf_size;
-    std::byte leaves[input_size];
-    randomize(leaves, input_size);
+    std::vector<std::byte> leaves(input_size);
+    randomize(leaves.data(), input_size);
+
+    std::byte* d_leaves;
+    ICICLE_CHECK(icicle_malloc((void**)&d_leaves, input_size));
+    ICICLE_CHECK(icicle_copy(d_leaves, leaves.data(), input_size));
 
     // define the merkle tree
     auto layer0_hash = Keccak256::create(leaf_size);
@@ -1012,12 +1016,13 @@ TEST_F(HashApiTest, MerkleTreeLastValuePaddingLeavesOnDevice)
 
     // test various cases of missing leaves in input, requiring padding.
     for (auto nof_leaves_iter : test_cases_nof_input_leaves) {
-      test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_iter, leaves, leaf_size);
+      test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_iter, leaves.data(), leaf_size);
     }
 
     // Test that leaf_size divides input size for this kind of padding
     auto prover_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
-    ASSERT_EQ(prover_tree.build(leaves, (leaf_size - 1) * nof_leaves, config), eIcicleError::INVALID_ARGUMENT);
+    ASSERT_EQ(prover_tree.build(d_leaves, (leaf_size - 1) * nof_leaves, config), eIcicleError::INVALID_ARGUMENT);
+    ICICLE_CHECK(icicle_free(d_leaves));
   }
 }
 
@@ -1992,6 +1997,33 @@ TEST_F(HashApiTest, poseidon2_3_1K_batch_without_dt)
 
   ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 } // poseidon2_3_1K_batch_without_dt
+
+TEST_F(HashApiTest, poseidon2_merkle_tree)
+{
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_INFO << "poseidon2_merkle_tree test on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
+
+    constexpr int leaf_size = sizeof(scalar_t);
+    constexpr int nof_leaves = 8;
+    constexpr int input_size = nof_leaves * leaf_size;
+    auto leaves = std::make_unique<scalar_t[]>(input_size);
+    scalar_t::rand_host_many(leaves.get(), input_size);
+
+    // define the merkle tree
+    auto layer0_hash = Poseidon2::create<scalar_t>(2, nullptr, 1);
+    auto layer1_hash = Poseidon2::create<scalar_t>(2);
+    auto layer2_hash = Poseidon2::create<scalar_t>(2);
+    auto layer3_hash = Poseidon2::create<scalar_t>(2);
+
+    std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
+    int output_store_min_layer = 0;
+
+    auto config = default_merkle_tree_config();
+    test_merkle_tree(
+      hashes, config, output_store_min_layer, nof_leaves, reinterpret_cast<std::byte*>(leaves.get()), leaf_size);
+  }
+}
 
 #endif // POSEIDON2
 

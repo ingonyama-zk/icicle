@@ -1,3 +1,5 @@
+//go:build !icicle_exclude_all || g2
+
 package tests
 
 import (
@@ -120,13 +122,13 @@ type G2CurveTestSuite struct {
 }
 
 func (s *G2CurveTestSuite) TestG2Curve() {
-	s.Run("TestG2AffineZero", testWrapper(&s.Suite, testG2AffineZero))
-	s.Run("TestG2AffineFromLimbs", testWrapper(&s.Suite, testG2AffineFromLimbs))
-	s.Run("TestG2AffineToProjective", testWrapper(&s.Suite, testG2AffineToProjective))
-	s.Run("TestG2ProjectiveZero", testWrapper(&s.Suite, testG2ProjectiveZero))
-	s.Run("TestG2ProjectiveFromLimbs", testWrapper(&s.Suite, testG2ProjectiveFromLimbs))
-	s.Run("TestG2ProjectiveFromAffine", testWrapper(&s.Suite, testG2ProjectiveFromAffine))
-	s.Run("TestG2ProjectiveArithmetic", testWrapper(&s.Suite, testG2ProjectiveArithmetic))
+	s.Run("TestG2AffineZero", test_helpers.TestWrapper(&s.Suite, testG2AffineZero))
+	s.Run("TestG2AffineFromLimbs", test_helpers.TestWrapper(&s.Suite, testG2AffineFromLimbs))
+	s.Run("TestG2AffineToProjective", test_helpers.TestWrapper(&s.Suite, testG2AffineToProjective))
+	s.Run("TestG2ProjectiveZero", test_helpers.TestWrapper(&s.Suite, testG2ProjectiveZero))
+	s.Run("TestG2ProjectiveFromLimbs", test_helpers.TestWrapper(&s.Suite, testG2ProjectiveFromLimbs))
+	s.Run("TestG2ProjectiveFromAffine", test_helpers.TestWrapper(&s.Suite, testG2ProjectiveFromAffine))
+	s.Run("TestG2ProjectiveArithmetic", test_helpers.TestWrapper(&s.Suite, testG2ProjectiveArithmetic))
 }
 
 func TestSuiteG2Curve(t *testing.T) {

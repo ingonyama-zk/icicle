@@ -8,7 +8,12 @@ use icicle_runtime::errors::eIcicleError;
 /// This allows the implementation of Poseidon2 hashing for various field types that implement `FieldImpl`.
 pub trait Poseidon2Hasher<F: FieldImpl> {
     /// Method to create a new Poseidon2 hasher for a given t (branching factor).
-    fn new(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>;
+    fn new(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError> {
+        Self::new_with_input_size(t, domain_tag, 0)
+    }
+
+    /// Method to create a new Poseidon2 hasher for a given t, overriding input size.
+    fn new_with_input_size(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, eIcicleError>;
 }
 
 /// Function to create a Poseidon2 hasher for a specific field type and t (branching factor).
@@ -30,6 +35,14 @@ impl Poseidon2 {
         F::Config: Poseidon2Hasher<F>, // The Config associated with F must implement Poseidon2Hasher<F>
     {
         create_poseidon2_hasher::<F>(t, domain_tag)
+    }
+
+    pub fn new_with_input_size<F>(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, eIcicleError>
+    where
+        F: FieldImpl,                  // F must implement the FieldImpl trait
+        F::Config: Poseidon2Hasher<F>, // The Config associated with F must implement Poseidon2Hasher<F>
+    {
+        <<F as FieldImpl>::Config as Poseidon2Hasher<F>>::new_with_input_size(t, domain_tag, input_size)
     }
 }
 
@@ -53,19 +66,27 @@ macro_rules! impl_poseidon2 {
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_create_poseidon2_hasher")]
-                fn create_poseidon2_hasher(t: u32, domain_tag: *const $field) -> HasherHandle;
+                fn create_poseidon2_hasher(t: u32, domain_tag: *const $field, input_size: u32) -> HasherHandle;
             }
 
             // Implement the `Poseidon2Hasher` trait for the given field configuration.
             impl Poseidon2Hasher<$field> for $field_cfg {
-                fn new(t: u32, domain_tag: Option<&$field>) -> Result<Hasher, eIcicleError> {
+                fn new_with_input_size(
+                    t: u32,
+                    domain_tag: Option<&$field>,
+                    input_size: u32,
+                ) -> Result<Hasher, eIcicleError> {
                     let handle: HasherHandle = unsafe {
-                        create_poseidon2_hasher(t, domain_tag.map_or(std::ptr::null(), |tag| tag as *const $field))
-                    }; // Calls the external FFI function to create the hasher.
+                        create_poseidon2_hasher(
+                            t,
+                            domain_tag.map_or(std::ptr::null(), |tag| tag as *const $field),
+                            input_size,
+                        )
+                    };
                     if handle.is_null() {
-                        return Err(eIcicleError::UnknownError); // Checks if the handle is null and returns an error if so.
+                        return Err(eIcicleError::UnknownError);
                     }
-                    Ok(Hasher::from_handle(handle)) // Wraps the handle in a `Hasher` object and returns it.
+                    Ok(Hasher::from_handle(handle))
                 }
             }
         }

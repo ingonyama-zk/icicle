@@ -62,15 +62,13 @@ where
         test_utilities::test_set_main_device();
         let poseidon_hasher_main = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
-        poseidon_hasher_main
-            .hash(
-                HostSlice::from_slice(&inputs),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut outputs_main),
-            )
-            .unwrap();
+        let err = poseidon_hasher_main.hash(
+            HostSlice::from_slice(&inputs),
+            &HashConfig::default(),
+            HostSlice::from_mut_slice(&mut outputs_main),
+        );
+        assert_eq!(err, Err(eIcicleError::InvalidArgument));
 
-        // Sponge poseidon is planned for v3.2. Not supported in v3.1
         test_utilities::test_set_ref_device();
         let poseidon_hasher_ref = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 

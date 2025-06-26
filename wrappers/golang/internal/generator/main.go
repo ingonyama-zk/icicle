@@ -35,7 +35,7 @@ func generateFiles() {
 		lib_linker.Generate(curveDir, curve.PackageName, curve.Curve, lib_linker.CURVE, 0)
 
 		if curve.SupportsNTT {
-			ntt.Generate(curveDir, "", curve.Curve, scalarFieldPrefix, curve.GnarkImport, 0, true, "", "")
+			ntt.Generate(curveDir, "", curve.Curve, scalarFieldPrefix, curve.GnarkImport, true, "", "")
 			poly.Generate(curveDir, curve.Curve, scalarFieldPrefix, curve.GnarkImport)
 		}
 
@@ -59,7 +59,7 @@ func generateFiles() {
 			poseidon2.Generate(curveDir, curve.Curve)
 		}
 
-		tests.Generate(curveDir, curve.Curve, scalarFieldPrefix, curve.GnarkImport, 0, curve.SupportsNTT)
+		tests.Generate(curveDir, curve.Curve, scalarFieldPrefix, curve.GnarkImport, curve.SupportsNTT)
 	}
 
 	for _, field := range config.Fields {
@@ -68,7 +68,7 @@ func generateFiles() {
 		fields.Generate(fieldDir, field.PackageName, field.Field, scalarFieldPrefix, true, field.LimbsNum)
 		vecops.Generate(fieldDir, fieldDir, field.Field, scalarFieldPrefix, field.Field)
 		if field.SupportsNTT {
-			ntt.Generate(fieldDir, "", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, true, "", "")
+			ntt.Generate(fieldDir, "", field.Field, scalarFieldPrefix, field.GnarkImport, true, "", "")
 			poly.Generate(fieldDir, field.Field, scalarFieldPrefix, field.GnarkImport)
 		}
 		lib_linker.Generate(fieldDir, field.PackageName, field.Field, lib_linker.FIELD, 0)
@@ -79,7 +79,9 @@ func generateFiles() {
 			extensionFieldPrefix := "Extension"
 			fields.Generate(extensionsDir, "extension", extensionField, extensionFieldPrefix, true, field.ExtensionLimbsNum)
 			vecops.Generate(extensionsDir, fieldDir, extensionField, extensionFieldPrefix, field.Field)
-			ntt.Generate(fieldDir, "extension", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, false, extensionField, extensionFieldPrefix)
+			if field.SupportsNTT {
+				ntt.Generate(fieldDir, "extension", field.Field, scalarFieldPrefix, field.GnarkImport, false, extensionField, extensionFieldPrefix)
+			}
 		}
 
 		if field.SupportsPoseidon {
@@ -90,7 +92,7 @@ func generateFiles() {
 			poseidon2.Generate(fieldDir, field.Field)
 		}
 
-		tests.Generate(fieldDir, field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, field.SupportsNTT)
+		tests.Generate(fieldDir, field.Field, scalarFieldPrefix, field.GnarkImport, field.SupportsNTT)
 	}
 
 	// Mock field and curve files for core

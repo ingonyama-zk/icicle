@@ -27,6 +27,8 @@ type Config struct {
 	BuildDir         string
 	InstallPath      string
 	ReleaseType      string
+	Pqc              string
+	CudaPqcBackend   string
 }
 
 var supportedCurves = []string{"bn254", "bls12_377", "bls12_381", "bw6_761", "grumpkin"}
@@ -52,6 +54,7 @@ Options:
   -cuda-version <string>    			Specifies the version of CUDA to use
   -cuda-compiler-path <string>    Specifies the path to the CUDA compiler
   -metal <string>           			Specifies the branch/commit for METAL backend, or "local"
+  -pqc                      			Enable Pqc (only CUDA)
   -install-path <string>    			Installation path for built libraries
 `, os.Args[0])
 }
@@ -70,6 +73,8 @@ func main() {
 		DevMode:          "OFF",
 		CudaBackend:      "OFF",
 		MetalBackend:     "OFF",
+		Pqc:              "OFF",
+		CudaPqcBackend:   "OFF",
 	}
 
 	// Setup command line flags
@@ -87,6 +92,7 @@ func main() {
 	cudaVersion := flag.String("cuda-version", "", "CUDA version")
 	cudaCompilerPath := flag.String("cuda-compiler-path", "", "CUDA compiler path")
 	metalBackend := flag.String("metal", "OFF", "Metal backend")
+	pqcEnabled := flag.Bool("pqc", false, "Enable Pqc (only CUDA)")
 	installPath := flag.String("install-path", "", "Installation path")
 	releaseType := flag.String("release-type", "Release", "Release type")
 	help := flag.Bool("help", false, "Show help message")
@@ -131,6 +137,11 @@ func main() {
 	}
 	config.CudaBackend = *cudaBackend
 	config.MetalBackend = *metalBackend
+
+	if *pqcEnabled {
+		config.Pqc = "ON"
+		config.CudaPqcBackend = "ON"
+	}
 
 	// Set CUDA compiler path
 	if *cudaVersion != "" {
@@ -212,6 +223,16 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println("Finished building hash ✅")
+	}
+
+	// build PQC if enabled
+	if config.Pqc == "ON" {
+		fmt.Println("Building PQC ...")
+		if err := buildPqc(config); err != nil {
+			fmt.Printf("Error building PQC: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Finished building PQC ✅")
 	}
 }
 
@@ -315,6 +336,40 @@ func buildHash(config Config) error {
 		fmt.Sprintf("-DCUDA_BACKEND=%s", config.CudaBackend),
 		fmt.Sprintf("-DMETAL_BACKEND=%s", config.MetalBackend),
 		fmt.Sprintf("-DHASH=%s", config.Hash),
+		fmt.Sprintf("-DCMAKE_BUILD_TYPE=%s", config.ReleaseType),
+		fmt.Sprintf("-DCMAKE_INSTALL_PREFIX=%s", config.InstallPath),
+		"-S", ".", "-B", "build",
+	}
+
+	cmd := exec.Command("cmake", cmakeArgs...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("cmake configure failed: %v\n%s", err, out)
+	}
+
+	// Run cmake build and install
+	cmd = exec.Command("cmake", "--build", "build", "--target", "install")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("cmake build failed: %v\n%s", err, out)
+	}
+
+	os.Remove("build_config.txt")
+	return nil
+}
+
+func buildPqc(config Config) error {
+	// Write build config
+	f, err := os.Create("build_config.txt")
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(f, "DEVMODE=%s\n", config.DevMode)
+	f.Close()
+
+	// Run cmake configure
+	cmakeArgs := []string{
+		fmt.Sprintf("-DCMAKE_CUDA_COMPILER=%s", config.CudaCompilerPath),
+		fmt.Sprintf("-DPQC=%s", config.Pqc),
+		fmt.Sprintf("-DCUDA_PQC_BACKEND=%s", config.CudaPqcBackend),
 		fmt.Sprintf("-DCMAKE_BUILD_TYPE=%s", config.ReleaseType),
 		fmt.Sprintf("-DCMAKE_INSTALL_PREFIX=%s", config.InstallPath),
 		"-S", ".", "-B", "build",

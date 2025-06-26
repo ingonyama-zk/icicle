@@ -158,17 +158,17 @@ type ScalarFieldTestSuite struct {
 }
 
 func (s *ScalarFieldTestSuite) TestScalarField() {
-	s.Run("TestScalarFieldFromLimbs", testWrapper(&s.Suite, testScalarFieldFromLimbs))
-	s.Run("TestScalarFieldGetLimbs", testWrapper(&s.Suite, testScalarFieldGetLimbs))
-	s.Run("TestScalarFieldOne", testWrapper(&s.Suite, testScalarFieldOne))
-	s.Run("TestScalarFieldZero", testWrapper(&s.Suite, testScalarFieldZero))
-	s.Run("TestScalarFieldSize", testWrapper(&s.Suite, testScalarFieldSize))
-	s.Run("TestScalarFieldAsPointer", testWrapper(&s.Suite, testScalarFieldAsPointer))
-	s.Run("TestScalarFieldFromBytes", testWrapper(&s.Suite, testScalarFieldFromBytes))
-	s.Run("TestScalarFieldToBytes", testWrapper(&s.Suite, testScalarFieldToBytes))
-	s.Run("TestScalarFieldArithmetic", testWrapper(&s.Suite, testScalarFieldArithmetic))
-	s.Run("TestGrumpkinGenerateScalars", testWrapper(&s.Suite, testGrumpkinGenerateScalars))
-	s.Run("TestGrumpkinMongtomeryConversion", testWrapper(&s.Suite, testGrumpkinMongtomeryConversion))
+	s.Run("TestScalarFieldFromLimbs", test_helpers.TestWrapper(&s.Suite, testScalarFieldFromLimbs))
+	s.Run("TestScalarFieldGetLimbs", test_helpers.TestWrapper(&s.Suite, testScalarFieldGetLimbs))
+	s.Run("TestScalarFieldOne", test_helpers.TestWrapper(&s.Suite, testScalarFieldOne))
+	s.Run("TestScalarFieldZero", test_helpers.TestWrapper(&s.Suite, testScalarFieldZero))
+	s.Run("TestScalarFieldSize", test_helpers.TestWrapper(&s.Suite, testScalarFieldSize))
+	s.Run("TestScalarFieldAsPointer", test_helpers.TestWrapper(&s.Suite, testScalarFieldAsPointer))
+	s.Run("TestScalarFieldFromBytes", test_helpers.TestWrapper(&s.Suite, testScalarFieldFromBytes))
+	s.Run("TestScalarFieldToBytes", test_helpers.TestWrapper(&s.Suite, testScalarFieldToBytes))
+	s.Run("TestScalarFieldArithmetic", test_helpers.TestWrapper(&s.Suite, testScalarFieldArithmetic))
+	s.Run("TestGrumpkinGenerateScalars", test_helpers.TestWrapper(&s.Suite, testGrumpkinGenerateScalars))
+	s.Run("TestGrumpkinMongtomeryConversion", test_helpers.TestWrapper(&s.Suite, testGrumpkinMongtomeryConversion))
 }
 
 func TestSuiteScalarField(t *testing.T) {

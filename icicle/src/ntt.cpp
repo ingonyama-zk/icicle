@@ -1,4 +1,5 @@
 #include "icicle/backend/ntt_backend.h"
+#include "icicle/negacyclic_ntt.h"
 #include "icicle/dispatcher.h"
 
 using namespace field_config;
@@ -181,5 +182,38 @@ namespace icicle {
   {
     return CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_get_root_of_unity_from_domain)(logn, rou);
   }
+
+  template <>
+  eIcicleError ntt(const PolyRing* input, size_t size, NTTDir dir, const NegacyclicNTTConfig& config, PolyRing* output)
+  {
+    using Zq = typename PolyRing::Base;
+    constexpr int degree = PolyRing::d;
+
+    // Use ψ as a primitive 2n-th root of unity for negacyclic transform
+    const Zq psi = Zq::omega(log2(2 * degree));
+    // Note that this is called only once per device
+    ICICLE_CHECK(ntt_init_domain(psi, NTTInitDomainConfig{}));
+
+    // Computing a coset-NTT in Zq. It is equivalent to a negacyclic NTT
+    NTTConfig<Zq> cyclic_ntt_config = default_ntt_config<Zq>();
+    cyclic_ntt_config.stream = config.stream;
+    cyclic_ntt_config.are_inputs_on_device = config.are_inputs_on_device;
+    cyclic_ntt_config.are_outputs_on_device = config.are_outputs_on_device;
+    cyclic_ntt_config.is_async = config.is_async;
+    cyclic_ntt_config.ext = config.ext;
+    cyclic_ntt_config.batch_size = size;
+    cyclic_ntt_config.columns_batch = false;
+    cyclic_ntt_config.coset_gen = psi;
+    cyclic_ntt_config.ordering = dir == NTTDir::kForward ? Ordering::kNR : Ordering::kRN;
+
+    return ntt(reinterpret_cast<const Zq*>(input), degree, dir, cyclic_ntt_config, reinterpret_cast<Zq*>(output));
+  }
+
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, negacyclic_ntt)(
+    const PolyRing* input, size_t size, NTTDir dir, const NegacyclicNTTConfig* config, PolyRing* output)
+  {
+    return ntt(input, size, dir, *config, output);
+  }
 #endif // RING
+
 } // namespace icicle

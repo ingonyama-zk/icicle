@@ -120,13 +120,13 @@ type CurveTestSuite struct {
 }
 
 func (s *CurveTestSuite) TestCurve() {
-	s.Run("TestAffineZero", testWrapper(&s.Suite, testAffineZero))
-	s.Run("TestAffineFromLimbs", testWrapper(&s.Suite, testAffineFromLimbs))
-	s.Run("TestAffineToProjective", testWrapper(&s.Suite, testAffineToProjective))
-	s.Run("TestProjectiveZero", testWrapper(&s.Suite, testProjectiveZero))
-	s.Run("TestProjectiveFromLimbs", testWrapper(&s.Suite, testProjectiveFromLimbs))
-	s.Run("TestProjectiveFromAffine", testWrapper(&s.Suite, testProjectiveFromAffine))
-	s.Run("TestProjectiveArithmetic", testWrapper(&s.Suite, testProjectiveArithmetic))
+	s.Run("TestAffineZero", test_helpers.TestWrapper(&s.Suite, testAffineZero))
+	s.Run("TestAffineFromLimbs", test_helpers.TestWrapper(&s.Suite, testAffineFromLimbs))
+	s.Run("TestAffineToProjective", test_helpers.TestWrapper(&s.Suite, testAffineToProjective))
+	s.Run("TestProjectiveZero", test_helpers.TestWrapper(&s.Suite, testProjectiveZero))
+	s.Run("TestProjectiveFromLimbs", test_helpers.TestWrapper(&s.Suite, testProjectiveFromLimbs))
+	s.Run("TestProjectiveFromAffine", test_helpers.TestWrapper(&s.Suite, testProjectiveFromAffine))
+	s.Run("TestProjectiveArithmetic", test_helpers.TestWrapper(&s.Suite, testProjectiveArithmetic))
 }
 
 func TestSuiteCurve(t *testing.T) {

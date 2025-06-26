@@ -10,7 +10,7 @@ extern "C" {
 typedef struct scalar_t scalar_t;
 typedef struct Hash Hash;
 
-Hash* bls12_381_create_poseidon2_hasher(unsigned t, const scalar_t* domain_tag);
+Hash* bls12_381_create_poseidon2_hasher(unsigned t, const scalar_t* domain_tag, unsigned input_size);
 
   #ifdef __cplusplus
 }

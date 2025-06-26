@@ -33,7 +33,7 @@ go get github.com/ingonyama-zk/icicle/v3@<commit_id>
 
 ### Building from source
 
-To build the shared libraries you can run [this](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/build.sh) script inside the downloaded go dependency:
+To build the shared libraries you can run [this](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/internal/build-libs.go) script inside the downloaded go dependency:
 
 ```sh
 ./build.sh [-curve=<curve>] [-field=<field>] [-cuda_version=<version>] [-skip_msm] [-skip_ntt] [-skip_g2] [-skip_ecntt] [-skip_fieldext]

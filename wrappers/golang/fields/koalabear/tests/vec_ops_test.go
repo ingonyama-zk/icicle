@@ -124,10 +124,10 @@ type KoalabearVecOpsTestSuite struct {
 }
 
 func (s *KoalabearVecOpsTestSuite) TestKoalabearVecOps() {
-	s.Run("TestKoalabearVecOps", testWrapper(&s.Suite, testKoalabearVecOps))
-	s.Run("TestKoalabearTranspose", testWrapper(&s.Suite, testKoalabearTranspose))
-	s.Run("TestKoalabearSum", testWrapper(&s.Suite, testKoalabearSum))
-	s.Run("TestKoalabearProduct", testWrapper(&s.Suite, testKoalabearProduct))
+	s.Run("TestKoalabearVecOps", test_helpers.TestWrapper(&s.Suite, testKoalabearVecOps))
+	s.Run("TestKoalabearTranspose", test_helpers.TestWrapper(&s.Suite, testKoalabearTranspose))
+	s.Run("TestKoalabearSum", test_helpers.TestWrapper(&s.Suite, testKoalabearSum))
+	s.Run("TestKoalabearProduct", test_helpers.TestWrapper(&s.Suite, testKoalabearProduct))
 }
 
 func TestSuiteKoalabearVecOps(t *testing.T) {

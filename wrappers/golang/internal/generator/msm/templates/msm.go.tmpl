@@ -1,3 +1,5 @@
+//go:build !icicle_exclude_all || {{if eq .CurvePrefix "G2"}}msm && g2{{else}}msm{{end}}
+
 package {{.PackageName}}
 
 // #cgo CFLAGS: -I./include/

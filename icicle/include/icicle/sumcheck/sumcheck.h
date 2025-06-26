@@ -102,10 +102,15 @@ namespace icicle {
                          << ", but " << total_nof_vars << " were given";
         return eIcicleError::INVALID_ARGUMENT;
       }
+
+      // Initialize challenge vector with the correct size based on MLE polynomial size
+      m_challenge_vector.resize(std::log2(mle_polynomial_size));
+
       return m_backend->get_proof(
         mle_polynomials, mle_polynomial_size, claimed_sum, combine_function, std::move(transcript_config),
-        sumcheck_config, sumcheck_proof);
+        sumcheck_config, const_cast<F*>(m_challenge_vector.data()), sumcheck_proof);
     }
+    std::vector<F> get_challenge_vector() { return m_challenge_vector; }
 
     /**
      * @brief Verify an element against the Sumcheck round polynomial.
@@ -158,6 +163,7 @@ namespace icicle {
   private:
     std::shared_ptr<SumcheckBackend<F>>
       m_backend; ///< Shared pointer to the backend responsible for Sumcheck operations.
+    mutable std::vector<F> m_challenge_vector;
 
     // Receive the polynomial in evaluation on x=0,1,2...
     // return the evaluation of the polynomial at x

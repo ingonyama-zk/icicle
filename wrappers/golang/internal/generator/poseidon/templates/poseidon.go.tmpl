@@ -1,3 +1,5 @@
+//go:build !icicle_exclude_all || poseidon
+
 package poseidon
 
 // #cgo CFLAGS: -I./include/
@@ -19,7 +21,7 @@ func NewHasher(t uint64, domainTag *{{.Field}}.ScalarField) (hash.Hasher, runtim
 		cDomainTag = (*C.scalar_t)(unsafe.Pointer(domainTag.AsPointer()))
 	}
 
-	handle := C.{{.Field}}_create_poseidon_hasher(cT, cDomainTag)
+	handle := C.{{.Field}}_create_poseidon_hasher(cT, cDomainTag, 0)
 
 	if handle == nil {
 		return hash.Hasher{}, runtime.UnknownError

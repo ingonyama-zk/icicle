@@ -32,14 +32,14 @@ namespace icicle {
    *       unsupported value for `t` is provided.
    */
   template <typename S>
-  Hash create_poseidon_hash(unsigned t, const S* domain_tag = nullptr);
+  Hash create_poseidon_hash(unsigned t, const S* domain_tag = nullptr, unsigned input_size = 0);
 
   // Poseidon struct providing a static interface to Poseidon-related operations.
   struct Poseidon {
     template <typename S>
-    inline static Hash create(unsigned t, const S* domain_tag = nullptr)
+    inline static Hash create(unsigned t, const S* domain_tag = nullptr, unsigned input_size = 0)
     {
-      return create_poseidon_hash<S>(t, domain_tag);
+      return create_poseidon_hash<S>(t, domain_tag, input_size);
     }
   };
 

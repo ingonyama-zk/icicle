@@ -1,11 +1,59 @@
 #include "test_mod_arithmetic_api.h"
+#include "test_matrix_api.h"
 #include "icicle/balanced_decomposition.h"
+#include "icicle/jl_projection.h"
+#include "icicle/norm.h"
+#include "icicle/random_sampling.h"
+#include "icicle/negacyclic_ntt.h"
+#include "icicle/fields/field_config.h"
+#include "icicle/fields/field.h"
+
+using namespace field_config;
+using namespace icicle;
+
+using uint128_t = __uint128_t;
+
+// Helper function for norm checking
+static uint64_t abs_centered(uint64_t val, uint64_t q)
+{
+  if (val > q / 2) { val = q - val; }
+  return val;
+}
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
 class RingTest : public ModArithTest<T>
 {
 };
+
+// This function performs a negacyclic convolution multiplication
+static PolyRing Rq_mul(const PolyRing& a, const PolyRing& b)
+{
+  PolyRing c;
+  constexpr size_t degree = PolyRing::d;
+  const Zq* a_zq = reinterpret_cast<const Zq*>(&a);
+  const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
+  Zq* c_zq = reinterpret_cast<Zq*>(&c);
+  // zero initialize c
+  for (size_t k = 0; k < degree; ++k)
+    c_zq[k] = Zq::zero();
+
+  // Manual negacyclic convolution: c_k = sum_{i+j ≡ k mod n} a_i * b_j,
+  // with negation when i+j >= n
+  for (size_t i = 0; i < degree; ++i) {
+    for (size_t j = 0; j < degree; ++j) {
+      size_t ij = i + j;
+      size_t k = ij % degree;
+      Zq prod = a_zq[i] * b_zq[j];
+      if (ij >= degree) {
+        c_zq[k] = c_zq[k] - prod; // negacyclic
+      } else {
+        c_zq[k] = c_zq[k] + prod;
+      }
+    }
+  }
+  return c;
+}
 
 using RingTestBase = ModArithTestBase;
 TYPED_TEST_SUITE(RingTest, FTImplementations);
@@ -97,7 +145,7 @@ TEST_F(RingTestBase, VectorRnsConversion)
   }
 }
 
-TEST_F(RingTestBase, BalancedDecomposition)
+TEST_F(RingTestBase, BalancedDecompositionZQ)
 {
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
@@ -171,7 +219,7 @@ TEST_F(RingTestBase, BalancedDecomposition)
   } // device loop
 }
 
-TEST_F(RingTestBase, BalancedDecompositionErrorCases)
+TEST_F(RingTestBase, BalancedDecompositionZqErrorCases)
 {
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
@@ -229,4 +277,1012 @@ TEST_F(RingTestBase, BalancedDecompositionErrorCases)
       balanced_decomposition::recompose(decomposed.data(), decomposed_size, 1 /*=base*/, cfg, input.data(), size));
 
   } // device loop
+}
+
+// This test verifies that balanced decomposition of a PolyRing is implemented correctly by recomposing manually
+TEST_F(RingTestBase, BalancedDecompositionPolyRing)
+{
+  static_assert(PolyRing::Base::TLC == 2, "Decomposition assumes q ~64-bit");
+
+  // Get q from PolyRing::Base as signed 64-bit for safe arithmetic
+  constexpr auto q_storage = PolyRing::Base::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage;
+  ICICLE_ASSERT(q > 0) << "Expecting positive modulus q to allow int64 arithmetic";
+
+  // Generate a random input polynomial over PolyRing
+  constexpr size_t size = 7;
+  std::vector<PolyRing> input_polynomials(size);
+  PolyRing::rand_host_many(input_polynomials.data(), size);
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    VecOpsConfig cfg{};
+    const uint32_t q_sqrt = static_cast<uint32_t>(std::sqrt(q));
+    const std::vector<uint32_t> bases = {2, 3, 16, (1 << 20) + 1, q_sqrt};
+
+    for (uint32_t base : bases) {
+      // Compute the number of digits for the given base
+      const size_t num_digits = balanced_decomposition::compute_nof_digits<Zq>(base);
+      std::vector<PolyRing> decomposed_polynomials(size * num_digits);
+
+      // Perform balanced decomposition into digits. Output is digit-major
+      ICICLE_CHECK(balanced_decomposition::decompose(
+        input_polynomials.data(), input_polynomials.size(), base, cfg, decomposed_polynomials.data(),
+        decomposed_polynomials.size()));
+
+      // Recompose the original polynomial from digits
+      std::vector<PolyRing> recomposed(size);
+      memset(recomposed.data(), 0, sizeof(PolyRing) * size);
+      // Generate repeated powers of base: each digit level gets the same base^i for all polynomials
+      Zq power = Zq::from(1);
+      std::vector<Zq> powers(size * num_digits);
+      for (size_t digit_idx = 0; digit_idx < num_digits; ++digit_idx) {
+        Zq current = power;
+        for (size_t poly_idx = 0; poly_idx < size; ++poly_idx) {
+          powers[digit_idx * size + poly_idx] = current;
+        }
+        power = power * Zq::from(base);
+      }
+
+      // Multiply each decomposed digit by its base power
+      std::vector<PolyRing> scaled_digits(size * num_digits);
+      ICICLE_CHECK(
+        vector_mul(decomposed_polynomials.data(), powers.data(), size * num_digits, {}, scaled_digits.data()));
+
+      // Accumulate scaled digits into recomposed result
+      for (size_t digit_idx = 0; digit_idx < num_digits; ++digit_idx) {
+        ICICLE_CHECK(vector_add(
+          (const Zq*)recomposed.data(), (const Zq*)(scaled_digits.data() + digit_idx * size), size * PolyRing::d, {},
+          (Zq*)recomposed.data()));
+      }
+
+      // Verify recomposed polynomial matches the original input
+      ASSERT_EQ(0, memcmp(recomposed.data(), input_polynomials.data(), size * sizeof(PolyRing)));
+    }
+  }
+}
+
+// This test verifies that batch balanced decomposition and recomposition
+// on device memory correctly reconstruct the original PolyRing polynomials.
+// It also checks that the decomposition satisfies the L∞ bound.
+TEST_F(RingTestBase, BalancedDecompositionPolyRingBatch)
+{
+  static_assert(PolyRing::Base::TLC == 2, "Decomposition assumes q ~64-bit");
+
+  constexpr size_t degree = PolyRing::d;
+  constexpr size_t size = 1 << 10; // Number of PolyRing polynomials
+
+  // Get modulus q as signed integer for arithmetic safety
+  constexpr auto q_storage = PolyRing::Base::get_modulus();
+  const int64_t q = *(const int64_t*)&q_storage;
+  ICICLE_ASSERT(q > 0) << "Expecting positive q to allow int64 arithmetic";
+
+  // Generate random input polynomials over PolyRing
+  std::vector<PolyRing> input(size);
+  PolyRing::rand_host_many(input.data(), size);
+
+  std::vector<PolyRing> recomposed(size);
+  const std::vector<uint32_t> bases = {2, 3, 16, 155, 1024, static_cast<uint32_t>(std::sqrt(q))};
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    PolyRing *d_input = nullptr, *d_decomposed = nullptr, *d_recomposed = nullptr;
+    ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(PolyRing)));
+    ICICLE_CHECK(icicle_malloc((void**)&d_recomposed, size * sizeof(PolyRing)));
+    ICICLE_CHECK(icicle_copy(d_input, input.data(), size * sizeof(PolyRing)));
+
+    VecOpsConfig cfg{};
+    cfg.is_a_on_device = true;
+    cfg.is_result_on_device = true;
+
+    for (uint32_t base : bases) {
+      const size_t digits_per_coeff = balanced_decomposition::compute_nof_digits<Zq>(base);
+      const size_t decomposed_size = size * digits_per_coeff;
+
+      std::stringstream label_decompose, label_recompose;
+      label_decompose << "PolyRing Decomposition [device=" << device << ", base=" << base << "]";
+      label_recompose << "PolyRing Recomposition [device=" << device << ", base=" << base << "]";
+
+      ICICLE_CHECK(icicle_malloc((void**)&d_decomposed, decomposed_size * sizeof(PolyRing)));
+
+      // --- Step 1: Decomposition ---
+      START_TIMER(decompose);
+      ICICLE_CHECK(balanced_decomposition::decompose(d_input, size, base, cfg, d_decomposed, decomposed_size));
+      END_TIMER(decompose, label_decompose.str().c_str(), true);
+
+      // --- Step 2: Norm Bound Check (L∞) ---
+      {
+        VecOpsConfig norm_cfg{};
+        norm_cfg.is_a_on_device = true;
+        norm_cfg.batch_size = digits_per_coeff * size;
+
+        std::vector<char> is_norm_bound(norm_cfg.batch_size, false);
+        norm::check_norm_bound(
+          reinterpret_cast<Zq*>(d_decomposed), degree, eNormType::LInfinity, base / 2 + 1, norm_cfg,
+          reinterpret_cast<bool*>(is_norm_bound.data()));
+
+        for (size_t i = 0; i < norm_cfg.batch_size; ++i) {
+          ASSERT_TRUE(is_norm_bound[i]) << "Decomposed PolyRing polynomial " << i
+                                        << " exceeds expected balanced range for base = " << base;
+        }
+      }
+
+      // --- Step 3: Recomposition and Validation ---
+      START_TIMER(recompose);
+      ICICLE_CHECK(balanced_decomposition::recompose(d_decomposed, decomposed_size, base, cfg, d_recomposed, size));
+      END_TIMER(recompose, label_recompose.str().c_str(), true);
+
+      ICICLE_CHECK(icicle_copy(recomposed.data(), d_recomposed, size * sizeof(PolyRing)));
+
+      ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), size * sizeof(PolyRing)))
+        << "Recomposition mismatch for base = " << base;
+
+      icicle_free(d_decomposed);
+    }
+
+    icicle_free(d_input);
+    icicle_free(d_recomposed);
+  }
+}
+
+TEST_F(RingTestBase, JLProjectionTest)
+{
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  const size_t N = 1 << 16;       // Input vector size
+  const size_t output_size = 256; // JL projected size
+  const int max_trials = 10;      // JL projection output is bound by sqrt(128)*norm(input) with probability 0.5.
+                                  // Therefore we allow repeating the check a few times.
+
+  std::vector<field_t> input(N);
+  std::vector<field_t> output(output_size);
+
+  // generate random values in [0, sqrt(q)]. We assume input is low norm. Otherwise we may wrap around and the JL
+  // lemma won't hold.
+  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
+  for (auto& x : input) {
+    uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
+    x = field_t::from(val);
+  }
+
+  auto norm_squared = [&](const std::vector<field_t>& v) -> double {
+    double sum = 0.0;
+    for (const auto& x : v) {
+      const int64_t val = *reinterpret_cast<const int64_t*>(&x);
+      const int64_t centered = (val > q / 2) ? val - q : val; // Convert to signed representative
+      sum += static_cast<double>(centered) * static_cast<double>(centered);
+    }
+    return sum;
+  };
+
+  const double input_norm = std::sqrt(norm_squared(input));
+  ASSERT_GT(input_norm, 0.0) << "Input norm is zero, invalid for JL test";
+
+  const auto cfg = VecOpsConfig{};
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    std::stringstream timer_label;
+    timer_label << "JL-projection [device=" << device << "]";
+
+    bool passed = false;
+    for (int trial = 0; trial < max_trials; ++trial) {
+      std::byte seed[32];
+      for (auto& b : seed) {
+        b = static_cast<std::byte>(rand_uint_32b() % 256);
+      }
+
+      START_TIMER(projection);
+      ICICLE_CHECK(jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, output.data(), output.size()));
+      END_TIMER(projection, timer_label.str().c_str(), true);
+
+      const double output_norm = std::sqrt(norm_squared(output));
+      ASSERT_GT(output_norm, 0.0) << "JL projection output norm is zero (trial " << trial << ")";
+
+      const double bound = std::sqrt(128.0) * input_norm;
+      passed = (output_norm <= bound);
+
+      ICICLE_LOG_INFO << "Input norm = " << input_norm << ", Output norm = " << output_norm
+                      << ", Ratio = " << (output_norm / input_norm) << ", Bound = " << bound
+                      << ", Passed = " << (passed ? "true" : "false");
+      if (passed) break;
+    }
+
+    ASSERT_TRUE(passed) << "JL projection norm exceeded sqrt(128)*input_norm in all " << max_trials << " trials";
+  }
+}
+
+TEST_F(RingTestBase, JLprojectionGetRowsTest)
+{
+  const size_t N = 1 << 10;       // Input vector size
+  const size_t output_size = 256; // Number of JL projection rows
+
+  std::vector<field_t> input(N, field_t::one()); // Input vector: all ones
+  std::vector<field_t> projected(output_size);   // Output from jl_projection
+  std::vector<field_t> matrix(output_size * N);  // Raw JL matrix rows (row-major)
+  std::vector<field_t> expected(output_size);    // Expected output computed via matrix row sums
+
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() % 256);
+  }
+
+  const auto cfg = VecOpsConfig{};
+
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    std::stringstream projection_timer_label, generate_timer_label;
+    projection_timer_label << "JL-projection [device=" << device << "]";
+    generate_timer_label << "JL-generate [device=" << device << "]";
+
+    // Step 1: Compute projection via JL API
+    START_TIMER(projection);
+    ICICLE_CHECK(jl_projection(input.data(), N, seed, sizeof(seed), cfg, projected.data(), output_size));
+    END_TIMER(projection, projection_timer_label.str().c_str(), true);
+
+    // Step 2: Generate JL matrix rows explicitly
+    START_TIMER(generate);
+    ICICLE_CHECK(get_jl_matrix_rows(
+      seed, sizeof(seed),
+      N,           // row_size = input dimension
+      0,           // start_row
+      output_size, // num_rows
+      cfg,
+      matrix.data() // Output: [num_rows x row_size]
+      ));
+    END_TIMER(generate, generate_timer_label.str().c_str(), true);
+
+    // Step 3: Since input = {1,1,...,1}, matrix-vector product is just summing each row
+    VecOpsConfig sum_cfg{};
+    sum_cfg.batch_size = output_size;
+    ICICLE_CHECK(vector_sum(matrix.data(), N, sum_cfg, expected.data()));
+
+    // Step 4: Compare expected vs projected
+    for (size_t i = 0; i < output_size; ++i) {
+      ASSERT_EQ(projected[i], expected[i])
+        << "Mismatch at output[" << i << "]: projected = " << projected[i] << ", expected = " << expected[i];
+    }
+  }
+}
+
+TEST_F(RingTestBase, JLMatrixRowsDeviceConsistency)
+{
+  const size_t N = 1 << 10;       // Input vector size (row size)
+  const size_t output_size = 256; // Number of JL projection rows
+
+  // Skip test if fewer than 2 devices are available
+  if (s_registered_devices.size() < 2) { GTEST_SKIP() << "At least 2 devices are required for this test"; }
+
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() % 256);
+  }
+
+  const auto cfg = VecOpsConfig{};
+
+  // Store matrices from all devices
+  std::vector<std::vector<field_t>> matrices;
+  std::vector<std::string> device_timer_labels;
+
+  // Generate matrix on each device
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    std::vector<field_t> matrix(output_size * N);
+    std::stringstream timer_label;
+    timer_label << "JL-matrix-rows [device=" << device << "]";
+    device_timer_labels.push_back(timer_label.str());
+
+    START_TIMER(generate);
+    ICICLE_CHECK(get_jl_matrix_rows(
+      seed, sizeof(seed),
+      N,           // row_size = input dimension
+      0,           // start_row
+      output_size, // num_rows
+      cfg,
+      matrix.data() // Output: [num_rows x row_size]
+      ));
+    END_TIMER(generate, timer_label.str().c_str(), true);
+
+    matrices.push_back(std::move(matrix));
+  }
+
+  // Compare all device matrices with the first one
+  const auto& reference_matrix = matrices[0];
+  const auto& reference_device = s_registered_devices[0];
+
+  for (size_t device_idx = 1; device_idx < matrices.size(); ++device_idx) {
+    const auto& matrix = matrices[device_idx];
+    const auto& device = s_registered_devices[device_idx];
+
+    // Compare matrices element by element
+    for (size_t i = 0; i < output_size * N; ++i) {
+      ASSERT_EQ(reference_matrix[i], matrix[i]) << "Matrix mismatch at index " << i << ": " << reference_device << " = "
+                                                << reference_matrix[i] << ", " << device << " = " << matrix[i];
+    }
+  }
+
+  // Additional verification: test with different start_row and num_rows parameters
+  const size_t start_row = 10;
+  const size_t partial_rows = 50;
+  std::vector<std::vector<field_t>> partial_matrices;
+
+  // Generate partial matrix on each device
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    std::vector<field_t> device_partial(partial_rows * N);
+    ICICLE_CHECK(get_jl_matrix_rows(
+      seed, sizeof(seed),
+      N,            // row_size
+      start_row,    // start_row
+      partial_rows, // num_rows
+      cfg, device_partial.data()));
+
+    partial_matrices.push_back(std::move(device_partial));
+  }
+
+  // Compare all partial matrices with the first one
+  const auto& reference_partial = partial_matrices[0];
+
+  for (size_t device_idx = 1; device_idx < partial_matrices.size(); ++device_idx) {
+    const auto& partial = partial_matrices[device_idx];
+    const auto& device = s_registered_devices[device_idx];
+
+    // Compare partial matrices
+    for (size_t i = 0; i < partial_rows * N; ++i) {
+      ASSERT_EQ(reference_partial[i], partial[i])
+        << "Partial matrix mismatch at index " << i << " (start_row=" << start_row << ", partial_rows=" << partial_rows
+        << "): " << reference_device << " = " << reference_partial[i] << ", " << device << " = " << partial[i];
+    }
+  }
+}
+
+// This test verifies the JL-projection lemma: projecting an input vector of Rq polynomials
+// via Zq yields the same value as the constant term of an inner product in Rq with conjugated rows.
+TEST_F(RingTestBase, JLprojectionLemma)
+{
+  const size_t input_size = 8;        // Number of Rq polynomials in the input
+  const size_t projected_size = 16;   // Number of projected output values
+  const size_t d = PolyRing::d;       // Degree of each Rq polynomial
+  const size_t row_size = input_size; // Each JL row is composed of `input_size` Rq polynomials
+
+  // Randomize input polynomials
+  std::vector<PolyRing> input(input_size);
+  PolyRing::rand_host_many(input.data(), input_size);
+
+  // Prepare random seed
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() & 0xFF);
+  }
+
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    // Project using flat Zq view (as if input is Zq vector)
+    std::vector<field_t> projected(projected_size);
+    ICICLE_CHECK(jl_projection(
+      reinterpret_cast<const Zq*>(input.data()), input_size * d, seed, sizeof(seed), {}, projected.data(),
+      projected_size));
+
+    // Check the JL-lemma
+    for (size_t row_idx = 0; row_idx < projected_size; ++row_idx) {
+      std::vector<PolyRing> jl_row_conj(row_size);
+
+      // Generate JL matrix row as Rq polynomials, with conjugation
+      ICICLE_CHECK(get_jl_matrix_rows<PolyRing>(
+        seed, sizeof(seed), row_size, row_idx, 1, /* 1 row */
+        true /* conjugate */, {}, jl_row_conj.data()));
+
+      // compute inner product in Rq domain. Note that we avoid negacyclic-NTT to avoid unnecessary dependency
+      PolyRing inner_product_ntt = {0};
+      for (size_t i = 0; i < row_size; ++i) {
+        inner_product_ntt = inner_product_ntt + Rq_mul(input[i], jl_row_conj[i]);
+      }
+
+      // Validate that the constant term equals the Zq projection result
+      const field_t constant_term = inner_product_ntt.values[0];
+      EXPECT_EQ(constant_term, projected[row_idx]) << "Mismatch at row " << row_idx;
+    }
+  }
+}
+
+TEST_F(RingTestBase, JLProjectionDeviceConsistency)
+{
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  const size_t N = (1 << 16) + 1; // Input vector size
+  const size_t output_size = 256; // JL projected size
+
+  // Skip test if fewer than 2 devices are available
+  if (s_registered_devices.size() < 2) { GTEST_SKIP() << "At least 2 devices are required for this test"; }
+
+  std::vector<field_t> input(N);
+
+  // generate random values in [0, sqrt(q)]. We assume input is low norm.
+  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
+  for (auto& x : input) {
+    uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
+    x = field_t::from(val);
+  }
+
+  const auto cfg = VecOpsConfig{};
+
+  // Prepare random seed
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() % 256);
+  }
+
+  // Store outputs from all devices
+  std::vector<std::vector<field_t>> device_outputs;
+  std::vector<std::string> device_timer_labels;
+
+  // Perform JL projection on each device
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    std::vector<field_t> device_output(output_size);
+    std::stringstream timer_label;
+    timer_label << "JL-projection [device=" << device << "]";
+    device_timer_labels.push_back(timer_label.str());
+
+    START_TIMER(projection);
+    ICICLE_CHECK(
+      jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, device_output.data(), device_output.size()));
+    END_TIMER(projection, timer_label.str().c_str(), true);
+
+    device_outputs.push_back(std::move(device_output));
+  }
+
+  // Compare all device outputs with the first one
+  const auto& reference_output = device_outputs[0];
+  const auto& reference_device = s_registered_devices[0];
+
+  for (size_t device_idx = 1; device_idx < device_outputs.size(); ++device_idx) {
+    const auto& device_output = device_outputs[device_idx];
+    const auto& device = s_registered_devices[device_idx];
+
+    // Compare outputs element by element
+    for (size_t i = 0; i < output_size; ++i) {
+      ASSERT_EQ(reference_output[i], device_output[i])
+        << "Mismatch at index " << i << ": " << reference_device << " = " << reference_output[i] << ", " << device
+        << " = " << device_output[i];
+    }
+  }
+}
+
+TEST_F(RingTestBase, NormBounded)
+{
+  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+  auto square_root = static_cast<uint32_t>(std::sqrt(q));
+
+  const size_t size = 1 << 10;
+  auto input = std::vector<field_t>(size);
+
+  for (size_t i = 0; i < size; ++i) {
+    int32_t val = rand_uint_32b();
+    if (val > square_root) { val = val % square_root; }
+    input[i] = field_t::from(val);
+  }
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    bool output;
+
+    // Test L2 norm
+    {
+      uint128_t actual_norm_squared = 0;
+      for (size_t i = 0; i < size; ++i) {
+        int64_t val = abs_centered(*(int64_t*)&input[i], q);
+        actual_norm_squared += static_cast<uint64_t>(val) * static_cast<uint64_t>(val);
+      }
+
+      uint64_t bound = static_cast<uint64_t>(std::sqrt(actual_norm_squared)) + 1;
+      ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::L2, bound, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "L2 norm check failed with bound " << bound << " on device " << device;
+
+      bound = static_cast<uint64_t>(std::sqrt(actual_norm_squared)) - 1;
+      ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::L2, bound, VecOpsConfig{}, &output));
+      ASSERT_FALSE(output) << "L2 norm check should fail with bound " << bound << " on device " << device;
+    }
+
+    // Test L-infinity norm
+    {
+      // Compute actual L-infinity norm
+      uint64_t actual_norm = 0;
+      for (size_t i = 0; i < size; ++i) {
+        uint64_t val = abs_centered(*(int64_t*)&input[i], q);
+        actual_norm = std::max(actual_norm, val);
+      }
+
+      // Test with bound just above actual norm
+      uint64_t bound = actual_norm + 1;
+      ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, bound, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "L-infinity norm check failed with bound " << bound << " on device " << device;
+
+      // Test with bound just below actual norm
+      bound = actual_norm - 1;
+      ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, bound, VecOpsConfig{}, &output));
+      ASSERT_FALSE(output) << "L-infinity norm check should fail with bound " << bound << " on device " << device;
+    }
+
+    // Test error cases
+    {
+      field_t* nullptr_field_t = nullptr;
+      bool* nullptr_bool = nullptr;
+
+      // Test null input
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_bound(nullptr_field_t, size, eNormType::L2, 100, VecOpsConfig{}, &output));
+
+      // Test null output
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_bound(input.data(), size, eNormType::L2, 100, VecOpsConfig{}, nullptr_bool));
+
+      // Test zero size
+      ASSERT_NE(
+        eIcicleError::SUCCESS, norm::check_norm_bound(input.data(), 0, eNormType::L2, 100, VecOpsConfig{}, &output));
+
+      // Test with values exceeding sqrt(q)
+      auto invalid_input = std::vector<field_t>(size);
+      invalid_input[0] = field_t::from(square_root + 1);
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_bound(invalid_input.data(), size, eNormType::L2, 100, VecOpsConfig{}, &output));
+    }
+  }
+}
+
+TEST_F(RingTestBase, NormRelative)
+{
+  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  auto square_root = static_cast<uint32_t>(std::sqrt(q));
+
+  const size_t size = 1 << 10;
+  auto input_a = std::vector<field_t>(size);
+  auto input_b = std::vector<field_t>(size);
+
+  for (size_t i = 0; i < size; ++i) {
+    int32_t val_a = rand_uint_32b() % (square_root / 4);
+    int32_t val_b = rand_uint_32b() % square_root;
+    input_a[i] = field_t::from(val_a);
+    input_b[i] = field_t::from(val_b);
+  }
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    bool output;
+
+    // Test L2 norm
+    {
+      uint128_t norm_a_squared = 0;
+      uint128_t norm_b_squared = 0;
+
+      for (size_t i = 0; i < size; ++i) {
+        int64_t val_a = abs_centered(*(int64_t*)&input_a[i], q);
+        int64_t val_b = abs_centered(*(int64_t*)&input_b[i], q);
+        norm_a_squared += static_cast<uint128_t>(val_a) * static_cast<uint128_t>(val_a);
+        norm_b_squared += static_cast<uint128_t>(val_b) * static_cast<uint128_t>(val_b);
+      }
+
+      uint64_t passing_scale =
+        static_cast<uint64_t>(std::sqrt(static_cast<double>(norm_a_squared) / static_cast<double>(norm_b_squared))) + 1;
+
+      ICICLE_CHECK(norm::check_norm_relative(
+        input_a.data(), input_b.data(), size, eNormType::L2, passing_scale, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "L2 relative norm check failed with scale " << passing_scale << " on device " << device;
+
+      uint64_t failing_scale = passing_scale - 1;
+      ICICLE_CHECK(norm::check_norm_relative(
+        input_a.data(), input_b.data(), size, eNormType::L2, failing_scale, VecOpsConfig{}, &output));
+      ASSERT_FALSE(output) << "L2 relative norm check should fail with scale " << failing_scale << " on device "
+                           << device;
+    }
+
+    // Test L-infinity norm
+    {
+      int64_t max_abs_a = 0;
+      int64_t max_abs_b = 0;
+
+      for (size_t i = 0; i < size; ++i) {
+        int64_t val_a = abs_centered(*(int64_t*)&input_a[i], q);
+        int64_t val_b = abs_centered(*(int64_t*)&input_b[i], q);
+        max_abs_a = std::max(max_abs_a, val_a);
+        max_abs_b = std::max(max_abs_b, val_b);
+      }
+
+      // Calculate scale that should make the check pass
+      uint64_t passing_scale =
+        static_cast<uint64_t>(static_cast<double>(max_abs_a) / static_cast<double>(max_abs_b)) + 1;
+
+      // Test with scale that should pass
+      ICICLE_CHECK(norm::check_norm_relative(
+        input_a.data(), input_b.data(), size, eNormType::LInfinity, passing_scale, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "L-infinity relative norm check failed with scale " << passing_scale << " on device "
+                          << device;
+
+      // Test with scale that should fail
+      uint64_t failing_scale = passing_scale - 1;
+      ICICLE_CHECK(norm::check_norm_relative(
+        input_a.data(), input_b.data(), size, eNormType::LInfinity, failing_scale, VecOpsConfig{}, &output));
+      ASSERT_FALSE(output) << "L-infinity relative norm check should fail with scale " << failing_scale << " on device "
+                           << device;
+    }
+
+    // Test error cases
+    {
+      field_t* nullptr_field_t = nullptr;
+      bool* nullptr_bool = nullptr;
+
+      // Test null input_a
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(nullptr_field_t, input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+
+      // Test null input_b
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(input_a.data(), nullptr_field_t, size, eNormType::L2, 2, VecOpsConfig{}, &output));
+
+      // Test null output
+      ASSERT_NE(
+        eIcicleError::SUCCESS, norm::check_norm_relative(
+                                 input_a.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, nullptr_bool));
+
+      // Test zero size
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(input_a.data(), input_b.data(), 0, eNormType::L2, 2, VecOpsConfig{}, &output));
+
+      // Test with values exceeding sqrt(q)
+      auto invalid_input = std::vector<field_t>(size);
+      invalid_input[0] = field_t::from(square_root + 1);
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(
+          invalid_input.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(
+          input_a.data(), invalid_input.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+    }
+  }
+}
+
+TEST_F(RingTestBase, NormBoundedBatch)
+{
+  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  auto square_root = static_cast<uint32_t>(std::sqrt(q));
+
+  const size_t size = 1 << 10;
+  const size_t batch_size = 4;
+
+  auto input_a = std::vector<field_t>(size * batch_size);
+
+  for (size_t i = 0; i < size * batch_size; ++i) {
+    input_a[i] = field_t::from(rand_uint_32b() % square_root);
+  }
+
+  // Test L2 norm
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    bool* output = new bool[batch_size];
+    VecOpsConfig cfg = VecOpsConfig{};
+    cfg.batch_size = batch_size;
+
+    uint128_t* actual_norm = new uint128_t[batch_size];
+    for (size_t i = 0; i < batch_size; ++i) {
+      actual_norm[i] = 0;
+      for (size_t j = 0; j < size; ++j) {
+        int64_t val = abs_centered(*(int64_t*)&input_a[i * size + j], q);
+        actual_norm[i] += static_cast<uint64_t>(val) * static_cast<uint64_t>(val);
+      }
+    }
+
+    uint64_t max_bound = 0;
+    uint64_t min_bound = std::numeric_limits<uint64_t>::max();
+    for (size_t i = 0; i < batch_size; ++i) {
+      max_bound = std::max(max_bound, static_cast<uint64_t>(std::sqrt(actual_norm[i])));
+      min_bound = std::min(min_bound, static_cast<uint64_t>(std::sqrt(actual_norm[i])));
+    }
+
+    ICICLE_CHECK(norm::check_norm_bound(input_a.data(), size, eNormType::L2, max_bound + 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_TRUE(output[i]) << "L2 norm check should pass for batch " << i << " on device " << device;
+    }
+
+    ICICLE_CHECK(norm::check_norm_bound(input_a.data(), size, eNormType::L2, min_bound - 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_FALSE(output[i]) << "L2 norm check should fail for batch " << i << " on device " << device;
+    }
+
+    delete[] output;
+  }
+
+  // Test L-infinity norm
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    bool* output = new bool[batch_size];
+    VecOpsConfig cfg = VecOpsConfig{};
+    cfg.batch_size = batch_size;
+
+    uint64_t* actual_max_abs = new uint64_t[batch_size];
+    for (size_t i = 0; i < batch_size; ++i) {
+      actual_max_abs[i] = 0;
+      for (size_t j = 0; j < size; ++j) {
+        int64_t val = abs_centered(*(int64_t*)&input_a[i * size + j], q);
+        actual_max_abs[i] = std::max(actual_max_abs[i], static_cast<uint64_t>(val));
+      }
+    }
+
+    uint64_t max_bound = 0;
+    uint64_t min_bound = std::numeric_limits<uint64_t>::max();
+    for (size_t i = 0; i < batch_size; ++i) {
+      max_bound = std::max(max_bound, actual_max_abs[i]);
+      min_bound = std::min(min_bound, actual_max_abs[i]);
+    }
+
+    ICICLE_CHECK(norm::check_norm_bound(input_a.data(), size, eNormType::LInfinity, max_bound + 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_TRUE(output[i]) << "L-infinity norm check should pass for batch " << i << " on device " << device;
+    }
+
+    ICICLE_CHECK(norm::check_norm_bound(input_a.data(), size, eNormType::LInfinity, min_bound - 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_FALSE(output[i]) << "L-infinity norm check should fail for batch " << i << " on device " << device;
+    }
+
+    delete[] output;
+    delete[] actual_max_abs;
+  }
+}
+
+TEST_F(RingTestBase, NormRelativeBatch)
+{
+  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  auto square_root = static_cast<uint32_t>(std::sqrt(q));
+
+  const size_t size = 1 << 10;
+  const size_t batch_size = 4;
+
+  auto input_a = std::vector<field_t>(size * batch_size);
+  auto input_b = std::vector<field_t>(size * batch_size);
+
+  for (size_t i = 0; i < size * batch_size; ++i) {
+    input_a[i] = field_t::from(rand_uint_32b() % square_root);
+    input_b[i] = field_t::from(rand_uint_32b() % square_root);
+  }
+
+  // Test L2 norm
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    bool* output = new bool[batch_size];
+    VecOpsConfig cfg = VecOpsConfig{};
+    cfg.batch_size = batch_size;
+
+    uint128_t* norm_a_squared = new uint128_t[batch_size];
+    uint128_t* norm_b_squared = new uint128_t[batch_size];
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      norm_a_squared[i] = 0;
+      norm_b_squared[i] = 0;
+      for (size_t j = 0; j < size; ++j) {
+        int64_t val_a = abs_centered(*(int64_t*)&input_a[i * size + j], q);
+        int64_t val_b = abs_centered(*(int64_t*)&input_b[i * size + j], q);
+        norm_a_squared[i] += static_cast<uint128_t>(val_a) * static_cast<uint128_t>(val_a);
+        norm_b_squared[i] += static_cast<uint128_t>(val_b) * static_cast<uint128_t>(val_b);
+      }
+    }
+
+    uint128_t* passing_scale = new uint128_t[batch_size];
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      passing_scale[i] = static_cast<uint128_t>(
+                           std::sqrt(static_cast<double>(norm_a_squared[i]) / static_cast<double>(norm_b_squared[i]))) +
+                         1;
+    }
+
+    uint128_t max_bound = passing_scale[0];
+    uint128_t min_bound = passing_scale[0];
+    for (size_t i = 1; i < batch_size; ++i) {
+      max_bound = std::max(max_bound, passing_scale[i]);
+      min_bound = std::min(min_bound, passing_scale[i]);
+    }
+
+    ICICLE_CHECK(
+      norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, max_bound + 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_TRUE(output[i]) << "L2 relative norm check should pass for batch " << i << " on device " << device;
+    }
+
+    ICICLE_CHECK(
+      norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, min_bound - 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_FALSE(output[i]) << "L2 relative norm check should fail for batch " << i << " on device " << device;
+    }
+  }
+
+  // Test L-infinity norm
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    bool* output = new bool[batch_size];
+    VecOpsConfig cfg = VecOpsConfig{};
+    cfg.batch_size = batch_size;
+
+    uint64_t* max_abs_a = new uint64_t[batch_size];
+    uint64_t* max_abs_b = new uint64_t[batch_size];
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      max_abs_a[i] = 0;
+      max_abs_b[i] = 0;
+      for (size_t j = 0; j < size; ++j) {
+        int64_t val_a = abs_centered(*(int64_t*)&input_a[i * size + j], q);
+        int64_t val_b = abs_centered(*(int64_t*)&input_b[i * size + j], q);
+        max_abs_a[i] = std::max(max_abs_a[i], static_cast<uint64_t>(val_a));
+        max_abs_b[i] = std::max(max_abs_b[i], static_cast<uint64_t>(val_b));
+      }
+    }
+
+    uint64_t* passing_scale = new uint64_t[batch_size];
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      passing_scale[i] = static_cast<uint64_t>(max_abs_a[i]) / static_cast<uint64_t>(max_abs_b[i]) + 1;
+    }
+
+    uint64_t max_bound = passing_scale[0];
+    uint64_t min_bound = passing_scale[0];
+    for (size_t i = 1; i < batch_size; ++i) {
+      max_bound = std::max(max_bound, passing_scale[i]);
+      min_bound = std::min(min_bound, passing_scale[i]);
+    }
+
+    ICICLE_CHECK(norm::check_norm_relative(
+      input_a.data(), input_b.data(), size, eNormType::LInfinity, max_bound + 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_TRUE(output[i]) << "L-infinity relative norm check should pass for batch " << i << " on device " << device;
+    }
+
+    ICICLE_CHECK(norm::check_norm_relative(
+      input_a.data(), input_b.data(), size, eNormType::LInfinity, min_bound - 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_FALSE(output[i]) << "L-infinity relative norm check should fail for batch " << i << " on device "
+                              << device;
+    }
+  }
+}
+
+#ifdef NTT
+TEST_F(RingTestBase, NegacyclicNTT)
+{
+  int size = 1 << 15;
+  std::vector<PolyRing> a(size);
+  std::vector<PolyRing> b(size);
+  PolyRing::rand_host_many(a.data(), size);
+  PolyRing::rand_host_many(b.data(), size);
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    // Dummy NTT to initialize NTT domain for this device (first call per device)
+    PolyRing dummy;
+    ICICLE_CHECK(ntt(&dummy, 1, NTTDir::kForward, NegacyclicNTTConfig{}, &dummy));
+
+    std::vector<PolyRing> res(size);
+
+    std::stringstream timer_label;
+    timer_label << "Rq multiplication via NTT [device=" << device << "]";
+    START_TIMER(RqMul);
+
+    // Forward NTT: Rq → Tq
+    ICICLE_CHECK(ntt(a.data(), size, NTTDir::kForward, NegacyclicNTTConfig{}, a.data()));
+    ICICLE_CHECK(ntt(b.data(), size, NTTDir::kForward, NegacyclicNTTConfig{}, b.data()));
+
+    // Pointwise multiplication in NTT domain
+    ICICLE_CHECK(vector_mul(a.data(), b.data(), size, VecOpsConfig{}, res.data()));
+
+    // Inverse NTT: Tq → Rq
+    ICICLE_CHECK(ntt(res.data(), size, NTTDir::kInverse, NegacyclicNTTConfig{}, res.data()));
+
+    END_TIMER(RqMul, timer_label.str().c_str(), true);
+
+    // Convert a, b back to coefficient domain (in-place inverse NTT)
+    ICICLE_CHECK(ntt(a.data(), size, NTTDir::kInverse, NegacyclicNTTConfig{}, a.data()));
+    ICICLE_CHECK(ntt(b.data(), size, NTTDir::kInverse, NegacyclicNTTConfig{}, b.data()));
+
+    // Verify correctness
+    for (int i = 0; i < size; ++i) {
+      PolyRing expected = Rq_mul(a[i], b[i]);
+      EXPECT_EQ(0, memcmp(&expected, &res[i], sizeof(PolyRing)));
+    }
+  }
+}
+#endif // NTT
+
+TEST_F(RingTestBase, RandomSampling)
+{
+  size_t size = 1 << 20;
+  size_t seed_len = 32;
+  std::vector<std::byte> seed(seed_len);
+  for (size_t i = 0; i < seed_len; ++i) {
+    seed[i] = static_cast<std::byte>(rand_uint_32b());
+  }
+  std::vector<std::byte> seed_prime(seed);
+  seed_prime[0] = static_cast<std::byte>(uint8_t(seed_prime[0]) + 1); // Make sure the seed is different
+
+  std::vector<std::vector<field_t>> a(s_registered_devices.size());
+  std::vector<std::vector<field_t>> b(s_registered_devices.size());
+  for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+    a[device_index] = std::vector<field_t>(size);
+    b[device_index] = std::vector<field_t>(size);
+  }
+
+  auto test_random_sampling = [&](bool fast_mode) {
+    const int N = 15;
+    for (int i = 0; i < N; ++i) {
+      for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+        ICICLE_CHECK(icicle_set_device(s_registered_devices[device_index]));
+
+        // Different seed inconsistency test
+        ICICLE_CHECK(random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, a[device_index].data()));
+        ICICLE_CHECK(
+          random_sampling(size, fast_mode, seed_prime.data(), seed_len, VecOpsConfig{}, b[device_index].data()));
+        bool equal = true;
+        for (size_t j = 0; j < size; ++j) {
+          if (a[device_index][j] != b[device_index][j]) { equal = false; }
+        }
+        ASSERT_FALSE(equal);
+
+        // Same seed consistency test
+        ICICLE_CHECK(random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, a[device_index].data()));
+        ICICLE_CHECK(random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, b[device_index].data()));
+        for (size_t i = 0; i < size; ++i) {
+          ASSERT_EQ(a[device_index][i], b[device_index][i]);
+        }
+      }
+      for (int j = 0; j < size; ++j) {
+        for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+          ASSERT_EQ(a[device_index][j], b[device_index][j]);
+        }
+      }
+    }
+  };
+  test_random_sampling(true);
+  test_random_sampling(false);
 }
