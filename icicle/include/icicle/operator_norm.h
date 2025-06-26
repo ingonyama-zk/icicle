@@ -6,9 +6,11 @@
 ///
 /// Notes:
 /// - N = 64 (fixed), over polynomials modulo X^N + 1
-/// - Input is uint64_t, assumed reduced mod q
+/// - Input is int64_t, assumed reduced mod q
 /// - Uses float32 complex FFT with twist/untwist to compute the spectral ℓ∞ norm
 /// - No batching or heap allocations; ready for device-side integration
+
+/// TODO Roman: need to balance the input values to make it i64, not u64. See python reference
 
 #include <array>
 #include <complex>
@@ -22,7 +24,7 @@ namespace negacyclic_fft_cpu {
   constexpr float PI = 3.14159265358979323846f;
 
   using Complex = std::complex<float>;
-  using Poly = std::array<uint64_t, N>;
+  using Poly = std::array<int64_t, N>;
   using CPoly = std::array<Complex, N>;
 
   /// @brief Compute psi^i where psi = exp(pi * i / N), used for twist/untwist
@@ -75,7 +77,7 @@ namespace negacyclic_fft_cpu {
   }
 
   /// @brief Compute the operator norm of a single polynomial: max |FFT(ψᵢ·aᵢ)| over ℂ
-  inline uint64_t operator_norm(const Poly& a)
+  inline int64_t operator_norm(const Poly& a)
   {
     static const auto twist = compute_twist(false);
     static const auto twist_inv = compute_twist(true);
@@ -86,14 +88,15 @@ namespace negacyclic_fft_cpu {
 
     fft(complex_a);
 
-    for (size_t i = 0; i < N; ++i)
-      complex_a[i] *= twist_inv[i];
+    // Untwist is redundant for norm checking
+    // for (size_t i = 0; i < N; ++i)
+    //   complex_a[i] *= twist_inv[i];
 
     float max_norm = 0.0f;
     for (const auto& x : complex_a)
       max_norm = std::max(max_norm, std::abs(x));
 
-    return static_cast<uint64_t>(std::ceil(max_norm));
+    return static_cast<int64_t>(std::ceil(max_norm));
   }
 
 } // namespace negacyclic_fft_cpu

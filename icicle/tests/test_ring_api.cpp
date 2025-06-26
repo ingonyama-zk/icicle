@@ -1311,3 +1311,17 @@ TEST_F(RingTestBase, ComplexFFT_Alternating)
   ASSERT_LT(opnorm, 101902);             // Python computed '101900.08' but losing precision with f32
   std::cout << "Operator norm (alternating): " << opnorm << "\n";
 }
+
+// TODO Roman: make this test pass by balancing [0,q) --> (-q/2,q/2]. See Python for reference
+TEST_F(RingTestBase, ComplexFFT_QMinus2X)
+{
+  using namespace negacyclic_fft_cpu;
+  constexpr uint64_t q = (1ULL << 62) - 57;
+
+  Poly poly{};
+  poly[1] = q - 2; // Balanced as -2 in operator_norm()
+
+  uint64_t opnorm = operator_norm(poly);
+  ASSERT_EQ(opnorm, 2.1); // FFT of -2*X has magnitude 2 everywhere
+  std::cout << "Operator norm ((q - 2)*X): " << opnorm << "\n";
+}
