@@ -5,7 +5,7 @@ use crate::{
 };
 
 use icicle_runtime::{
-    memory::{DeviceSlice, HostSlice, DeviceVec},
+    memory::{DeviceSlice, DeviceVec, HostSlice},
     test_utilities,
 };
 
@@ -51,9 +51,9 @@ where
         // (2) matmul host memory inputs -> device memory output
         let mut output_device = vec![P::zero(); out_size];
         let mut device_mem_output = DeviceVec::<P>::device_malloc(out_size).unwrap();
-            device_mem_output 
-                .copy_from_host(&HostSlice::from_slice(&output_device))
-                .unwrap();
+        device_mem_output
+            .copy_from_host(&HostSlice::from_slice(&output_device))
+            .unwrap();
         cfg.is_a_on_device = false;
         cfg.is_b_on_device = false;
         cfg.is_result_on_device = true;
@@ -81,14 +81,14 @@ where
         cfg.is_a_on_device = true;
         cfg.is_b_on_device = true;
         cfg.is_result_on_device = false;
-        let mut device_mem_a = DeviceVec::<P>::device_malloc(N*M).unwrap();
-            device_mem_a 
-                .copy_from_host(&HostSlice::from_slice(&input_a))
-                .unwrap();
-        let mut device_mem_b = DeviceVec::<P>::device_malloc(M*K).unwrap();
-            device_mem_b
-                .copy_from_host(&HostSlice::from_slice(&input_b))
-                .unwrap();
+        let mut device_mem_a = DeviceVec::<P>::device_malloc(N * M).unwrap();
+        device_mem_a
+            .copy_from_host(&HostSlice::from_slice(&input_a))
+            .unwrap();
+        let mut device_mem_b = DeviceVec::<P>::device_malloc(M * K).unwrap();
+        device_mem_b
+            .copy_from_host(&HostSlice::from_slice(&input_b))
+            .unwrap();
         let mut output_host_2 = output_host.clone();
         P::matmul(
             &mut device_mem_a,
@@ -110,18 +110,18 @@ where
         cfg.is_b_on_device = true;
         cfg.is_result_on_device = true;
         let mut output_device = vec![P::zero(); out_size];
-        let mut device_mem_a = DeviceVec::<P>::device_malloc(N*M).unwrap();
-            &mut device_mem_a 
-                .copy_from_host(&HostSlice::from_slice(&input_a))
-                .unwrap();
-        let mut device_mem_b = DeviceVec::<P>::device_malloc(M*K).unwrap();
-            &mut device_mem_b
-                .copy_from_host(&HostSlice::from_slice(&input_b))
-                .unwrap();
-                let mut device_mem_output = DeviceVec::<P>::device_malloc(out_size).unwrap();
-            &mut device_mem_output 
-                .copy_from_host(&HostSlice::from_slice(&output_device))
-                .unwrap();
+        let mut device_mem_a = DeviceVec::<P>::device_malloc(N * M).unwrap();
+        &mut device_mem_a
+            .copy_from_host(&HostSlice::from_slice(&input_a))
+            .unwrap();
+        let mut device_mem_b = DeviceVec::<P>::device_malloc(M * K).unwrap();
+        &mut device_mem_b
+            .copy_from_host(&HostSlice::from_slice(&input_b))
+            .unwrap();
+        let mut device_mem_output = DeviceVec::<P>::device_malloc(out_size).unwrap();
+        &mut device_mem_output
+            .copy_from_host(&HostSlice::from_slice(&output_device))
+            .unwrap();
 
         device_mem_output
             .copy_to_host(HostSlice::from_mut_slice(&mut host_buffer))
@@ -144,10 +144,10 @@ where
         cfg.is_a_on_device = true;
         cfg.is_b_on_device = false;
         cfg.is_result_on_device = false;
-        let mut device_mem_a = DeviceVec::<P>::device_malloc(N*M).unwrap();
-            &mut device_mem_a 
-                .copy_from_host(&HostSlice::from_slice(&input_a))
-                .unwrap();
+        let mut device_mem_a = DeviceVec::<P>::device_malloc(N * M).unwrap();
+        &mut device_mem_a
+            .copy_from_host(&HostSlice::from_slice(&input_a))
+            .unwrap();
         let mut output_host_3 = output_host.clone();
         P::matmul(
             &mut device_mem_a,
