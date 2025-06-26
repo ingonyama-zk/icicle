@@ -114,9 +114,15 @@ public:
     return CubicExtensionField{xs - ys.c0, ys.c1.neg(), ys.c2.neg()};
   }
 
-  HOST_DEVICE_INLINE CubicExtensionField operator+(const BaseField& ys) const { return CubicExtensionField{c0 + ys, c1, c2}; }
+  HOST_DEVICE_INLINE CubicExtensionField operator+(const BaseField& ys) const
+  {
+    return CubicExtensionField{c0 + ys, c1, c2};
+  }
 
-  HOST_DEVICE_INLINE CubicExtensionField operator-(const BaseField& ys) const { return CubicExtensionField{c0 - ys, c1, c2}; }
+  HOST_DEVICE_INLINE CubicExtensionField operator-(const BaseField& ys) const
+  {
+    return CubicExtensionField{c0 - ys, c1, c2};
+  }
 
   constexpr HOST_DEVICE_INLINE CubicExtensionField operator-() const { return this->neg(); }
 
@@ -213,8 +219,7 @@ public:
     return ys.mul_wide(xs);
   }
 
-  friend HOST_DEVICE_INLINE CubicExtensionField
-  operator*(const CubicExtensionField& xs, const CubicExtensionField& ys)
+  friend HOST_DEVICE_INLINE CubicExtensionField operator*(const CubicExtensionField& xs, const CubicExtensionField& ys)
   {
     Wide xy = xs.mul_wide(ys);
     return xy.reduce();
@@ -222,15 +227,15 @@ public:
 
   template <
     class T2,
-    typename = typename std::enable_if<!std::is_same<T2, CubicExtensionField>() && !std::is_base_of<CubicExtensionField, T2>()>::type>
+    typename = typename std::enable_if<
+      !std::is_same<T2, CubicExtensionField>() && !std::is_base_of<CubicExtensionField, T2>()>::type>
   friend HOST_DEVICE_INLINE CubicExtensionField operator*(const CubicExtensionField& xs, const T2& ys)
   {
     Wide xy = xs.mul_wide(ys);
     return xy.reduce();
   }
 
-  friend HOST_DEVICE_INLINE CubicExtensionField
-  operator*(const CubicExtensionField& xs, const BaseField& ys)
+  friend HOST_DEVICE_INLINE CubicExtensionField operator*(const CubicExtensionField& xs, const BaseField& ys)
   {
     Wide xy = xs.mul_wide(ys);
     return xy.reduce();

@@ -230,14 +230,16 @@ public:
   }
 
   template <class T2>
-  friend HOST_DEVICE_INLINE ComplexExtensionField
-  operator*(const ComplexExtensionField& xs, const T2& ys)
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const ComplexExtensionField& xs, const T2& ys)
   {
     Wide xy = xs.mul_wide(ys);
     return xy.reduce();
   }
 
-  template <class T2, typename = typename std::enable_if<!std::is_same<T2, ComplexExtensionField>() && !std::is_base_of<ComplexExtensionField, T2>()>::type>
+  template <
+    class T2,
+    typename = typename std::enable_if<
+      !std::is_same<T2, ComplexExtensionField>() && !std::is_base_of<ComplexExtensionField, T2>()>::type>
   friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const T2& ys, const ComplexExtensionField& xs)
   {
     return xs * ys;
