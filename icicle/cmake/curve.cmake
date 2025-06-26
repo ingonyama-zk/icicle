@@ -53,8 +53,11 @@ function(setup_curve_target CURVE CURVE_INDEX FEATURES_STRING)
   handle_curve(icicle_curve) # basic curve and field methods, including vec ops
   # Handle features
   handle_msm(icicle_curve "${FEATURES_LIST}")
+  set(MSM ${MSM} PARENT_SCOPE)
   handle_g2(icicle_curve "${FEATURES_LIST}")
+  set(G2 ${G2} PARENT_SCOPE)
   handle_ecntt(icicle_curve "${FEATURES_LIST}")
+  set(ECNTT ${ECNTT} PARENT_SCOPE)
   handle_pairing(icicle_curve "${FEATURES_LIST}")
   # Add additional feature handling calls here
 
