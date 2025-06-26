@@ -352,11 +352,19 @@ extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)
   return eIcicleError::SUCCESS;
 }
 
+bool path_exists(const char* path) {
+    if (path == nullptr) {
+        return false;
+    }
+    struct stat buffer;
+    return (stat(path, &buffer) == 0);
+}
+
 extern "C" eIcicleError icicle_load_backend_from_env_or_default()
 {
   // First, check the environment variable
   const char* env_dir = std::getenv("ICICLE_BACKEND_INSTALL_DIR");
-  if (env_dir && std::filesystem::exists(env_dir)) {
+  if (env_dir && path_exists(env_dir)) {
     // Attempt to load the backend from the environment variable directory
     eIcicleError result = icicle_load_backend(env_dir, true /*=recursive*/);
     if (result == eIcicleError::SUCCESS) {
@@ -370,7 +378,7 @@ extern "C" eIcicleError icicle_load_backend_from_env_or_default()
 
   // If not found or failed, fall back to the default directory
   const std::string default_dir = "/opt/icicle/lib/backend";
-  if (std::filesystem::exists(default_dir)) {
+  if (path_exists(default_dir.c_str())) {
     eIcicleError result = icicle_load_backend(default_dir.c_str(), true /*=recursive*/);
     if (result == eIcicleError::SUCCESS) {
       ICICLE_LOG_INFO << "ICICLE backend loaded from " << default_dir;
