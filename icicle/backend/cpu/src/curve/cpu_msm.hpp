@@ -239,15 +239,14 @@ private:
   void phase1_populate_buckets(const scalar_t* scalars, const A* bases)
   {
     // Divide the msm problem to workers
-    const int worker_msm_size = (m_msm_size + m_nof_workers - 1) / m_nof_workers; // round up
+    // const int worker_msm_size = (m_msm_size + m_nof_workers - 1) / m_nof_workers; // round up
+    const int interval_size = std::max<uint32_t>(1, m_msm_size / m_nof_workers / 16);
+    std::atomic<int> interval_start(0);
 
     // Run workers to build their buckets on a subset of the scalars and bases
     for (int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
       m_taskflow.emplace([&, worker_i]() {
-        const int scalars_start_idx = worker_msm_size * worker_i;
-        const int bases_start_idx = scalars_start_idx * m_precompute_factor;
-        const int cur_worker_msm_size = std::min(worker_msm_size, m_msm_size - worker_i * worker_msm_size);
-        worker_run_phase1(worker_i, scalars + scalars_start_idx, bases + bases_start_idx, cur_worker_msm_size);
+        worker_run_phase1(worker_i, scalars, bases, interval_start, interval_size);
       });
     }
 
@@ -255,8 +254,8 @@ private:
     run_workers_and_wait();
   }
 
-  // Each worker run this function and update its buckets - this function needs re writing
-  void worker_run_phase1(const int worker_idx, const scalar_t* scalars, const A* bases, const int msm_size)
+// Each worker run this function and update its buckets - this function needs re writing
+  void worker_run_phase1(const int worker_idx, const scalar_t* scalars, const A* bases, std::atomic<int> &interval_start, const int interval_size)
   {
     // Init My buckets:
     std::vector<Bucket>& buckets = m_workers_buckets[worker_idx];
@@ -268,46 +267,55 @@ private:
     // NUmber of windows / additions per scalar in case num_bms * precompute_factor exceed scalar width
     const int num_bms_before_precompute = ((m_scalar_size_with_carry - 1) / m_c) + 1; // +1 for ceiling
     int carry = 0;
-    for (int i = 0; i < msm_size; i++) {
-      carry = 0;
-      // Handle required preprocess of scalar
-      scalar_t scalar =
-        m_config.are_scalars_montgomery_form ? scalar_t::from_montgomery(scalars[i]) : scalars[i]; // TBD: avoid copy
-      bool negate_p_and_s = (!m_is_chopped_scalar) && scalar.get_scalar_bits(m_scalar_size - 1, 1) > 0;
-      if (negate_p_and_s) { scalar = scalar_t::neg(scalar); } // TBD: inplace
-      int scalar_offset = 0;
-      for (int j = 0; j < m_precompute_factor; j++) {
-        // Handle required preprocess of base P. Note: no need to convert to montgomery. Projective point handles it)
-        const A& base = bases[m_precompute_factor * i + j];
-        if (base == A::zero()) { continue; } // TBD: why is that? can be done more efficiently?
-        const A base_neg = A::neg(base);
+    while (1) {
+      // get a new interval to process. If no more scalars, return
+      const int cur_interval_start = interval_start.fetch_add(interval_size);
+      if (cur_interval_start >= m_msm_size) {
+        return;
+      }
+      // run over all scalars in the interval
+      const int cur_interval_end = std::min(cur_interval_start + interval_size, m_msm_size);
+      for (int i = cur_interval_start; i < cur_interval_end; i++) {  
+        carry = 0;
+        // Handle required preprocess of scalar
+        scalar_t scalar =
+          m_config.are_scalars_montgomery_form ? scalar_t::from_montgomery(scalars[i]) : scalars[i]; // TBD: avoid copy
+        bool negate_p_and_s = (!m_is_chopped_scalar) && scalar.get_scalar_bits(m_scalar_size - 1, 1) > 0;
+        if (negate_p_and_s) { scalar = scalar_t::neg(scalar); } // TBD: inplace
+        int scalar_offset = 0;
+        for (int j = 0; j < m_precompute_factor; j++) {
+          // Handle required preprocess of base P. Note: no need to convert to montgomery. Projective point handles it)
+          const A& base = bases[m_precompute_factor * i + j];
+          if (base == A::zero()) { continue; } // TBD: why is that? can be done more efficiently?
+          const A base_neg = A::neg(base);
 
-        for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
-          // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
-          if (m_nof_buckets_module * j + bm_i >= num_bms_before_precompute) { break; }
-          const unsigned coeff_width = std::min(m_c, m_scalar_size - scalar_offset);
-          const uint32_t curr_coeff = scalar.get_scalar_bits(scalar_offset, coeff_width) + carry;
-          // For the edge case of curr_coeff = c (limb=c-1, carry=1) use the sign bit mask
-          if ((curr_coeff & coeff_bit_mask_with_sign_bit) != 0) {
-            // Remove sign to infer the bkt idx.
-            carry = curr_coeff > m_bm_size;
-            int bkt_idx = carry ? m_bm_size * bm_i + ((-curr_coeff) & coeff_bit_mask_no_sign_bit)
-                                : m_bm_size * bm_i + (curr_coeff & coeff_bit_mask_no_sign_bit);
-            // Check for collision in that bucket and either dispatch an addition or store the P accordingly.
-            if (buckets_busy[bkt_idx]) {
-              buckets[bkt_idx].point =
-                buckets[bkt_idx].point + ((negate_p_and_s ^ (carry > 0)) ? base_neg : base); // TBD: inplace
+          for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
+            // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
+            if (m_nof_buckets_module * j + bm_i >= num_bms_before_precompute) { break; }
+            const unsigned coeff_width = std::min(m_c, m_scalar_size - scalar_offset);
+            const uint32_t curr_coeff = scalar.get_scalar_bits(scalar_offset, coeff_width) + carry;
+            // For the edge case of curr_coeff = c (limb=c-1, carry=1) use the sign bit mask
+            if ((curr_coeff & coeff_bit_mask_with_sign_bit) != 0) {
+              // Remove sign to infer the bkt idx.
+              carry = curr_coeff > m_bm_size;
+              int bkt_idx = carry ? m_bm_size * bm_i + ((-curr_coeff) & coeff_bit_mask_no_sign_bit)
+                                  : m_bm_size * bm_i + (curr_coeff & coeff_bit_mask_no_sign_bit);
+              // Check for collision in that bucket and either dispatch an addition or store the P accordingly.
+              if (buckets_busy[bkt_idx]) {
+                buckets[bkt_idx].point =
+                  buckets[bkt_idx].point + ((negate_p_and_s ^ (carry > 0)) ? base_neg : base); // TBD: inplace
+              } else {
+                buckets_busy[bkt_idx] = true;
+                buckets[bkt_idx].point =
+                  P::from_affine(((negate_p_and_s ^ (carry > 0)) ? base_neg : base)); // TBD: inplace
+              }
             } else {
-              buckets_busy[bkt_idx] = true;
-              buckets[bkt_idx].point =
-                P::from_affine(((negate_p_and_s ^ (carry > 0)) ? base_neg : base)); // TBD: inplace
+              // Handle edge case where coeff = 1 << c due to carry overflow which means:
+              // coeff & coeff_mask == 0 but there is a carry to propagate to the next segment
+              carry = curr_coeff >> m_c;
             }
-          } else {
-            // Handle edge case where coeff = 1 << c due to carry overflow which means:
-            // coeff & coeff_mask == 0 but there is a carry to propagate to the next segment
-            carry = curr_coeff >> m_c;
+            scalar_offset += m_c;
           }
-          scalar_offset += m_c;
         }
       }
     }
