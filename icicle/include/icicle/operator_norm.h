@@ -1,16 +1,20 @@
 #pragma once
 
-/// @file complex_fft.h
-/// @brief Header for negacyclic FFT of size N=64 over Zq[X]/(X^N + 1), using float32.
-/// Designed for CPU and GPU compatibility (f32 math, no dynamic memory, static layout).
+/// @file operator_norm.h
+/// @brief Operator norm estimation for polynomials in Zq[X]/(X^N + 1) using float32 FFT.
+/// This version is tailored for single-threaded (or per-thread) use, compatible with GPU kernels.
+///
+/// Notes:
+/// - N = 64 (fixed), over polynomials modulo X^N + 1
+/// - Input is uint64_t, assumed reduced mod q
+/// - Uses float32 complex FFT with twist/untwist to compute the spectral ℓ∞ norm
+/// - No batching or heap allocations; ready for device-side integration
 
 #include <array>
 #include <complex>
 #include <cstdint>
 #include <cmath>
 #include <algorithm>
-
-// TODO: use taskflow, compute on a batch of polynomials
 
 namespace negacyclic_fft_cpu {
 
@@ -21,7 +25,7 @@ namespace negacyclic_fft_cpu {
   using Poly = std::array<uint64_t, N>;
   using CPoly = std::array<Complex, N>;
 
-  // Compute psi^i where psi = exp(pi i / N), used for twist and untwist
+  /// @brief Compute psi^i where psi = exp(pi * i / N), used for twist/untwist
   inline std::array<Complex, N> compute_twist(bool inverse = false)
   {
     std::array<Complex, N> twist{};
@@ -34,12 +38,12 @@ namespace negacyclic_fft_cpu {
     return twist;
   }
 
-  // In-place radix-2 Cooley-Tukey FFT
+  /// @brief In-place Cooley-Tukey radix-2 FFT (float32)
   inline void fft(CPoly& a, bool inverse = false)
   {
-    size_t n = a.size();
+    const size_t n = a.size();
 
-    // Bit reversal permutation
+    // Bit-reversal permutation
     for (size_t i = 1, j = 0; i < n; ++i) {
       size_t bit = n >> 1;
       for (; j & bit; bit >>= 1)
@@ -51,7 +55,6 @@ namespace negacyclic_fft_cpu {
     for (size_t len = 2; len <= n; len <<= 1) {
       float angle = 2.0f * PI / static_cast<float>(len) * (inverse ? -1.0f : 1.0f);
       Complex wlen(std::cos(angle), std::sin(angle));
-
       for (size_t i = 0; i < n; i += len) {
         Complex w = 1.0f;
         for (size_t j = 0; j < len / 2; ++j) {
@@ -71,7 +74,7 @@ namespace negacyclic_fft_cpu {
     }
   }
 
-  // Compute operator norm of a polynomial in Zq[X]/(X^N + 1)
+  /// @brief Compute the operator norm of a single polynomial: max |FFT(ψᵢ·aᵢ)| over ℂ
   inline uint64_t operator_norm(const Poly& a)
   {
     static const auto twist = compute_twist(false);
