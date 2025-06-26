@@ -42,7 +42,7 @@ struct LabradorProver {
   }
 
   std::vector<Rq> prepare_recursion_witness(
-    const PartialTranscript& trs, const LabradorBaseCaseProof& pf, size_t base0, size_t mu, size_t nu);
+    const PartialTranscript& trs, const LabradorBaseCaseProof& pf, uint32_t base0, size_t mu, size_t nu);
 
   std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> prove();
 };

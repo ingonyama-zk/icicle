@@ -68,6 +68,36 @@ std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, std::byte* seed, 
   return challenge;
 }
 
+eIcicleError RecursionPreparer::copy_like_z0(Rq* dst, const Rq* src) const
+{
+  // copy to dst[0 : n]
+  return icicle_copy(dst, src, prev_n * sizeof(Rq));
+}
+
+eIcicleError RecursionPreparer::copy_like_z1(Rq* dst, const Rq* src) const
+{
+  // copy to dst[nu * n_prime : nu * n_prime + n]
+  return icicle_copy(&dst[nu * n_prime], src, prev_n * sizeof(Rq));
+}
+
+eIcicleError RecursionPreparer::copy_like_t(Rq* dst, const Rq* src) const
+{
+  // copy to dst[2*nu*n_prime : 2*nu*n_prime + |t|]
+  return icicle_copy(&dst[(2 * nu) * n_prime], src, t_len * sizeof(Rq));
+}
+
+eIcicleError RecursionPreparer::copy_like_g(Rq* dst, const Rq* src) const
+{
+  // copy to dst[(2*nu + L_t) * n_prime : ...]
+  return icicle_copy(&dst[(2 * nu + L_t) * n_prime], src, g_len * sizeof(Rq));
+}
+
+eIcicleError RecursionPreparer::copy_like_h(Rq* dst, const Rq* src) const
+{
+  // copy to dst[(2*nu + L_t + L_g) * n_prime : ...]
+  return icicle_copy(&dst[(2 * nu + L_t + L_g) * n_prime], src, h_len * sizeof(Rq));
+}
+
 LabradorInstance prepare_recursion_instance(
   const LabradorParam& prev_param,
   const EqualityInstance& final_const,

@@ -11,6 +11,7 @@ using namespace icicle::labrador;
 /* ======================================================================
  *  Constraint descriptions
  * ====================================================================*/
+
 struct EqualityInstance {
   size_t r;            // Number of witness vectors
   size_t n;            // Dimension of each vector in Tq
@@ -52,6 +53,7 @@ struct ConstZeroInstance {
 /* ======================================================================
  *  Protocol parameters
  * ====================================================================*/
+
 struct LabradorParam {
   // Problem size
   size_t r; // number of witness vectors
@@ -120,6 +122,7 @@ struct LabradorParam {
 /* ======================================================================
  *  Instance to be proved
  * ====================================================================*/
+
 struct LabradorInstance {
   LabradorParam param;                                   // LabradorParam for this instance
   std::vector<EqualityInstance> equality_constraints;    // K equality constraints

@@ -38,3 +38,41 @@ LabradorInstance prepare_recursion_instance(
   size_t base0,
   size_t mu,
   size_t nu);
+
+struct RecursionPreparer {
+  size_t prev_r, prev_n, mu, nu;
+  uint32_t base0;
+
+  // These are internally created
+  size_t n_prime, r_prime;
+  size_t t_len, g_len, h_len;
+  size_t L_t, L_g, L_h;
+
+  RecursionPreparer(const LabradorParam& param, size_t mu, size_t nu, uint32_t base0)
+      : prev_r(param.r), prev_n(param.n), mu(mu), nu(nu), base0(base0)
+  {
+    t_len = param.t_len();
+    g_len = param.g_len();
+    h_len = param.h_len();
+    size_t m = t_len + g_len + h_len;
+
+    n_prime = std::max(std::ceil((double)prev_n / nu), std::ceil((double)m / mu));
+
+    L_t = (t_len + n_prime - 1) / n_prime;
+    L_g = (g_len + n_prime - 1) / n_prime;
+    L_h = (h_len + n_prime - 1) / n_prime;
+    r_prime = (2 * nu + L_t + L_g + L_h);
+  }
+
+  // NOTE: for these functions need to ensure that the size of dst is r_prime * n_prime and src has correct size (same
+  // as z0, z1, t, g, h depending on what is being called)
+
+  // Needs dst size = r_prime * n_prime and src size = prev_n
+  eIcicleError copy_like_z0(Rq* dst, const Rq* src) const;
+  // Needs dst size = r_prime * n_prime and src size = prev_n
+  eIcicleError copy_like_z1(Rq* dst, const Rq* src) const;
+  // Needs dst size = r_prime * n_prime and src size = prev_n
+  eIcicleError copy_like_t(Rq* dst, const Rq* src) const;
+  eIcicleError copy_like_g(Rq* dst, const Rq* src) const;
+  eIcicleError copy_like_h(Rq* dst, const Rq* src) const;
+};
