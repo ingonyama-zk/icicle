@@ -1,6 +1,6 @@
 use crate::ntt::{NttAlgorithm, Ordering, CUDA_NTT_ALGORITHM, CUDA_NTT_FAST_TWIDDLES_MODE};
 use crate::vec_ops::{transpose_matrix, VecOps, VecOpsConfig};
-use icicle_runtime::memory::{HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
+use icicle_runtime::memory::{IntoIcicleSlice, IntoIcicleSliceMut};
 use icicle_runtime::{memory::DeviceVec, runtime, stream::IcicleStream, test_utilities};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
@@ -108,7 +108,8 @@ where
             let ntt_result_half = ntt_result_half.into_slice_mut();
             let mut ntt_result_coset = vec![F::zero(); small_size];
             let ntt_result_coset = ntt_result_coset.into_slice_mut();
-            let scalars_h = HostSlice::from_slice(&scalars[..small_size]);
+            let scalars_h = &scalars[..small_size];
+            let scalars_h = scalars_h.into_slice();
 
             ntt(scalars_h, NTTDir::kForward, &config, ntt_result_half).unwrap();
             assert_ne!(*ntt_result_half.as_slice(), scalars);
