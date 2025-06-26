@@ -109,16 +109,16 @@ static eIcicleError cpu_decompose_balanced_digits(
 
   tf::Taskflow tasks;
   tf::Executor executor(get_nof_workers(config));
-
-  // To decompose PolyRing polynomials into balanced digits, we decompose all d coefficients, in num_digits steps,
-  // creating a polynomial on each step.
+  
   const size_t total_size = input_size * config.batch_size;
   constexpr size_t task_size = 256; // Seems to be working better
   const size_t nof_tasks = (total_size + task_size - 1) / task_size;
+
   for (int task_idx = 0; task_idx < nof_tasks; ++task_idx) {
     const size_t start = task_idx * task_size;
     const size_t end = std::min(total_size, start + task_size);
     const size_t nof_elements = end-start;
+
     tasks.emplace([=] {            
       // Temporary buffer to hold intermediate remainders during decomposition.
       int64_t remainder[task_size]; 
@@ -183,12 +183,14 @@ static eIcicleError cpu_recompose_from_balanced_digits(
   tf::Executor executor(get_nof_workers(config));
 
   const size_t total_size = output_size * config.batch_size;
-  constexpr size_t task_size = 32; // TODO Yuval: why?
+  constexpr size_t task_size = 256; // Seems to work well
   const size_t nof_tasks = (total_size + task_size - 1) / task_size;
   for (int task_idx = 0; task_idx < nof_tasks; ++task_idx) {
+    const size_t start = task_idx * task_size;
+    const size_t end = std::min(total_size, start + task_size);
+    const size_t nof_elements = end-start;
     tasks.emplace([=]() {
-      // Recompose a single output polynomial from its digit-wise components
-      for (int i = 0; i < task_size; ++i) {
+      for (int i = 0; i < nof_elements; ++i) {
         field_t acc = field_t::zero();
         // Accumulate from most significant digit to least
         for (int digit_idx = digits_per_element - 1; digit_idx >= 0; --digit_idx) {
