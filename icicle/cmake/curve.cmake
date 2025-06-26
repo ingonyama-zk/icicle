@@ -43,6 +43,12 @@ endfunction()
 function(setup_curve_target CURVE CURVE_INDEX FEATURES_STRING)
   # the scalar field of the curve is built to a field library (like babybear is built)
   setup_field_target(${CURVE} ${CURVE_INDEX} ${FEATURES_STRING})
+  set(NTT ${NTT} PARENT_SCOPE)
+  set(EXT_FIELD ${EXT_FIELD} PARENT_SCOPE)
+  set(POSEIDON ${POSEIDON} PARENT_SCOPE)
+  set(POSEIDON2 ${POSEIDON2} PARENT_SCOPE)
+  set(SUMCHECK ${SUMCHECK} PARENT_SCOPE)
+  set(FRI ${FRI} PARENT_SCOPE)
 
   add_library(icicle_curve SHARED)
 
