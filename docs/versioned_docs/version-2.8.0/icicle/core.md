@@ -2,7 +2,7 @@
 
 ICICLE Core is a library written in C++/CUDA. All the ICICLE primitives are implemented within ICICLE Core.
 
-The Core is split into logical modules that can be compiled into static libraries using different [strategies](#compilation-strategies). You can then [link](#linking) these libraries with your C++ project or write your own [bindings](#writing-new-bindings-for-icicle) for other programming languages. If you want to use ICICLE with existing bindings please refer to the [Rust](/icicle/rust-bindings) or [Golang](/icicle/golang-bindings) bindings documentation.
+The Core is split into logical modules that can be compiled into static libraries using different [strategies](#compilation-strategies). You can then [link](#linking) these libraries with your C++ project or write your own [bindings](#writing-new-bindings-for-icicle) for other programming languages. If you want to use ICICLE with existing bindings please refer to the [Rust](./rust-bindings) or [Golang](./golang-bindings) bindings documentation.
 
 ## Supported curves, fields and operations
 

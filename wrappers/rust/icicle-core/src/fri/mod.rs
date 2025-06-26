@@ -216,83 +216,118 @@ macro_rules! impl_fri {
 #[macro_export]
 macro_rules! impl_fri_tests {
     (
-      $field_prefix_ident:ident,
       $ntt_field:ident,
       $field:ident
     ) => {
-        mod $field_prefix_ident {
-            use super::*;
-            use icicle_core::fri::fri_transcript_config::FriTranscriptConfig;
-            use icicle_core::fri::tests::{check_fri, check_fri_on_device, check_fri_proof_serialization};
-            use icicle_core::hash::Hasher;
-            use icicle_core::ntt::tests::init_domain;
-            use icicle_hash::keccak::Keccak256;
-            use icicle_runtime::test_utilities;
-            use icicle_runtime::{device::Device, runtime};
-            use serial_test::parallel;
-            use std::sync::Once;
+        use super::*;
+        use icicle_core::fri::fri_transcript_config::FriTranscriptConfig;
+        use icicle_core::fri::tests::{check_fri, check_fri_on_device, check_fri_proof_serialization};
+        use icicle_core::hash::Hasher;
+        use icicle_core::ntt::tests::init_domain;
+        use icicle_hash::keccak::Keccak256;
+        use icicle_runtime::test_utilities;
+        use icicle_runtime::{device::Device, runtime};
+        use serial_test::parallel;
+        use std::sync::Once;
 
-            const MAX_SIZE: u64 = 1 << 10;
-            static INIT: Once = Once::new();
-            const FAST_TWIDDLES_MODE: bool = false;
+        const MAX_SIZE: u64 = 1 << 10;
+        static INIT: Once = Once::new();
+        const FAST_TWIDDLES_MODE: bool = false;
 
-            pub fn initialize() {
-                INIT.call_once(move || {
-                    test_utilities::test_load_and_init_devices();
-                    // init domain for both devices
-                    test_utilities::test_set_ref_device();
-                    init_domain::<$ntt_field>(MAX_SIZE, FAST_TWIDDLES_MODE);
+        pub fn initialize() {
+            INIT.call_once(move || {
+                test_utilities::test_load_and_init_devices();
+                // init domain for both devices
+                test_utilities::test_set_ref_device();
+                init_domain::<$ntt_field>(MAX_SIZE, FAST_TWIDDLES_MODE);
 
-                    test_utilities::test_set_main_device();
-                    init_domain::<$ntt_field>(MAX_SIZE, FAST_TWIDDLES_MODE);
-                });
                 test_utilities::test_set_main_device();
-            }
+                init_domain::<$ntt_field>(MAX_SIZE, FAST_TWIDDLES_MODE);
+            });
+            test_utilities::test_set_main_device();
+        }
 
-            // Note: tests are prefixed with 'phase4' since they conflict with NTT tests domain.
-            //       The fri tests are executed via 'cargo test phase4' as an additional step
+        // Note: tests are prefixed with 'phase4' since they conflict with NTT tests domain.
+        //       The fri tests are executed via 'cargo test phase4' as an additional step
 
-            #[test]
-            pub fn phase4_test_fri() {
-                initialize();
-                let merkle_tree_leaves_hash = Keccak256::new(std::mem::size_of::<$field>() as u64).unwrap();
-                let merkle_tree_compress_hash = Keccak256::new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
-                let transcript_hash = Keccak256::new(0).unwrap();
-                check_fri::<$field>(
-                    &merkle_tree_leaves_hash,
-                    &merkle_tree_compress_hash,
-                    &transcript_hash,
-                );
-            }
+        #[test]
+        pub fn phase4_test_fri() {
+            initialize();
+            let merkle_tree_leaves_hash = Keccak256::new(std::mem::size_of::<$field>() as u64).unwrap();
+            let merkle_tree_compress_hash = Keccak256::new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
+            let transcript_hash = Keccak256::new(0).unwrap();
+            check_fri::<$field>(
+                &merkle_tree_leaves_hash,
+                &merkle_tree_compress_hash,
+                &transcript_hash,
+            );
+        }
 
-            #[test]
-            pub fn phase4_test_fri_on_device() {
-                initialize();
+        #[test]
+        pub fn phase4_test_fri_on_device() {
+            initialize();
 
-                let merkle_tree_leaves_hash = Keccak256::new(std::mem::size_of::<$field>() as u64).unwrap();
-                let merkle_tree_compress_hash = Keccak256::new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
-                let transcript_hash = Keccak256::new(0).unwrap();
-                check_fri_on_device::<$field>(
-                    &merkle_tree_leaves_hash,
-                    &merkle_tree_compress_hash,
-                    &transcript_hash,
-                );
-            }
+            let merkle_tree_leaves_hash = Keccak256::new(std::mem::size_of::<$field>() as u64).unwrap();
+            let merkle_tree_compress_hash = Keccak256::new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
+            let transcript_hash = Keccak256::new(0).unwrap();
+            check_fri_on_device::<$field>(
+                &merkle_tree_leaves_hash,
+                &merkle_tree_compress_hash,
+                &transcript_hash,
+            );
+        }
 
-            #[test]
-            pub fn phase4_test_fri_proof_serialization() {
-                initialize();
-                let merkle_tree_leaves_hash = Keccak256::new(std::mem::size_of::<$field>() as u64).unwrap();
-                let merkle_tree_compress_hash = Keccak256::new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
-                let transcript_hash = Keccak256::new(0).unwrap();
-                check_fri_proof_serialization::<$field, _, _, String>(
-                    &merkle_tree_leaves_hash,
-                    &merkle_tree_compress_hash,
-                    &transcript_hash,
-                    |fri_proof| serde_json::to_string(fri_proof).unwrap(),
-                    |s| serde_json::from_str(&s).unwrap(),
-                );
-            }
+        #[test]
+        pub fn phase4_test_fri_proof_serialization() {
+            initialize();
+            let merkle_tree_leaves_hash = Keccak256::new(std::mem::size_of::<$field>() as u64).unwrap();
+            let merkle_tree_compress_hash = Keccak256::new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
+            let transcript_hash = Keccak256::new(0).unwrap();
+            check_fri_proof_serialization::<$field, _, _, String>(
+                &merkle_tree_leaves_hash,
+                &merkle_tree_compress_hash,
+                &transcript_hash,
+                |fri_proof| serde_json::to_string(fri_proof).unwrap(),
+                |s| serde_json::from_str(&s).unwrap(),
+            );
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_fri_test_with_poseidon {
+    (
+      $ntt_field:ident,
+      $field:ident
+    ) => {
+        #[test]
+        pub fn phase4_test_fri_poseidon2() {
+            use icicle_core::poseidon2::Poseidon2;
+            use icicle_core::traits::FieldImpl;
+            initialize();
+            let merkle_tree_leaves_hash = Poseidon2::new_with_input_size::<$field>(3, None, 1).unwrap();
+            let merkle_tree_compress_hash = Poseidon2::new::<$field>(2, None).unwrap();
+            let transcript_hash = Keccak256::new(0).unwrap();
+            check_fri::<$field>(
+                &merkle_tree_leaves_hash,
+                &merkle_tree_compress_hash,
+                &transcript_hash,
+            );
+        }
+
+        #[test]
+        pub fn phase4_test_fri_poseidon() {
+            use icicle_core::poseidon::Poseidon;
+            use icicle_core::traits::FieldImpl;
+            initialize();
+            let merkle_tree_leaves_hash = Poseidon::new_with_input_size::<$field>(3, None, 1).unwrap();
+            let merkle_tree_compress_hash = Poseidon::new_with_input_size::<$field>(5, None, 2).unwrap();
+            let transcript_hash = Keccak256::new(0).unwrap();
+            check_fri::<$field>(
+                &merkle_tree_leaves_hash,
+                &merkle_tree_compress_hash,
+                &transcript_hash,
+            );
         }
     };
 }

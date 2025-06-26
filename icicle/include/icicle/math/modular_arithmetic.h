@@ -303,6 +303,17 @@ public:
 public:
   ff_storage limbs_storage;
 
+  HOST_DEVICE_INLINE uint32_t get_scalar_bits(const unsigned lsb_idx, const unsigned width) const
+  {
+    ICICLE_ASSERT(width <= 8 * sizeof(*(limbs_storage.limbs)))
+      << "get_scalar_bits::width(" << width << ") should be < 32";
+    const uint32_t limb_lsb_idx = lsb_idx / (8 * sizeof(*(limbs_storage.limbs)));
+    const uint32_t shift_bits = lsb_idx % (8 * sizeof(*(limbs_storage.limbs)));
+    const uint64_t mask = (1 << width) - 1;
+    const uint64_t* rv = reinterpret_cast<const uint64_t*>(&(limbs_storage.limbs[limb_lsb_idx]));
+    return (((*rv) >> shift_bits) & mask);
+  }
+
   template <unsigned NLIMBS>
   static HOST_INLINE storage<NLIMBS> rand_storage(unsigned non_zero_limbs = NLIMBS)
   {
@@ -483,6 +494,15 @@ public:
     return Wide{res}.reduce(); // finally, use barret reduction
   }
 
+  static constexpr HOST_DEVICE_INLINE Derived reduce_from_bytes(const std::byte* in)
+  {
+    Derived value;
+    memcpy(reinterpret_cast<std::byte*>(value.limbs_storage.limbs), in, TLC * 4);
+    while (lt(Derived{get_modulus()}, value))
+      value = value - Derived{get_modulus()};
+    return value;
+  }
+
   HOST_DEVICE Derived& operator=(Derived const& other)
   {
 #pragma unroll
@@ -534,11 +554,11 @@ public:
   #pragma unroll
 #endif
     for (unsigned i = 0; i < 32; i++) {
-      if (multiplier & (1 << i)) {
-        rs = is_zero ? temp : (rs + temp);
+      if ((multiplier >> i) == 0) { break; }
+      if ((multiplier >> i) & 1) {
+        rs = is_zero ? temp : rs + temp;
         is_zero = false;
       }
-      if (multiplier & ((1 << (31 - i - 1)) << (i + 1))) break;
       temp = temp + temp;
     }
     return rs;

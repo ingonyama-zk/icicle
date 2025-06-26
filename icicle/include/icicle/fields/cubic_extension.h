@@ -37,26 +37,26 @@ public:
     }
   };
 
-  typedef T FF;
-  static constexpr unsigned TLC = 3 * FF::TLC;
+  typedef T BaseField;
+  static constexpr unsigned TLC = 3 * BaseField::TLC;
 
-  FF c0;
-  FF c1;
-  FF c2;
+  BaseField c0;
+  BaseField c1;
+  BaseField c2;
 
   static constexpr HOST_DEVICE_INLINE CubicExtensionField zero()
   {
-    return CubicExtensionField{FF::zero(), FF::zero(), FF::zero()};
+    return CubicExtensionField{BaseField::zero(), BaseField::zero(), BaseField::zero()};
   }
 
   static constexpr HOST_DEVICE_INLINE CubicExtensionField one()
   {
-    return CubicExtensionField{FF::one(), FF::zero(), FF::zero()};
+    return CubicExtensionField{BaseField::one(), BaseField::zero(), BaseField::zero()};
   }
 
   static constexpr HOST_DEVICE_INLINE CubicExtensionField from(uint32_t val)
   {
-    return CubicExtensionField{FF::from(val), FF::zero(), FF::zero()};
+    return CubicExtensionField{BaseField::from(val), BaseField::zero(), BaseField::zero()};
   }
 
   constexpr HOST_DEVICE_INLINE CubicExtensionField to_montgomery() const
@@ -71,7 +71,7 @@ public:
 
   static HOST_INLINE CubicExtensionField rand_host()
   {
-    return CubicExtensionField{FF::rand_host(), FF::rand_host(), FF::rand_host()};
+    return CubicExtensionField{BaseField::rand_host(), BaseField::rand_host(), BaseField::rand_host()};
   }
 
   static void rand_host_many(CubicExtensionField* out, int size)
@@ -104,19 +104,19 @@ public:
     return CubicExtensionField{c0 - ys.c0, c1 - ys.c1, c2 - ys.c2};
   }
 
-  friend HOST_DEVICE_INLINE CubicExtensionField operator+(FF xs, const CubicExtensionField& ys)
+  friend HOST_DEVICE_INLINE CubicExtensionField operator+(BaseField xs, const CubicExtensionField& ys)
   {
     return CubicExtensionField{xs + ys.c0, ys.c1, ys.c2};
   }
 
-  friend HOST_DEVICE_INLINE CubicExtensionField operator-(FF xs, const CubicExtensionField& ys)
+  friend HOST_DEVICE_INLINE CubicExtensionField operator-(BaseField xs, const CubicExtensionField& ys)
   {
     return CubicExtensionField{xs - ys.c0, ys.c1.neg(), ys.c2.neg()};
   }
 
-  HOST_DEVICE_INLINE CubicExtensionField operator+(const FF& ys) const { return CubicExtensionField{c0 + ys, c1, c2}; }
+  HOST_DEVICE_INLINE CubicExtensionField operator+(const BaseField& ys) const { return CubicExtensionField{c0 + ys, c1, c2}; }
 
-  HOST_DEVICE_INLINE CubicExtensionField operator-(const FF& ys) const { return CubicExtensionField{c0 - ys, c1, c2}; }
+  HOST_DEVICE_INLINE CubicExtensionField operator-(const BaseField& ys) const { return CubicExtensionField{c0 - ys, c1, c2}; }
 
   constexpr HOST_DEVICE_INLINE CubicExtensionField operator-() const { return this->neg(); }
 
@@ -138,19 +138,19 @@ public:
     return *this;
   }
 
-  constexpr HOST_DEVICE_INLINE CubicExtensionField& operator+=(const FF& ys)
+  constexpr HOST_DEVICE_INLINE CubicExtensionField& operator+=(const BaseField& ys)
   {
     *this = *this + ys;
     return *this;
   }
 
-  constexpr HOST_DEVICE_INLINE CubicExtensionField& operator-=(const FF& ys)
+  constexpr HOST_DEVICE_INLINE CubicExtensionField& operator-=(const BaseField& ys)
   {
     *this = *this - ys;
     return *this;
   }
 
-  constexpr HOST_DEVICE_INLINE CubicExtensionField& operator*=(const FF& ys)
+  constexpr HOST_DEVICE_INLINE CubicExtensionField& operator*=(const BaseField& ys)
   {
     *this = *this * ys;
     return *this;
@@ -159,12 +159,12 @@ public:
   /**
    * @brief Multiplies a field element by the nonresidue of the field
    */
-  static constexpr HOST_DEVICE FF mul_by_nonresidue(const FF& xs)
+  static constexpr HOST_DEVICE BaseField mul_by_nonresidue(const BaseField& xs)
   {
     if constexpr (CONFIG::nonresidue_is_u32) {
-      return FF::template mul_unsigned<CONFIG::nonresidue>(xs);
+      return BaseField::template mul_unsigned<CONFIG::nonresidue>(xs);
     } else {
-      return FF::template mul_const<CONFIG::nonresidue>(xs);
+      return BaseField::template mul_const<CONFIG::nonresidue>(xs);
     }
   }
 
@@ -174,7 +174,7 @@ public:
   static constexpr HOST_DEVICE FWide mul_by_nonresidue(const FWide& xs)
   {
     if constexpr (CONFIG::nonresidue_is_u32) {
-      return FF::template mul_unsigned<CONFIG::nonresidue>(xs);
+      return BaseField::template mul_unsigned<CONFIG::nonresidue>(xs);
     } else {
       return xs.reduce().mul_wide(CONFIG::nonresidue);
     }
@@ -203,18 +203,34 @@ public:
       prod_of_cross_sums - c0_prod - c2_prod + c1_prod};
   }
 
-  constexpr HOST_DEVICE_INLINE Wide mul_wide(const FF& ys) const
+  constexpr HOST_DEVICE_INLINE Wide mul_wide(const BaseField& ys) const
   {
     return Wide{c0.mul_wide(ys), c1.mul_wide(ys), c2.mul_wide(ys)};
   }
 
-  static constexpr HOST_DEVICE_INLINE Wide mul_wide(const FF& xs, const CubicExtensionField& ys)
+  static constexpr HOST_DEVICE_INLINE Wide mul_wide(const BaseField& xs, const CubicExtensionField& ys)
   {
     return ys.mul_wide(xs);
   }
 
-  template <class T2>
+  friend HOST_DEVICE_INLINE CubicExtensionField
+  operator*(const CubicExtensionField& xs, const CubicExtensionField& ys)
+  {
+    Wide xy = xs.mul_wide(ys);
+    return xy.reduce();
+  }
+
+  template <
+    class T2,
+    typename = typename std::enable_if<!std::is_same<T2, CubicExtensionField>() && !std::is_base_of<CubicExtensionField, T2>()>::type>
   friend HOST_DEVICE_INLINE CubicExtensionField operator*(const CubicExtensionField& xs, const T2& ys)
+  {
+    Wide xy = xs.mul_wide(ys);
+    return xy.reduce();
+  }
+
+  friend HOST_DEVICE_INLINE CubicExtensionField
+  operator*(const CubicExtensionField& xs, const BaseField& ys)
   {
     Wide xy = xs.mul_wide(ys);
     return xy.reduce();
@@ -230,13 +246,13 @@ public:
   template <const CubicExtensionField& multiplier>
   static HOST_DEVICE CubicExtensionField mul_const(const CubicExtensionField& xs)
   {
-    static constexpr FF mul_c0 = multiplier.c0;
-    static constexpr FF mul_c1 = multiplier.c1;
-    static constexpr FF mul_c2 = multiplier.c2;
+    static constexpr BaseField mul_c0 = multiplier.c0;
+    static constexpr BaseField mul_c1 = multiplier.c1;
+    static constexpr BaseField mul_c2 = multiplier.c2;
 
-    FWide c0_prod = FWide::from_field(FF::template mul_const<mul_c0>(xs.c0));
-    FWide c1_prod = FWide::from_field(FF::template mul_const<mul_c1>(xs.c1));
-    FWide c2_prod = FWide::from_field(FF::template mul_const<mul_c2>(xs.c2));
+    FWide c0_prod = FWide::from_field(BaseField::template mul_const<mul_c0>(xs.c0));
+    FWide c1_prod = FWide::from_field(BaseField::template mul_const<mul_c1>(xs.c1));
+    FWide c2_prod = FWide::from_field(BaseField::template mul_const<mul_c2>(xs.c2));
 
     FWide prod_of_low_sums = (xs.c0 + xs.c1).mul_wide(mul_c0 + mul_c1);
     FWide prod_of_high_sums = (xs.c1 + xs.c2).mul_wide(mul_c1 + mul_c2);
@@ -261,8 +277,8 @@ public:
   static constexpr HOST_DEVICE CubicExtensionField mul_unsigned(const CubicExtensionField& xs)
   {
     return {
-      FF::template mul_unsigned<multiplier>(xs.c0), FF::template mul_unsigned<multiplier>(xs.c1),
-      FF::template mul_unsigned<multiplier>(xs.c2)};
+      BaseField::template mul_unsigned<multiplier>(xs.c0), BaseField::template mul_unsigned<multiplier>(xs.c1),
+      BaseField::template mul_unsigned<multiplier>(xs.c2)};
   }
 
   constexpr HOST_DEVICE_INLINE Wide sqr_wide() const
@@ -284,21 +300,21 @@ public:
 
   constexpr HOST_DEVICE CubicExtensionField inverse() const
   {
-    const FF t0 = c0.sqr();
-    const FF t1 = c1.sqr();
-    const FF t2 = c2.sqr();
-    const FF t3 = c0 * c1;
-    const FF t4 = c0 * c2;
-    const FF t5 = c1 * c2;
-    const FF n5 = mul_by_nonresidue(t5);
+    const BaseField t0 = c0.sqr();
+    const BaseField t1 = c1.sqr();
+    const BaseField t2 = c2.sqr();
+    const BaseField t3 = c0 * c1;
+    const BaseField t4 = c0 * c2;
+    const BaseField t5 = c1 * c2;
+    const BaseField n5 = mul_by_nonresidue(t5);
 
-    const FF s0 = t0 - n5;
-    const FF s1 = mul_by_nonresidue(t2) - t3;
-    const FF s2 = t1 - t4;
-    const FF a1 = c2 * s1;
-    const FF a2 = c1 * s2;
-    FF a3 = mul_by_nonresidue(a1 + a2);
-    const FF t6 = (c0 * s0 + a3).inverse();
+    const BaseField s0 = t0 - n5;
+    const BaseField s1 = mul_by_nonresidue(t2) - t3;
+    const BaseField s2 = t1 - t4;
+    const BaseField a1 = c2 * s1;
+    const BaseField a2 = c1 * s2;
+    BaseField a3 = mul_by_nonresidue(a1 + a2);
+    const BaseField t6 = (c0 * s0 + a3).inverse();
 
     return CubicExtensionField{
       t6 * s0,

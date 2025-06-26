@@ -112,8 +112,9 @@ namespace icicle {
   class PoseidonBackendCPU : public HashBackend
   {
   public:
-    PoseidonBackendCPU(unsigned t, const S* domain_tag)
-        : HashBackend("Poseidon-CPU", sizeof(S), sizeof(S) * (nullptr != domain_tag ? t - 1 : t)),
+    PoseidonBackendCPU(unsigned t, const S* domain_tag, unsigned input_size)
+        : HashBackend(
+            "Poseidon-CPU", sizeof(S), sizeof(S) * (input_size ? input_size : (nullptr != domain_tag ? t - 1 : t))),
           m_domain_tag(nullptr != domain_tag ? *domain_tag : S::zero()), m_use_domain_tag(nullptr != domain_tag), m_t(t)
     {
       init_default_constants();
@@ -126,16 +127,16 @@ namespace icicle {
       unsigned int arity = m_use_domain_tag ? m_t - 1 : m_t;
 
       // Currently sponge and padding functionalities are not supported.
-      if (size != arity * sizeof(S)) {
+      if (size > arity * sizeof(S)) {
         ICICLE_LOG_ERROR
-          << "Sponge function still isn't supported. The following should be true: (size == T) but it is not.\n";
+          << "Sponge function isn't fully supported. The following should be true: (size <= T) but it is not.\n";
         return eIcicleError::INVALID_ARGUMENT;
       }
 
       // Call hash_single config.batch times.
       for (int batch_hash_idx = 0; batch_hash_idx < config.batch; batch_hash_idx++) {
-        hash_single(input, output);
-        input += arity * sizeof(S);
+        hash_single(input, size / sizeof(S), output);
+        input += size;
         output += sizeof(S);
       }
 
@@ -144,7 +145,7 @@ namespace icicle {
 
   private:
     // This function performs a single hash according to parameters in the poseidon_constants[] struct.
-    eIcicleError hash_single(const std::byte* input, std::byte* output) const
+    eIcicleError hash_single(const std::byte* input, unsigned input_size, std::byte* output) const
     {
       const unsigned int T = m_t;
 
@@ -165,10 +166,10 @@ namespace icicle {
       if (m_use_domain_tag) {
         // in that case we hash [domain_tag, t-1 field elements]
         memcpy(tmp_fields, &m_domain_tag, sizeof(S));
-        memcpy(tmp_fields + 1, in_fields, (T - 1) * sizeof(S));
+        memcpy(tmp_fields + 1, in_fields, input_size * sizeof(S));
       } else {
         // in that case we hash [t field elements]
-        memcpy(tmp_fields, in_fields, T * sizeof(S));
+        memcpy(tmp_fields, in_fields, input_size * sizeof(S));
       }
 
       // Add pre-round constants.
@@ -287,9 +288,13 @@ namespace icicle {
   }; // class PoseidonBackendCPU : public HashBackend
 
   static eIcicleError create_cpu_poseidon_hash_backend(
-    const Device& device, unsigned t, const scalar_t* domain_tag, std::shared_ptr<HashBackend>& backend /*OUT*/)
+    const Device& device,
+    unsigned t,
+    const scalar_t* domain_tag,
+    unsigned input_size,
+    std::shared_ptr<HashBackend>& backend /*OUT*/)
   {
-    backend = std::make_shared<PoseidonBackendCPU<scalar_t>>(t, domain_tag);
+    backend = std::make_shared<PoseidonBackendCPU<scalar_t>>(t, domain_tag, input_size);
     return eIcicleError::SUCCESS;
   }
 

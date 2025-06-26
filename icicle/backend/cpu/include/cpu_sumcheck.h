@@ -24,6 +24,7 @@ namespace icicle {
       const CombineFunction<F>& combine_function,
       SumcheckTranscriptConfig<F>&& transcript_config,
       const SumcheckConfig& sumcheck_config,
+      F* challenge_vector /*out*/,
       SumcheckProof<F>& sumcheck_proof /*out*/) override
     {
       if (sumcheck_config.use_extension_field) {
@@ -71,6 +72,7 @@ namespace icicle {
         const int nof_tasks_per_worker = (nof_total_iterations + nof_workers - 1) / nof_workers; // round up
         F alpha =
           round_idx ? sumcheck_transcript.get_alpha(sumcheck_proof.get_round_polynomial(round_idx - 1)) : F::zero();
+        challenge_vector[round_idx] = alpha;
         for (int worker_idx = 0; worker_idx < nof_workers; ++worker_idx) {
           m_taskflow.emplace([&, worker_idx]() {
             const int start_element_idx = worker_idx * nof_tasks_per_worker;
