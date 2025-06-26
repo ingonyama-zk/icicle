@@ -113,38 +113,41 @@ static eIcicleError cpu_decompose_balanced_digits(
   // To decompose PolyRing polynomials into balanced digits, we decompose all d coefficients, in num_digits steps,
   // creating a polynomial on each step.
   const size_t total_size = input_size * config.batch_size;
-  constexpr size_t task_size = 64; // TODO Yuval - why? is it a good value
+  constexpr size_t task_size = 256; // Seems to be working better
   const size_t nof_tasks = (total_size + task_size - 1) / task_size;
   for (int task_idx = 0; task_idx < nof_tasks; ++task_idx) {
-    tasks.emplace([=] {      
-      const int64_t* input_data_i64 = reinterpret_cast<const int64_t*>(input + task_idx*task_size);
-
+    const size_t start = task_idx * task_size;
+    const size_t end = std::min(total_size, start + task_size);
+    const size_t nof_elements = end-start;
+    tasks.emplace([=] {            
       // Temporary buffer to hold intermediate remainders during decomposition.
-      
-      int64_t remainder[task_size];
+      int64_t remainder[task_size]; 
+      const int64_t* input_data_i64 = reinterpret_cast<const int64_t*>(input + task_idx*task_size);
       std::memcpy(remainder, input_data_i64, sizeof(remainder));
 
-      for (int digit_idx = 0; digit_idx < digits_per_element; ++digit_idx) {
-        int64_t* output_data_task = reinterpret_cast<int64_t*>(output + digit_idx * total_size + task_idx*task_size);        
+      for (int digit_idx = 0; digit_idx < digits_per_element; ++digit_idx) {        
+        int64_t digit_buf[task_size]; 
 
-        for (int i = 0; i < task_size; ++i) {
-          int64_t val = remainder[i];
-          int64_t digit = 0;
+          for (int i = 0; i < nof_elements; ++i) {
+            int64_t val = remainder[i];
+            int64_t digit = 0;
 
-          // we need to handle case where val>q/2 by subtracting q (only for base>2)
-          if (base > 2 && val > q_div2) { val -= q; }
+            // we need to handle case where val>q/2 by subtracting q (only for base>2)
+            if (base > 2 && val > q_div2) { val -= q; }
 
-          std::tie(val, digit) = divmod(val, base);
-          // Shift into balanced digit range [-b/2, b/2)
-          if (digit > base_div2) {
-            digit -= base;
-            ++val;
+            std::tie(val, digit) = divmod(val, base);
+            // Shift into balanced digit range [-b/2, b/2)
+            if (digit > base_div2) {
+              digit -= base;
+              ++val;
+            }
+
+            remainder[i] = val;
+            digit_buf[i] = digit < 0 ? digit + q : digit;             
           }
-
-          remainder[i] = val;
-          *(output_data_task + i) = digit < 0 ? digit + q : digit;
+          int64_t* output_data = reinterpret_cast<int64_t*>(output + digit_idx*total_size + task_idx*task_size);        
+          std::memcpy(output_data, digit_buf, sizeof(int64_t) * task_size);            
         }
-      }
     });
   }
 
@@ -180,7 +183,7 @@ static eIcicleError cpu_recompose_from_balanced_digits(
   tf::Executor executor(get_nof_workers(config));
 
   const size_t total_size = output_size * config.batch_size;
-  constexpr size_t task_size = 64; // TODO Yuval: why?
+  constexpr size_t task_size = 32; // TODO Yuval: why?
   const size_t nof_tasks = (total_size + task_size - 1) / task_size;
   for (int task_idx = 0; task_idx < nof_tasks; ++task_idx) {
     tasks.emplace([=]() {
