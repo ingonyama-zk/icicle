@@ -155,6 +155,7 @@ TEST_F(RingTestBase, BalancedDecompositionZQ)
   const size_t size = 1 << 20;
   auto input = std::vector<field_t>(size);
   field_t::rand_host_many(input.data(), size);
+  auto recomposed_ref = std::vector<field_t>(size);
   auto recomposed = std::vector<field_t>(size);
 
   const auto q_sqrt = static_cast<uint32_t>(std::sqrt(q));
@@ -174,8 +175,8 @@ TEST_F(RingTestBase, BalancedDecompositionZQ)
 
     for (const auto base : bases) {
       // Number of digits needed to represent an element mod q in balanced base-b representation
-      const size_t digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
-      const size_t decomposed_size = size * digits_per_element;
+      const size_t num_digits = balanced_decomposition::compute_nof_digits<field_t>(base);
+      const size_t decomposed_size = size * num_digits;
       auto decomposed = std::vector<field_t>(decomposed_size);
 
       std::stringstream timer_label_decompose, timer_label_recompose;
@@ -201,6 +202,20 @@ TEST_F(RingTestBase, BalancedDecompositionZQ)
 
         ASSERT_TRUE(is_balanced) << "Digit " << digit << " is out of expected balanced range for base=" << base;
       }
+
+      // Recompose manually to check to layout is digit-major, as it should be
+      // Generate the powers b^i for i in [0..num_digits]
+      Zq power = Zq::from(1);
+      std::vector<Zq> powers(num_digits);
+      for (size_t digit_idx = 0; digit_idx < num_digits; ++digit_idx) {
+        powers[digit_idx] = power;
+        power = power * Zq::from(base);
+      }
+      // Consider the decomposition as a [num_digits][size] matrix where rows are a single digit for the entire input vector.
+      // Then a linear combination with scalars [1, b, b^2, ...] is exactly the recomposition
+      ICICLE_CHECK(matmul(powers.data(), 1, num_digits, decomposed.data(), num_digits, size, {}, recomposed_ref.data()));      
+      ASSERT_EQ(0, memcmp(input.data(), recomposed_ref.data(), sizeof(field_t) * size))
+        << "Recomposition failed for base=" << base;
 
       // Recompose and compare to original input
       START_TIMER(recomposition);
