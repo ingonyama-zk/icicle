@@ -1,44 +1,45 @@
 #pragma once
 
 /// @file complex_fft.h
-/// @brief Header file for complex FFT operations.
-/// This is actually negacyclic-fft of size N=64 for the PolyRing Zq[X]/(X^N + 1),
-
-// TODO: move this to cpu backend
+/// @brief Header for negacyclic FFT of size N=64 over Zq[X]/(X^N + 1), using float32.
+/// Designed for CPU and GPU compatibility (f32 math, no dynamic memory, static layout).
 
 #include <array>
 #include <complex>
 #include <cstdint>
 #include <cmath>
 #include <algorithm>
-#include <iostream>
+
+// TODO: use taskflow, compute on a batch of polynomials
 
 namespace negacyclic_fft_cpu {
 
   constexpr size_t N = 64;
-  constexpr double PI = 3.14159265358979323846;
-  using Complex = std::complex<double>;
+  constexpr float PI = 3.14159265358979323846f;
+
+  using Complex = std::complex<float>;
   using Poly = std::array<uint64_t, N>;
   using CPoly = std::array<Complex, N>;
 
-  // Return psi^i (pre or post-twist), where psi^2 = root of unity
-  constexpr std::array<Complex, N> compute_twist(bool inverse = false)
+  // Compute psi^i where psi = exp(pi i / N), used for twist and untwist
+  inline std::array<Complex, N> compute_twist(bool inverse = false)
   {
     std::array<Complex, N> twist{};
-    double angle_unit = PI / N; // 2π/2N = π/N
+    float angle_unit = PI / static_cast<float>(N);
     for (size_t i = 0; i < N; ++i) {
-      double angle = angle_unit * i;
+      float angle = angle_unit * static_cast<float>(i);
       if (inverse) angle = -angle;
       twist[i] = Complex(std::cos(angle), std::sin(angle));
     }
     return twist;
   }
 
-  // In-place Cooley-Tukey FFT (radix-2)
-  void fft(CPoly& a, bool inverse = false)
+  // In-place radix-2 Cooley-Tukey FFT
+  inline void fft(CPoly& a, bool inverse = false)
   {
     size_t n = a.size();
-    // Bit reversal
+
+    // Bit reversal permutation
     for (size_t i = 1, j = 0; i < n; ++i) {
       size_t bit = n >> 1;
       for (; j & bit; bit >>= 1)
@@ -48,10 +49,11 @@ namespace negacyclic_fft_cpu {
     }
 
     for (size_t len = 2; len <= n; len <<= 1) {
-      double ang = 2 * PI / len * (inverse ? -1 : 1);
-      Complex wlen(std::cos(ang), std::sin(ang));
+      float angle = 2.0f * PI / static_cast<float>(len) * (inverse ? -1.0f : 1.0f);
+      Complex wlen(std::cos(angle), std::sin(angle));
+
       for (size_t i = 0; i < n; i += len) {
-        Complex w = 1;
+        Complex w = 1.0f;
         for (size_t j = 0; j < len / 2; ++j) {
           Complex u = a[i + j];
           Complex v = a[i + j + len / 2] * w;
@@ -63,34 +65,32 @@ namespace negacyclic_fft_cpu {
     }
 
     if (inverse) {
+      float scale = 1.0f / static_cast<float>(n);
       for (Complex& x : a)
-        x /= n;
+        x *= scale;
     }
   }
 
-  // Entry point: compute operator norm of polynomial a in Zq[X]/(X⁶⁴ + 1)
-  double operator_norm(const Poly& a, uint64_t q)
+  // Compute operator norm of a polynomial in Zq[X]/(X^N + 1)
+  inline uint64_t operator_norm(const Poly& a)
   {
-    static const auto twist = compute_twist();
+    static const auto twist = compute_twist(false);
     static const auto twist_inv = compute_twist(true);
 
-    // Step 1: Convert to Complex, apply pre-twist
     CPoly complex_a;
     for (size_t i = 0; i < N; ++i)
-      complex_a[i] = Complex(static_cast<double>(a[i] % q), 0.0) * twist[i];
+      complex_a[i] = Complex(static_cast<float>(a[i]), 0.0f) * twist[i];
 
-    // Step 2: Forward FFT
     fft(complex_a);
 
-    // Step 3: Post-twist
     for (size_t i = 0; i < N; ++i)
       complex_a[i] *= twist_inv[i];
 
-    // Step 4: Operator norm = max_i |value_i|
-    double max_norm = 0.0;
+    float max_norm = 0.0f;
     for (const auto& x : complex_a)
       max_norm = std::max(max_norm, std::abs(x));
 
-    return max_norm;
+    return static_cast<uint64_t>(std::ceil(max_norm));
   }
+
 } // namespace negacyclic_fft_cpu
