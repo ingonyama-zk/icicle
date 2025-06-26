@@ -18,8 +18,6 @@ import (
 )
 
 func main() {
-	runtime.LoadBackendFromEnvOrDefault()
-
 	var logSizeMin int
 	var logSizeMax int
 	var deviceType string
@@ -29,8 +27,15 @@ func main() {
 	flag.StringVar(&deviceType, "device", "CUDA", "Device type")
 	flag.Parse()
 
+	if deviceType != "CPU" {
+		runtime.LoadBackendFromEnvOrDefault()
+	}
+
 	device := runtime.CreateDevice(deviceType, 0)
-	runtime.SetDevice(&device)
+	// NOTE: If you are only using a single device the entire time
+	// 			then this is ok. If you are using multiple devices
+	// 			then you should use runtime.RunOnDevice() instead.
+	runtime.SetDefaultDevice(&device)
 
 	sizeMax := 1 << logSizeMax
 
