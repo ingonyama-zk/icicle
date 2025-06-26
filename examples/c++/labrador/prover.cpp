@@ -512,6 +512,19 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   return std::make_pair(final_proof, trs);
 }
 
+// eIcicleError shape_like_z0(const LabradorInstance &lab_inst, Rq *dst, Rq *src, size_t n_prime, size_t nu){
+//   size_t n = lab_inst.n;
+//   size_t r = lab_inst.r;
+//     size_t t_len = lab_inst.param.t_len(r);
+//   size_t g_len = lab_inst.param.g_len(r);
+//   size_t h_len = lab_inst.param.h_len(r);
+//     size_t L_t = (t_len + n_prime - 1) / n_prime;
+//   size_t L_g = (g_len + n_prime - 1) / n_prime;
+//   size_t L_h = (h_len + n_prime - 1) / n_prime;
+//   size_t r_prime = (2 * nu + L_t + L_g + L_h);
+//   icicle_copy(s_prime.data(), z_tilde.data(), n * sizeof(Rq))
+// }
+
 std::vector<Rq> LabradorProver::prepare_recursion_witness(
   const PartialTranscript& trs, const LabradorBaseCaseProof& pf, size_t base0, size_t mu, size_t nu)
 {
@@ -526,6 +539,7 @@ std::vector<Rq> LabradorProver::prepare_recursion_witness(
   size_t l0 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base0);
 
   // Decompose all elements first
+  // TODO: simply make the output size = 2n
   std::vector<Rq> z_tilde(l0 * n);
   ICICLE_CHECK(decompose(z.data(), n, base0, {}, z_tilde.data(), z_tilde.size()));
   // Keep only first 2n elements- all the rest should be 0
@@ -542,50 +556,34 @@ std::vector<Rq> LabradorProver::prepare_recursion_witness(
 
   // Step 6
   // we will view s_prime as a multidimensional array. At the base level it consists of n_prime length vectors
-  std::vector<Rq> s_prime;
+  size_t t_len = lab_inst.t_len();
+  size_t g_len = lab_inst.g_len();
+  size_t h_len = lab_inst.h_len();
 
-  for (size_t i = 0; i < n; i++) {
-    s_prime.push_back(z_tilde[i]);
-  }
-  for (size_t i = n; i < nu * n_prime; i++) {
-    s_prime.push_back(Rq());
-  }
-  // now s_prime is nu*n_prime long and can be viewed as a nu long array of n_prime dimension Tq vectors
+  size_t m = t_len + g_len + h_len;
+  size_t n_prime = std::max(std::ceil((double)n / nu), std::ceil((double)m / mu));
+  size_t L_t = (t_len + n_prime - 1) / n_prime;
+  size_t L_g = (g_len + n_prime - 1) / n_prime;
+  size_t L_h = (h_len + n_prime - 1) / n_prime;
+  size_t r_prime = (2 * nu + L_t + L_g + L_h);
 
-  for (size_t i = 0; i < n; i++) {
-    s_prime.push_back(z_tilde[n + i]);
-  }
-  for (size_t i = n; i < nu * n_prime; i++) {
-    s_prime.push_back(Rq());
-  }
-  // now s_prime is 2*nu*n_prime long and can be viewed as a 2*nu long array of n_prime dimension Tq vectors
+  std::vector<Rq> s_prime(r_prime * n_prime, zero());
 
-  // add the polynomials in t to s_prime and zero pad to make them L_t*n_prime length
-  size_t L_t = (pf.t.size() + n_prime - 1) / n_prime;
-  for (size_t i = 0; i < pf.t.size(); i++) {
-    s_prime.push_back(pf.t[i]);
-  }
-  for (size_t i = pf.t.size(); i < L_t * n_prime; i++) {
-    s_prime.push_back(Rq());
-  }
+  // copy z0 = z_tilde[0 : n] →  s_prime[0 : n]
+  ICICLE_CHECK(icicle_copy(s_prime.data(), z_tilde.data(), n * sizeof(Rq)));
 
-  // add the polynomials in g to s_prime and zero pad to make them L_g*n_prime length
-  size_t L_g = (pf.g.size() + n_prime - 1) / n_prime;
-  for (size_t i = 0; i < pf.g.size(); i++) {
-    s_prime.push_back(pf.g[i]);
-  }
-  for (size_t i = pf.g.size(); i < L_g * n_prime; i++) {
-    s_prime.push_back(Rq());
-  }
+  // copy z1 = z_tilde[n : 2n] →  s_prime[nu * n_prime : nu * n_prime + n]
+  ICICLE_CHECK(icicle_copy(&s_prime[nu * n_prime], &z_tilde[n], n * sizeof(Rq)));
 
-  // add the polynomials in h to s_prime and zero pad to make them L_h*n_prime length
-  size_t L_h = (pf.h.size() + n_prime - 1) / n_prime;
-  for (size_t i = 0; i < pf.h.size(); i++) {
-    s_prime.push_back(pf.h[i]);
-  }
-  for (size_t i = pf.h.size(); i < L_h * n_prime; i++) {
-    s_prime.push_back(Rq());
-  }
+  // copy t  →  s_prime[2*nu*n_prime : 2*nu*n_prime + |t|]
+  ICICLE_CHECK(icicle_copy(&s_prime[(2 * nu) * n_prime], pf.t.data(), pf.t.size() * sizeof(Rq)));
+
+  // copy g  →  s_prime[(2*nu + L_t) * n_prime : ...]
+  ICICLE_CHECK(icicle_copy(&s_prime[(2 * nu + L_t) * n_prime], pf.g.data(), pf.g.size() * sizeof(Rq)));
+
+  // copy h  →  s_prime[(2*nu + L_t + L_g) * n_prime : ...]
+  ICICLE_CHECK(icicle_copy(&s_prime[(2 * nu + L_t + L_g) * n_prime], pf.h.data(), pf.h.size() * sizeof(Rq)));
+
   return s_prime;
 }
 
