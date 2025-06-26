@@ -49,6 +49,7 @@ function(setup_ring_target RING RING_INDEX FEATURES_STRING)
   handle_ring(icicle_ring) # basic RING methods, including vec ops
   # Handle features
   handle_ntt(icicle_ring "${FEATURES_LIST}")
+  set(NTT "${NTT}" PARENT_SCOPE)
   # Add additional feature handling calls here
 
   set_target_properties(icicle_ring PROPERTIES OUTPUT_NAME "icicle_ring_${RING}")

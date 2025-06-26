@@ -1,5 +1,6 @@
 package mlkem
 
+// #cgo LDFLAGS: -licicle_pqc -lstdc++
 // #cgo CFLAGS: -I./include/
 // #include "mlkem.h"
 import "C"
