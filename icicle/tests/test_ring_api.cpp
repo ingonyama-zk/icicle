@@ -1286,3 +1286,30 @@ TEST_F(RingTestBase, RandomSampling)
   test_random_sampling(true);
   test_random_sampling(false);
 }
+
+#include "icicle/complex_fft.h"
+TEST_F(RingTestBase, ComplexFFT_Simple)
+{
+  using namespace negacyclic_fft_cpu;
+  Poly poly{};
+  for (size_t i = 0; i < N; ++i)
+    poly[i] = i * 100;
+
+  uint64_t q = (1ULL << 62) - 57;
+  uint64_t opnorm = operator_norm(poly, q); // returns u64 now
+  ASSERT_LT(opnorm, 152850);                // Match with Python or manually adjust
+  std::cout << "Operator norm (simple): " << opnorm << "\n";
+}
+
+TEST_F(RingTestBase, ComplexFFT_Alternating)
+{
+  using namespace negacyclic_fft_cpu;
+  Poly poly{};
+  for (size_t i = 0; i < N; ++i)
+    poly[i] = (i % 2 == 0) ? 5000 : 0;
+
+  uint64_t q = (1ULL << 62) - 57;
+  uint64_t opnorm = operator_norm(poly, q); // returns u64
+  ASSERT_LT(opnorm, 101901);
+  std::cout << "Operator norm (alternating): " << opnorm << "\n";
+}
