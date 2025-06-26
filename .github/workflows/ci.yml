@@ -830,7 +830,7 @@ jobs:
       if: needs.check-changed-files.outputs.pqc == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DCUDA_PQC_BACKEND=ON -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DCUDA_PQC_BACKEND=ON -DPQC=ON -S . -B build
         cmake --build build -j
 
     - name: Run backend specific PQC Tests
