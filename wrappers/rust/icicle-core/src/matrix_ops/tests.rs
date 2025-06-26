@@ -5,7 +5,7 @@ use crate::{
 };
 
 use icicle_runtime::{
-    memory::{DeviceSlice, DeviceVec, HostSlice},
+    memory::{DeviceVec, HostSlice},
     test_utilities,
 };
 
@@ -18,12 +18,12 @@ where
 {
     let mut cfg = VecOpsConfig::default();
 
-    let N = 1 << 5;
-    let M = 1 << 6;
-    let K = 1 << 4;
-    let out_size = N * K;
-    let input_a = P::generate_random(N * M);
-    let input_b = P::generate_random(M * K);
+    let n = 1 << 5;
+    let m = 1 << 6;
+    let k = 1 << 4;
+    let out_size = n * k;
+    let input_a = P::generate_random(n * m);
+    let input_b = P::generate_random(m * k);
 
     let mut test_single_device = |main_device: bool| {
         if main_device {
@@ -38,11 +38,11 @@ where
         let mut output_host = vec![P::zero(); out_size];
         P::matmul(
             HostSlice::from_slice(&input_a),
-            N as u32,
-            M as u32,
+            n as u32,
+            m as u32,
             HostSlice::from_slice(&input_b),
-            M as u32,
-            K as u32,
+            m as u32,
+            k as u32,
             &cfg,
             HostSlice::from_mut_slice(&mut output_host),
         )
@@ -60,11 +60,11 @@ where
 
         P::matmul(
             HostSlice::from_slice(&input_a),
-            N as u32,
-            M as u32,
+            n as u32,
+            m as u32,
             HostSlice::from_slice(&input_b),
-            M as u32,
-            K as u32,
+            m as u32,
+            k as u32,
             &cfg,
             &mut device_mem_output,
         )
@@ -81,22 +81,22 @@ where
         cfg.is_a_on_device = true;
         cfg.is_b_on_device = true;
         cfg.is_result_on_device = false;
-        let mut device_mem_a = DeviceVec::<P>::device_malloc(N * M).unwrap();
+        let mut device_mem_a = DeviceVec::<P>::device_malloc(n * m).unwrap();
         device_mem_a
             .copy_from_host(&HostSlice::from_slice(&input_a))
             .unwrap();
-        let mut device_mem_b = DeviceVec::<P>::device_malloc(M * K).unwrap();
+        let mut device_mem_b = DeviceVec::<P>::device_malloc(m * k).unwrap();
         device_mem_b
             .copy_from_host(&HostSlice::from_slice(&input_b))
             .unwrap();
         let mut output_host_2 = output_host.clone();
         P::matmul(
             &mut device_mem_a,
-            N as u32,
-            M as u32,
+            n as u32,
+            m as u32,
             &mut device_mem_b,
-            M as u32,
-            K as u32,
+            m as u32,
+            k as u32,
             &cfg,
             HostSlice::from_mut_slice(&mut output_host_2),
         )
@@ -110,52 +110,55 @@ where
         cfg.is_b_on_device = true;
         cfg.is_result_on_device = true;
         let mut output_device = vec![P::zero(); out_size];
-        let mut device_mem_a = DeviceVec::<P>::device_malloc(N * M).unwrap();
+
+        let mut device_mem_a = DeviceVec::<P>::device_malloc(n * m).unwrap();
         &mut device_mem_a
             .copy_from_host(&HostSlice::from_slice(&input_a))
             .unwrap();
-        let mut device_mem_b = DeviceVec::<P>::device_malloc(M * K).unwrap();
+        let mut device_mem_b = DeviceVec::<P>::device_malloc(m * k).unwrap();
         &mut device_mem_b
             .copy_from_host(&HostSlice::from_slice(&input_b))
             .unwrap();
-        let mut device_mem_output = DeviceVec::<P>::device_malloc(out_size).unwrap();
         &mut device_mem_output
             .copy_from_host(&HostSlice::from_slice(&output_device))
             .unwrap();
+        let mut device_mem_output = DeviceVec::<P>::device_malloc(out_size).unwrap();
 
-        device_mem_output
-            .copy_to_host(HostSlice::from_mut_slice(&mut host_buffer))
-            .unwrap();
 
         P::matmul(
-            HostSlice::from_slice(&input_a),
-            N as u32,
-            M as u32,
-            HostSlice::from_slice(&input_b),
-            M as u32,
-            K as u32,
+            &mut device_mem_a,
+            n as u32,
+            m as u32,
+            &mut device_mem_b,
+            m as u32,
+            k as u32,
             &cfg,
             &mut device_mem_output,
         )
         .unwrap();
 
-        //assert_eq!(output_host, host_buffer);
+        device_mem_output
+            .copy_to_host(HostSlice::from_mut_slice(&mut host_buffer))
+            .unwrap();
+
+        assert_eq!(output_host, host_buffer);
+
         // (5) mamtmul mixed memory model for inputs, host memory output
         cfg.is_a_on_device = true;
         cfg.is_b_on_device = false;
         cfg.is_result_on_device = false;
-        let mut device_mem_a = DeviceVec::<P>::device_malloc(N * M).unwrap();
+        let mut device_mem_a = DeviceVec::<P>::device_malloc(n * m).unwrap();
         &mut device_mem_a
             .copy_from_host(&HostSlice::from_slice(&input_a))
             .unwrap();
         let mut output_host_3 = output_host.clone();
         P::matmul(
             &mut device_mem_a,
-            N as u32,
-            M as u32,
+            n as u32,
+            m as u32,
             HostSlice::from_slice(&input_b),
-            M as u32,
-            K as u32,
+            m as u32,
+            k as u32,
             &cfg,
             HostSlice::from_mut_slice(&mut output_host_3),
         )
@@ -163,6 +166,7 @@ where
 
         // compare (1) and (5)
         assert_eq!(output_host, output_host_3);
+ 
         output_host
     };
 
