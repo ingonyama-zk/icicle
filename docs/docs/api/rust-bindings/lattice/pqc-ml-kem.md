@@ -134,7 +134,7 @@ fn main() {
 
 ## Device & async execution
 
-The API works identically for Device buffers – allocate input/output `DeviceVec`s, and provide an `IcicleStream` for non-blocking execution. See [`tests.rs`](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/rust/icicle-pqc/icicle-ml-kem/src/tests.rs) in the crate for an end-to-end example.
+The API works identically for Device buffers – allocate input/output `DeviceVec`s, and provide an `IcicleStream` for non-blocking execution. See [`tests.rs`](../../../../../wrappers/rust/icicle-pqc/src/ml_kem/tests.rs) in the crate for an end-to-end example.
 
 ---
 

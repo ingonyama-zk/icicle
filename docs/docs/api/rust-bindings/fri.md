@@ -106,4 +106,4 @@ assert!(valid);
 
 ## **Links**
 
-For more information on FRI concepts, see [FRI Primitives](../cpp/fri).
+For more information on FRI concepts, see [FRI Primitives](../cpp/fri.md).
