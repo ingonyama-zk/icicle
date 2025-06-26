@@ -5,7 +5,7 @@ const items = [
   { href: "/api/cpp/NTT", label: "NTT / ECNTT" },
   { href: "/api/cpp/Vector-operations", label: "Vector Operations" },
   { href: "/api/cpp/Program", label: "Program" },
-  { href: "/api/cpp/Polynomials", label: "Polynomials" },
+  { href: "/api/cpp/Polynomials/overview", label: "Polynomials" },
   { href: "/api/cpp/Hash", label: "Hash" },
   { href: "/api/cpp/Merkle-Tree", label: "Merkle Tree" },
   { href: "/api/cpp/Sumcheck", label: "Sumcheck" },

@@ -17,6 +17,7 @@ pub mod polynomials;
 pub mod poseidon;
 pub mod poseidon2;
 pub mod program;
+pub mod random_sampling;
 pub mod rns;
 pub mod sumcheck;
 pub mod symbol;

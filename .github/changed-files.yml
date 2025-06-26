@@ -1,24 +1,375 @@
-golang:
-  - wrappers/golang/**/*.go
-  - wrappers/golang/**/*.h
-  - wrappers/golang/**/*.tmpl
-  - go.mod
-  - .github/workflows/cpp-golang-rust.yml
+# NOTE: The following are not direct outputs in the check-changed-files.yml
+# but are used as building blocks for the outputs at the end of the file
+
+# START ANCHORS
+
+# C/C++ file feature mappings
+cpp-program: &cpp-program
+  - icicle/src/program/**/*
+  - icicle/include/icicle/program/**/*
+  - icicle/src/symbol/**/*
+  - icicle/include/icicle/symbol/**/*
+cpp-base: &cpp-base
+  - *cpp-program
+  - icicle/include/icicle/math/**/*
+  - icicle/src/vec_ops.cpp
+  - icicle/include/icicle/vec_ops.h
+  - icicle/src/fields/ffi_extern.cpp
+  - icicle/src/matrix_ops.cpp
+  - icicle/include/icicle/matrix_ops.h
+  - icicle/include/icicle/backend/vec_ops_backend.h
+  - icicle/tests/test_mod_arithmetic_api.cpp
+  - icicle/tests/test_matrix_api.h
+cpp-field: &cpp-field
+  - *cpp-base
+  - icicle/src/fields/**/*
+  - icicle/include/icicle/fields/**/*
+  - icicle/tests/test_field_api.cpp
+cpp-curve: &cpp-curve
+  - *cpp-field
+  - icicle/src/curves/**/*
+  - icicle/include/icicle/curves/**/*
+  - icicle/tests/test_curve_api.cpp
+cpp-ring: &cpp-ring
+  - *cpp-base
+  - icicle/src/rings/**/*
+  - icicle/include/icicle/rings/**/*
+  - icicle/tests/test_ring_api.cpp
+  - icicle/src/balanced_decomposition.cpp
+  - icicle/include/icicle/balanced_decomposition.h
+  - icicle/src/jl_projection.cpp
+  - icicle/include/icicle/jl_projection.h
+  - icicle/src/norm.cpp
+  - icicle/include/icicle/norm.h
+  - icicle/include/icicle/negacyclic_ntt.h
+cpp-pqc: &cpp-pqc
+  - icicle/src/pqc/**/*
+  - icicle/include/icicle/pqc/**/*
+  - icicle/tests/test_pqc_api.cpp
+
+# C/C++ feature-specific file patterns
+cpp-msm: &cpp-msm
+  - icicle/src/msm.cpp
+  - icicle/include/icicle/msm.h
+  - icicle/include/icicle/backend/msm_backend.h
+  - icicle/include/icicle/backend/msm_config.h
+cpp-ntt: &cpp-ntt
+  - icicle/src/ntt.cpp
+  - icicle/include/icicle/ntt.h
+  - icicle/src/polynomials/**/*
+  - icicle/tests/test_polynomial_api.cpp
+  - icicle/include/icicle/polynomials/**/*
+  - icicle/include/icicle/backend/ntt_backend.h
+  - icicle/include/icicle/backend/ntt_config.h
+  - icicle/include/icicle/backend/polynomial_backend.h
+cpp-ecntt: &cpp-ecntt
+  - icicle/src/ecntt.cpp
+  - icicle/include/icicle/ecntt.h
+  - icicle/include/icicle/backend/ecntt_backend.h
+cpp-fri: &cpp-fri
+  - icicle/src/fri/**/*
+  - icicle/include/icicle/fri/**/*
+  - icicle/include/icicle/backend/fri_backend.h
+cpp-sumcheck: &cpp-sumcheck
+  - *cpp-program
+  - icicle/src/sumcheck/**/*
+  - icicle/include/icicle/sumcheck/**/*
+  - icicle/include/icicle/backend/sumcheck_backend.h
+cpp-pairing: &cpp-pairing
+  - icicle/src/pairing.cpp
+  - icicle/include/icicle/pairing.h
+cpp-poseidon: &cpp-poseidon
+  - icicle/src/hash/poseidon.cpp
+  - icicle/src/hash/poseidon_c_api.cpp
+  - icicle/include/icicle/hash/poseidon.h
+  - icicle/include/icicle/hash/poseidon_constants/**/*
+  - icicle/include/icicle/backend/hash/poseidon_backend.h
+cpp-poseidon2: &cpp-poseidon2
+  - icicle/src/hash/poseidon2.cpp
+  - icicle/src/hash/poseidon2_c_api.cpp
+  - icicle/include/icicle/hash/poseidon2.h
+  - icicle/include/icicle/hash/poseidon2_constants/**/*
+  - icicle/include/icicle/backend/hash/poseidon2_backend.h
+cpp-hash: &cpp-hash
+  - icicle/src/hash/**/*
+  - icicle/include/icicle/hash/**/*
+  - icicle/include/icicle/backend/hash/**/*
+  - icicle/include/icicle/backend/merkle/**/*
+  - icicle/tests/test_hash_api.cpp
+  - "!icicle/src/hash/poseidon*"
+  - "!icicle/include/icicle/hash/poseidon*"
+  - "!icicle/include/icicle/backend/hash/poseidon_backend.h"
+  - "!icicle/src/hash/poseidon2*"
+  - "!icicle/include/icicle/hash/poseidon2*"
+  - "!icicle/include/icicle/backend/hash/poseidon2_backend.h"
+cpp-runtime: &cpp-runtime
+  - icicle/src/runtime.cpp
+  - icicle/include/icicle/runtime.h
+  - icicle/tests/test_device_api.cpp
+
+# Rust file feature mappings
+rust-program: &rust-program
+  - wrappers/rust/**/program/**/*.rs
+  - wrappers/rust/**/symbol/**/*.rs
+rust-base: &rust-base
+  - *rust-program
+  - wrappers/rust/**/vec_ops/**/*.rs
+rust-field: &rust-field
+  - *rust-base
+  - wrappers/rust/icicle-core/src/field.rs
+  - wrappers/rust/icicle-fields/**/*.rs
+rust-curve: &rust-curve
+  - *rust-field
+  - wrappers/rust/icicle-core/src/curve.rs
+  - wrappers/rust/icicle-curves/**/*.rs
+rust-ring: &rust-ring
+  - *rust-field
+  - wrappers/rust/icicle-core/src/rns/**/*.rs
+  - wrappers/rust/icicle-core/src/balanced_decomposition/**/*.rs
+  - wrappers/rust/icicle-core/src/jl_projection/**/*.rs
+  - wrappers/rust/icicle-core/src/norm/**/*.rs
+  - wrappers/rust/icicle-core/src/negacyclic_ntt/**/*.rs
+  - wrappers/rust/icicle-core/src/polynomial_ring.rs
+  - wrappers/rust/icicle-rings/**/*.rs
+rust-pqc: &rust-pqc
+  - wrappers/rust/icicle-pqc/**/*.rs
+
+# Rust feature-specific file patterns
+rust-msm: &rust-msm
+  - wrappers/rust/**/msm/**/*.rs
+rust-ntt: &rust-ntt
+  - wrappers/rust/**/ntt/**/*.rs
+  - wrappers/rust/**/polynomials/**/*.rs
+rust-ecntt: &rust-ecntt
+  - wrappers/rust/**/ecntt/**/*.rs
+rust-fri: &rust-fri
+  - wrappers/rust/**/fri/**/*.rs
+rust-sumcheck: &rust-sumcheck
+  - *rust-program
+  - wrappers/rust/**/sumcheck/**/*.rs
+rust-pairing: &rust-pairing
+  - wrappers/rust/**/pairing/**/*.rs
+rust-poseidon: &rust-poseidon
+  - wrappers/rust/**/poseidon/**/*.rs
+rust-poseidon2: &rust-poseidon2
+  - wrappers/rust/**/poseidon2/**/*.rs
+rust-hash: &rust-hash
+  - wrappers/rust/icicle-core/src/hash/**/*.rs
+  - wrappers/rust/icicle-core/src/merkle/**/*.rs
+  - wrappers/rust/icicle-hash/**/*.rs
+rust-runtime: &rust-runtime
+  - wrappers/rust/icicle-runtime/**/*.rs
+
+# Go file feature mappings
+go-program: &go-program
+  - wrappers/golang/internal/generator/program/**/*.go
+  - wrappers/golang/internal/generator/symbol/**/*.go
+go-base: &go-base
+  - *go-program
+  - wrappers/golang/internal/generator/vecOps/**/*.go
+  - wrappers/golang/core/vec_ops.go
+  - wrappers/golang/core/vec_ops_test.go
+go-field: &go-field
+  - *go-base
+  - wrappers/golang/internal/generator/fields/**/*.go
+go-curve: &go-curve
+  - *go-field
+  - wrappers/golang/internal/generator/curves/**/*.go
+go-ring: &go-ring
+  - *go-field
+  - wrappers/golang/internal/generator/rings/**/*.go
+go-pqc: &go-pqc
+  - wrappers/golang/pqc/**/*.go
+
+# Go feature-specific file patterns
+go-msm: &go-msm
+  - wrappers/golang/internal/generator/msm/**/*.go
+  - wrappers/golang/core/msm.go
+  - wrappers/golang/core/msm_test.go
+go-ntt: &go-ntt
+  - wrappers/golang/internal/generator/ntt/**/*.go
+  - wrappers/golang/internal/generator/polynomials/**/*.go
+  - wrappers/golang/core/ntt.go
+  - wrappers/golang/core/ntt_test.go
+go-ecntt: &go-ecntt
+  - wrappers/golang/internal/generator/ecntt/**/*.go
+go-fri: &go-fri
+  - wrappers/golang/internal/generator/fri/**/*.go
+go-sumcheck: &go-sumcheck
+  - *go-program
+  - wrappers/golang/internal/generator/sumcheck/**/*.go
+go-pairing: &go-pairing
+  - wrappers/golang/internal/generator/pairing/**/*.go
+go-poseidon: &go-poseidon
+  - wrappers/golang/internal/generator/poseidon/**/*.go
+go-poseidon2: &go-poseidon2
+  - wrappers/golang/internal/generator/poseidon2/**/*.go
+go-hash: &go-hash
+  - wrappers/golang/hash/**/*.go
+  - wrappers/golang/merkle-tree/**/*.go
+  - wrappers/golang/core/hash.go
+  - wrappers/golang/core/hash_test.go
+  - wrappers/golang/core/merkletree.go
+  - wrappers/golang/core/merkletree_test.go
+go-runtime: &go-runtime
+  - wrappers/golang/runtime/**/*.go
+
+# CPU backend feature-specific file patterns
+cpu-backend-msm: &cpu-backend-msm
+  - icicle/backend/cpu/src/curve/cpu_msm.hpp
+  - icicle/backend/cpu/src/curve/cpu_msm.cpp
+  - icicle/backend/cpu/include/decision_tree_params/**/*
+cpu-backend-ntt: &cpu-backend-ntt
+  - icicle/backend/cpu/src/field/cpu_ntt.cpp
+  - icicle/backend/cpu/src/polynomial/cpu_polynomial_backend.cpp
+  - icicle/backend/cpu/include/ntt_cpu.h
+  - icicle/backend/cpu/include/ntt_data.h
+  - icicle/backend/cpu/include/ntt_task.h
+  - icicle/backend/cpu/include/ntt_utils.h
+  - icicle/backend/cpu/include/cpu_ntt_domain.h
+  - icicle/backend/cpu/include/cpu_ntt_main.h
+cpu-backend-ecntt: &cpu-backend-ecntt
+  - icicle/backend/cpu/src/curve/cpu_ecntt.cpp
+cpu-backend-fri: &cpu-backend-fri
+  - icicle/backend/cpu/src/field/cpu_fri.cpp
+  - icicle/backend/cpu/include/cpu_fri_backend.h
+  - icicle/backend/cpu/include/cpu_fri_rounds.h
+cpu-backend-sumcheck: &cpu-backend-sumcheck
+  - icicle/backend/cpu/src/field/cpu_sumcheck.cpp
+  - icicle/backend/cpu/include/cpu_sumcheck.h
+cpu-backend-poseidon: &cpu-backend-poseidon
+  - icicle/backend/cpu/src/hash/cpu_poseidon.cpp
+cpu-backend-poseidon2: &cpu-backend-poseidon2
+  - icicle/backend/cpu/src/hash/cpu_poseidon2.cpp
+cpu-backend-hash: &cpu-backend-hash
+  - icicle/backend/cpu/src/hash/**/*
+  - '!icicle/backend/cpu/src/hash/cpu_poseidon.cpp'
+  - '!icicle/backend/cpu/src/hash/cpu_poseidon2.cpp'
+  - icicle/backend/cpu/include/tasks_manager.h
+cpu-backend-runtime: &cpu-backend-runtime
+  - icicle/backend/cpu/src/cpu_device_api.cpp
+cpu-backend-field: &cpu-backend-field
+  - icicle/backend/cpu/src/field/cpu_vec_ops.cpp
+cpu-backend-curve: &cpu-backend-curve
+  - icicle/backend/cpu/src/curve/cpu_modulus_conversion.cpp
+cpu-backend-ring: &cpu-backend-ring
+  - icicle/backend/cpu/src/ring/**/*
+
+# CUDA-PQC backend
+cuda-pqc-backend: &cuda-pqc-backend
+  - icicle/backend/cuda_pqc/**/*
+  - '!icicle/backend/cuda_pqc/README.md'
+  - '!icicle/backend/cuda_pqc/tests/ml_kem/test_data/**/*'
+
+# END ANCHORS
+
+# Outputs for check-changed-files.yml
+# The following are used to enable features in tests/builds
+msm: &msm
+  - *cpp-msm
+  - *rust-msm
+  - *go-msm
+  - *cpu-backend-msm
+ntt: &ntt
+  - *cpp-ntt
+  - *rust-ntt
+  - *go-ntt
+  - *cpu-backend-ntt
+ecntt: &ecntt
+  - *cpp-ecntt
+  - *rust-ecntt
+  - *go-ecntt
+  - *cpu-backend-ecntt
+fri: &fri
+  - *cpp-fri
+  - *rust-fri
+  - *go-fri
+  - *cpu-backend-fri
+sumcheck: &sumcheck
+  - *cpp-sumcheck
+  - *rust-sumcheck
+  - *go-sumcheck
+  - *cpu-backend-sumcheck
+pairing: &pairing
+  - *cpp-pairing
+  - *rust-pairing
+  - *go-pairing
+poseidon: &poseidon
+  - *cpp-poseidon
+  - *rust-poseidon
+  - *go-poseidon
+  - *cpu-backend-poseidon
+poseidon2: &poseidon2
+  - *cpp-poseidon2
+  - *rust-poseidon2
+  - *go-poseidon2
+  - *cpu-backend-poseidon2
+
+# The following are used to check if workflow steps should run
+field: &field
+  - *cpp-field
+  - *rust-field
+  - *go-field
+  - *cpu-backend-field
+  - *ntt
+  - *fri
+  - *sumcheck
+  - *poseidon
+  - *poseidon2
+
+curve:
+  - *cpp-curve
+  - *rust-curve
+  - *go-curve
+  - *cpu-backend-curve
+  - *field
+  - *msm
+  - *ecntt
+  - *pairing
+
+ring:
+  - *cpp-ring
+  - *rust-ring
+  - *go-ring
+  - *cpu-backend-ring
+  - *ntt
+
+hash:
+  - *cpp-hash
+  - *rust-hash
+  - *go-hash
+  - *cpu-backend-hash
+
+runtime:
+  - *cpp-runtime
+  - *rust-runtime
+  - *go-runtime
+  - *cpu-backend-runtime
+
+pqc:
+  - *cpp-pqc
+  - *rust-pqc
+  - *go-pqc
+  - *cuda-pqc-backend
+
+cpp: &cpp
+  - icicle/**/*
+  - '!icicle/backend/**/*'
+  - '!icicle/include/icicle/backend/**/*'
+
 rust:
+  - *cpp
   - wrappers/rust/**/*
-  - '!wrappers/rust/README.md'
-  - .github/workflows/cpp-golang-rust.yml
-cpp:
-  - icicle/**/*.cu
-  - icicle/**/*.cuh
-  - icicle/**/*.cpp
-  - icicle/**/*.hpp
-  - icicle/**/*.c
-  - icicle/**/*.h
-  - icicle/CMakeLists.txt
-  - icicle/cmake/**/*.cmake
-  - .github/workflows/cpp-golang-rust.yml
-examples:
-  - examples/**/*
-  - .github/workflows/cpp-golang-rust.yml
-  - .github/workflows/rust-examples.yml
+
+go:
+  - *cpp
+  - wrappers/golang/**/*
+  - '!wrappers/golang/README.md'
+  - '!wrappers/golang/internal/generator/main.go'
+  - '!wrappers/golang/internal/build-libs.go'
+
+cpu-backend:
+  - icicle/backend/cpu/**/*
+
+backend-api:
+  - icicle/include/icicle/backend/**/*

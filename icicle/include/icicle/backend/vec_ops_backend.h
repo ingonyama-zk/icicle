@@ -521,7 +521,30 @@ namespace icicle {
     }
 #endif // EXT_FIELD
 
-#ifdef RING // for RNS type
+#ifdef RING
+  // This should be the same for all the devices to get a deterministic result
+  const uint64_t RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS = 256;
+
+  // for Zq type
+  using ringZqRandomSamplingImpl = std::function<eIcicleError(
+    const Device& device,
+    uint64_t size,
+    bool fast_mode,
+    const std::byte* seed,
+    uint64_t seed_len,
+    const VecOpsConfig& cfg,
+    field_t* output)>;
+  void register_ring_zq_random_sampling(const std::string& deviceType, ringZqRandomSamplingImpl);
+
+  #define REGISTER_RING_ZQ_RANDOM_SAMPLING_BACKEND(DEVICE_TYPE, FUNC)                                                  \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_ring_zq_random_sampling) = []() -> bool {                                                \
+        register_ring_zq_random_sampling(DEVICE_TYPE, FUNC);                                                           \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  // for RNS type
   using ringRnsVectorReduceOpImpl = std::function<eIcicleError(
     const Device& device, const scalar_rns_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_rns_t* output)>;
   using ringRnsVectorOpImpl = std::function<eIcicleError(
@@ -697,6 +720,24 @@ namespace icicle {
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_matrix_transpose_ring_rns) = []() -> bool {                                              \
         register_ring_rns_matrix_transpose(DEVICE_TYPE, FUNC);                                                         \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  using ringPolyRingMatrixOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const PolyRing* in,
+    uint32_t nof_rows,
+    uint32_t nof_cols,
+    const VecOpsConfig& config,
+    PolyRing* out)>;
+
+  void register_poly_ring_matrix_transpose(const std::string& deviceType, ringPolyRingMatrixOpImpl impl);
+
+  #define REGISTER_MATRIX_TRANSPOSE_POLY_RING_BACKEND(DEVICE_TYPE, FUNC)                                               \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_matrix_transpose_poly_ring) = []() -> bool {                                             \
+        register_poly_ring_matrix_transpose(DEVICE_TYPE, FUNC);                                                        \
         return true;                                                                                                   \
       }();                                                                                                             \
     }

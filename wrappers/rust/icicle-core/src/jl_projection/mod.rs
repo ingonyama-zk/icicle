@@ -364,10 +364,18 @@ macro_rules! impl_jl_projection_polyring_tests {
             fn test_jl_projection() {
                 initialize();
                 test_utilities::test_set_main_device();
-                // TODO uncomment when implemented for CUDA
-                // check_jl_projection_polyring<$poly_type>();
+                check_jl_projection_polyring::<$poly_type>();
                 test_utilities::test_set_ref_device();
                 check_jl_projection_polyring::<$poly_type>();
+            }
+
+            #[test]
+            fn test_polynomial_projection() {
+                initialize();
+                test_utilities::test_set_main_device();
+                check_polynomial_projection::<$poly_type>();
+                test_utilities::test_set_ref_device();
+                check_polynomial_projection::<$poly_type>();
             }
         }
     };
