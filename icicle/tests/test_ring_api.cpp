@@ -8,6 +8,7 @@
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
 #include <chrono>
+#include <map>
 
 using namespace field_config;
 using namespace icicle;
@@ -1302,18 +1303,33 @@ TEST_F(RingTestBase, ChallengePolynomialsSampling)
     outputs[device_index] = std::vector<Rq>(size);
   }
 
+  size_t ones = 31;
+  size_t twos = 10;
+
   const int N = 4;
   for (int i = 0; i < N; ++i) {
     for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
       ICICLE_CHECK(icicle_set_device(s_registered_devices[device_index]));
       ICICLE_CHECK(sample_challenge_space_polynomials(
-        seed.data(), seed_len, size, 31, 10, VecOpsConfig{}, outputs[device_index].data()));
+        seed.data(), seed_len, size, ones, twos, VecOpsConfig{}, outputs[device_index].data()));
     }
   }
+
+  field_t two = field_t::one() + field_t::one();
+  field_t neg_two = field_t::neg(two);
+  field_t neg_one = field_t::neg(field_t::one());
 
   for (size_t device_index = 1; device_index < s_registered_devices.size(); ++device_index) {
     for (size_t i = 0; i < size; ++i) {
       ASSERT_EQ(outputs[device_index][i], outputs[0][i]);
+      const auto& poly = outputs[device_index][i];
+      std::unordered_map<field_t, size_t> coeff_counts;
+      for (int j = 0; j < Rq::d; ++j) {
+        coeff_counts[poly.values[j]]++;
+      }
+      ASSERT_EQ(coeff_counts[field_t::one()] + coeff_counts[neg_one], ones);
+      ASSERT_EQ(coeff_counts[two] + coeff_counts[neg_two], twos);
+      ASSERT_EQ(coeff_counts[field_t::zero()], Rq::d - ones - twos);
     }
   }
 }

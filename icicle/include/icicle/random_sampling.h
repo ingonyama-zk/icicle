@@ -24,10 +24,10 @@ namespace icicle {
     size_t size, bool fast_mode, const std::byte* seed, size_t seed_len, const VecOpsConfig& config, T* output);
 
   /**
-   * @brief Sample Labrador Rq challenge polynomials from challenge space C.
+   * @brief Sample Rq challenge polynomials with {0, 1, 2, -1, -2} coefficients.
    *
    * This function samples challenge polynomials with specific coefficient patterns. The sampling process:
-   * 1. Initializes a polynomial with coefficients consisting of "ones" number of 1s, "twos" number of 2s, and the rest
+   * 1. Initializes a polynomial with coefficients consisting of "ones" number of ±1s, "twos" number of ±2s, and the rest
    * of the coefficients are 0s.
    * 2. Randomly flips the signs of the coefficients
    * 3. Permutes the coefficients randomly
@@ -43,7 +43,6 @@ namespace icicle {
    * @param output Output buffer to store the sampled Rq polynomials. Should be of size config.batch_size.
    * @return eIcicleError::SUCCESS on success, or an error code on failure.
    *
-   * Assumes num_coeffs == num_occur size == coeff_val size <= T::d (the rest of the coefficients are 0)
    */
   template <typename T>
   eIcicleError sample_challenge_space_polynomials(

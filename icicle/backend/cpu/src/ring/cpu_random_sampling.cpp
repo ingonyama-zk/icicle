@@ -157,9 +157,9 @@ struct RandomBitIterator {
     return x;
   }
 
-  int next_bit()
+  bool next_bit()
   {
-    int bit;
+    bool bit;
     if (limb_idx < 8) {
       bit = (keccak_buffer[limb_idx] >> bit_idx) & 1;
     } else {
@@ -185,20 +185,20 @@ void merge_shuffle(
   int j = size_a;
   int n = size_a + size_b;
   while (true) {
-    if (random_bit_iterator.next_bit()) {
+    if (!random_bit_iterator.next_bit()) {
       if (j == n) { break; }
       std::swap(array[i], array[j]);
       ++j;
     } else {
       if (i == j) { break; }
-      ++i;
     }
+    ++i;
   }
-  for (i = i ? i : 1; i < n; i++) {
+  for (; i < n; i++) {
     uint32_t m = 0;
     for (int b = 0; b < index_bits; b++) {
       m |= random_bit_iterator.next_bit();
-      m <<= 1;
+      if (b < index_bits - 1) { m <<= 1; }
     }
     m = m % i;
     std::swap(array[i], array[m]);
