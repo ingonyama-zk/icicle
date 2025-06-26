@@ -1,6 +1,7 @@
 #include "icicle/backend/vec_ops_backend.h"
 #include "icicle/hash/keccak.h"
 #include "taskflow/taskflow.hpp"
+#include "icicle/operator_norm.h"
 
 // extract the number of threads to run from config
 int get_nof_workers(const VecOpsConfig& config); // defined in cpu_vec_ops.cpp
@@ -212,6 +213,7 @@ eIcicleError cpu_challenge_space_polynomials_sampling(
   size_t size,
   uint32_t ones,
   uint32_t twos,
+  int64_t norm,
   const VecOpsConfig& cfg,
   Rq* output)
 {
@@ -231,61 +233,73 @@ eIcicleError cpu_challenge_space_polynomials_sampling(
   }
 
   auto keccak512 = Keccak512::create();
-  const size_t polynomials_per_hash = CHALLENGE_SPACE_POLYNOMIALS_SAMPLING_POLYNOMIALS_PER_HASH;
-  const size_t total_hashes = (size + polynomials_per_hash - 1) / polynomials_per_hash;
 
   static const field_t two = field_t::one() + field_t::one();
   static const field_t neg_two = field_t::neg(two);
   static const field_t neg_one = field_t::neg(field_t::one());
 
-  const size_t nof_workers = std::min((size_t)get_nof_workers(cfg), total_hashes);
+  const size_t nof_workers = std::min((size_t)get_nof_workers(cfg), size);
   const size_t size_per_worker = (size + nof_workers - 1) / nof_workers;
-  const size_t hashes_per_worker = (size_per_worker + polynomials_per_hash - 1) / polynomials_per_hash;
 
   tf::Taskflow taskflow;
   tf::Executor executor(nof_workers);
 
-  for (size_t w = 0; w < nof_workers; ++w) {
-    taskflow.emplace([=]() {
-      for (size_t hash_idx = w * hashes_per_worker;
-           hash_idx < (w + 1) * hashes_per_worker && hash_idx * polynomials_per_hash < size; hash_idx++) {
-        Rq* output_polynomials = output + hash_idx * polynomials_per_hash;
-        size_t compute_polynomials = std::min(polynomials_per_hash, size - hash_idx * polynomials_per_hash);
+  static const std::unordered_map<field_t, int64_t> balanced_table = {
+    {field_t::one(), 1},
+    {neg_one, -1},
+    {two, 2},
+    {neg_two, -2},
+    {field_t::zero(), 0},
+  };
 
+  for (size_t poly_idx = 0; poly_idx < size; poly_idx++) {
+    taskflow.emplace([=]() {
+      uint32_t retry_idx = 0;
+      Rq* output_polynomial = output + poly_idx;
+      int64_t opnorm = 0;
+
+      do {
         // Setup the random bits iterator
         HashConfig hash_cfg{};
-        std::vector<std::byte> hash_input(seed_len + sizeof(hash_idx));
+        std::vector<std::byte> hash_input(seed_len + sizeof(poly_idx) + sizeof(retry_idx));
         std::memcpy(hash_input.data(), seed, seed_len);
-        std::memcpy(hash_input.data() + seed_len, &hash_idx, sizeof(hash_idx));
+        std::memcpy(hash_input.data() + seed_len, &poly_idx, sizeof(poly_idx));
+        std::memcpy(hash_input.data() + seed_len + sizeof(poly_idx), &retry_idx, sizeof(retry_idx));
         std::vector<uint64_t> hash_output(keccak512.output_size());
         keccak512.hash(hash_input.data(), hash_input.size(), hash_cfg, hash_output.data());
         RandomBitIterator random_bit_iterator(hash_output);
 
         // Initialize polynomial with coefficients and randomly flip signs of ones and twos coefficients
         // [1, -1, ..., 1, 2, -2, ..., 2, 0, ..., 0]
-        for (uint32_t i = 0; i < compute_polynomials; ++i) {
-          for (uint32_t l = 0; l < ones; ++l) {
-            output_polynomials[i].values[l] = random_bit_iterator.next_bit() ? field_t::one() : neg_one;
-          }
-          for (uint32_t m = ones; m < ones + twos; ++m) {
-            output_polynomials[i].values[m] = random_bit_iterator.next_bit() ? two : neg_two;
-          }
-          // TODO: memset here?
-          for (uint32_t k = ones + twos; k < Rq::d; ++k) {
-            output_polynomials[i].values[k] = field_t::zero();
-          }
+        for (uint32_t l = 0; l < ones; ++l) {
+          output_polynomial->values[l] = random_bit_iterator.next_bit() ? field_t::one() : neg_one;
+        }
+        for (uint32_t m = ones; m < ones + twos; ++m) {
+          output_polynomial->values[m] = random_bit_iterator.next_bit() ? two : neg_two;
+        }
+        // TODO: memset here?
+        for (uint32_t k = ones + twos; k < Rq::d; ++k) {
+          output_polynomial->values[k] = field_t::zero();
         }
 
-        for (uint32_t i = 0; i < compute_polynomials; ++i) {
-          // Do merge shuffle of 1s and 2s
-          merge_shuffle(
-            output_polynomials[i].values, ones, twos, std::ceil(std::log2(ones + twos)), random_bit_iterator);
-          // Do merge shuffle of shuffled 1s and 2s and zeroes
-          merge_shuffle(
-            output_polynomials[i].values, ones + twos, Rq::d - ones - twos, std::ceil(std::log2(Rq::d)),
-            random_bit_iterator);
+        // Do merge shuffle of 1s and 2s
+        merge_shuffle(
+          output_polynomial->values, ones, twos, std::ceil(std::log2(ones + twos)), random_bit_iterator);
+        // Do merge shuffle of shuffled 1s and 2s and zeroes
+        merge_shuffle(
+          output_polynomial->values, ones + twos, Rq::d - ones - twos, std::ceil(std::log2(Rq::d)),
+          random_bit_iterator);
+
+        if (norm) {
+          opnorm_cpu::Poly poly{};
+          for (int i = 0; i < Rq::d; ++i) {
+            poly[i] = balanced_table.at(output_polynomial->values[i]);
+          }
+          opnorm = opnorm_cpu::operator_norm(poly);
+          retry_idx++;
+          ICICLE_ASSERT(retry_idx <= 0xFFFFFF);
         }
-      }
+      } while (opnorm > norm);
     });
   }
 

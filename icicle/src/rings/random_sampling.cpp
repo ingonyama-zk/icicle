@@ -38,10 +38,11 @@ namespace icicle {
     size_t size,
     uint32_t ones,
     uint32_t twos,
+    int64_t norm,
     const VecOpsConfig* config,
     Rq* output)
   {
-    return ChallengeSpacePolynomialsSamplingDispatcher::execute(seed, seed_len, size, ones, twos, *config, output);
+    return ChallengeSpacePolynomialsSamplingDispatcher::execute(seed, seed_len, size, ones, twos, norm, *config, output);
   }
 
   template <>
@@ -51,9 +52,10 @@ namespace icicle {
     size_t size,
     uint32_t ones,
     uint32_t twos,
+    int64_t norm,
     const VecOpsConfig& config,
     Rq* output)
   {
-    return ChallengeSpacePolynomialsSamplingDispatcher::execute(seed, seed_len, size, ones, twos, config, output);
+    return ChallengeSpacePolynomialsSamplingDispatcher::execute(seed, seed_len, size, ones, twos, norm, config, output);
   }
 } // namespace icicle

@@ -547,9 +547,6 @@ namespace icicle {
 
   // for Rq type
 
-  // This should be the same for all the devices to get a deterministic result
-  const size_t CHALLENGE_SPACE_POLYNOMIALS_SAMPLING_POLYNOMIALS_PER_HASH = 8;
-
   using challengeSpacePolynomialsSamplingImpl = std::function<eIcicleError(
     const Device& device,
     const std::byte* seed,
@@ -557,6 +554,7 @@ namespace icicle {
     size_t size,
     uint32_t ones,
     uint32_t twos,
+    int64_t norm,
     const VecOpsConfig& cfg,
     Rq* output)>;
   void

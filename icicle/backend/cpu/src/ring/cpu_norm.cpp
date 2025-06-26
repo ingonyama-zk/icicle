@@ -111,7 +111,7 @@ static eIcicleError cpu_check_norm_bound(
       for (const auto& sum : thread_sums[batch_idx]) {
         total_sum += sum;
       }
-      output[batch_idx] = total_sum <= bound_squared;
+      output[batch_idx] = total_sum < bound_squared;
     }
   }
   // For L-infinity norm, we just need to check the max(|input|) < norm_bound
@@ -160,7 +160,7 @@ static eIcicleError cpu_check_norm_bound(
     if (validation_failed.load(std::memory_order_relaxed)) { return eIcicleError::INVALID_ARGUMENT; }
 
     for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
-      output[batch_idx] = max_abs[batch_idx].load(std::memory_order_relaxed) <= static_cast<int64_t>(norm_bound);
+      output[batch_idx] = max_abs[batch_idx].load(std::memory_order_relaxed) < static_cast<int64_t>(norm_bound);
     }
   }
 

@@ -1291,7 +1291,7 @@ TEST_F(RingTestBase, RandomSampling)
 
 TEST_F(RingTestBase, ChallengePolynomialsSampling)
 {
-  size_t size = 1 << 20;
+  size_t size = 1 << 16;
   size_t seed_len = 32;
   std::vector<std::byte> seed(seed_len);
   for (size_t i = 0; i < seed_len; ++i) {
@@ -1305,13 +1305,14 @@ TEST_F(RingTestBase, ChallengePolynomialsSampling)
 
   size_t ones = 31;
   size_t twos = 10;
+  int64_t norm = 15;
 
-  const int N = 4;
+  const int N = 5;
   for (int i = 0; i < N; ++i) {
     for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
       ICICLE_CHECK(icicle_set_device(s_registered_devices[device_index]));
       ICICLE_CHECK(sample_challenge_space_polynomials(
-        seed.data(), seed_len, size, ones, twos, VecOpsConfig{}, outputs[device_index].data()));
+        seed.data(), seed_len, size, ones, twos, norm, VecOpsConfig{}, outputs[device_index].data()));
     }
   }
 
@@ -1321,6 +1322,9 @@ TEST_F(RingTestBase, ChallengePolynomialsSampling)
 
   for (size_t device_index = 1; device_index < s_registered_devices.size(); ++device_index) {
     for (size_t i = 0; i < size; ++i) {
+      if (outputs[device_index][i] != outputs[0][i]) {
+        std::cout << "MISMATCH: " << i << std::endl;
+      }
       ASSERT_EQ(outputs[device_index][i], outputs[0][i]);
       const auto& poly = outputs[device_index][i];
       std::unordered_map<field_t, size_t> coeff_counts;
@@ -1332,4 +1336,39 @@ TEST_F(RingTestBase, ChallengePolynomialsSampling)
       ASSERT_EQ(coeff_counts[field_t::zero()], Rq::d - ones - twos);
     }
   }
+}
+
+#include "icicle/operator_norm.h"
+TEST_F(RingTestBase, ComplexFFT_Simple)
+{
+  using namespace opnorm_cpu;
+  Poly poly{};
+  for (size_t i = 0; i < N; ++i)
+    poly[i] = i * 100;
+
+  uint64_t opnorm = operator_norm(poly);
+  ASSERT_LT(opnorm, 152851);             // Python computed 152849.98 but losing precision with f32
+}
+
+TEST_F(RingTestBase, ComplexFFT_Alternating)
+{
+  using namespace opnorm_cpu;
+  Poly poly{};
+  for (size_t i = 0; i < N; ++i)
+    poly[i] = (i % 2 == 0) ? 5000 : 0;
+
+  uint64_t opnorm = operator_norm(poly); // returns u64
+  ASSERT_LT(opnorm, 101902);             // Python computed '101900.08' but losing precision with f32
+}
+
+TEST_F(RingTestBase, ComplexFFT_QMinus2X)
+{
+  using namespace opnorm_cpu;
+  constexpr uint64_t q = (1ULL << 62) - 57;
+
+  Poly poly{};
+  poly[1] = balance<q>(q - 2); // Balanced as -2 in operator_norm()
+
+  uint64_t opnorm = operator_norm(poly);
+  ASSERT_EQ(opnorm, 2); // FFT of -2*X has magnitude 2 everywhere
 }

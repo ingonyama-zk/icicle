@@ -1,6 +1,15 @@
+---
+display: false
+---
+
 # Poseidon
 
-TODO update for V3
+:::note
+
+This page has not yet been updated for ICICLE v3.0.0 and later. Some information may be outdated
+
+:::
+
 
 [Poseidon](https://eprint.iacr.org/2019/458.pdf) is a popular hash in the ZK ecosystem primarily because its optimized to work over large prime fields, a common setting for ZK proofs, thereby minimizing the number of multiplicative operations required.
 

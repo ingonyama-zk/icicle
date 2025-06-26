@@ -419,8 +419,6 @@
   content: url('/img/darkmode/rust_drk.svg');
 }
 
-
-
 /* ========== MERMAID DARK MODE FIX ========== */
 [data-theme='dark'] {
   --ifm-color-primary: #006AEA;
@@ -445,4 +443,21 @@
 /* ========== MISC ========== */
 .anchor {
   scroll-margin-top: 50pt;
+}
+
+/* Fixes for sticky table headers in MDX/Docusaurus */
+table thead th {
+  background: #fff;
+  z-index: 4;
+}
+[data-theme='dark'] table thead th {
+  background: #000;
+}
+
+/* Make markdown and doc containers not block sticky */
+.theme-doc-markdown,
+.theme-doc-markdown--centered,
+.markdown {
+  overflow: visible !important;
+  position: relative;
 }

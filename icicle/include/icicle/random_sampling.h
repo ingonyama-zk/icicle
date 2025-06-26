@@ -32,14 +32,14 @@ namespace icicle {
    * 2. Randomly flips the signs of the coefficients
    * 3. Permutes the coefficients randomly
    *
-   * Note: This function does not ensure norm constraints (e.g., τ, T) hold
-   *
    * @tparam T The element type for the polynomial coefficients.
    * @param seed Pointer to the seed buffer for deterministic sampling.
    * @param seed_len Length of the seed buffer in bytes.
    * @param size Number of polynomials to sample.
    * @param ones Number of 1s coefficients in each polynomial.
    * @param twos Number of 2s coefficients in each polynomial.
+   * @param norm Only sample polynomials for which operator norm is less than or equal to this value. If set to zero,
+   * no norm constraint is applied.
    * @param output Output buffer to store the sampled Rq polynomials. Should be of size config.batch_size.
    * @return eIcicleError::SUCCESS on success, or an error code on failure.
    *
@@ -51,6 +51,7 @@ namespace icicle {
     size_t size,
     uint32_t ones,
     uint32_t twos,
+    int64_t norm,
     const VecOpsConfig& config,
     T* output);
 } // namespace icicle
