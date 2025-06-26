@@ -18,7 +18,7 @@
 #include <cmath>
 #include <algorithm>
 
-namespace negacyclic_fft_cpu {
+namespace opnorm_cpu {
 
   constexpr size_t N = 64;
   constexpr float PI = 3.14159265358979323846f;
@@ -99,4 +99,4 @@ namespace negacyclic_fft_cpu {
     return static_cast<int64_t>(std::ceil(max_norm));
   }
 
-} // namespace negacyclic_fft_cpu
+} // namespace opnorm_cpu

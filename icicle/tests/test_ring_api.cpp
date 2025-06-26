@@ -1290,7 +1290,7 @@ TEST_F(RingTestBase, RandomSampling)
 #include "icicle/operator_norm.h"
 TEST_F(RingTestBase, ComplexFFT_Simple)
 {
-  using namespace negacyclic_fft_cpu;
+  using namespace opnorm_cpu;
   Poly poly{};
   for (size_t i = 0; i < N; ++i)
     poly[i] = i * 100;
@@ -1302,7 +1302,7 @@ TEST_F(RingTestBase, ComplexFFT_Simple)
 
 TEST_F(RingTestBase, ComplexFFT_Alternating)
 {
-  using namespace negacyclic_fft_cpu;
+  using namespace opnorm_cpu;
   Poly poly{};
   for (size_t i = 0; i < N; ++i)
     poly[i] = (i % 2 == 0) ? 5000 : 0;
@@ -1315,7 +1315,7 @@ TEST_F(RingTestBase, ComplexFFT_Alternating)
 // TODO Roman: make this test pass by balancing [0,q) --> (-q/2,q/2]. See Python for reference
 TEST_F(RingTestBase, ComplexFFT_QMinus2X)
 {
-  using namespace negacyclic_fft_cpu;
+  using namespace opnorm_cpu;
   constexpr uint64_t q = (1ULL << 62) - 57;
 
   Poly poly{};
