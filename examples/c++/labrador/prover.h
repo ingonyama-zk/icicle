@@ -14,7 +14,7 @@ struct LabradorBaseProver {
 
   LabradorBaseProver(const LabradorInstance& lab_inst, const std::vector<Rq>& S) : lab_inst(lab_inst), S(S)
   {
-    if (S.size() != lab_inst.r * lab_inst.n) { throw std::invalid_argument("S must have size r * n"); }
+    if (S.size() != lab_inst.param.r * lab_inst.param.n) { throw std::invalid_argument("S must have size r * n"); }
   }
 
   std::vector<Tq> agg_const_zero_constraints(

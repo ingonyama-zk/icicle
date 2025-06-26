@@ -6,8 +6,8 @@
 std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std::byte* seed, size_t seed_len) const
 {
   size_t JL_out = lab_inst.param.JL_out;
-  size_t n = lab_inst.n;
-  size_t r = lab_inst.r;
+  size_t n = lab_inst.param.n;
+  size_t r = lab_inst.param.r;
   size_t d = Rq::d;
 
   std::vector<Zq> p(JL_out);
@@ -48,8 +48,8 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
   const std::vector<Zq>& psi,
   const std::vector<Zq>& omega)
 {
-  size_t r = lab_inst.r;
-  size_t n = lab_inst.n;
+  size_t r = lab_inst.param.r;
+  size_t n = lab_inst.param.n;
   size_t d = Rq::d;
   const size_t L = lab_inst.const_zero_constraints.size();
 
@@ -184,8 +184,8 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
 std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_case_prover()
 {
   // Step 1: Pack the Witnesses into a Matrix S
-  const size_t r = lab_inst.r; // Number of witness vectors
-  const size_t n = lab_inst.n; // Dimension of witness vectors
+  const size_t r = lab_inst.param.r; // Number of witness vectors
+  const size_t n = lab_inst.param.n; // Dimension of witness vectors
   constexpr size_t d = Rq::d;
 
   if (TESTING) {
@@ -549,19 +549,16 @@ std::vector<Rq> LabradorProver::prepare_recursion_witness(
   // z0 = z_tilde[:n]
   // z1 = z_tilde[n:2*n]
 
-  size_t m = pf.t.size() + pf.g.size() + pf.h.size();
+  size_t t_len = lab_inst.param.t_len();
+  size_t g_len = lab_inst.param.g_len();
+  size_t h_len = lab_inst.param.h_len();
 
+  size_t m = t_len + g_len + h_len;
   // Step 4, 5:
   size_t n_prime = std::max(std::ceil((double)n / nu), std::ceil((double)m / mu));
 
   // Step 6
   // we will view s_prime as a multidimensional array. At the base level it consists of n_prime length vectors
-  size_t t_len = lab_inst.t_len();
-  size_t g_len = lab_inst.g_len();
-  size_t h_len = lab_inst.h_len();
-
-  size_t m = t_len + g_len + h_len;
-  size_t n_prime = std::max(std::ceil((double)n / nu), std::ceil((double)m / mu));
   size_t L_t = (t_len + n_prime - 1) / n_prime;
   size_t L_g = (g_len + n_prime - 1) / n_prime;
   size_t L_h = (h_len + n_prime - 1) / n_prime;
@@ -591,7 +588,7 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
 {
   std::vector<PartialTranscript> trs;
   PartialTranscript part_trs;
-  LabradorBaseCaseProof base_proof(lab_inst.r, lab_inst.n);
+  LabradorBaseCaseProof base_proof(lab_inst.param.r, lab_inst.param.n);
   for (size_t i = 0; i < NUM_REC; i++) {
     LabradorBaseProver base_prover(lab_inst, S);
     std::tie(base_proof, part_trs) = base_prover.base_case_prover();

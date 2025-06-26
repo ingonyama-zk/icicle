@@ -84,9 +84,10 @@ LabradorInstance prepare_recursion_instance(
   std::vector<Tq> u2 = trs.u2;
   std::vector<Tq> challenges_hat = trs.challenges_hat;
 
-  size_t t_len = prev_param.t_len(r);
-  size_t g_len = prev_param.g_len(r);
-  size_t h_len = prev_param.h_len(r);
+  // TODO: check whether these are called correctly
+  size_t t_len = prev_param.t_len();
+  size_t g_len = prev_param.g_len();
+  size_t h_len = prev_param.h_len();
 
   size_t m = t_len + g_len + h_len;
   size_t n_prime = std::max(std::ceil((double)n / nu), std::ceil((double)m / mu));
@@ -100,6 +101,8 @@ LabradorInstance prepare_recursion_instance(
   new_ajtai_seed.push_back(std::byte('1'));
   // TODO: figure out param using Lattirust code
   LabradorParam recursion_param{
+    r_prime,
+    n_prime,
     new_ajtai_seed,
     prev_param.kappa,      // kappa
     prev_param.kappa1,     // kappa1
@@ -109,7 +112,7 @@ LabradorInstance prepare_recursion_instance(
     prev_param.base3,      // base3
     100 * prev_param.beta, // beta
   };
-  LabradorInstance recursion_instance{r_prime, n_prime, recursion_param};
+  LabradorInstance recursion_instance{recursion_param};
 
   // Step 8: add the equality constraint u1=Bt + Cg to recursion_instance
   // Generate B, C

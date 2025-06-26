@@ -39,6 +39,8 @@ int main(int argc, char* argv[])
   std::string ajtai_seed_str = std::to_string(millis);
   std::cout << "Ajtai seed = " << ajtai_seed_str << std::endl;
   LabradorParam param{
+    r,
+    n,
     {reinterpret_cast<const std::byte*>(ajtai_seed_str.data()),
      reinterpret_cast<const std::byte*>(ajtai_seed_str.data()) + ajtai_seed_str.size()},
     1 << 4,    // kappa
@@ -49,14 +51,14 @@ int main(int argc, char* argv[])
     1 << 16,   // base3
     n * r * d, // beta
   };
-  LabradorInstance lab_inst{r, n, param};
+  LabradorInstance lab_inst{param};
   lab_inst.add_equality_constraint(eq_inst);
   lab_inst.add_const_zero_constraint(const_zero_inst);
 
   LabradorBaseProver base_prover{lab_inst, S};
   auto [base_proof, trs] = base_prover.base_case_prover();
 
-  LabradorInstance verif_lab_inst{r, n, param};
+  LabradorInstance verif_lab_inst{param};
   verif_lab_inst.add_equality_constraint(eq_inst);
   verif_lab_inst.add_const_zero_constraint(const_zero_inst);
 

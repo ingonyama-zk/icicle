@@ -4,8 +4,8 @@
 // check anyway
 bool LabradorBaseVerifier::_verify_base_proof() const
 {
-  size_t n = lab_inst.n;
-  size_t r = lab_inst.r;
+  size_t n = lab_inst.param.n;
+  size_t r = lab_inst.param.r;
   size_t d = Rq::d;
 
   auto z_hat = base_proof.z_hat;
