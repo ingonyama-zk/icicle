@@ -29,3 +29,8 @@ metal_backend = ["icicle-runtime/metal_backend"]
 pull_metal_backend = ["icicle-runtime/pull_metal_backend"]
 vulkan_backend = ["icicle-runtime/vulkan_backend"]
 pull_vulkan_backend = ["icicle-runtime/pull_vulkan_backend"]
+
+[[bench]]
+name = "matmul-bench" # run ```cargo bench --bench matmul-bench -- --verbose```to get std-dev
+path = "src/matrix_ops/bench.rs"
+harness = false

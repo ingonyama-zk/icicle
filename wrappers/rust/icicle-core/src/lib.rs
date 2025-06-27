@@ -5,6 +5,7 @@ pub mod field;
 pub mod fri;
 pub mod hash;
 pub mod jl_projection;
+pub mod matrix_ops;
 pub mod merkle;
 pub mod msm;
 pub mod negacyclic_ntt;
