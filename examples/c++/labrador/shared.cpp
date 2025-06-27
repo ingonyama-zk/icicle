@@ -153,10 +153,14 @@ LabradorInstance prepare_recursion_instance(
   };
   LabradorInstance recursion_instance{recursion_param};
 
-  // Step 8: add the equality constraint u1=Bt + Cg to recursion_instance
+  Zq _zero = Zq::zero();
+  Zq two = Zq::from(2);
+  Zq two_inv = Zq::inverse(two);
+  size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base3);
+
+  // Step 8: add the equality constraint u1=tB + gC to recursion_instance
   // Generate B, C
   // TODO: change this so that B,C need not be computed and stored
-
   std::vector<Tq> B(prev_param.t_len() * prev_param.kappa1), C(prev_param.g_len() * prev_param.kappa1),
     B_t(prev_param.kappa1 * prev_param.t_len()), C_t(prev_param.kappa1 * prev_param.g_len());
 
@@ -169,6 +173,10 @@ LabradorInstance prepare_recursion_instance(
   // B_t, C_t are transposed B, C
   ICICLE_CHECK(matrix_transpose<Tq>(B.data(), prev_param.t_len(), prev_param.kappa1, {}, B_t.data()));
   ICICLE_CHECK(matrix_transpose<Tq>(C.data(), prev_param.g_len(), prev_param.kappa1, {}, C_t.data()));
+
+  // negate u1
+  ICICLE_CHECK(
+    scalar_sub_vec(&_zero, reinterpret_cast<Zq*>(u1.data()), d * u1.size(), {}, reinterpret_cast<Zq*>(u1.data())));
 
   for (size_t i = 0; i < prev_param.kappa1; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
@@ -193,16 +201,19 @@ LabradorInstance prepare_recursion_instance(
   C_t.clear();
   C_t.shrink_to_fit();
 
-  // Step 9: add the equality constraint u2=Dh to recursion_instance
+  // Step 9: add the equality constraint u2=hD to recursion_instance
   // Generate D
   // TODO: change this so that D need not be computed and stored
-  size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base3);
   std::vector<Tq> D(h_len * prev_param.kappa2), D_t(prev_param.kappa2 * h_len);
 
   std::vector<std::byte> seed_D(prev_param.ajtai_seed);
   seed_D.push_back(std::byte('3'));
   ICICLE_CHECK(random_sampling(seed_D.data(), seed_D.size(), false, {}, D.data(), D.size()));
   ICICLE_CHECK(matrix_transpose<Tq>(D.data(), h_len, prev_param.kappa2, {}, D_t.data()));
+
+  // negate u2
+  ICICLE_CHECK(
+    scalar_sub_vec(&_zero, reinterpret_cast<Zq*>(u2.data()), d * u2.size(), {}, reinterpret_cast<Zq*>(u2.data())));
 
   for (size_t i = 0; i < prev_param.kappa2; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
@@ -251,21 +262,20 @@ LabradorInstance prepare_recursion_instance(
     std::vector<Tq> temp(r * kappa, zero());
     for (size_t j = 0; j < r; j++) {
       Tq neg_challenge_hat_j = challenges_hat[j];
-      Zq zero = Zq::zero();
-      scalar_sub_vec(&zero, challenges_hat[j].values, d, {}, neg_challenge_hat_j.values);
+      scalar_sub_vec(&_zero, challenges_hat[j].values, d, {}, neg_challenge_hat_j.values);
       temp[j * kappa + i] = neg_challenge_hat_j;
     }
     // construct the vector t_mul = [temp | base1*temp | base1^2* temp | ... | base1^l1 * temp]
     std::vector<Tq> t_mul(t_len); // t_len == l1 * r * kappa
 
     Zq b1_zq = Zq::from(prev_param.base1);
-    icicle_copy(&t_mul[0], temp.data(), temp.size() * sizeof(Tq));
+    ICICLE_CHECK(icicle_copy(&t_mul[0], temp.data(), temp.size() * sizeof(Tq)));
     for (size_t j = 1; j < l1; j++) {
       // temp = base1*temp
       scalar_mul_vec(
         &b1_zq, reinterpret_cast<Zq*>(temp.data()), temp.size() * d, {}, reinterpret_cast<Zq*>(temp.data()));
       // t_mul[j * r * kappa: ] = temp
-      icicle_copy(&t_mul[j * r * kappa], temp.data(), temp.size() * sizeof(Tq));
+      ICICLE_CHECK(icicle_copy(&t_mul[j * r * kappa], temp.data(), temp.size() * sizeof(Tq)));
     }
 
     ICICLE_CHECK(preparer.copy_like_t(new_constraint.phi.data(), t_mul.data()));
@@ -274,7 +284,7 @@ LabradorInstance prepare_recursion_instance(
   }
 
   std::vector<Tq> c_times_ct(r * r);
-  /* Step 11: add c^t * Phi * z === c^t H c */ {
+  /* Step 11: add c^t * Phi * z - c^t H c == 0 */ {
     EqualityInstance step11_constraint(r_prime, n_prime);
     std::vector<Tq> c_times_phi(n);
     // c_times_phi = c^t * Phi
@@ -289,8 +299,6 @@ LabradorInstance prepare_recursion_instance(
     ICICLE_CHECK(preparer.copy_like_z1(step11_constraint.phi.data(), c_times_phi.data()));
 
     ICICLE_CHECK(matmul(challenges_hat.data(), r, 1, challenges_hat.data(), 1, r, {}, c_times_ct.data()));
-    Zq two = Zq::from(2);
-    Zq two_inv = Zq::inverse(two);
     // c_times_ct = 2 * c_times_ct
     scalar_mul_vec(
       &two, reinterpret_cast<Zq*>(c_times_ct.data()), c_times_ct.size() * d, {},
@@ -303,18 +311,22 @@ LabradorInstance prepare_recursion_instance(
     // for j!=k c_times_ct[j,k] = 2* challenges_hat[j] * challenges_hat[k]
     std::vector<Tq> temp = extract_symm_part(c_times_ct.data(), r);
 
+    // negate temp
+    ICICLE_CHECK(scalar_sub_vec(
+      &_zero, reinterpret_cast<Zq*>(temp.data()), d * temp.size(), {}, reinterpret_cast<Zq*>(temp.data())));
+
     // construct the vector h_mul = [temp | base3*temp | base3^2* temp | ... | base3^l3 * temp]
     std::vector<Tq> h_mul(h_len);
     size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base3);
 
     Zq b3_zq = Zq::from(prev_param.base3);
-    icicle_copy(&h_mul[0], temp.data(), temp.size() * sizeof(Tq));
+    ICICLE_CHECK(icicle_copy(&h_mul[0], temp.data(), temp.size() * sizeof(Tq)));
     for (size_t j = 1; j < l3; j++) {
       // temp = base3*temp
       scalar_mul_vec(
         &b3_zq, reinterpret_cast<Zq*>(temp.data()), temp.size() * d, {}, reinterpret_cast<Zq*>(temp.data()));
       // h_mul[j * temp.size(): ] = temp
-      icicle_copy(&h_mul[j * temp.size()], temp.data(), temp.size() * sizeof(Tq));
+      ICICLE_CHECK(icicle_copy(&h_mul[j * temp.size()], temp.data(), temp.size() * sizeof(Tq)));
     }
 
     ICICLE_CHECK(preparer.copy_like_h(step11_constraint.phi.data(), h_mul.data()));
@@ -344,20 +356,23 @@ LabradorInstance prepare_recursion_instance(
     ICICLE_CHECK(matrix_transpose(final_const.a.data(), r, r, {}, M.data()));
     // M = final_const.a + final_const.a^t
     ICICLE_CHECK(vector_add(final_const.a.data(), M.data(), r * r, {}, M.data()));
-
+    // rescale diagonal back to original
+    for (size_t j = 0; j < r; j++) {
+      scalar_mul_vec(&two_inv, M[j * r + j].values, d, {}, M[j * r + j].values);
+    }
     // extract the symmetric part of M as vector a_symm
     std::vector<Tq> a_symm = extract_symm_part(M.data(), r);
 
     // construct the vector g_mul = [a_symm | base2*a_symm | base2^2* a_symm | ... | base2^l2 * a_symm]
     std::vector<Tq> g_mul(g_len);
     Zq b2_zq = Zq::from(prev_param.base2);
-    icicle_copy(&g_mul[0], a_symm.data(), a_symm.size() * sizeof(Tq));
+    ICICLE_CHECK(icicle_copy(&g_mul[0], a_symm.data(), a_symm.size() * sizeof(Tq)));
     for (size_t j = 1; j < l2; j++) {
       // a_symm = base2 * a_symm
       scalar_mul_vec(
         &b2_zq, reinterpret_cast<Zq*>(a_symm.data()), a_symm.size() * d, {}, reinterpret_cast<Zq*>(a_symm.data()));
       // g_mul[j * r * kappa: ] = a_symm
-      icicle_copy(&g_mul[j * a_symm.size()], a_symm.data(), a_symm.size() * sizeof(Tq));
+      ICICLE_CHECK(icicle_copy(&g_mul[j * a_symm.size()], a_symm.data(), a_symm.size() * sizeof(Tq)));
     }
 
     ICICLE_CHECK(preparer.copy_like_g(step12_constraint.phi.data(), g_mul.data()));
@@ -369,7 +384,7 @@ LabradorInstance prepare_recursion_instance(
     size_t skip = r;
 
     while (i < r_choose_2) {
-      icicle_copy(symm_I[i].values, poly_one.values, d * sizeof(Zq));
+      ICICLE_CHECK(icicle_copy(symm_I[i].values, poly_one.values, d * sizeof(Zq)));
       i += skip;
       skip--;
     }
@@ -377,13 +392,13 @@ LabradorInstance prepare_recursion_instance(
     std::vector<Tq> h_mul(h_len);
     Zq b3_zq = Zq::from(prev_param.base3);
     // [symm_I | base3*symm_I | base3^2* symm_I | ... | base3^l3 * symm_I]
-    icicle_copy(&h_mul[0], symm_I.data(), symm_I.size() * sizeof(Tq));
+    ICICLE_CHECK(icicle_copy(&h_mul[0], symm_I.data(), symm_I.size() * sizeof(Tq)));
     for (size_t j = 1; j < l3; j++) {
       // symm_I = base3*symm_I
       scalar_mul_vec(
         &b3_zq, reinterpret_cast<Zq*>(symm_I.data()), symm_I.size() * d, {}, reinterpret_cast<Zq*>(symm_I.data()));
       // h_mul[j * symm_I.size(): ] = symm_I
-      icicle_copy(&h_mul[j * symm_I.size()], symm_I.data(), symm_I.size() * sizeof(Tq));
+      ICICLE_CHECK(icicle_copy(&h_mul[j * symm_I.size()], symm_I.data(), symm_I.size() * sizeof(Tq)));
     }
     ICICLE_CHECK(preparer.copy_like_h(step12_constraint.phi.data(), h_mul.data()));
 
@@ -409,16 +424,19 @@ LabradorInstance prepare_recursion_instance(
 
     std::vector<Tq> temp = extract_symm_part(c_times_ct.data(), r);
 
+    ICICLE_CHECK(scalar_sub_vec(
+      &_zero, reinterpret_cast<Zq*>(temp.data()), d * temp.size(), {}, reinterpret_cast<Zq*>(temp.data())));
+
     // construct the vector g_mul2 = [temp | base2*temp | base2^2* temp | ... | base3^l2 * temp]
     std::vector<Tq> g_mul(g_len);
     Zq b2_zq = Zq::from(prev_param.base2);
-    icicle_copy(&g_mul[0], temp.data(), temp.size() * sizeof(Tq));
+    ICICLE_CHECK(icicle_copy(&g_mul[0], temp.data(), temp.size() * sizeof(Tq)));
     for (size_t j = 1; j < l2; j++) {
       // temp = base2 * temp
       scalar_mul_vec(
         &b2_zq, reinterpret_cast<Zq*>(temp.data()), temp.size() * d, {}, reinterpret_cast<Zq*>(temp.data()));
       // g_mul2[j * temp.size(): ] = temp
-      icicle_copy(&g_mul[j * temp.size()], temp.data(), temp.size() * sizeof(Tq));
+      ICICLE_CHECK(icicle_copy(&g_mul[j * temp.size()], temp.data(), temp.size() * sizeof(Tq)));
     }
 
     ICICLE_CHECK(preparer.copy_like_g(step13_constraint.phi.data(), g_mul.data()));

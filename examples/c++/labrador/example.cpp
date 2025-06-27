@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
   const size_t n = 1 << 5;
   const size_t r = 1 << 3;
   constexpr size_t d = Rq::d;
-  std::vector<Rq> S = rand_poly_vec(r * n, 1);
+  const std::vector<Rq> S = rand_poly_vec(r * n, 1);
   EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
   assert(witness_legit_eq(eq_inst, S));
   ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(n, r, S);
@@ -70,6 +70,22 @@ int main(int argc, char* argv[])
   } else {
     std::cout << "Base proof verification failed\n";
   }
+  uint32_t base0 = 1 << 3;
+  size_t mu = 1 << 3, nu = 1 << 3;
+  LabradorInstance rec_inst = prepare_recursion_instance(
+    param,                  // prev_param
+    base_proof.final_const, // final_const,
+    trs, base0, mu, nu);
+  LabradorProver dummy_prover{lab_inst, S, 1};
+  std::vector<Rq> rec_S = dummy_prover.prepare_recursion_witness(trs, base_proof, base0, mu, nu);
+  std::cout << "rec_inst.r = " << rec_inst.param.r << std::endl;
+  std::cout << "rec_inst.n = " << rec_inst.param.n << std::endl;
+  std::cout << "Num rec_inst.equality_constraints = " << rec_inst.equality_constraints.size() << std::endl;
+  std::cout << "Num rec_inst.const_zero_constraints = " << rec_inst.const_zero_constraints.size() << std::endl;
+
+  std::cout << "\tTesting rec-witness validity...";
+  assert(lab_witness_legit(rec_inst, rec_S));
+  std::cout << "VALID\n";
 
   std::cout << "Hello\n";
   return 0;

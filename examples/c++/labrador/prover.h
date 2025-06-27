@@ -36,7 +36,7 @@ struct LabradorProver {
   std::vector<Rq> S;
   const size_t NUM_REC;
 
-  LabradorProver(LabradorInstance& lab_inst, std::vector<Rq>& S, size_t NUM_REC)
+  LabradorProver(const LabradorInstance& lab_inst, const std::vector<Rq>& S, size_t NUM_REC)
       : lab_inst(lab_inst), S(S), NUM_REC(NUM_REC)
   {
   }
