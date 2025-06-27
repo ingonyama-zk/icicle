@@ -3,6 +3,11 @@ use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
+/// Trait defines operations on  on Matrices. 
+/// 
+/// The following methods are supported:
+/// * Matrix multiplication (matmul), takes two inputs ```a```, ```b`````` 
+/// in rows-first layout and writes their product to ```result```in rows-first layout
 pub trait MatrixOps<T> {
     fn matmul(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
@@ -38,7 +43,6 @@ macro_rules! impl_matmul {
     ($prefix: literal, $poly_type: ty) => {
         mod labrador {
             use crate::matrix_ops::labrador;
-            //use crate::polynomial_ring::$poly_type;
             use icicle_core::{matrix_ops::MatrixOps, vec_ops::VecOpsConfig};
             use icicle_runtime::errors::eIcicleError;
             use icicle_runtime::memory::HostOrDeviceSlice;
@@ -105,7 +109,7 @@ macro_rules! impl_matmul {
 macro_rules! impl_matmul_device_tests {
     ($poly:ty) => {
         #[cfg(test)]
-        mod matmul_device_memory_tests {
+        mod test_matmul_device_memory {
 
             use icicle_core::matrix_ops::tests::*;
             use icicle_runtime::test_utilities;
@@ -113,11 +117,13 @@ macro_rules! impl_matmul_device_tests {
             pub fn initialize() {
                 test_utilities::test_load_and_init_devices();
                 test_utilities::test_set_main_device();
+                test_utilities::test_set_ref_device();
             }
 
             #[test]
             fn matmul_device_memory_test() {
-                test_matmul_device_memory::<$poly>();
+                initialize();
+                check_matmul_device_memory::<$poly>();
             }
         }
     };
