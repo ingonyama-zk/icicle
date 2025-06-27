@@ -3,10 +3,10 @@ use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
-/// Trait defines operations on  on Matrices. 
-/// 
+/// Trait defines operations on  on Matrices.
+///
 /// The following methods are supported:
-/// * Matrix multiplication (matmul), takes two inputs ```a```, ```b`````` 
+/// * Matrix multiplication (matmul), takes two inputs ```a```, ```b``````
 /// in rows-first layout and writes their product to ```result```in rows-first layout
 pub trait MatrixOps<T> {
     fn matmul(

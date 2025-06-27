@@ -119,7 +119,7 @@ where
         cfg.is_a_on_device = true;
         cfg.is_b_on_device = true;
         cfg.is_result_on_device = true;
-        
+
         /* Allocate input a on device, copy data to device */
         let mut device_mem_a = DeviceVec::<P>::device_malloc(n * m).unwrap();
         &mut device_mem_a
@@ -148,7 +148,7 @@ where
             &mut device_mem_output,
         )
         .unwrap();
-        
+
         /* Zero out host_buffer, copy result of (4) to host_buffer */
         let mut host_buffer = vec![P::zero(); out_size];
         device_mem_output
