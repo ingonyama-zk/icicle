@@ -447,6 +447,7 @@ impl<T> DeviceVec<T> {
     ///
     /// Example:
     /// ```
+    /// use icicle_runtime::memory::{DeviceVec, HostSlice};
     /// let host_data = vec![1u32, 2, 3, 4];
     /// let device_buf = DeviceVec::<u32>::from_host_slice(&host_data);
     /// ```
