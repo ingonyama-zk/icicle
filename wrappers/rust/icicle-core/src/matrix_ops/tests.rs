@@ -124,7 +124,6 @@ where
             .unwrap();
         let mut device_mem_output = DeviceVec::<P>::device_malloc(out_size).unwrap();
 
-
         P::matmul(
             &mut device_mem_a,
             n as u32,
@@ -166,7 +165,7 @@ where
 
         // compare (1) and (5)
         assert_eq!(output_host, output_host_3);
- 
+
         output_host
     };
 

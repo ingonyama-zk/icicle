@@ -68,6 +68,20 @@ macro_rules! impl_matmul {
                     cfg: &VecOpsConfig,
                     result: &mut (impl HostOrDeviceSlice<$poly_type> + ?Sized),
                 ) -> Result<(), eIcicleError> {
+                    if result.is_on_device() && !result.is_on_active_device() {
+                        eprintln!("Result matrix is on an inactive device");
+                        return Err(eIcicleError::InvalidArgument);
+                    }
+
+                    if a.is_on_device() && !a.is_on_active_device() {
+                        eprintln!("Input a is on an inactive device");
+                        return Err(eIcicleError::InvalidArgument);
+                    }
+
+                    if b.is_on_device() && !b.is_on_active_device() {
+                        eprintln!("Input b  is on an inactive device");
+                        return Err(eIcicleError::InvalidArgument);
+                    }
                     unsafe {
                         labrador::matmul_ffi(
                             a.as_ptr(),
