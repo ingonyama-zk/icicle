@@ -35,7 +35,7 @@ LabradorInstance prepare_recursion_instance(
   const LabradorParam& prev_param,
   const EqualityInstance& final_const,
   const PartialTranscript& trs,
-  size_t base0,
+  uint32_t base0,
   size_t mu,
   size_t nu);
 
@@ -63,6 +63,13 @@ struct RecursionPreparer {
     L_h = (h_len + n_prime - 1) / n_prime;
     r_prime = (2 * nu + L_t + L_g + L_h);
   }
+
+  // These functions return the starting index for corresponding witness in a r_prime * n_prime matrix
+  size_t z0_begin_idx() const;
+  size_t z1_begin_idx() const;
+  size_t t_begin_idx() const;
+  size_t g_begin_idx() const;
+  size_t h_begin_idx() const;
 
   // NOTE: for these functions need to ensure that the size of dst is r_prime * n_prime and src has correct size (same
   // as z0, z1, t, g, h depending on what is being called)

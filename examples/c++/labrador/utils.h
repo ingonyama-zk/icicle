@@ -15,14 +15,6 @@ int64_t get_q()
   return q;
 }
 
-eIcicleError scale_diagonal_with_mask(
-  const Tq* matrix,  // Input n×n matrix (row-major order)
-  Zq scaling_factor, // Factor to scale diagonal by
-  size_t n,          // Matrix dimension (n×n)
-  const VecOpsConfig& config,
-  Tq* output // Output matrix
-);
-
 /// extracts the symmetric part of a n X n matrix as a n(n+1)/2 size vector
 template <typename T>
 std::vector<T> extract_symm_part(T* mat, size_t n)

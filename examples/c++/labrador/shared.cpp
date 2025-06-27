@@ -68,41 +68,51 @@ std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, std::byte* seed, 
   return challenge;
 }
 
+size_t RecursionPreparer::z0_begin_idx() const { return 0; }
+
+size_t RecursionPreparer::z1_begin_idx() const { return nu * n_prime; }
+
+size_t RecursionPreparer::t_begin_idx() const { return (2 * nu) * n_prime; }
+
+size_t RecursionPreparer::g_begin_idx() const { return (2 * nu + L_t) * n_prime; }
+
+size_t RecursionPreparer::h_begin_idx() const { return (2 * nu + L_t + L_g) * n_prime; }
+
 eIcicleError RecursionPreparer::copy_like_z0(Rq* dst, const Rq* src) const
 {
-  // copy to dst[0 : n]
-  return icicle_copy(dst, src, prev_n * sizeof(Rq));
+  // copy to dst[z0_begin_idx() : z0_begin_idx() + n]
+  return icicle_copy(&dst[z0_begin_idx()], src, prev_n * sizeof(Rq));
 }
 
 eIcicleError RecursionPreparer::copy_like_z1(Rq* dst, const Rq* src) const
 {
-  // copy to dst[nu * n_prime : nu * n_prime + n]
-  return icicle_copy(&dst[nu * n_prime], src, prev_n * sizeof(Rq));
+  // copy to dst[z1_begin_idx() : z1_begin_idx() + n]
+  return icicle_copy(&dst[z1_begin_idx()], src, prev_n * sizeof(Rq));
 }
 
 eIcicleError RecursionPreparer::copy_like_t(Rq* dst, const Rq* src) const
 {
-  // copy to dst[2*nu*n_prime : 2*nu*n_prime + |t|]
-  return icicle_copy(&dst[(2 * nu) * n_prime], src, t_len * sizeof(Rq));
+  // copy to dst[t_begin_idx() : t_begin_idx() + |t|]
+  return icicle_copy(&dst[t_begin_idx()], src, t_len * sizeof(Rq));
 }
 
 eIcicleError RecursionPreparer::copy_like_g(Rq* dst, const Rq* src) const
 {
-  // copy to dst[(2*nu + L_t) * n_prime : ...]
-  return icicle_copy(&dst[(2 * nu + L_t) * n_prime], src, g_len * sizeof(Rq));
+  // copy to dst[g_begin_idx() : g_begin_idx() + |g|]
+  return icicle_copy(&dst[g_begin_idx()], src, g_len * sizeof(Rq));
 }
 
 eIcicleError RecursionPreparer::copy_like_h(Rq* dst, const Rq* src) const
 {
-  // copy to dst[(2*nu + L_t + L_g) * n_prime : ...]
-  return icicle_copy(&dst[(2 * nu + L_t + L_g) * n_prime], src, h_len * sizeof(Rq));
+  // copy to dst[h_begin_idx() : h_begin_idx() + |h|]
+  return icicle_copy(&dst[h_begin_idx()], src, h_len * sizeof(Rq));
 }
 
 LabradorInstance prepare_recursion_instance(
   const LabradorParam& prev_param,
   const EqualityInstance& final_const,
   const PartialTranscript& trs,
-  size_t base0,
+  uint32_t base0,
   size_t mu,
   size_t nu)
 {
@@ -114,19 +124,18 @@ LabradorInstance prepare_recursion_instance(
   std::vector<Tq> u2 = trs.u2;
   std::vector<Tq> challenges_hat = trs.challenges_hat;
 
-  // TODO: check whether these are called correctly
-  size_t t_len = prev_param.t_len();
-  size_t g_len = prev_param.g_len();
-  size_t h_len = prev_param.h_len();
+  RecursionPreparer preparer{prev_param, mu, nu, base0};
 
-  size_t m = t_len + g_len + h_len;
-  size_t n_prime = std::max(std::ceil((double)n / nu), std::ceil((double)m / mu));
-  size_t L_t = (t_len + n_prime - 1) / n_prime;
-  size_t L_g = (g_len + n_prime - 1) / n_prime;
-  size_t L_h = (h_len + n_prime - 1) / n_prime;
-
+  size_t n_prime = preparer.n_prime;
+  size_t t_len = preparer.t_len;
+  size_t g_len = preparer.g_len;
+  size_t h_len = preparer.h_len;
+  size_t L_t = preparer.L_t;
+  size_t L_g = preparer.L_g;
+  size_t L_h = preparer.L_h;
+  size_t r_prime = preparer.r_prime;
   // Step 7: Let recursion_instance be a new empty LabradorInstance
-  size_t r_prime = 2 * nu + L_t + L_g + L_h;
+
   std::vector<std::byte> new_ajtai_seed(prev_param.ajtai_seed);
   new_ajtai_seed.push_back(std::byte('1'));
   // TODO: figure out param using Lattirust code
@@ -147,11 +156,9 @@ LabradorInstance prepare_recursion_instance(
   // Step 8: add the equality constraint u1=Bt + Cg to recursion_instance
   // Generate B, C
   // TODO: change this so that B,C need not be computed and stored
-  size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base1);
-  size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base2);
-  size_t r_choose_2 = (r * (r + 1)) / 2;
-  std::vector<Tq> B(prev_param.kappa1 * l1 * r * prev_param.kappa), C(prev_param.kappa1 * r_choose_2 * l2),
-    B_t(prev_param.kappa1 * l1 * r * prev_param.kappa), C_t(prev_param.kappa1 * r_choose_2 * l2);
+
+  std::vector<Tq> B(prev_param.t_len() * prev_param.kappa1), C(prev_param.g_len() * prev_param.kappa1),
+    B_t(prev_param.kappa1 * prev_param.t_len()), C_t(prev_param.kappa1 * prev_param.g_len());
 
   std::vector<std::byte> seed_B(prev_param.ajtai_seed), seed_C(prev_param.ajtai_seed);
   seed_B.push_back(std::byte('1'));
@@ -160,216 +167,264 @@ LabradorInstance prepare_recursion_instance(
   ICICLE_CHECK(random_sampling(seed_C.data(), seed_C.size(), false, {}, C.data(), C.size()));
 
   // B_t, C_t are transposed B, C
-  ICICLE_CHECK(matrix_transpose<Tq>(B.data(), l1 * r * prev_param.kappa, prev_param.kappa1, {}, B_t.data()));
-  ICICLE_CHECK(matrix_transpose<Tq>(C.data(), r_choose_2 * l2, prev_param.kappa1, {}, C_t.data()));
+  ICICLE_CHECK(matrix_transpose<Tq>(B.data(), prev_param.t_len(), prev_param.kappa1, {}, B_t.data()));
+  ICICLE_CHECK(matrix_transpose<Tq>(C.data(), prev_param.g_len(), prev_param.kappa1, {}, C_t.data()));
 
   for (size_t i = 0; i < prev_param.kappa1; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
 
-    icicle_copy(&new_constraint.phi[2 * nu * n_prime], &B_t[i * t_len], t_len * sizeof(Tq));
-    icicle_copy(&new_constraint.phi[(2 * nu + L_t) * n_prime], &C_t[i * g_len], g_len * sizeof(Tq));
+    ICICLE_CHECK(preparer.copy_like_t(new_constraint.phi.data(), &B_t[i * t_len]));
+    ICICLE_CHECK(preparer.copy_like_g(new_constraint.phi.data(), &C_t[i * g_len]));
 
     new_constraint.b = u1[i];
 
+    // TESTING: at this point you can check whether the witness satisfies the constraint
+
     recursion_instance.add_equality_constraint(new_constraint);
   }
+
+  // The vectors B, C, B_t, C_t are no longer needed, so we delete them to free memory.
+  B.clear();
+  B.shrink_to_fit();
+  C.clear();
+  C.shrink_to_fit();
+  B_t.clear();
+  B_t.shrink_to_fit();
+  C_t.clear();
+  C_t.shrink_to_fit();
 
   // Step 9: add the equality constraint u2=Dh to recursion_instance
   // Generate D
   // TODO: change this so that D need not be computed and stored
   size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base3);
-  std::vector<Tq> D(prev_param.kappa2 * l3 * r_choose_2), D_t(prev_param.kappa2 * l3 * r_choose_2);
+  std::vector<Tq> D(h_len * prev_param.kappa2), D_t(prev_param.kappa2 * h_len);
 
   std::vector<std::byte> seed_D(prev_param.ajtai_seed);
   seed_D.push_back(std::byte('3'));
   ICICLE_CHECK(random_sampling(seed_D.data(), seed_D.size(), false, {}, D.data(), D.size()));
-  ICICLE_CHECK(matrix_transpose<Tq>(D.data(), r_choose_2 * l3, prev_param.kappa2, {}, D_t.data()));
+  ICICLE_CHECK(matrix_transpose<Tq>(D.data(), h_len, prev_param.kappa2, {}, D_t.data()));
 
   for (size_t i = 0; i < prev_param.kappa2; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
 
-    icicle_copy(&new_constraint.phi[(2 * nu + L_t + L_g) * n_prime], &D_t[i * h_len], sizeof(Tq) * h_len);
+    ICICLE_CHECK(preparer.copy_like_h(new_constraint.phi.data(), &D_t[i * h_len]));
+
     new_constraint.b = u2[i];
+
+    // TESTING: at this point you can check whether the witness satisfies the constraint
 
     recursion_instance.add_equality_constraint(new_constraint);
   }
+  // The vectors D, D_t are no longer needed, so we delete them to free memory.
+  D.clear();
+  D.shrink_to_fit();
+  D_t.clear();
+  D_t.shrink_to_fit();
 
   // Step 10: add the equality constraint Az - sum_i c_i t_i =0 to recursion_instance
   // Generate A
   // TODO: change this so that A need not be computed and stored
-  std::vector<Tq> A(n * prev_param.kappa);
+  size_t kappa = prev_param.kappa;
+  size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base1);
+  std::vector<Tq> A(n * kappa);
 
   std::vector<std::byte> seed_A(prev_param.ajtai_seed);
   seed_A.push_back(std::byte('0'));
-  ICICLE_CHECK(random_sampling(seed_A.data(), seed_A.size(), false, {}, A.data(), n * prev_param.kappa));
+  ICICLE_CHECK(random_sampling(seed_A.data(), seed_A.size(), false, {}, A.data(), n * kappa));
 
   // A transpose
-  std::vector<Tq> A_t(prev_param.kappa * n);
-  ICICLE_CHECK(matrix_transpose<Tq>(A.data(), n, prev_param.kappa, {}, A_t.data()));
+  std::vector<Tq> A_t(kappa * n);
+  ICICLE_CHECK(matrix_transpose<Tq>(A.data(), n, kappa, {}, A_t.data()));
 
-  for (size_t i = 0; i < prev_param.kappa; i++) {
+  for (size_t i = 0; i < kappa; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
 
-    icicle_copy(new_constraint.phi.data(), &A_t[i * n], n * sizeof(Tq));
-    icicle_copy(&new_constraint.phi[nu * n_prime], &A_t[i * n], n * sizeof(Tq));
+    ICICLE_CHECK(preparer.copy_like_z0(new_constraint.phi.data(), &A_t[i * n]));
+    ICICLE_CHECK(preparer.copy_like_z1(new_constraint.phi.data(), &A_t[i * n]));
     // new_constraint.phi[nu+ j] = base0*new_constraint.phi[nu+ j]
     Zq base0_scalar = Zq::from(base0);
     ICICLE_CHECK(scalar_mul_vec(
-      &base0_scalar, reinterpret_cast<const Zq*>(&new_constraint.phi[nu]), n * d, {},
-      reinterpret_cast<Zq*>(&new_constraint.phi[nu])));
+      &base0_scalar, reinterpret_cast<const Zq*>(&new_constraint.phi[preparer.z1_begin_idx()]), n * d, {},
+      reinterpret_cast<Zq*>(&new_constraint.phi[preparer.z1_begin_idx()])));
 
-    // Step 10.d
-    size_t k1 = 2 * nu, k2 = 0;
-    for (size_t i1 = 0; i1 < r; i1++) {
-      for (size_t i2 = 0; i2 < n; i2++) {
-        for (size_t i3 = 0; i3 < l1; i3++) {
-          if (i2 == i) {
-            Tq temp;
-            Zq base1_pow = Zq::from(static_cast<int64_t>(std::pow(prev_param.base1, i3)));
-            ICICLE_CHECK(scalar_mul_vec(&base1_pow, challenges_hat[i2].values, d, {}, temp.values));
-            new_constraint.phi[k1 * n_prime + k2] = temp;
-          }
-          k2++;
-          if (k2 == n_prime) {
-            k2 = 0;
-            k1++;
-          }
-        }
-      }
+    // TODO: think about vectorising
+    std::vector<Tq> temp(r * kappa, zero());
+    for (size_t j = 0; j < r; j++) {
+      Tq neg_challenge_hat_j = challenges_hat[j];
+      Zq zero = Zq::zero();
+      scalar_sub_vec(&zero, challenges_hat[j].values, d, {}, neg_challenge_hat_j.values);
+      temp[j * kappa + i] = neg_challenge_hat_j;
     }
+    // construct the vector t_mul = [temp | base1*temp | base1^2* temp | ... | base1^l1 * temp]
+    std::vector<Tq> t_mul(t_len); // t_len == l1 * r * kappa
+
+    Zq b1_zq = Zq::from(prev_param.base1);
+    icicle_copy(&t_mul[0], temp.data(), temp.size() * sizeof(Tq));
+    for (size_t j = 1; j < l1; j++) {
+      // temp = base1*temp
+      scalar_mul_vec(
+        &b1_zq, reinterpret_cast<Zq*>(temp.data()), temp.size() * d, {}, reinterpret_cast<Zq*>(temp.data()));
+      // t_mul[j * r * kappa: ] = temp
+      icicle_copy(&t_mul[j * r * kappa], temp.data(), temp.size() * sizeof(Tq));
+    }
+
+    ICICLE_CHECK(preparer.copy_like_t(new_constraint.phi.data(), t_mul.data()));
 
     recursion_instance.add_equality_constraint(new_constraint);
   }
 
-  // Step 11:
-  EqualityInstance step11_constraint(r_prime, n_prime);
-  std::vector<Tq> c_times_phi(n);
-  // TODO: vectorize
-  for (size_t i = 0; i < r; i++) {
-    for (size_t j = 0; j < n; j++) {
-      Tq temp;
-      ICICLE_CHECK(vector_mul(challenges_hat[i].values, final_const.phi[i * n_prime + j].values, d, {}, temp.values));
-      ICICLE_CHECK(vector_add(c_times_phi[j].values, temp.values, d, {}, c_times_phi[j].values));
+  std::vector<Tq> c_times_ct(r * r);
+  /* Step 11: add c^t * Phi * z === c^t H c */ {
+    EqualityInstance step11_constraint(r_prime, n_prime);
+    std::vector<Tq> c_times_phi(n);
+    // c_times_phi = c^t * Phi
+    ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, final_const.phi.data(), r, n, {}, c_times_phi.data()));
+    ICICLE_CHECK(preparer.copy_like_z0(step11_constraint.phi.data(), c_times_phi.data()));
+    Zq b0_zq = Zq::from(base0);
+    // c_times_phi = base0 * c_times_phi
+    scalar_mul_vec(
+      &b0_zq, reinterpret_cast<Zq*>(c_times_phi.data()), c_times_phi.size() * d, {},
+      reinterpret_cast<Zq*>(c_times_phi.data()));
+
+    ICICLE_CHECK(preparer.copy_like_z1(step11_constraint.phi.data(), c_times_phi.data()));
+
+    ICICLE_CHECK(matmul(challenges_hat.data(), r, 1, challenges_hat.data(), 1, r, {}, c_times_ct.data()));
+    Zq two = Zq::from(2);
+    Zq two_inv = Zq::inverse(two);
+    // c_times_ct = 2 * c_times_ct
+    scalar_mul_vec(
+      &two, reinterpret_cast<Zq*>(c_times_ct.data()), c_times_ct.size() * d, {},
+      reinterpret_cast<Zq*>(c_times_ct.data()));
+    // rescale diagonal back to original
+    for (size_t j = 0; j < r; j++) {
+      scalar_mul_vec(&two_inv, c_times_ct[j * r + j].values, d, {}, c_times_ct[j * r + j].values);
     }
-  }
-  icicle_copy(step11_constraint.phi.data(), c_times_phi.data(), c_times_phi.size() * sizeof(Tq));
-  icicle_copy(&step11_constraint.phi[nu], c_times_phi.data(), c_times_phi.size() * sizeof(Tq));
+    // now c_times_ct[j,j] =challenges_hat[j]^2 and
+    // for j!=k c_times_ct[j,k] = 2* challenges_hat[j] * challenges_hat[k]
+    std::vector<Tq> temp = extract_symm_part(c_times_ct.data(), r);
 
-  // step11_constraint.phi[nu+ j] = base0*step11_constraint.phi[nu+ j]
-  Zq base0_scalar = Zq::from(base0);
-  ICICLE_CHECK(scalar_mul_vec(
-    &base0_scalar, reinterpret_cast<const Zq*>(&step11_constraint.phi[nu]), n * d, {},
-    reinterpret_cast<Zq*>(&step11_constraint.phi[nu])));
+    // construct the vector h_mul = [temp | base3*temp | base3^2* temp | ... | base3^l3 * temp]
+    std::vector<Tq> h_mul(h_len);
+    size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base3);
 
-  size_t s11_k1 = 2 * nu + L_t + L_g, s11_k2 = 0;
-  for (size_t i1 = 0; i1 < r; i1++) {
-    for (size_t i2 = i1; i2 < r; i2++) {
-      for (size_t i3 = 0; i3 < l3; i3++) {
-        Tq temp;
-        ICICLE_CHECK(vector_mul(challenges_hat[i1].values, challenges_hat[i2].values, d, {}, temp.values));
-        Zq minus_1 = Zq::neg(Zq::from(1));
-        Zq multiplier = minus_1 * Zq::from(std::pow(prev_param.base3, i3));
-        if (i1 != i2) { multiplier = Zq::from(2) * multiplier; }
-        ICICLE_CHECK(scalar_mul_vec(&multiplier, temp.values, d, {}, temp.values));
-        step11_constraint.phi[s11_k1 * n_prime + s11_k2] = temp;
-        s11_k2++;
-        if (s11_k2 == n_prime) {
-          s11_k2 = 0;
-          s11_k1++;
-        }
-      }
+    Zq b3_zq = Zq::from(prev_param.base3);
+    icicle_copy(&h_mul[0], temp.data(), temp.size() * sizeof(Tq));
+    for (size_t j = 1; j < l3; j++) {
+      // temp = base3*temp
+      scalar_mul_vec(
+        &b3_zq, reinterpret_cast<Zq*>(temp.data()), temp.size() * d, {}, reinterpret_cast<Zq*>(temp.data()));
+      // h_mul[j * temp.size(): ] = temp
+      icicle_copy(&h_mul[j * temp.size()], temp.data(), temp.size() * sizeof(Tq));
     }
-  }
-  recursion_instance.add_equality_constraint(step11_constraint);
 
-  // Step 12:
-  EqualityInstance step12_constraint(r_prime, n_prime);
+    ICICLE_CHECK(preparer.copy_like_h(step11_constraint.phi.data(), h_mul.data()));
 
-  size_t s12_k1 = 2 * nu + L_t, s12_k2 = 0;
-  for (size_t i1 = 0; i1 < r; i1++) {
-    for (size_t i2 = i1; i2 < r; i2++) {
-      for (size_t i3 = 0; i3 < l2; i3++) {
-        Tq temp = final_const.a[i1 * n + i2];
-        Zq multiplier = Zq::from(std::pow(prev_param.base2, i3));
-        if (i1 != i2) { multiplier = Zq::from(2) * multiplier; }
-
-        ICICLE_CHECK(scalar_mul_vec(&multiplier, temp.values, d, {}, temp.values));
-        step12_constraint.phi[s12_k1 * n_prime + s12_k2] = temp;
-        s12_k2++;
-        if (s12_k2 == n_prime) {
-          s12_k2 = 0;
-          s12_k1++;
-        }
-      }
-    }
-  }
-  s12_k1 = 2 * nu + L_t + L_g, s12_k2 = 0;
-  for (size_t i1 = 0; i1 < r; i1++) {
-    for (size_t i2 = i1; i2 < r; i2++) {
-      for (size_t i3 = 0; i3 < l3; i3++) {
-        if (i1 == i2) {
-          Tq temp;
-          Zq multiplier = Zq::from(std::pow(prev_param.base3, i3));
-          for (size_t k = 0; k < d; k++) {
-            temp.values[k] = multiplier;
-          }
-          step12_constraint.phi[s12_k1 * n_prime + s12_k2] = temp;
-        }
-        s12_k2++;
-        if (s12_k2 == n_prime) {
-          s12_k2 = 0;
-          s12_k1++;
-        }
-      }
-    }
-  }
-  step12_constraint.b = final_const.b;
-  recursion_instance.add_equality_constraint(step12_constraint);
-
-  // Step 13:
-  EqualityInstance step13_constraint(r_prime, n_prime);
-
-  for (int i1 = 0; i1 < 2 * nu; i1++) {
-    for (int i2 = 0; i2 < 2 * nu; i2++) {
-      Zq c = Zq::from(0);
-      if (i1 == i2) {
-        if (i1 < nu) {
-          c = Zq::from(1);
-        } else {
-          c = Zq::from(base0 * base0);
-        }
-      } else if (abs(static_cast<int>(i2 - i1)) == nu) {
-        c = Zq::from(2 * base0);
-      }
-      Tq temp;
-      for (size_t k = 0; k < d; k++) {
-        temp.values[k] = c;
-      }
-      step13_constraint.a[i1 * n + i2] = temp;
-    }
+    recursion_instance.add_equality_constraint(step11_constraint);
   }
 
-  size_t s13_k1 = 2 * nu + L_t, s13_k2 = 0;
-  for (size_t i1 = 0; i1 < r; i1++) {
-    for (size_t i2 = i1; i2 < r; i2++) {
-      for (size_t i3 = 0; i3 < l2; i3++) {
-        Tq temp;
-        ICICLE_CHECK(vector_mul(challenges_hat[i1].values, challenges_hat[i2].values, d, {}, temp.values));
-        Zq minus_1 = Zq::neg(Zq::from(1));
-        Zq multiplier = minus_1 * Zq::from(std::pow(prev_param.base2, i3));
-        if (i1 != i2) { multiplier = Zq::from(2) * multiplier; }
-        ICICLE_CHECK(scalar_mul_vec(&multiplier, temp.values, d, {}, temp.values));
-        step11_constraint.phi[s13_k1 * n_prime + s13_k2] = temp;
-        s13_k2++;
-        if (s13_k2 == n_prime) {
-          s13_k2 = 0;
-          s13_k1++;
-        }
-      }
+  // returns a constant polynomial in Tq
+  auto const_poly = [](const Zq& c) {
+    Tq poly;
+    for (size_t j = 0; j < d; j++) {
+      poly.values[j] = c;
     }
-  }
-  recursion_instance.add_equality_constraint(step11_constraint);
+    return poly;
+  };
 
+  Tq poly_one = const_poly(Zq::one());
+  size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base2);
+
+  /* Step 12: \sum_ij a_ij G_ij + \sum_i h_ii + b == 0 */ {
+    EqualityInstance step12_constraint(r_prime, n_prime);
+
+    // construct matrix M such that M[i,j] = final_const.a[i,j] + final_const.a[j,i] for i != j else M[i,i] =
+    // final_const.a[i,i]
+    std::vector<Tq> M(r * r);
+    // M = final_const.a^t
+    ICICLE_CHECK(matrix_transpose(final_const.a.data(), r, r, {}, M.data()));
+    // M = final_const.a + final_const.a^t
+    ICICLE_CHECK(vector_add(final_const.a.data(), M.data(), r * r, {}, M.data()));
+
+    // extract the symmetric part of M as vector a_symm
+    std::vector<Tq> a_symm = extract_symm_part(M.data(), r);
+
+    // construct the vector g_mul = [a_symm | base2*a_symm | base2^2* a_symm | ... | base2^l2 * a_symm]
+    std::vector<Tq> g_mul(g_len);
+    Zq b2_zq = Zq::from(prev_param.base2);
+    icicle_copy(&g_mul[0], a_symm.data(), a_symm.size() * sizeof(Tq));
+    for (size_t j = 1; j < l2; j++) {
+      // a_symm = base2 * a_symm
+      scalar_mul_vec(
+        &b2_zq, reinterpret_cast<Zq*>(a_symm.data()), a_symm.size() * d, {}, reinterpret_cast<Zq*>(a_symm.data()));
+      // g_mul[j * r * kappa: ] = a_symm
+      icicle_copy(&g_mul[j * a_symm.size()], a_symm.data(), a_symm.size() * sizeof(Tq));
+    }
+
+    ICICLE_CHECK(preparer.copy_like_g(step12_constraint.phi.data(), g_mul.data()));
+
+    // construct the vector symm_I = symmetric_part(I)
+    size_t r_choose_2 = (r * (r + 1)) / 2;
+    std::vector<Tq> symm_I(r_choose_2, zero());
+    size_t i = 0;
+    size_t skip = r;
+
+    while (i < r_choose_2) {
+      icicle_copy(symm_I[i].values, poly_one.values, d * sizeof(Zq));
+      i += skip;
+      skip--;
+    }
+
+    std::vector<Tq> h_mul(h_len);
+    Zq b3_zq = Zq::from(prev_param.base3);
+    // [symm_I | base3*symm_I | base3^2* symm_I | ... | base3^l3 * symm_I]
+    icicle_copy(&h_mul[0], symm_I.data(), symm_I.size() * sizeof(Tq));
+    for (size_t j = 1; j < l3; j++) {
+      // symm_I = base3*symm_I
+      scalar_mul_vec(
+        &b3_zq, reinterpret_cast<Zq*>(symm_I.data()), symm_I.size() * d, {}, reinterpret_cast<Zq*>(symm_I.data()));
+      // h_mul[j * symm_I.size(): ] = symm_I
+      icicle_copy(&h_mul[j * symm_I.size()], symm_I.data(), symm_I.size() * sizeof(Tq));
+    }
+    ICICLE_CHECK(preparer.copy_like_h(step12_constraint.phi.data(), h_mul.data()));
+
+    step12_constraint.b = final_const.b;
+    recursion_instance.add_equality_constraint(step12_constraint);
+  }
+
+  /* Step 13: <z, z> - sum_ij c_i c_j G_ij == 0 */ {
+    EqualityInstance step13_constraint(r_prime, n_prime);
+
+    Tq b0_poly = const_poly(Zq::from(base0));
+    Tq b0_sq_poly = const_poly(Zq::from(base0 * base0));
+    for (size_t i = 0; i < nu; i++) {
+      // a[i,i] = 1
+      step13_constraint.a[i * r_prime + i] = poly_one;
+      // a[i+nu, i+nu] = base0^2
+      step13_constraint.a[(i + nu) * r_prime + (i + nu)] = b0_sq_poly;
+      // a[i, i+nu] = base0
+      step13_constraint.a[(i + nu) * r_prime + i] = b0_poly;
+      // a[i+nu, i] = base0
+      step13_constraint.a[i * r_prime + i + nu] = b0_poly;
+    }
+
+    std::vector<Tq> temp = extract_symm_part(c_times_ct.data(), r);
+
+    // construct the vector g_mul2 = [temp | base2*temp | base2^2* temp | ... | base3^l2 * temp]
+    std::vector<Tq> g_mul(g_len);
+    Zq b2_zq = Zq::from(prev_param.base2);
+    icicle_copy(&g_mul[0], temp.data(), temp.size() * sizeof(Tq));
+    for (size_t j = 1; j < l2; j++) {
+      // temp = base2 * temp
+      scalar_mul_vec(
+        &b2_zq, reinterpret_cast<Zq*>(temp.data()), temp.size() * d, {}, reinterpret_cast<Zq*>(temp.data()));
+      // g_mul2[j * temp.size(): ] = temp
+      icicle_copy(&g_mul[j * temp.size()], temp.data(), temp.size() * sizeof(Tq));
+    }
+
+    ICICLE_CHECK(preparer.copy_like_g(step13_constraint.phi.data(), g_mul.data()));
+
+    recursion_instance.add_equality_constraint(step13_constraint);
+  }
   // Step 14: already done
 
   return recursion_instance;
