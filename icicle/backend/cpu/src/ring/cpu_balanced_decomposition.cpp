@@ -73,7 +73,6 @@ static eIcicleError verify_params(
 }
 
 // Decomposes Zq elements into balanced base-b digits.
-// Decompose PolyRing polynomials into balanced base-b digits
 static eIcicleError cpu_decompose_balanced_digits(
   const Device& device,
   const field_t* input,
@@ -156,7 +155,7 @@ static eIcicleError cpu_decompose_balanced_digits(
   return eIcicleError::SUCCESS;
 }
 
-// Recompose PolyRing polynomials from balanced base-b digits
+// Recompose Zq elements from balanced base-b digits
 static eIcicleError cpu_recompose_from_balanced_digits(
   const Device& device,
   const field_t* input,
