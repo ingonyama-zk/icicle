@@ -99,7 +99,7 @@ static eIcicleError cpu_decompose_balanced_digits(
   if (digits_per_element < expected_digits_per_element) {
     ICICLE_LOG_WARNING << "Balanced Decomposition: Output buffer may be too small to decompose input polynomials. "
                           "Decomposition will stop after "
-                       << digits_per_element << "digits, based on output size.";
+                       << digits_per_element << " digits, based on output size.";
   }
 
   const auto base_div2 = base / 2;
