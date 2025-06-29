@@ -63,7 +63,7 @@ fn main() {
         if cfg!(not(feature = "sumcheck")) {
             config.define("SUMCHECK", "OFF");
         }
-        
+
         // build (or pull and build) cuda backend if feature enabled.
         // Note: this requires access to the repo
         if cfg!(feature = "cuda_backend") {
