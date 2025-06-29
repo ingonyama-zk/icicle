@@ -3,7 +3,7 @@ use rand::Rng;
 use std::time::Instant;
 
 use icicle_core::{
-    balanced_decomposition, jl_projection, negacyclic_ntt, norm,
+    balanced_decomposition, jl_projection, matrix_ops, negacyclic_ntt, norm,
     ntt::NTTDir,
     polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut, PolynomialRing},
     random_sampling,
@@ -78,6 +78,55 @@ where
     .unwrap();
 
     println!("[NTT] Output vector contains {} transformed elements", output.len());
+}
+
+/// Demonstrates matrix multiplication over `PolyRing` elements using device-accelerated APIs.
+///
+/// - Inputs A and B are interpreted as row-major matrices:
+///     - A has shape `[n × m]`
+///     - B has shape `[m × k]`
+/// - The output C is also stored in row-major layout with shape `[n × k]`
+///
+/// This API is useful for matrix-matrix multiplication, vector dot products,
+/// Ajtai-style commitments, and other linear algebra primitives over polynomial rings.
+fn matmul_example<P>(n: u32, m: u32, k: u32)
+where
+    P: PolynomialRing + matrix_ops::MatrixOps<P> + GenerateRandom<P>,
+{
+    println!("----------------------------------------------------------------------");
+    println!(
+        "[Matmul] Computing matrix product: A ({}×{}) × B ({}×{}) = C ({}×{})",
+        n, m, m, k, n, k
+    );
+
+    let cfg = VecOpsConfig::default();
+    let a_len = (n * m) as usize;
+    let b_len = (m * k) as usize;
+    let c_len = (n * k) as usize;
+
+    // Generate random host-side input matrices
+    let host_a: Vec<P> = P::generate_random(a_len);
+    let host_b: Vec<P> = P::generate_random(b_len);
+
+    // Allocate device memory for inputs and output
+    let mut device_a = DeviceVec::<P>::device_malloc(a_len).expect("Allocation failed");
+    let mut device_b = DeviceVec::<P>::device_malloc(b_len).expect("Allocation failed");
+    let mut device_c = DeviceVec::<P>::device_malloc(c_len).expect("Allocation failed");
+
+    // Transfer inputs to device
+    device_a
+        .copy_from_host(HostSlice::from_slice(&host_a))
+        .expect("Copy A to device failed");
+    device_b
+        .copy_from_host(HostSlice::from_slice(&host_b))
+        .expect("Copy B to device failed");
+
+    // Perform matrix multiplication on device: C = A × B
+    let start = std::time::Instant::now();
+    matrix_ops::matmul::<P>(&device_a, n, m, &device_b, m, k, &cfg, &mut device_c).expect("Matmul failed");
+    let elapsed = start.elapsed();
+
+    println!("[Matmul] Completed in {:.2?}", elapsed);
 }
 
 /// Computes the modulus of a field element type `T` as `usize`.
@@ -546,7 +595,7 @@ fn main() {
     //     - Dot products and vector-matrix ops
     // ----------------------------------------------------------------------
 
-    // TODO
+    matmul_example::<PolyRing>(size as u32 >> 3, size as u32, size as u32 >> 2);
 
     // ----------------------------------------------------------------------
     // (5) Balanced base decomposition for polynomial rings
