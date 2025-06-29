@@ -52,21 +52,17 @@ ICICLE_BACKEND_SOURCE_DIR="${ICICLE_DIR}/backend/${DEVICE_TYPE_LOWERCASE}"
 # Build Icicle and the example app that links to it
 if [ "$DEVICE_TYPE" != "CPU" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_BACKEND_SOURCE_DIR}" ]; then
   echo "Building icicle and ${DEVICE_TYPE} backend"
-  rm -f "${BUILD_DIR}/CMakeCache.txt"
-  cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -DECNTT=OFF "-D${DEVICE_TYPE}_BACKEND"=local -S "${ICICLE_DIR}" -B "${BUILD_DIR}"
+  cmake --fresh -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -DECNTT=OFF "-D${DEVICE_TYPE}_BACKEND"=local -S "${ICICLE_DIR}" -B "${BUILD_DIR}"
   cmake --build "${BUILD_DIR}" -j
-  rm "${BUILD_DIR}/CMakeCache.txt"
-  cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DECNTT=OFF "-D${DEVICE_TYPE}_BACKEND"=local -S "${ICICLE_DIR}" -B "${BUILD_DIR}"
+  cmake --fresh -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DECNTT=OFF "-D${DEVICE_TYPE}_BACKEND"=local -S "${ICICLE_DIR}" -B "${BUILD_DIR}"
   cmake --build "${BUILD_DIR}" -j
   export ICICLE_BACKEND_INSTALL_DIR=$(realpath "${BUILD_DIR}/backend")
 else
   echo "Building icicle without backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
   export ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR}"
-  rm -f "${BUILD_DIR}/CMakeCache.txt"
-  cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -S "${ICICLE_DIR}" -B "${BUILD_DIR}"
+  cmake --fresh -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -S "${ICICLE_DIR}" -B "${BUILD_DIR}"
   cmake --build "${BUILD_DIR}" -j
-  rm "${BUILD_DIR}/CMakeCache.txt"
-  cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -S "${ICICLE_DIR}" -B "${BUILD_DIR}"
+  cmake --fresh -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -S "${ICICLE_DIR}" -B "${BUILD_DIR}"
   cmake --build "${BUILD_DIR}" -j
 fi
 
