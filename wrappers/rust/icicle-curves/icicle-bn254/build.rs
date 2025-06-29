@@ -11,7 +11,6 @@ fn main() {
         println!("cargo:rustc-link-arg=-Wl,-rpath,{}", path);
     } else {
         println!("cargo:warning=ICICLE_FRONTEND_INSTALL_DIR is not set...building icicle libs from source");
-
         // Construct the path to the deps directory
         let out_dir = env::var("OUT_DIR").expect("OUT_DIR is not set");
         let build_dir = PathBuf::from(format!("{}/../../../", &out_dir));
@@ -36,6 +35,34 @@ fn main() {
         config
             .define("CURVE", "bn254")
             .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
+
+        // Enable features based on Cargo.toml configuration
+        if cfg!(feature = "ecntt") {
+            config.define("ECNTT", "ON");
+        }
+        if cfg!(feature = "fri") {
+            config.define("FRI", "ON");
+        }
+        // NOTE: PAIRING is not a feature in icicle as it is enabled based on G2 being enabled
+        //       and the curve supporting pairing.
+        if cfg!(feature = "g2") {
+            config.define("G2", "ON");
+        }
+        if cfg!(feature = "msm") {
+            config.define("MSM", "ON");
+        }
+        if cfg!(feature = "ntt") {
+            config.define("NTT", "ON");
+        }
+        if cfg!(feature = "poseidon") {
+            config.define("POSEIDON", "ON");
+        }
+        if cfg!(feature = "poseidon2") {
+            config.define("POSEIDON2", "ON");
+        }
+        if cfg!(feature = "sumcheck") {
+            config.define("SUMCHECK", "ON");
+        }
 
         // build (or pull and build) cuda backend if feature enabled.
         // Note: this requires access to the repo

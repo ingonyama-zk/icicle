@@ -160,7 +160,7 @@ jobs:
           FEATURE_FLAGS="$FEATURE_FLAGS -DMSM=ON -DG2=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|msm"
           if [[ "${{ contains(matrix.curve.rust-supported-features, 'msm') }}" = "true" ]]; then
-            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,msm"
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,msm,g2"
           fi
           if [[ "${{ contains(matrix.curve.go-supported-features, 'msm') }}" = "true" ]]; then
             GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,msm,g2"

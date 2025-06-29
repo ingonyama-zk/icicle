@@ -37,6 +37,20 @@ fn main() {
             .define("CURVE", "grumpkin")
             .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
+        // Enable features based on Cargo.toml configuration
+        if cfg!(feature = "msm") {
+            config.define("MSM", "ON");
+        }
+        if cfg!(feature = "poseidon") {
+            config.define("POSEIDON", "ON");
+        }
+        if cfg!(feature = "poseidon2") {
+            config.define("POSEIDON2", "ON");
+        }
+        if cfg!(feature = "sumcheck") {
+            config.define("SUMCHECK", "ON");
+        }
+
         // build (or pull and build) cuda backend if feature enabled.
         // Note: this requires access to the repo
         if cfg!(feature = "cuda_backend") {
