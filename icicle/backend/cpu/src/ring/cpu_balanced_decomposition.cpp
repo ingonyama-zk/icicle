@@ -110,7 +110,7 @@ static eIcicleError cpu_decompose_balanced_digits(
   tf::Executor executor(get_nof_workers(config));
 
   const size_t total_size = input_size * config.batch_size;
-  constexpr size_t task_size = 256; // Seems to be working better
+  constexpr size_t task_size = 256; // Seems to perform well
   const size_t nof_tasks = (total_size + task_size - 1) / task_size;
 
   for (int task_idx = 0; task_idx < nof_tasks; ++task_idx) {
@@ -181,7 +181,7 @@ static eIcicleError cpu_recompose_from_balanced_digits(
   tf::Executor executor(get_nof_workers(config));
 
   const size_t total_size = output_size * config.batch_size;
-  constexpr size_t task_size = 256; // Seems to work well
+  constexpr size_t task_size = 256; // Seems to perform well
   const size_t nof_tasks = (total_size + task_size - 1) / task_size;
   for (int task_idx = 0; task_idx < nof_tasks; ++task_idx) {
     const size_t start = task_idx * task_size;
