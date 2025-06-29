@@ -3,11 +3,20 @@ use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
-/// Trait defines operations on  on Matrices.
+/// Trait defining matrix operations for types stored in host or device memory.
 ///
-/// The following methods are supported:
-/// * Matrix multiplication (matmul), takes two inputs ```a```, ```b``````
-/// in rows-first layout and writes their product to ```result```in rows-first layout
+/// ### Supported Operations
+/// - **Matrix multiplication (`matmul`)**  
+///   Multiplies two matrices `a` and `b`, both stored in **row-major** (rows-first) order,
+///   and writes the result to `result`, also in row-major order.
+///
+///   Dimensions must satisfy:
+///   - `a` is of shape `(a_rows × a_cols)`
+///   - `b` is of shape `(b_rows × b_cols)`
+///   - `a_cols == b_rows`
+///   - `result` must be sized to hold `(a_rows × b_cols)` elements
+///
+///   Memory for all inputs and the result can reside on either the host or device.
 pub trait MatrixOps<T> {
     fn matmul(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
@@ -72,6 +81,39 @@ macro_rules! impl_matmul {
                     cfg: &VecOpsConfig,
                     result: &mut (impl HostOrDeviceSlice<$poly_type> + ?Sized),
                 ) -> Result<(), eIcicleError> {
+                    if a.len() as u32 != nof_rows_a * nof_cols_a {
+                        eprintln!(
+                            "Matrix A has invalid size: got {}, expected {} ({} × {})",
+                            a.len(),
+                            nof_rows_a * nof_cols_a,
+                            nof_rows_a,
+                            nof_cols_a
+                        );
+                        return Err(eIcicleError::InvalidArgument);
+                    }
+
+                    if b.len() as u32 != nof_rows_b * nof_cols_b {
+                        eprintln!(
+                            "Matrix B has invalid size: got {}, expected {} ({} × {})",
+                            b.len(),
+                            nof_rows_b * nof_cols_b,
+                            nof_rows_b,
+                            nof_cols_b
+                        );
+                        return Err(eIcicleError::InvalidArgument);
+                    }
+
+                    if result.len() as u32 != nof_rows_a * nof_cols_b {
+                        eprintln!(
+                            "Result matrix has invalid size: got {}, expected {} ({} × {})",
+                            result.len(),
+                            nof_rows_a * nof_cols_b,
+                            nof_rows_a,
+                            nof_cols_b
+                        );
+                        return Err(eIcicleError::InvalidArgument);
+                    }
+
                     if result.is_on_device() && !result.is_on_active_device() {
                         eprintln!("Result matrix is on an inactive device");
                         return Err(eIcicleError::InvalidArgument);
@@ -86,6 +128,12 @@ macro_rules! impl_matmul {
                         eprintln!("Input b  is on an inactive device");
                         return Err(eIcicleError::InvalidArgument);
                     }
+
+                    let mut cfg_clone = cfg.clone();
+                    cfg_clone.is_a_on_device = a.is_on_device();
+                    cfg_clone.is_b_on_device = b.is_on_device();
+                    cfg_clone.is_result_on_device = result.is_on_device();
+
                     unsafe {
                         labrador::matmul_ffi(
                             a.as_ptr(),
@@ -94,7 +142,7 @@ macro_rules! impl_matmul {
                             b.as_ptr(),
                             nof_rows_b,
                             nof_cols_b,
-                            cfg,
+                            &cfg_clone,
                             result.as_mut_ptr(),
                         )
                         .wrap()
@@ -117,11 +165,10 @@ macro_rules! impl_matmul_device_tests {
             pub fn initialize() {
                 test_utilities::test_load_and_init_devices();
                 test_utilities::test_set_main_device();
-                test_utilities::test_set_ref_device();
             }
 
             #[test]
-            fn matmul_device_memory_test() {
+            fn test_matmul_device_memory() {
                 initialize();
                 check_matmul_device_memory::<$poly>();
             }
