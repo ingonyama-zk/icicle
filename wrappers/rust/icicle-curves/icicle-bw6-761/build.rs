@@ -37,23 +37,23 @@ fn main() {
             .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
         // Enable features based on Cargo.toml configuration
-        if cfg!(feature = "fri") {
-            config.define("FRI", "ON");
+        if cfg!(not(feature = "fri")) {
+            config.define("FRI", "OFF");
         }
-        if cfg!(feature = "g2") {
-            config.define("G2", "ON");
+        if cfg!(not(feature = "g2")) {
+            config.define("G2", "OFF");
         }
-        if cfg!(feature = "msm") {
-            config.define("MSM", "ON");
+        if cfg!(not(feature = "msm")) {
+            config.define("MSM", "OFF");
         }
-        if cfg!(feature = "ntt") {
-            config.define("NTT", "ON");
+        if cfg!(not(feature = "ntt")) {
+            config.define("NTT", "OFF");
         }
-        if cfg!(feature = "poseidon") {
-            config.define("POSEIDON", "ON");
+        if cfg!(not(feature = "poseidon")) {
+            config.define("POSEIDON", "OFF");
         }
-        if cfg!(feature = "poseidon2") {
-            config.define("POSEIDON2", "ON");
+        if cfg!(not(feature = "poseidon2")) {
+            config.define("POSEIDON2", "OFF");
         }
 
         // build (or pull and build) cuda backend if feature enabled.
