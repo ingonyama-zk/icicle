@@ -114,6 +114,7 @@ rust-program: &rust-program
 rust-base: &rust-base
   - *rust-program
   - wrappers/rust/**/vec_ops/**/*.rs
+  - wrappers/rust/**/matrix_ops/**/*.rs
 rust-field: &rust-field
   - *rust-base
   - wrappers/rust/icicle-core/src/field.rs
