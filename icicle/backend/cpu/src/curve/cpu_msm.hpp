@@ -88,7 +88,7 @@ public:
     }
 
     // Use decision tree to predict the optimal number of workers
-    double field_size_to_fixed_size_ratio = scalar_size / FIXED_SCALAR_SIZE_CORES_TREE;
+    double field_size_to_fixed_size_ratio = (double)scalar_size / FIXED_SCALAR_SIZE_CORES_TREE;
     double pcm = (double)precompute_factor;
     double msm_log_size = (double)std::log2(msm_size * field_size_to_fixed_size_ratio);
     double features[NOF_FEATURES_CORES_TREE] = {msm_log_size, pcm};
@@ -111,7 +111,7 @@ public:
     if (config.c > 0) { return config.c; }
 
     // Use decision tree to predict the optimal c
-    double field_size_to_fixed_size_ratio = scalar_size / FIXED_SCALAR_SIZE_C_TREE;
+    double field_size_to_fixed_size_ratio = (double)scalar_size / FIXED_SCALAR_SIZE_C_TREE;
     double pcm = (double)precompute_factor;
     double msm_log_size = (double)std::log2(msm_size * field_size_to_fixed_size_ratio);
     double nof_cores = (double)nof_workers;
