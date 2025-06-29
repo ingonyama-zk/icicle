@@ -31,7 +31,7 @@ where
     let input_a = P::generate_random(n * m);
     let input_b = P::generate_random(m * k);
 
-    let mut test_single_device = |main_device: bool| {
+    let test_single_device = |main_device: bool| {
         if main_device {
             test_utilities::test_set_main_device();
         } else {
