@@ -31,32 +31,23 @@ option(METAL_BACKEND "Branch/commit to pull for METAL backend or `local` if unde
 option(VULKAN_BACKEND "Branch/commit to pull for VULKAN backend or `local` if under icicle/backend/vulkan. Default=OFF" OFF)
 
 option(DISABLE_ALL_FEATURES "Disables all features" OFF)
-# features that some fields/curves have and some don't.
-if(NOT DISABLE_ALL_FEATURES)
-  option(NTT "Build NTT" ON)
-  option(ECNTT "Build ECNTT" ON)
-  option(MSM "Build MSM" ON)
-  option(G2 "Build G2 MSM" ON)
-  option(EXT_FIELD "Build extension field" ON)
-  option(HASH "Build hashes and tree builders" ON)
-  option(POSEIDON "Build poseidon hash" ON)
-  option(POSEIDON2 "Build poseidon2 hash" ON)
-  option(SUMCHECK "Build sumcheck" ON)
-  option(FRI "Build fri" ON)
+if(DISABLE_ALL_FEATURES)
+  set(ENABLE_ALL_FEATURES OFF)
 else()
-  option(NTT "Build NTT" OFF)
-  option(ECNTT "Build ECNTT" OFF)
-  option(MSM "Build MSM" OFF)
-  option(G2 "Build G2 MSM" OFF)
-  option(EXT_FIELD "Build extension field" OFF)
-  option(HASH "Build hashes and tree builders" OFF)
-  option(POSEIDON "Build poseidon hash" OFF)
-  option(POSEIDON2 "Build poseidon2 hash" OFF)
-  option(SUMCHECK "Build sumcheck" OFF)
-  option(FRI "Build fri" OFF)
+  set(ENABLE_ALL_FEATURES ON)
 endif()
-
-option(PQC "Build pqc" CUDA_PQC_BACKEND) # Post-Quantum Cryptography. TODO: default to ON? do we care about CPU too?
+# features that some fields/curves have and some don't.
+option(NTT "Build NTT" ${ENABLE_ALL_FEATURES})
+option(ECNTT "Build ECNTT" ${ENABLE_ALL_FEATURES})
+option(MSM "Build MSM" ${ENABLE_ALL_FEATURES})
+option(G2 "Build G2 MSM" ${ENABLE_ALL_FEATURES})
+option(EXT_FIELD "Build extension field" ${ENABLE_ALL_FEATURES})
+option(HASH "Build hashes and tree builders" ${ENABLE_ALL_FEATURES})
+option(POSEIDON "Build poseidon hash" ${ENABLE_ALL_FEATURES})
+option(POSEIDON2 "Build poseidon2 hash" ${ENABLE_ALL_FEATURES})
+option(SUMCHECK "Build sumcheck" ${ENABLE_ALL_FEATURES})
+option(FRI "Build fri" ${ENABLE_ALL_FEATURES})
+option(PQC "Build pqc" ${CUDA_PQC_BACKEND}) # Post-Quantum Cryptography. TODO: default to ON? do we care about CPU too?
 option(SANITIZE "Enable memory address sanitizer" OFF)
 
 # address sanitizer
