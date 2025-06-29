@@ -36,6 +36,23 @@ fn main() {
             .define("HASH", "ON")
             .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
+        // Enable features based on Cargo.toml configuration
+        if cfg!(feature = "fri") {
+            config.define("FRI", "ON");
+        }
+        if cfg!(feature = "ntt") {
+            config.define("NTT", "ON");
+        }
+        if cfg!(feature = "poseidon") {
+            config.define("POSEIDON", "ON");
+        }
+        if cfg!(feature = "poseidon2") {
+            config.define("POSEIDON2", "ON");
+        }
+        if cfg!(feature = "sumcheck") {
+            config.define("SUMCHECK", "ON");
+        }
+
         if cfg!(feature = "cuda_backend") {
             config.define("CUDA_BACKEND", "local");
         } else if cfg!(feature = "pull_cuda_backend") {
