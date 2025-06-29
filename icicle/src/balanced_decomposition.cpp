@@ -81,10 +81,10 @@ namespace icicle {
       PolyRing* output,
       size_t output_size)
     {
-      return CONCAT_EXPAND(ICICLE_FFI_PREFIX, decompose_balanced_digits)((const field_t*)input, input_size * PolyRing::d, base, &config, (field_t*)output, output_size * PolyRing::d);
+      return CONCAT_EXPAND(ICICLE_FFI_PREFIX, decompose_balanced_digits)(
+        (const field_t*)input, input_size * PolyRing::d, base, &config, (field_t*)output, output_size * PolyRing::d);
     }
   } // namespace balanced_decomposition
-
 
   namespace balanced_decomposition {
     template <>
