@@ -20,7 +20,7 @@ pub(crate) mod tests {
         field::PrimeField,
         ntt::{initialize_domain, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTInitDomainConfig},
     };
-    use icicle_runtime::memory::HostSlice;
+    use icicle_runtime::memory::IntoIcicleSliceMut;
     use lambdaworks_math::{
         field::{
             element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsFFTField,
@@ -58,7 +58,7 @@ pub(crate) mod tests {
             let ntt_cfg: NTTConfig<ScalarField> = NTTConfig::default();
             ntt_inplace(scalars.into_slice_mut(), NTTDir::kForward, &ntt_cfg).unwrap();
 
-            let poly = Polynomial::new(scalars_lw.into_slice());
+            let poly = Polynomial::new(scalars_lw.as_slice());
             let evaluations = Polynomial::evaluate_fft::<Stark252PrimeField>(&poly, 1, None).unwrap();
 
             for (s1, s2) in scalars
