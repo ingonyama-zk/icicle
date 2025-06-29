@@ -7,7 +7,7 @@ use std::fmt::{Debug, Display};
 use std::ops::{Add, Mul, Sub};
 
 use icicle_runtime::errors::eIcicleError;
-use icicle_runtime::memory::HostOrDeviceSlice;
+use icicle_runtime::memory::{HostOrDeviceSlice, IntoIcicleSliceMut};
 use icicle_runtime::stream::IcicleStream;
 
 pub(crate) const SCALAR_LIMBS: usize = 2;

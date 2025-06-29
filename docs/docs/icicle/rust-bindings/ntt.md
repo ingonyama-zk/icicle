@@ -67,7 +67,7 @@ The `NTTConfig` struct is a configuration object used to specify parameters for 
 // Setting Bn254 points and scalars
 println!("Generating random inputs on host for bn254...");
 let scalars = Bn254ScalarCfg::generate_random(size);
-let mut ntt_results = DeviceVec::<Bn254ScalarField>::device_malloc(size).unwrap();
+let mut ntt_results = DeviceVec::<Bn254ScalarField>::malloc(size);
 
 // constructing NTT domain
 initialize_domain(
@@ -84,10 +84,10 @@ let cfg = ntt::NTTConfig::<Bn254ScalarField>::default();
 
 // Computing NTT
 ntt::ntt(
-    HostSlice::from_slice(&scalars),
+    scalars.into_slice(),
     ntt::NTTDir::kForward,
     &cfg,
-    &mut ntt_results[..],
+    ntt_results.into_slice_mut(),
 )
 .unwrap();
 ```

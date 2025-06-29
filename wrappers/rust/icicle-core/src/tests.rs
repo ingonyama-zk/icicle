@@ -4,7 +4,7 @@ use crate::{
     traits::{Arithmetic, GenerateRandom, MontgomeryConvertible},
 };
 use icicle_runtime::{
-    memory::{DeviceVec, HostSlice},
+    memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut},
     stream::IcicleStream,
 };
 
@@ -96,9 +96,9 @@ where
     let size = 1 << 10;
     let scalars = F::generate_random(size);
 
-    let mut d_scalars = DeviceVec::device_malloc(size).unwrap();
+    let mut d_scalars = DeviceVec::<F>::malloc(size);
     d_scalars
-        .copy_from_host(HostSlice::from_slice(&scalars))
+        .copy_from_host(scalars.into_slice())
         .unwrap();
 
     F::to_mont(&mut d_scalars, &stream);
@@ -106,7 +106,7 @@ where
 
     let mut scalars_copy = vec![F::zero(); size];
     d_scalars
-        .copy_to_host_async(HostSlice::from_mut_slice(&mut scalars_copy), &stream)
+        .copy_to_host_async(scalars_copy.into_slice_mut(), &stream)
         .unwrap();
     stream
         .synchronize()
@@ -126,9 +126,9 @@ where
     let size = 1 << 10;
 
     let affine_points = C::generate_random_affine_points(size);
-    let mut d_affine = DeviceVec::device_malloc(size).unwrap();
+    let mut d_affine = DeviceVec::<Affine<C>>::malloc(size);
     d_affine
-        .copy_from_host(HostSlice::from_slice(&affine_points))
+        .copy_from_host(affine_points.into_slice())
         .unwrap();
 
     Affine::<C>::to_mont(&mut d_affine, &IcicleStream::default())
@@ -138,17 +138,14 @@ where
         .wrap()
         .unwrap();
 
-    let mut affine_copy = vec![Affine::<C>::zero(); size];
-    d_affine
-        .copy_to_host(HostSlice::from_mut_slice(&mut affine_copy))
-        .unwrap();
+    let affine_copy = d_affine.to_host_vec();
 
     assert_eq!(affine_points, affine_copy);
 
     let proj_points = C::generate_random_projective_points(size);
-    let mut d_proj = DeviceVec::device_malloc(size).unwrap();
+    let mut d_proj = DeviceVec::<Projective<C>>::malloc(size);
     d_proj
-        .copy_from_host(HostSlice::from_slice(&proj_points))
+        .copy_from_host(proj_points.into_slice())
         .unwrap();
 
     Projective::<C>::to_mont(&mut d_proj, &IcicleStream::default())
@@ -158,10 +155,7 @@ where
         .wrap()
         .unwrap();
 
-    let mut projective_copy = vec![Projective::<C>::zero(); size];
-    d_proj
-        .copy_to_host(HostSlice::from_mut_slice(&mut projective_copy))
-        .unwrap();
+    let projective_copy = d_proj.to_host_vec();
 
     assert_eq!(proj_points, projective_copy);
 }

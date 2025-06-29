@@ -346,10 +346,25 @@ impl<T> DeviceSlice<T> {
             .wrap()
         }
     }
+
+    /// Copy the contents of the device slice back to the host and return them as `Vec<T>`.
+    /// Convenience method to avoid the boilerplate of allocating a host buffer and calling
+    /// `copy_to_host` manually. Requires `T: Copy + Default` so that we can cheaply create a
+    /// zero-initialised host vector.
+    pub fn to_host_vec(&self) -> Vec<T>
+    where
+        T: Copy + Default,
+    {
+        let mut host_vec = vec![T::default(); self.len()];
+        let host_slice = HostSlice::from_mut_slice(&mut host_vec);
+        self.copy_to_host(host_slice)
+            .unwrap();
+        host_vec
+    }
 }
 
 impl<T> DeviceVec<T> {
-    pub fn device_malloc(count: usize) -> Result<Self, eIcicleError> {
+    fn device_malloc(count: usize) -> Result<Self, eIcicleError> {
         let size = count
             .checked_mul(size_of::<T>())
             .unwrap_or(0);
@@ -369,6 +384,24 @@ impl<T> DeviceVec<T> {
                 count,
             )))))
         }
+    }
+
+    /// Fallible allocation that panics on failure, yielding slightly cleaner call sites:
+    /// `let mut buf = DeviceVec::<F>::malloc(size);`
+    pub fn malloc(count: usize) -> Self {
+        Self::device_malloc(count).expect("device allocation failed")
+    }
+
+    /// Allocate and zero-initialise the memory in a single call. Useful when the caller
+    /// needs the buffer to be in a well-defined state before copying or computing into it.
+    pub fn zeros(count: usize) -> Self
+    where
+        T: Copy,
+    {
+        let mut v = Self::malloc(count);
+        // Ignore potential failure because we just allocated the buffer on the active device.
+        let _ = v.memset(0, count);
+        v
     }
 
     pub fn device_malloc_async(count: usize, stream: &IcicleStream) -> Result<Self, eIcicleError> {
@@ -392,6 +425,41 @@ impl<T> DeviceVec<T> {
 
     pub fn as_mut_slice(&mut self) -> &mut DeviceSlice<T> {
         &mut self[..]
+    }
+
+    /// Copy the contents of the device vector back to the host and return them as `Vec<T>`.
+    /// Convenience method to avoid the boilerplate of allocating a host buffer and calling
+    /// `copy_to_host` manually. Requires `T: Copy + Default` so that we can cheaply create a
+    /// zero-initialised host vector.
+    pub fn to_host_vec(&self) -> Vec<T>
+    where
+        T: Copy + Default,
+    {
+        let mut host_vec = vec![T::default(); self.len()];
+        let host_slice = HostSlice::from_mut_slice(&mut host_vec);
+        self.copy_to_host(host_slice)
+            .unwrap();
+        host_vec
+    }
+
+    /// Convenience constructor: allocate a new `DeviceVec` on the active device, copy the
+    /// contents of a host slice into it, and return the populated vector.
+    ///
+    /// Example:
+    /// ```
+    /// use icicle_runtime::memory::{DeviceVec, HostSlice};
+    /// let host_data = vec![1u32, 2, 3, 4];
+    /// let device_buf = DeviceVec::<u32>::from_host_slice(&host_data);
+    /// ```
+    pub fn from_host_slice(src: &[T]) -> Self
+    where
+        T: Copy,
+    {
+        let mut device_vec = Self::malloc(src.len());
+        device_vec
+            .copy_from_host(HostSlice::from_slice(src))
+            .unwrap();
+        device_vec
     }
 }
 
@@ -540,5 +608,105 @@ impl<T> Deref for DeviceVec<T> {
 impl<T> DerefMut for DeviceVec<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self[..]
+    }
+}
+
+// =============================================================================================
+// Adapter traits to turn common buffer types into `HostOrDeviceSlice`s with minimal boilerplate.
+// =============================================================================================
+
+pub trait IntoIcicleSlice<'a, T: 'a> {
+    type Out: HostOrDeviceSlice<T> + ?Sized + 'a;
+    fn into_slice(&'a self) -> &'a Self::Out;
+}
+
+pub trait IntoIcicleSliceMut<'a, T: 'a> {
+    type Out: HostOrDeviceSlice<T> + ?Sized + 'a;
+    fn into_slice_mut(&'a mut self) -> &'a mut Self::Out;
+}
+
+// Host buffer implementations
+impl<'a, T> IntoIcicleSlice<'a, T> for &'a [T] {
+    type Out = HostSlice<T>;
+    fn into_slice(&'a self) -> &'a HostSlice<T> {
+        HostSlice::from_slice(self)
+    }
+}
+
+impl<'a, T> IntoIcicleSlice<'a, T> for &'a Vec<T> {
+    type Out = HostSlice<T>;
+    fn into_slice(&'a self) -> &'a HostSlice<T> {
+        HostSlice::from_slice(self.as_slice())
+    }
+}
+
+impl<'a, T: 'a> IntoIcicleSlice<'a, T> for Vec<T> {
+    type Out = HostSlice<T>;
+    fn into_slice(&'a self) -> &'a HostSlice<T> {
+        HostSlice::from_slice(self.as_slice())
+    }
+}
+
+impl<'a, T: 'a, const N: usize> IntoIcicleSlice<'a, T> for [T; N] {
+    type Out = HostSlice<T>;
+    fn into_slice(&'a self) -> &'a HostSlice<T> {
+        HostSlice::from_slice(self)
+    }
+}
+
+impl<'a, T> IntoIcicleSliceMut<'a, T> for &'a mut [T] {
+    type Out = HostSlice<T>;
+    fn into_slice_mut(&'a mut self) -> &'a mut HostSlice<T> {
+        HostSlice::from_mut_slice(self)
+    }
+}
+
+impl<'a, T> IntoIcicleSliceMut<'a, T> for &'a mut Vec<T> {
+    type Out = HostSlice<T>;
+    fn into_slice_mut(&'a mut self) -> &'a mut HostSlice<T> {
+        HostSlice::from_mut_slice(self.as_mut_slice())
+    }
+}
+
+impl<'a, T: 'a> IntoIcicleSliceMut<'a, T> for Vec<T> {
+    type Out = HostSlice<T>;
+    fn into_slice_mut(&'a mut self) -> &'a mut HostSlice<T> {
+        HostSlice::from_mut_slice(self.as_mut_slice())
+    }
+}
+
+impl<'a, T: 'a, const N: usize> IntoIcicleSliceMut<'a, T> for [T; N] {
+    type Out = HostSlice<T>;
+    fn into_slice_mut(&'a mut self) -> &'a mut HostSlice<T> {
+        HostSlice::from_mut_slice(self)
+    }
+}
+
+// Device buffer implementations
+impl<'a, T> IntoIcicleSlice<'a, T> for &'a DeviceVec<T> {
+    type Out = DeviceSlice<T>;
+    fn into_slice(&'a self) -> &'a DeviceSlice<T> {
+        &**self
+    }
+}
+
+impl<'a, T> IntoIcicleSliceMut<'a, T> for &'a mut DeviceVec<T> {
+    type Out = DeviceSlice<T>;
+    fn into_slice_mut(&'a mut self) -> &'a mut DeviceSlice<T> {
+        &mut **self
+    }
+}
+
+impl<'a, T: 'a> IntoIcicleSlice<'a, T> for DeviceVec<T> {
+    type Out = DeviceSlice<T>;
+    fn into_slice(&'a self) -> &'a DeviceSlice<T> {
+        &**self
+    }
+}
+
+impl<'a, T: 'a> IntoIcicleSliceMut<'a, T> for DeviceVec<T> {
+    type Out = DeviceSlice<T>;
+    fn into_slice_mut(&'a mut self) -> &'a mut DeviceSlice<T> {
+        &mut **self
     }
 }

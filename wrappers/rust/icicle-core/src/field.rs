@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display};
 
 pub trait PrimeField:
-    Display + Debug + PartialEq + Copy + Clone + Into<Self::Limbs> + From<Self::Limbs> + Send + Sync
+    Display + Debug + PartialEq + Copy + Clone + Into<Self::Limbs> + From<Self::Limbs> + Send + Sync + Default
 {
     const LIMBS_SIZE: usize;
     type Limbs: AsRef<[u32]> + AsMut<[u32]>;
@@ -170,6 +170,14 @@ macro_rules! impl_field {
         impl Debug for $field {
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
                 <Self as PrimeField>::debug_fmt(self, f)
+            }
+        }
+
+        impl Default for $field {
+            fn default() -> Self {
+                Self {
+                    limbs: [0u32; $num_limbs],
+                }
             }
         }
     };
@@ -349,7 +357,7 @@ macro_rules! impl_generate_random {
                 }
 
                 let mut res = vec![$field::zero(); size];
-                unsafe { $generate_random_function_name(&mut res[..] as *mut _ as *mut $field, size) };
+                unsafe { $generate_random_function_name(res.into_slice_mut() as *mut _ as *mut $field, size) };
                 res
             }
         }

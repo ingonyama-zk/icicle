@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::config::ConfigExtension;
-    use crate::memory::{DeviceVec, HostOrDeviceSlice, HostSlice};
+    use crate::memory::{DeviceVec, HostOrDeviceSlice, IntoIcicleSlice, IntoIcicleSliceMut};
     use crate::stream::IcicleStream;
     use crate::test_utilities;
     use crate::*;
@@ -85,13 +85,8 @@ mod tests {
         assert_ne!(input, output);
 
         // copy from input_host -> device --> output_host and compare
-        let mut d_mem = DeviceVec::device_malloc(input.len()).unwrap();
-        d_mem
-            .copy_from_host(HostSlice::from_slice(&input))
-            .unwrap();
-        d_mem
-            .copy_to_host(HostSlice::from_mut_slice(&mut output))
-            .unwrap();
+        let d_mem = DeviceVec::<u8>::from_host_slice(&input);
+        output = d_mem.to_host_vec();
         assert_eq!(input, output);
     }
 
@@ -107,12 +102,12 @@ mod tests {
         // ASYNC copy from input_host -> device --> output_host and compare
         let mut stream = IcicleStream::create().unwrap();
 
-        let mut d_mem = DeviceVec::device_malloc_async(input.len(), &stream).unwrap();
+        let mut d_mem = DeviceVec::<u8>::device_malloc_async(input.len(), &stream).unwrap();
         d_mem
-            .copy_from_host_async(HostSlice::from_slice(&input), &stream)
+            .copy_from_host_async(input.into_slice(), &stream)
             .unwrap();
         d_mem
-            .copy_to_host_async(HostSlice::from_mut_slice(&mut output), &stream)
+            .copy_to_host_async(output.into_slice_mut(), &stream)
             .unwrap();
         stream
             .synchronize()
@@ -132,19 +127,18 @@ mod tests {
         let input2 = vec![0; input.len()];
         let mut output = vec![0; input.len()];
         assert_ne!(input, output);
-        let h_input = HostSlice::from_slice(&input);
-        let h_input2 = HostSlice::from_slice(&input2);
+        let h_input = input.into_slice();
+        let h_input2 = input2.into_slice();
 
         // H -> D -> D -> H
         {
-            let h_output = HostSlice::from_mut_slice(&mut output);
-
-            let mut d_mem1 = DeviceVec::device_malloc(input.len()).unwrap();
+            let h_output = output.into_slice_mut();
+            let mut d_mem1 = DeviceVec::<u8>::malloc(input.len());
             d_mem1
                 .copy(h_input)
                 .unwrap();
 
-            let mut d_mem2 = DeviceVec::device_malloc(input.len() * 5).unwrap();
+            let mut d_mem2 = DeviceVec::<u8>::malloc(input.len() * 5);
             d_mem2
                 .copy(&d_mem1)
                 .unwrap();
@@ -157,7 +151,7 @@ mod tests {
 
         // H -> H
         {
-            let h_output = HostSlice::from_mut_slice(&mut output);
+            let h_output = output.into_slice_mut();
             h_output
                 .copy(h_input2)
                 .unwrap();
@@ -174,20 +168,20 @@ mod tests {
         let input2 = vec![0; input.len()];
         let mut output = vec![0; input.len()];
         assert_ne!(input, output);
-        let h_input = HostSlice::from_slice(&input);
-        let h_input2 = HostSlice::from_slice(&input2);
+        let h_input = input.into_slice();
+        let h_input2 = input2.into_slice();
 
         // H -> D -> D -> H
         {
             let mut stream = IcicleStream::create().unwrap();
-            let h_output = HostSlice::from_mut_slice(&mut output);
+            let h_output = output.into_slice_mut();
 
-            let mut d_mem1 = DeviceVec::device_malloc(input.len()).unwrap();
+            let mut d_mem1 = DeviceVec::<u8>::malloc(input.len());
             d_mem1
                 .copy_async(h_input, &stream)
                 .unwrap();
 
-            let mut d_mem2 = DeviceVec::device_malloc(input.len() * 5).unwrap();
+            let mut d_mem2 = DeviceVec::<u8>::malloc(input.len() * 5);
             d_mem2
                 .copy_async(&d_mem1, &stream)
                 .unwrap();
@@ -209,7 +203,7 @@ mod tests {
         // H -> H
         {
             let mut stream = IcicleStream::create().unwrap();
-            let h_output = HostSlice::from_mut_slice(&mut output);
+            let h_output = output.into_slice_mut();
 
             h_output
                 .copy_async(h_input2, &stream)
@@ -256,18 +250,14 @@ mod tests {
         let size = 1 << 10;
         let val = 42;
         let expected = vec![val; size];
-        let mut device_vec = DeviceVec::<u8>::device_malloc(size).unwrap();
+        let mut device_vec = DeviceVec::<u8>::malloc(size);
         device_vec
             .memset(val, size)
             .unwrap();
 
-        let mut host_slice = vec![0u8; size];
-        let host_slice = HostSlice::from_mut_slice(&mut host_slice);
-        device_vec
-            .copy_to_host(host_slice)
-            .unwrap();
+        let host_vec = device_vec.to_host_vec();
 
-        assert_eq!(host_slice.as_slice(), expected);
+        assert_eq!(host_vec, expected);
     }
 
     #[test]
@@ -278,7 +268,7 @@ mod tests {
         let val = 42;
         let expected = vec![val; size >> 1];
         let stream = IcicleStream::create().unwrap();
-        let mut device_vec = DeviceVec::<u8>::device_malloc(size).unwrap();
+        let mut device_vec = DeviceVec::<u8>::malloc(size);
         device_vec.as_mut_slice()[1..size >> 1] // set only part of the slice
             .memset_async(val, (size >> 1) - 1, &stream)
             .unwrap();
@@ -286,11 +276,7 @@ mod tests {
             .synchronize()
             .unwrap();
 
-        let mut host_slice = vec![0u8; size];
-        let host_slice = HostSlice::from_mut_slice(&mut host_slice);
-        device_vec
-            .copy_to_host(host_slice)
-            .unwrap();
+        let host_slice = device_vec.to_host_vec();
 
         assert_eq!(host_slice.as_slice()[1..size >> 1], expected[1..]);
     }
