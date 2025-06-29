@@ -72,8 +72,8 @@ public:
     run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
-      ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
-      ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
+      ASSERT_EQ(true, result_main[res_idx].is_on_curve());
+      ASSERT_EQ(true, result_ref[res_idx].is_on_curve());
       ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
     }
   }
@@ -115,8 +115,8 @@ public:
       run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
       run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
       for (int res_idx = 0; res_idx < batch; ++res_idx) {
-        ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
-        ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
+        ASSERT_EQ(true, result_main[res_idx].is_on_curve());
+        ASSERT_EQ(true, result_ref[res_idx].is_on_curve());
         ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
       }
     }
