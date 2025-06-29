@@ -1291,7 +1291,7 @@ TEST_F(RingTestBase, RandomSampling)
 
 TEST_F(RingTestBase, ChallengePolynomialsSampling)
 {
-  size_t size = 1 << 16;
+  size_t size = 1 << 20;
   size_t seed_len = 32;
   std::vector<std::byte> seed(seed_len);
   for (size_t i = 0; i < seed_len; ++i) {
@@ -1307,7 +1307,7 @@ TEST_F(RingTestBase, ChallengePolynomialsSampling)
   size_t twos = 10;
   int64_t norm = 15;
 
-  const int N = 5;
+  const int N = 1;
   for (int i = 0; i < N; ++i) {
     for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
       ICICLE_CHECK(icicle_set_device(s_registered_devices[device_index]));

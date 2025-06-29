@@ -258,6 +258,8 @@ eIcicleError cpu_challenge_space_polynomials_sampling(
       Rq* output_polynomial = output + poly_idx;
       int64_t opnorm = 0;
 
+      size_t poly_idx_local = 47004;
+
       do {
         // Setup the random bits iterator
         HashConfig hash_cfg{};
