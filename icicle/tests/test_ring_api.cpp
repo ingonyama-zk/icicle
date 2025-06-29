@@ -237,60 +237,63 @@ TEST_F(RingTestBase, BalancedDecompositionZQ)
 
 TEST_F(RingTestBase, BalancedDecompositionSmallValues)
 {
-  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  static_assert(field_t::TLC == 2, "Balanced decomposition assumes q ~64-bit");
   constexpr auto q_storage = field_t::get_modulus();
-  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
-  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+  const int64_t q = *reinterpret_cast<const int64_t*>(&q_storage);
+  ICICLE_ASSERT(q > 0) << "Expecting q to fit in int64_t";
 
   const size_t size = 1 << 10;
-  auto input = std::vector<field_t>(size);
-  // randomize small values that need 2b only
-  const int max_val = 4;
-  const size_t num_digits_used = log2(max_val);
-  for (auto& element_i : input) {
-    element_i = field_t::from(rand() % max_val);
-  }
-  auto recomposed = std::vector<field_t>(size);
-  auto recomposed_ref = std::vector<field_t>(size);
+  std::vector<field_t> input(size);
 
-  const auto q_sqrt = static_cast<uint32_t>(std::sqrt(q));
-  const auto bases = std::vector<uint32_t>{2, q_sqrt};
+  // Fill input with small values requiring at most 2 bits
+  constexpr int max_val = 4;
+  const size_t num_digits_used = static_cast<size_t>(std::log2(max_val));
+  for (auto& e : input) {
+    e = field_t::from(rand() % max_val);
+  }
+
+  std::vector<field_t> recomposed(size);
+  std::vector<field_t> recomposed_ref(size);
+
+  const uint32_t q_sqrt = static_cast<uint32_t>(std::sqrt(q));
+  const std::vector<uint32_t> bases = {2, q_sqrt};
 
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
 
-    for (const auto base : bases) {
-      // Number of digits needed to represent an element mod q in balanced base-b representation
+    for (uint32_t base : bases) {
+      // Compute the number of digits required to fully represent any element mod q
       const size_t num_digits_required = balanced_decomposition::compute_nof_digits<field_t>(base);
-      ASSERT_LT(num_digits_used, num_digits_required); // This is what the test is testing
-      const size_t decomposed_size = size * num_digits_used;
-      auto decomposed = std::vector<field_t>(decomposed_size);
+      ASSERT_GT(num_digits_required, num_digits_used)
+        << "Test requires decomposition to use less digits than are needed for worst case";
 
-      // Decompose into balanced digits
+      const size_t decomposed_size = size * num_digits_used;
+      std::vector<field_t> decomposed(decomposed_size);
+
+      // Perform decomposition
       ICICLE_CHECK(balanced_decomposition::decompose(input.data(), size, base, {}, decomposed.data(), decomposed_size));
 
-      // Recompose manually to check to layout is digit-major, as it should be
-      // Generate the powers b^i for i in [0..num_digits]
-      Zq power = Zq::from(1);
+      // Validate layout by manually recomposing using digit-major interpretation
       std::vector<Zq> powers(num_digits_used);
-      for (size_t digit_idx = 0; digit_idx < num_digits_used; ++digit_idx) {
-        powers[digit_idx] = power;
+      Zq power = Zq::from(1);
+      for (size_t i = 0; i < num_digits_used; ++i) {
+        powers[i] = power;
         power = power * Zq::from(base);
       }
-      // Consider the decomposition as a [num_digits][size] matrix where rows are a single digit for the entire input
-      // vector. Then a linear combination with scalars [1, b, b^2, ...] is exactly the recomposition
+
+      // Treat decomposition output as a [num_digits_used][size] matrix and compute dot product
       ICICLE_CHECK(
         matmul(powers.data(), 1, num_digits_used, decomposed.data(), num_digits_used, size, {}, recomposed_ref.data()));
       ASSERT_EQ(0, memcmp(input.data(), recomposed_ref.data(), sizeof(field_t) * size))
-        << "Recomposition failed for base=" << base;
+        << "Manual recomposition failed for base=" << base;
 
-      // Recompose and compare to original input
+      // Perform recompose() and verify equality with original input
       ICICLE_CHECK(
         balanced_decomposition::recompose(decomposed.data(), decomposed_size, base, {}, recomposed.data(), size));
       ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), sizeof(field_t) * size))
-        << "Recomposition failed for base=" << base;
-    } // base loop
-  } // device loop
+        << "API recomposition failed for base=" << base;
+    }
+  }
 }
 
 TEST_F(RingTestBase, BalancedDecompositionZqErrorCases)
