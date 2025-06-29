@@ -1,0 +1,94 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Run at midnight UTC
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  test-curve-cuda:
+    name: Test curves on CUDA (nightly)
+    uses: ./.github/workflows/test-curve.yml
+    with:
+      backend: cuda
+      backend_upper: CUDA
+      runner: '["self-hosted", "Linux", "X64", "icicle"]'
+      enable_conditional_testing: false
+    secrets:
+      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
+
+  test-field-cuda:
+    name: Test fields on CUDA (nightly)
+    uses: ./.github/workflows/test-field.yml
+    with:
+      backend: cuda
+      backend_upper: CUDA
+      secret_key: CUDA_PULL_KEY
+      runner: '["self-hosted", "Linux", "X64", "icicle"]'
+      backend_branch: main
+      fields: '["babybear", "stark252", "m31", "koalabear", "goldilocks"]'
+      skip-rust-all-fields: ""
+      skip-cpp-all-fields: ""
+      skip-golang-all-fields: "false"
+      initial-support: false
+      enable_conditional_testing: false
+    secrets:
+      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
+
+  test-hash-cuda:
+    name: Test hash on CUDA (nightly)
+    uses: ./.github/workflows/test-hash.yml
+    with:
+      backend: cuda
+      backend_upper: CUDA
+      secret_key: CUDA_PULL_KEY
+      runner: '["self-hosted", "Linux", "X64", "icicle"]'
+      backend_branch: main
+      skip-rust: ""
+      skip-cpp: ""
+      skip-golang: "false"
+      initial-support: false
+      enable_conditional_testing: false
+    secrets:
+      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
+
+  test-runtime-cuda:
+    name: Test runtime on CUDA (nightly)
+    uses: ./.github/workflows/test-runtime.yml
+    with:
+      backend: cuda
+      backend_upper: CUDA
+      secret_key: CUDA_PULL_KEY
+      runner: '["self-hosted", "Linux", "X64", "icicle"]'
+      backend_branch: main
+      initial-support: false
+      enable_conditional_testing: false
+    secrets:
+      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
+
+  test-ring-cuda:
+    name: Test ring on CUDA (nightly)
+    uses: ./.github/workflows/test-ring.yml
+    with:
+      backend: cuda
+      backend_upper: CUDA
+      secret_key: CUDA_PULL_KEY
+      runner: '["self-hosted", "Linux", "X64", "icicle"]'
+      backend_branch: main
+      rings: '["labrador"]'
+      enable_conditional_testing: false
+    secrets:
+      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
+
+  test-pqc-cuda:
+    name: Test PQC ML-KEM on CUDA (nightly)
+    uses: ./.github/workflows/test-pqc.yml
+    with:
+      backend: cuda
+      backend_upper: CUDA
+      secret_key: CUDA_PULL_KEY
+      runner: '["self-hosted", "Linux", "X64", "icicle"]'
+      backend_branch: main
+      enable_conditional_testing: false
+    secrets:
+      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }} 
