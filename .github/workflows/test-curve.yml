@@ -1,0 +1,358 @@
+name: Test Curve
+
+on:
+  workflow_call:
+    inputs:
+      backend:
+        description: 'Backend to test (cuda, metal)'
+        required: true
+        type: string
+      backend_upper:
+        description: 'Backend name in uppercase'
+        required: true
+        type: string
+      runner:
+        description: 'Runner labels as JSON array'
+        required: true
+        type: string
+      skip-rust-all-curves:
+        description: 'Skip patterns for Rust tests'
+        required: false
+        type: string
+        default: ""
+      skip-cpp-all-curves:
+        description: 'Skip patterns for C++ tests'
+        required: false
+        type: string
+        default: ""
+      skip-golang-all-curves:
+        description: 'Skip Golang tests (true/false)'
+        required: false
+        type: string
+        default: "false"
+      initial-support:
+        description: 'Whether this is initial support (continue-on-error)'
+        required: false
+        type: boolean
+        default: false
+      backend_branch:
+        description: 'Backend branch to checkout'
+        required: false
+        type: string
+        default: "main"
+      # Feature flags for CI conditional testing
+      enable_conditional_testing:
+        description: 'Enable conditional testing based on changed files'
+        required: false
+        type: boolean
+        default: false
+      # Changed files flags (only used when enable_conditional_testing is true)
+      changed_curve:
+        description: 'Whether curve files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_cpp:
+        description: 'Whether C++ files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_rust:
+        description: 'Whether Rust files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_go:
+        description: 'Whether Go files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_cpu_backend:
+        description: 'Whether CPU backend files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_backend_api:
+        description: 'Whether backend API files changed'
+        required: false
+        type: string
+        default: "true"
+      # Feature change flags for conditional cmake builds
+      changed_msm:
+        description: 'Whether MSM files changed'
+        required: false
+        type: string
+        default: "false"
+      changed_ntt:
+        description: 'Whether NTT files changed'
+        required: false
+        type: string
+        default: "false"
+      changed_ecntt:
+        description: 'Whether ECNTT files changed'
+        required: false
+        type: string
+        default: "false"
+      changed_pairing:
+        description: 'Whether pairing files changed'
+        required: false
+        type: string
+        default: "false"
+      changed_fri:
+        description: 'Whether FRI files changed'
+        required: false
+        type: string
+        default: "false"
+      changed_sumcheck:
+        description: 'Whether sumcheck files changed'
+        required: false
+        type: string
+        default: "false"
+      changed_poseidon:
+        description: 'Whether Poseidon files changed'
+        required: false
+        type: string
+        default: "false"
+      changed_poseidon2:
+        description: 'Whether Poseidon2 files changed'
+        required: false
+        type: string
+        default: "false"
+    secrets:
+      backend_ssh_key:
+        description: 'SSH key for backend repository'
+        required: true
+
+jobs:
+  test-curve:
+    name: Test ${{ matrix.curve.name }} on ${{ inputs.backend }}
+    runs-on: ${{ fromJson(inputs.runner) }}
+    continue-on-error: ${{ inputs.initial-support }}
+    strategy:
+      matrix:
+        include:
+          - curve:
+              name: bn254
+              rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
+              go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
+          - curve:
+              name: bls12_381
+              rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
+              go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
+          - curve:
+              name: bls12_377
+              rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
+              go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
+          - curve:
+              name: bw6_761
+              rust-supported-features: ["msm", "ntt", "fri", "poseidon", "poseidon2"]
+              go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
+          - curve:
+              name: grumpkin
+              rust-supported-features: ["msm", "sumcheck", "poseidon", "poseidon2"]
+              go-supported-features: ["msm", "poseidon", "poseidon2"]
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      
+    - name: Checkout ${{ inputs.backend_upper }} backend
+      if: ${{ inputs.changed_curve == 'true' }}
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        repository: ingonyama-zk/icicle-${{ inputs.backend }}-backend
+        path: ./icicle/backend/${{ inputs.backend }}
+        ssh-key: ${{ secrets.backend_ssh_key }}
+        ref: ${{ inputs.backend_branch }}
+        
+    - name: Set feature and build flags
+      id: feature_flags
+      if: ${{ inputs.enable_conditional_testing && inputs.changed_curve == 'true' }}
+      run: |
+        FEATURE_FLAGS=""
+        CPP_TEST_REGEX="CurveSanity|CurveApi|ModArith|MatrixTest|Symbol|Program"
+        RUST_TEST_FEATURES=""
+        GO_TEST_BUILD_TAGS="icicle_exclude_all"
+        
+        # MSM module
+        if [[ "${{ inputs.changed_msm }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DMSM=ON -DG2=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|msm"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'msm') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,msm"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'msm') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,msm,g2"
+          fi
+        fi
+        
+        # NTT module (includes polynomials)
+        if [[ "${{ inputs.changed_ntt }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DNTT=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|ntt"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'ntt') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ntt"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'ntt') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,ntt"
+          fi
+        fi
+        
+        # ECNTT module
+        if [[ "${{ inputs.changed_ecntt }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DECNTT=ON -DNTT=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|ecntt"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'ecntt') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ecntt"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'ecntt') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,ecntt"
+          fi
+        fi
+
+        # Pairing module
+        if [[ "${{ inputs.changed_pairing }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DG2=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|pairing"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'pairing') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,pairing"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'pairing') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,pairing,g2"
+          fi
+        fi
+        
+        # FRI module
+        if [[ "${{ inputs.changed_fri }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DFRI=ON -DHASH=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|fri"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'fri') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,fri"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'fri') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,fri"
+          fi
+        fi
+        
+        # Sumcheck module
+        if [[ "${{ inputs.changed_sumcheck }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DSUMCHECK=ON -DHASH=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|SumcheckTest"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'sumcheck') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,sumcheck"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'sumcheck') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,sumcheck"
+          fi
+        fi
+
+        # Poseidon module
+        if [[ "${{ inputs.changed_poseidon }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DPOSEIDON=ON -DHASH=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|poseidon"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'poseidon') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'poseidon') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,poseidon"
+          fi
+        fi
+
+        # Poseidon2 module
+        if [[ "${{ inputs.changed_poseidon2 }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DPOSEIDON2=ON -DHASH=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|poseidon2"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'poseidon2') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon2"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'poseidon2') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,poseidon2"
+          fi
+        fi
+
+        echo "FEATURE_FLAGS: $FEATURE_FLAGS"
+        echo "FEATURE_FLAGS=$FEATURE_FLAGS" >> $GITHUB_OUTPUT
+
+        echo "CPP_TEST_REGEX: $CPP_TEST_REGEX"
+        echo "CPP_TEST_REGEX=$CPP_TEST_REGEX" >> $GITHUB_OUTPUT
+
+        echo "RUST_TEST_FEATURES: $RUST_TEST_FEATURES"
+        echo "RUST_TEST_FEATURES=$RUST_TEST_FEATURES" >> $GITHUB_OUTPUT
+
+        echo "GO_TEST_BUILD_TAGS: $GO_TEST_BUILD_TAGS"
+        echo "GO_TEST_BUILD_TAGS=$GO_TEST_BUILD_TAGS" >> $GITHUB_OUTPUT
+        
+    - name: Build curve
+      working-directory: ./icicle
+      if: ${{ !inputs.enable_conditional_testing || inputs.changed_curve == 'true' }}
+      run: |
+        mkdir -p build && rm -rf build/*
+        EXTRA_FLAGS=""
+        if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
+          EXTRA_FLAGS="-DINGO_CI_ENV=ON ${{ steps.feature_flags.outputs.FEATURE_FLAGS }}"
+        fi
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} -D${{ inputs.backend_upper }}_BACKEND=local $EXTRA_FLAGS -S . -B build
+        cmake --build build
+
+    - name: Run C++ curve tests
+      working-directory: ./icicle/build/tests
+      if: ${{ !inputs.enable_conditional_testing || (inputs.changed_curve == 'true' && (inputs.changed_cpp == 'true' || inputs.changed_cpu_backend == 'true' || inputs.changed_backend_api == 'true')) }}
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
+
+        export SKIP_TESTS="${{ inputs.skip-cpp-all-curves }}"
+        echo "SKIP_TESTS: $SKIP_TESTS"
+        
+        if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
+          ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}" -E "$SKIP_TESTS"
+        else
+          ctest --output-on-failure -E "$SKIP_TESTS"
+        fi
+        
+    - name: Run Rust curve tests
+      working-directory: ./wrappers/rust/icicle-curves
+      if: ${{ !inputs.enable_conditional_testing || (inputs.changed_curve == 'true' && inputs.changed_rust == 'true') }}
+      run: |
+        CURVE=${{ matrix.curve.name }}
+        CURVE_DIR=icicle-${CURVE//_/-}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
+        export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
+        cd ./$CURVE_DIR
+        
+        export SKIP_RUST_TESTS="${{ inputs.skip-rust-all-curves }}"
+
+        FEATURES=""
+        if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
+          if [[ -z "${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}" ]]; then
+            FEATURES="--no-default-features"
+          else
+            FEATURES="--no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}"
+          fi
+        fi
+
+        rustup override set nightly
+        cargo test --release $FEATURES -- $SKIP_RUST_TESTS --skip phase2 --skip phase3 --skip phase4
+        cargo test phase3 --release $FEATURES -- $SKIP_RUST_TESTS
+        cargo test phase4 --release $FEATURES -- $SKIP_RUST_TESTS
+        
+    - name: Setup go
+      if: ${{ inputs.skip-golang-all-curves == 'false' && (!inputs.enable_conditional_testing || (inputs.changed_curve == 'true' && inputs.changed_go == 'true')) }}
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+      with:
+        go-version: '1.22.0'
+        cache: false
+        
+    - name: Run Golang curve tests
+      working-directory: ./wrappers/golang/curves
+      if: ${{ inputs.skip-golang-all-curves == 'false' && (!inputs.enable_conditional_testing || (inputs.changed_curve == 'true' && inputs.changed_go == 'true')) }}
+      run: |
+        CURVE=${{ matrix.curve.name }}
+        CURVE_DIR=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
+        export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
+        
+        BUILD_TAGS=""
+        if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
+          BUILD_TAGS="-tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }}"
+        fi
+        
+        go test ./$CURVE_DIR/tests $BUILD_TAGS -count=1 -failfast -p 2 -timeout 10m -v 
