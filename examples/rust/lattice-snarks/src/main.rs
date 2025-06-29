@@ -129,6 +129,47 @@ where
     println!("[Matmul] Completed in {:.2?}", elapsed);
 }
 
+/// Demonstrates matrix transpose over `PolyRing` elements using device-accelerated APIs.
+///
+/// - Input matrix is row-major with shape `[rows × cols]`
+/// - Output matrix is also row-major and will have shape `[cols × rows]`
+///
+/// Useful for transposing matrices before/after multiplication, or for
+/// column-major operations.
+fn transpose_example<P>(rows: u32, cols: u32)
+where
+    P: PolynomialRing + matrix_ops::MatrixOps<P> + GenerateRandom<P>,
+{
+    println!("----------------------------------------------------------------------");
+    println!(
+        "[Transpose] Transposing matrix of shape {}×{} → {}×{}",
+        rows, cols, cols, rows
+    );
+
+    let cfg = VecOpsConfig::default();
+    let len = (rows * cols) as usize;
+
+    // Generate random input matrix (row-major)
+    let host_input: Vec<P> = P::generate_random(len);
+
+    // Allocate device memory
+    let mut device_input = DeviceVec::<P>::device_malloc(len).expect("Allocation failed");
+    let mut device_output = DeviceVec::<P>::device_malloc(len).expect("Allocation failed");
+
+    // Copy to device
+    device_input
+        .copy_from_host(HostSlice::from_slice(&host_input))
+        .expect("Copy to device failed");
+
+    // Transpose
+    let start = std::time::Instant::now();
+    // TODO uncomment
+    // matrix_ops::transpose::<P>(&device_input, rows, cols, &cfg, &mut device_output).expect("Transpose failed");
+    let elapsed = start.elapsed();
+
+    println!("[Transpose] Completed in {:.2?}", elapsed);
+}
+
 /// Computes the modulus of a field element type `T` as `usize`.
 fn modulus<T>() -> usize
 where
@@ -631,7 +672,7 @@ fn main() {
     // (9) Matrix Transpose for Polynomial Rings
     // ----------------------------------------------------------------------
 
-    // TODO
+    transpose_example::<PolyRing>(size as u32, size as u32 >> 2);
 
     // ----------------------------------------------------------------------
     // (10) Random Sampling for Zq and PolyRing
