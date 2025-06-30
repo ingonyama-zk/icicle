@@ -29,21 +29,20 @@ TODO link to rust example
   - Random vector sampling
   - Challenge sampling with rejection based on operator norm
 
-## Design Highlights
-
-- Generic over ring types (`Zq`, `Rq`, etc.)
-- Unified support for various ICICLE backends
-- Optimized for batching and aggregation
-- Extensible for lattice-based SNARKs and post-quantum cryptography
-
 ## Core Types
 
 ### Integer Ring: Zq
 
 The integer ring `Zq` represents integers modulo `q`, where `q` is typically a product of small prime fields for efficiency.
 
-// TODO show q
+The modulus q used in this library is a special 64-bit prime constructed as the product of two 32-bit primes:
 
+```
+q = P_babybear × P_koalabear
+  = 0x78000001 × 0x7f000001
+  = 0x3b880000f7000001
+  = 4289678649214369793
+```
 
 // TODO: verify examples compile and work correctly before merging!
 // TODO: replace labrador with the final name that
@@ -89,14 +88,63 @@ let rq_from_slice: Vec<PolyRing> = zq_random
     .collect();
 ```
 
-// TODO Yuval
+Many ICICLE APIs are defined over scalar rings like Zq, but can be applied to polynomial ring vectors (Rq) by flattening the polynomials into a contiguous Zq slice. This is useful for operations like JL projection.
 
-Some APIs are defined for `Zq` but are useful for `Rq` vectors too, interpreting them as a flat `Zq` vector. ICICLE solves it by reinterpreting icicle-slices.
+To enable this, ICICLE provides utilities to reinterpret slices of polynomials as slices of their base field elements, using the HostOrDeviceSlice trait abstraction.
 
 ```rust
+/// Reinterprets a slice of polynomials as a flat slice of their base field elements.
+///
+/// This enables treating `&[P]` (e.g. Rq) as `&[P::Base]` (e.g. Zq) for scalar operations.
+///
+/// # Safety
+/// - `P` must be `#[repr(C)]` and match the layout of `[P::Base; DEGREE]`.
+/// - Memory must be properly aligned and valid for reading.
+#[inline(always)]
+pub fn flatten_polyring_slice<'a, P>(
+    input: &'a (impl HostOrDeviceSlice<P> + ?Sized),
+) -> impl HostOrDeviceSlice<P::Base> + 'a
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl + 'a,
+{
+    unsafe { reinterpret_slice::<P, P::Base>(input).expect("Invalid slice cast") }
+}
 
-// TODO Yuval
+/// Reinterprets a mutable slice of polynomials as a flat mutable slice of their base field elements.
+///
+/// # Safety
+/// - Layout must match `[P::Base; DEGREE]` exactly.
+/// - Caller must ensure exclusive access and proper alignment.
+#[inline(always)]
+pub fn flatten_polyring_slice_mut<'a, P>(
+    input: &'a mut (impl HostOrDeviceSlice<P> + ?Sized),
+) -> impl HostOrDeviceSlice<P::Base> + 'a
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl + 'a,
+{
+    unsafe { reinterpret_slice_mut::<P, P::Base>(input).expect("Invalid slice cast") }
+}
+```
 
+:::note
+These helpers use the general reinterpret_slice utility, which reinterprets memory across types when their sizes and alignments match.
+:::
+
+
+#### Example
+
+```rust
+use icicle_core::polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut};
+
+let polynomials = P::generate_random(5);
+let poly_slice = HostSlice::from_slice(&polynomials);
+
+// Flatten into a Zq slice (5 × DEGREE elements)
+let scalar_slice = flatten_polyring_slice(poly_slice);
+
+// This can now be passed into scalar-only APIs like `jl_projection`, `norm::check_norm_bound`, etc.
 ```
 
 
