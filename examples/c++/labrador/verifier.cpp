@@ -1,5 +1,70 @@
 #include "verifier.h"
 
+void LabradorBaseVerifier::create_transcript()
+{
+  const size_t d = Rq::d;
+  // 1. seed1 from u1
+  const auto& u1 = trs.prover_msg.u1;
+  const std::byte* u1_bytes = reinterpret_cast<const std::byte*>(u1.data());
+  size_t u1_len = u1.size() * sizeof(Tq);
+  trs.seed1 = oracle.generate(u1_bytes, u1_len);
+
+  // 2. seed2 from JL_i and p
+  size_t JL_i = trs.prover_msg.JL_i;
+  const std::vector<Zq>& p = trs.prover_msg.p;
+  std::vector<std::byte> jl_buf(sizeof(size_t));
+  std::memcpy(jl_buf.data(), &JL_i, sizeof(size_t));
+  jl_buf.insert(
+    jl_buf.end(), reinterpret_cast<const std::byte*>(p.data()),
+    reinterpret_cast<const std::byte*>(p.data()) + p.size() * sizeof(Zq));
+  trs.seed2 = oracle.generate(jl_buf.data(), jl_buf.size());
+
+  // 3. psi and omega sampling
+  const size_t L = lab_inst.const_zero_constraints.size();
+  const size_t JL_out = lab_inst.param.JL_out;
+  const size_t num_agg_rounds = std::ceil(128.0 / std::log2(get_q<Zq>()));
+  trs.psi.resize(num_agg_rounds * L);
+  trs.omega.resize(num_agg_rounds * JL_out);
+  // psi seed = seed2 || 0x01
+  std::vector<std::byte> psi_seed(trs.seed2);
+  psi_seed.push_back(std::byte('1'));
+  random_sampling(psi_seed.data(), psi_seed.size(), false, {}, trs.psi.data(), trs.psi.size());
+  // omega seed = seed2 || 0x02
+  std::vector<std::byte> omega_seed(trs.seed2);
+  omega_seed.push_back(std::byte('2'));
+  random_sampling(omega_seed.data(), omega_seed.size(), false, {}, trs.omega.data(), trs.omega.size());
+
+  // 4. seed3 from msg3 (b_agg)
+  const auto& msg3 = trs.prover_msg.b_agg;
+  const std::byte* msg3_bytes = reinterpret_cast<const std::byte*>(msg3.data());
+  size_t msg3_len = msg3.size() * sizeof(Tq);
+  trs.seed3 = oracle.generate(msg3_bytes, msg3_len);
+
+  // 5. alpha_hat sampling
+  // After we aggregate the L const-zero constraints the instance will
+  // have `num_agg_rounds` extra EqualityInstances, so we must sample
+  // α for the *final* size in advance.
+  const size_t K = lab_inst.equality_constraints.size() + num_agg_rounds;
+
+  trs.alpha_hat.resize(K);
+  std::vector<std::byte> alpha_seed(trs.seed3);
+  alpha_seed.push_back(std::byte('1'));
+  random_sampling(alpha_seed.data(), alpha_seed.size(), false, {}, trs.alpha_hat.data(), K);
+
+  // 6. seed4 from u2
+  const auto& u2 = trs.prover_msg.u2;
+  const std::byte* u2_bytes = reinterpret_cast<const std::byte*>(u2.data());
+  size_t u2_bytes_len = u2.size() * sizeof(Tq);
+  trs.seed4 = oracle.generate(u2_bytes, u2_bytes_len);
+
+  // 7. challenges_hat sampling
+  size_t n = lab_inst.param.n;
+  size_t r = lab_inst.param.r;
+  std::vector<Rq> challenge = sample_low_norm_challenges(n, r, trs.seed4.data(), trs.seed4.size());
+  trs.challenges_hat.resize(r);
+  ntt(challenge.data(), challenge.size(), NTTDir::kForward, {}, trs.challenges_hat.data());
+}
+
 // TODO: maybe make BaseProof more consistent by making everything Rq, since we have to convert z_hat to Rq before norm
 // check anyway
 bool LabradorBaseVerifier::_verify_base_proof() const
@@ -13,6 +78,7 @@ bool LabradorBaseVerifier::_verify_base_proof() const
   auto g_tilde = base_proof.g;
   auto h_tilde = base_proof.h;
   auto challenges_hat = trs.challenges_hat;
+  auto final_const = lab_inst.equality_constraints[0];
 
   bool t_tilde_small = true, g_tilde_small = true, h_tilde_small = true;
   size_t base1 = lab_inst.param.base1;
@@ -156,13 +222,13 @@ bool LabradorBaseVerifier::_verify_base_proof() const
   // Then compute challenges_hat^T * (H_hat * challenges_hat)
   ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, H_times_c.data(), r, 1, {}, &c_H_c));
 
-  // ip_a_G = <base_proof.final_const.a, G_hat> - inner product of flattened matrices
-  ICICLE_CHECK(matmul(base_proof.final_const.a.data(), 1, r * r, G_hat.data(), r * r, 1, {}, &ip_a_G));
+  // ip_a_G = <final_const.a, G_hat> - inner product of flattened matrices
+  ICICLE_CHECK(matmul(final_const.a.data(), 1, r * r, G_hat.data(), r * r, 1, {}, &ip_a_G));
 
-  // c_Phi_z = challenges_hat^T * base_proof.final_const.phi * z_hat
+  // c_Phi_z = challenges_hat^T * final_const.phi * z_hat
   // First compute phi * z_hat
   std::vector<Tq> phi_times_z(r);
-  ICICLE_CHECK(matmul(base_proof.final_const.phi.data(), r, n, z_hat.data(), n, 1, {}, phi_times_z.data()));
+  ICICLE_CHECK(matmul(final_const.phi.data(), r, n, z_hat.data(), n, 1, {}, phi_times_z.data()));
   // Then compute challenges_hat^T * (phi * z_hat)
   ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, phi_times_z.data(), r, 1, {}, &c_Phi_z));
 
@@ -187,7 +253,7 @@ bool LabradorBaseVerifier::_verify_base_proof() const
   ICICLE_CHECK(vector_add(&ip_a_G, &trace_H, 1, {}, &ip_a_G_plus_trace_H));
 
   Tq ip_a_G_plus_trace_H_plus_b;
-  ICICLE_CHECK(vector_add(&ip_a_G_plus_trace_H, &base_proof.final_const.b, 1, {}, &ip_a_G_plus_trace_H_plus_b));
+  ICICLE_CHECK(vector_add(&ip_a_G_plus_trace_H, &final_const.b, 1, {}, &ip_a_G_plus_trace_H_plus_b));
 
   Tq zero_poly(zero());
   // Check \sum_ij a_ij G_ij + \sum_i h_ii + b == 0
@@ -198,65 +264,122 @@ bool LabradorBaseVerifier::_verify_base_proof() const
   return true;
 }
 
-void LabradorBaseVerifier::create_transcript()
+// modifies the instance
+// returns num_aggregation_rounds number of polynomials
+void LabradorBaseVerifier::agg_const_zero_constraints(size_t num_aggregation_rounds, const std::vector<Tq>& Q_hat)
 {
-  const size_t d = Rq::d;
-  // 1. seed1 from u1
-  const auto& u1 = trs.prover_msg.u1;
-  const std::byte* u1_bytes = reinterpret_cast<const std::byte*>(u1.data());
-  size_t u1_len = u1.size() * sizeof(Tq);
-  trs.seed1 = oracle.generate(u1_bytes, u1_len);
-
-  // 2. seed2 from JL_i and p
-  size_t JL_i = trs.prover_msg.JL_i;
-  const std::vector<Zq>& p = trs.prover_msg.p;
-  std::vector<std::byte> jl_buf(sizeof(size_t));
-  std::memcpy(jl_buf.data(), &JL_i, sizeof(size_t));
-  jl_buf.insert(
-    jl_buf.end(), reinterpret_cast<const std::byte*>(p.data()),
-    reinterpret_cast<const std::byte*>(p.data()) + p.size() * sizeof(Zq));
-  trs.seed2 = oracle.generate(jl_buf.data(), jl_buf.size());
-
-  // 3. psi and omega sampling
-  const size_t L = lab_inst.const_zero_constraints.size();
-  const size_t JL_out = lab_inst.param.JL_out;
-  const size_t num_agg_rounds = std::ceil(128.0 / std::log2(get_q<Zq>()));
-  trs.psi.resize(num_agg_rounds * L);
-  trs.omega.resize(num_agg_rounds * JL_out);
-  // psi seed = seed2 || 0x01
-  std::vector<std::byte> psi_seed(trs.seed2);
-  psi_seed.push_back(std::byte('1'));
-  random_sampling(psi_seed.data(), psi_seed.size(), false, {}, trs.psi.data(), trs.psi.size());
-  // omega seed = seed2 || 0x02
-  std::vector<std::byte> omega_seed(trs.seed2);
-  omega_seed.push_back(std::byte('2'));
-  random_sampling(omega_seed.data(), omega_seed.size(), false, {}, trs.omega.data(), trs.omega.size());
-
-  // 4. seed3 from msg3 (b_agg)
-  const auto& msg3 = trs.prover_msg.b_agg;
-  const std::byte* msg3_bytes = reinterpret_cast<const std::byte*>(msg3.data());
-  size_t msg3_len = msg3.size() * sizeof(Tq);
-  trs.seed3 = oracle.generate(msg3_bytes, msg3_len);
-
-  // 5. alpha_hat sampling
-  const size_t K = lab_inst.equality_constraints.size();
-  trs.alpha_hat.resize(K);
-  std::vector<std::byte> alpha_seed(trs.seed3);
-  alpha_seed.push_back(std::byte('1'));
-  random_sampling(alpha_seed.data(), alpha_seed.size(), false, {}, trs.alpha_hat.data(), K);
-
-  // 6. seed4 from u2
-  const auto& u2 = trs.prover_msg.u2;
-  const std::byte* u2_bytes = reinterpret_cast<const std::byte*>(u2.data());
-  size_t u2_bytes_len = u2.size() * sizeof(Tq);
-  trs.seed4 = oracle.generate(u2_bytes, u2_bytes_len);
-
-  // 7. challenges_hat sampling
-  size_t n = lab_inst.param.n;
   size_t r = lab_inst.param.r;
-  std::vector<Rq> challenge = sample_low_norm_challenges(n, r, trs.seed4.data(), trs.seed4.size());
-  trs.challenges_hat.resize(r);
-  ntt(challenge.data(), challenge.size(), NTTDir::kForward, {}, trs.challenges_hat.data());
+  size_t n = lab_inst.param.n;
+  size_t d = Rq::d;
+  size_t JL_out = lab_inst.param.JL_out;
+  const size_t L = lab_inst.const_zero_constraints.size();
+
+  const std::vector<Zq>& p = trs.prover_msg.p;
+  const std::vector<Zq>& psi = trs.psi;
+  const std::vector<Zq>& omega = trs.omega;
+  // indexes into multidim arrays: psi[k][l] and omega[k][l]
+  auto psi_index = [num_aggregation_rounds, L](size_t k, size_t l) {
+    assert(l < L);
+    assert(k < num_aggregation_rounds);
+    return k * L + l;
+  };
+  auto omega_index = [num_aggregation_rounds, JL_out](size_t k, size_t l) {
+    assert(l < JL_out);
+    assert(k < num_aggregation_rounds);
+    return k * JL_out + l;
+  };
+
+  std::vector<Zq> verif_test_b0(num_aggregation_rounds, Zq::zero());
+
+  for (size_t k = 0; k < num_aggregation_rounds; k++) {
+    EqualityInstance new_constraint(r, n);
+    std::vector<ConstZeroInstance> temp_const(lab_inst.const_zero_constraints);
+    std::vector<Tq> Q_hat_copy(Q_hat);
+
+    // Compute a''_{ij} = sum_{l=0}^{L-1} psi^{(k)}(l) * a'_{ij}^{(l)}
+
+    // For each l do:
+    // const_zero_constraints[l].a[i,j] = psi[k,l]* const_zero_constraints[l].a[i,j]
+    // use async_config to parallelise
+    VecOpsConfig async_config = default_vec_ops_config();
+    async_config.is_async = true;
+
+    for (size_t l = 0; l < L; l++) {
+      Zq psi_scalar = psi[psi_index(k, l)];
+
+      ICICLE_CHECK(scalar_mul_vec(
+        &psi_scalar, reinterpret_cast<Zq*>(temp_const[l].a.data()), r * r * d, async_config,
+        reinterpret_cast<Zq*>(temp_const[l].a.data())));
+    }
+    ICICLE_CHECK(icicle_device_synchronize());
+    // new_constraint.a[i,j] = \sum_l const_zero_constraints[l].a[i,j]
+    for (size_t l = 0; l < L; l++) {
+      ICICLE_CHECK(vector_add(new_constraint.a.data(), temp_const[l].a.data(), r * r, {}, new_constraint.a.data()));
+    }
+
+    // Compute varphi'_i^{(k)} = sum_{l=0}^{L-1} psi^{(k)}(l) * phi'_i^{(l)} + sum_{l=0}^{255} omega^{(k)}(l) * q_{il}
+
+    // For each l do:
+    // const_zero_constraints[l].phi[i,:] = psi[k,l]* const_zero_constraints[l].phi[i,:]
+    // use async_config to parallelise
+    // TODO: can async with a aggregation above- leave for later
+    for (size_t l = 0; l < L; l++) {
+      Zq psi_scalar = psi[psi_index(k, l)];
+
+      ICICLE_CHECK(scalar_mul_vec(
+        &psi_scalar, reinterpret_cast<Zq*>(temp_const[l].phi.data()), r * n * d, async_config,
+        reinterpret_cast<Zq*>(temp_const[l].phi.data())));
+    }
+    ICICLE_CHECK(icicle_device_synchronize());
+    // new_constraint.phi[i,:] = \sum_l const_zero_constraints[l].phi[i,:]
+    for (size_t l = 0; l < L; l++) {
+      ICICLE_CHECK(
+        vector_add(new_constraint.phi.data(), temp_const[l].phi.data(), r * n, {}, new_constraint.phi.data()));
+    }
+
+    // For each j do:
+    // Q_hat[j, :, :] = omega[k,j]* Q_hat[j, :, :]
+    // use async_config to parallelise
+    // TODO: can async with a aggregation above- leave for later
+    for (size_t j = 0; j < JL_out; j++) {
+      Zq omega_scalar = omega[omega_index(k, j)];
+
+      ICICLE_CHECK(scalar_mul_vec(
+        &omega_scalar, reinterpret_cast<Zq*>(&Q_hat_copy[j * n * r]), r * n * d, async_config,
+        reinterpret_cast<Zq*>(&Q_hat_copy[j * n * r])));
+    }
+    ICICLE_CHECK(icicle_device_synchronize());
+    // new_constraint.phi[i,:] += \sum_j Q_hat[j, i, :]
+    for (size_t j = 0; j < JL_out; j++) {
+      ICICLE_CHECK(vector_add(new_constraint.phi.data(), &Q_hat_copy[j * n * r], r * n, {}, new_constraint.phi.data()));
+    }
+
+    new_constraint.b = trs.prover_msg.b_agg[k];
+
+    // Add the EqualityInstance to LabradorInstance
+    lab_inst.add_equality_constraint(new_constraint);
+  }
+  // delete the const zero constraints
+  lab_inst.const_zero_constraints.clear();
+  lab_inst.const_zero_constraints.shrink_to_fit();
 }
 
-bool LabradorBaseVerifier::verify() const { return true; }
+bool LabradorBaseVerifier::verify()
+{
+  size_t r = lab_inst.param.r;
+  size_t n = lab_inst.param.n;
+  size_t d = Rq::d;
+  size_t JL_out = lab_inst.param.JL_out;
+  // construct the final constraint correctly
+
+  std::vector<Rq> Q = compute_Q_poly(n, r, JL_out, trs.seed1.data(), trs.seed1.size(), trs.prover_msg.JL_i);
+  std::vector<Tq> Q_hat(JL_out * r * n);
+  // Q_hat = NTT(Q)
+  ICICLE_CHECK(ntt(Q.data(), Q.size(), NTTDir::kForward, {}, Q_hat.data()));
+  const size_t num_aggregation_rounds = std::ceil(128.0 / std::log2(get_q<Zq>()));
+
+  agg_const_zero_constraints(num_aggregation_rounds, Q_hat);
+  lab_inst.agg_equality_constraints(trs.alpha_hat);
+
+  return _verify_base_proof();
+}

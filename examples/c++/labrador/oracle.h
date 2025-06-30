@@ -15,10 +15,10 @@
  */
 class Oracle
 {
-private:
+public:
   Hash hasher_;                  // SHA3-256 hash engine
   std::vector<std::byte> state_; // current transcript state
-public:
+
   // Construct with an initial seed.
   Oracle(const std::byte* seed, size_t seed_len) : hasher_(Sha3_256::create()), state_(seed, seed + seed_len) {}
 

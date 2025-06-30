@@ -56,6 +56,10 @@ int main(int argc, char* argv[])
   lab_inst.add_const_zero_constraint(const_zero_inst);
 
   std::string oracle_seed = "ORACLE_SEED";
+
+  // Oracle o1(reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size()),
+  //   o2(reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size());
+
   LabradorBaseProver base_prover{
     lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size()};
 
@@ -68,30 +72,70 @@ int main(int argc, char* argv[])
   LabradorBaseVerifier base_verifier{
     verif_lab_inst, trs.prover_msg, base_proof, reinterpret_cast<const std::byte*>(oracle_seed.data()),
     oracle_seed.size()};
-  bool verification_result = base_verifier._verify_base_proof();
+
+  // Assert that Verifier trs and Prover trs are equal
+  auto bytes_eq = [](const std::vector<std::byte>& a, const std::vector<std::byte>& b) { return a == b; };
+  auto zq_vec_eq = [](const std::vector<Zq>& a, const std::vector<Zq>& b) {
+    if (a.size() != b.size()) return false;
+    for (size_t i = 0; i < a.size(); ++i)
+      if (a[i] != b[i]) return false;
+    return true;
+  };
+
+  const auto& trs_P = trs;               // Prover's transcript
+  const auto& trs_V = base_verifier.trs; // Verifier's transcript
+
+  auto report = [&](bool ok, const std::string& name) {
+    if (!ok) std::cout << "  • " << name << " mismatch\n";
+    return ok;
+  };
+
+  bool ok = true;
+  ok &= report(bytes_eq(trs_P.seed1, trs_V.seed1), "seed1");
+  ok &= report(bytes_eq(trs_P.seed2, trs_V.seed2), "seed2");
+  ok &= report(bytes_eq(trs_P.seed3, trs_V.seed3), "seed3");
+  ok &= report(bytes_eq(trs_P.seed4, trs_V.seed4), "seed4");
+
+  ok &= report(zq_vec_eq(trs_P.psi, trs_V.psi), "psi");
+  ok &= report(zq_vec_eq(trs_P.omega, trs_V.omega), "omega");
+
+  ok &= report(poly_vec_eq(trs_P.alpha_hat.data(), trs_V.alpha_hat.data(), trs_P.alpha_hat.size()), "alpha_hat");
+
+  ok &= report(
+    poly_vec_eq(trs_P.challenges_hat.data(), trs_V.challenges_hat.data(), trs_P.challenges_hat.size()),
+    "challenges_hat");
+
+  if (!ok) {
+    std::cerr << "\nTranscript mismatch detected above.\n";
+    return 1;
+  }
+  std::cout << "Transcript check passed ✅\n";
+
+  bool verification_result = base_verifier.verify();
 
   if (verification_result) {
     std::cout << "Base proof verification passed\n";
   } else {
     std::cout << "Base proof verification failed\n";
   }
-  std::cout << "Beginning recursion... \n";
-  uint32_t base0 = 1 << 3;
-  size_t mu = 1 << 3, nu = 1 << 3;
-  LabradorInstance rec_inst = prepare_recursion_instance(
-    param,                  // prev_param
-    base_proof.final_const, // final_const,
-    trs, base0, mu, nu);
-  LabradorProver dummy_prover{lab_inst, S, 1};
-  std::vector<Rq> rec_S = dummy_prover.prepare_recursion_witness(base_proof, base0, mu, nu);
-  std::cout << "rec_inst.r = " << rec_inst.param.r << std::endl;
-  std::cout << "rec_inst.n = " << rec_inst.param.n << std::endl;
-  std::cout << "Num rec_inst.equality_constraints = " << rec_inst.equality_constraints.size() << std::endl;
-  std::cout << "Num rec_inst.const_zero_constraints = " << rec_inst.const_zero_constraints.size() << std::endl;
 
-  std::cout << "\tTesting rec-witness validity...";
-  assert(lab_witness_legit(rec_inst, rec_S));
-  std::cout << "VALID\n";
+  // std::cout << "Beginning recursion... \n";
+  // uint32_t base0 = 1 << 3;
+  // size_t mu = 1 << 3, nu = 1 << 3;
+  // LabradorInstance rec_inst = prepare_recursion_instance(
+  //   param,                                        // prev_param
+  //   base_prover.lab_inst.equality_constraints[0], // final_const,
+  //   trs, base0, mu, nu);
+  // LabradorProver dummy_prover{lab_inst, S, 1};
+  // std::vector<Rq> rec_S = dummy_prover.prepare_recursion_witness(base_proof, base0, mu, nu);
+  // std::cout << "rec_inst.r = " << rec_inst.param.r << std::endl;
+  // std::cout << "rec_inst.n = " << rec_inst.param.n << std::endl;
+  // std::cout << "Num rec_inst.equality_constraints = " << rec_inst.equality_constraints.size() << std::endl;
+  // std::cout << "Num rec_inst.const_zero_constraints = " << rec_inst.const_zero_constraints.size() << std::endl;
+
+  // std::cout << "\tTesting rec-witness validity...";
+  // assert(lab_witness_legit(rec_inst, rec_S));
+  // std::cout << "VALID\n";
 
   std::cout << "Hello\n";
   return 0;

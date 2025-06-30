@@ -195,17 +195,15 @@ struct PartialTranscript {
 /// g: vector computed in Step 9 (g_tilde in the code)
 ///
 /// h: vector computed in Step 25 (H_tilde in the code)
+///
+/// Note: constructor doesn't check dimensions
 struct LabradorBaseCaseProof {
   std::vector<Tq> z_hat;
   std::vector<Rq> t, g, h;
 
-  // TODO: Only for testing. Need to remove this
-  EqualityInstance final_const;
-
-  LabradorBaseCaseProof(size_t r, size_t n) : final_const(r, n), z_hat(), t(), g(), h() {};
-  LabradorBaseCaseProof(
-    EqualityInstance final_const, std::vector<Tq> z_hat, std::vector<Tq> t, std::vector<Tq> g, std::vector<Tq> h)
-      : final_const(final_const), z_hat(z_hat), t(t), g(g), h(h)
+  LabradorBaseCaseProof() = default;
+  LabradorBaseCaseProof(std::vector<Tq> z_hat, std::vector<Tq> t, std::vector<Tq> g, std::vector<Tq> h)
+      : z_hat(z_hat), t(t), g(g), h(h)
   {
   }
 };

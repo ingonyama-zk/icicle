@@ -15,7 +15,7 @@ std::vector<Tq> ajtai_commitment(
   return comm;
 }
 
-std::vector<Rq> compute_Q_poly(size_t n, size_t r, size_t JL_out, std::byte* seed, size_t seed_len, size_t JL_i)
+std::vector<Rq> compute_Q_poly(size_t n, size_t r, size_t JL_out, const std::byte* seed, size_t seed_len, size_t JL_i)
 {
   size_t d = Rq::d;
 
@@ -39,7 +39,7 @@ std::vector<Rq> compute_Q_poly(size_t n, size_t r, size_t JL_out, std::byte* see
 }
 
 // TODO: Simply returns the polynomial x for every challenge rn
-std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, std::byte* seed, size_t seed_len)
+std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, const std::byte* seed, size_t seed_len)
 {
   size_t d = Rq::d;
   std::vector<Rq> challenge(r, zero());
@@ -70,9 +70,39 @@ std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, std::byte* seed, 
 
 Oracle create_oracle_seed(const std::byte* seed, size_t seed_len, const LabradorInstance& inst)
 {
-  std::vector<std::byte> buf(seed, seed + seed_len);
-  buf.insert(
-    buf.end(), reinterpret_cast<const std::byte*>(&inst), reinterpret_cast<const std::byte*>(&inst) + sizeof(inst));
+  std::vector<std::byte> buf;
+
+  auto append = [&](auto value) {
+    std::byte* p = reinterpret_cast<std::byte*>(&value);
+    buf.insert(buf.end(), p, p + sizeof(value));
+  };
+
+  // 0. external seed
+  buf.insert(buf.end(), seed, seed + seed_len);
+
+  // 1. fixed protocol parameters
+  const LabradorParam& prm = inst.param;
+  append(prm.r);
+  append(prm.n);
+  append(prm.kappa);
+  append(prm.kappa1);
+  append(prm.kappa2);
+  append(prm.base1);
+  append(prm.base2);
+  append(prm.base3);
+  append(prm.JL_out);
+  append(prm.beta);
+
+  // 1.a Ajtai seed (variable length)
+  append(prm.ajtai_seed.size());
+  buf.insert(buf.end(), prm.ajtai_seed.begin(), prm.ajtai_seed.end());
+
+  // 2. only counts of constraints
+  append(inst.equality_constraints.size());
+  append(inst.const_zero_constraints.size());
+
+  // TODO: add contents of equality and const_zero constraints
+
   return Oracle(buf.data(), buf.size());
 }
 

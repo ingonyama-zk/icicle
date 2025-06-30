@@ -26,10 +26,10 @@ std::vector<Tq> ajtai_commitment(
 /// Q(i,:,:) is the conjugation of the ith row of the JL projection viewed as a polynomial vector.
 /// So that const(<Q(i,:,:), S(:,:)>) = p_i
 /// JL_i needs to be the same as the one given by select_valid_jl_proj
-std::vector<Rq> compute_Q_poly(size_t n, size_t r, size_t JL_out, std::byte* seed, size_t seed_len, size_t JL_i);
+std::vector<Rq> compute_Q_poly(size_t n, size_t r, size_t JL_out, const std::byte* seed, size_t seed_len, size_t JL_i);
 
 // TODO: Simply returns the polynomial x for every challenge rn
-std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, std::byte* seed, size_t seed_len);
+std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, const std::byte* seed, size_t seed_len);
 
 // Helper to concatenate oracle_seed and lab_inst bytes and return an Oracle object.
 Oracle create_oracle_seed(const std::byte* seed, size_t seed_len, const LabradorInstance& inst);

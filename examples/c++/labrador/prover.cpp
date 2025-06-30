@@ -308,6 +308,9 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   auto [JL_i, p] = select_valid_jl_proj(seed1.data(), seed1.size());
   std::cout << "Step 12 completed: Selected JL projection" << std::endl;
 
+  trs.prover_msg.JL_i = JL_i;
+  trs.prover_msg.p = p;
+
   // Step 13: serialize (JL_i, p) into bytes and feed to oracle for seed2
   std::vector<std::byte> jl_buf(sizeof(size_t));
   std::memcpy(jl_buf.data(), &JL_i, sizeof(size_t));
@@ -329,6 +332,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // Step 18: Let L be the number of constZeroInstance constraints in LabradorInstance.
   // For 0 ≤ k < ceil(128/log(q)), sample the following random vectors:
   const size_t L = lab_inst.const_zero_constraints.size();
+  // TODO: make this a shared param between P,V
   const size_t num_aggregation_rounds = std::ceil(128.0 / std::log2(get_q<Zq>()));
 
   std::vector<Zq> psi(num_aggregation_rounds * L), omega(num_aggregation_rounds * JL_out);
@@ -501,7 +505,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
     if (succ) { std::cout << "\tbase_prover zA = ct passed\n"; }
   }
 
-  LabradorBaseCaseProof final_proof{lab_inst.equality_constraints[0], z_hat, T_tilde, g_tilde, h_tilde};
+  LabradorBaseCaseProof final_proof{z_hat, T_tilde, g_tilde, h_tilde};
   std::cout << "Step 29 completed: Computed z_hat and created final proof" << std::endl;
 
   std::cout << "base_case_prover completed successfully!" << std::endl;
@@ -558,7 +562,7 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
 {
   std::vector<PartialTranscript> trs;
   PartialTranscript part_trs;
-  LabradorBaseCaseProof base_proof(lab_inst.param.r, lab_inst.param.n);
+  LabradorBaseCaseProof base_proof;
   const char* placeholder = "HELLO";
   for (size_t i = 0; i < NUM_REC; i++) {
     LabradorBaseProver base_prover(lab_inst, S, reinterpret_cast<const std::byte*>(placeholder), sizeof(char) * 5);
@@ -566,7 +570,8 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
     // TODO: figure out param using Lattirust code
     size_t base0 = 1 << 8, mu = 1 << 8, nu = 1 << 8;
     S = prepare_recursion_witness(base_proof, base0, mu, nu);
-    lab_inst = prepare_recursion_instance(base_prover.lab_inst.param, base_proof.final_const, part_trs, base0, mu, nu);
+    EqualityInstance final_const = lab_inst.equality_constraints[0];
+    lab_inst = prepare_recursion_instance(base_prover.lab_inst.param, final_const, part_trs, base0, mu, nu);
     trs.push_back(part_trs);
   }
   return std::make_pair(trs, base_proof);

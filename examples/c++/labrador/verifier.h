@@ -28,7 +28,9 @@ struct LabradorBaseVerifier {
   }
 
   bool _verify_base_proof() const;
-  bool verify() const;
+  bool verify();
+
+  void agg_const_zero_constraints(size_t num_aggregation_rounds, const std::vector<Tq>& Q_hat);
 
   // internal
   void create_transcript();

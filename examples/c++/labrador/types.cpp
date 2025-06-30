@@ -7,6 +7,7 @@ void LabradorInstance::agg_equality_constraints(const std::vector<Tq>& alpha_hat
 
   // For 0 ≤ i,j < r, the Prover computes a''_{ij}:
   const size_t K = equality_constraints.size();
+  assert(K == alpha_hat.size() && "alpha_hat size insufficient");
   size_t r = param.r;
   size_t n = param.n;
   const size_t d = Tq::d;
