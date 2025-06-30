@@ -139,7 +139,7 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      
+
     - name: Checkout ${{ inputs.backend_upper }} backend
       if: ${{ !inputs.enable_conditional_testing || inputs.changed_field == 'true' }}
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -148,7 +148,7 @@ jobs:
         path: ./icicle/backend/${{ inputs.backend }}
         ssh-key: ${{ secrets.backend_ssh_key }}
         ref: ${{ inputs.backend_branch }}
-    
+
     - name: Set feature and build flags
       id: feature_flags
       if: ${{ inputs.enable_conditional_testing && inputs.changed_field == 'true' }}
@@ -162,7 +162,7 @@ jobs:
         if [[ "${{ matrix.field.name }}" != "stark252" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DEXT_FIELD=ON"
         fi
-        
+
         # NTT module (includes polynomials)
         if [[ "${{ inputs.changed_ntt }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DNTT=ON"
@@ -174,7 +174,7 @@ jobs:
             GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,ntt"
           fi
         fi
-        
+
         # FRI module
         if [[ "${{ inputs.changed_fri }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DFRI=ON -DHASH=ON"
@@ -186,7 +186,7 @@ jobs:
             GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,fri"
           fi
         fi
-        
+
         # Sumcheck module
         if [[ "${{ inputs.changed_sumcheck }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DSUMCHECK=ON -DHASH=ON"
@@ -234,7 +234,7 @@ jobs:
 
         echo "GO_TEST_BUILD_TAGS: $GO_TEST_BUILD_TAGS"
         echo "GO_TEST_BUILD_TAGS=$GO_TEST_BUILD_TAGS" >> $GITHUB_OUTPUT
-    
+
     - name: Build field
       working-directory: ./icicle
       if: ${{ !inputs.enable_conditional_testing || inputs.changed_field == 'true' }}
@@ -254,7 +254,7 @@ jobs:
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
         export SKIP_TESTS="${{ inputs.skip-cpp-all-fields }}"
         echo "SKIP_TESTS: $SKIP_TESTS"
-        
+
         if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
           ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}" -E "$SKIP_TESTS"
         else
@@ -270,9 +270,9 @@ jobs:
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
         export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
         cd ./$FIELD_DIR
-        
+
         export SKIP_RUST_TESTS="${{ inputs.skip-rust-all-fields }}"
-        
+
         FEATURES=""
         if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
           if [[ -z "${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}" ]]; then
@@ -287,14 +287,14 @@ jobs:
         cargo test phase2 --release $FEATURES -- $SKIP_RUST_TESTS
         cargo test phase3 --release $FEATURES -- $SKIP_RUST_TESTS
         cargo test phase4 --release $FEATURES -- $SKIP_RUST_TESTS
-        
+
     - name: Setup go
       if: ${{ inputs.skip-golang-all-fields == 'false' && (!inputs.enable_conditional_testing || (inputs.changed_field == 'true' && inputs.changed_go == 'true')) }}
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
         cache: false
-        
+
     - name: Run Golang field tests
       working-directory: ./wrappers/golang/fields
       if: ${{ inputs.skip-golang-all-fields == 'false' && (!inputs.enable_conditional_testing || (inputs.changed_field == 'true' && inputs.changed_go == 'true')) }}
@@ -309,4 +309,4 @@ jobs:
           BUILD_TAGS="-tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }}"
         fi
 
-        go test ./$FIELD_DIR/tests $BUILD_TAGS -count=1 -failfast -p 2 -timeout 10m -v 
+        go test ./$FIELD_DIR/tests $BUILD_TAGS -count=1 -failfast -p 2 -timeout 10m -v

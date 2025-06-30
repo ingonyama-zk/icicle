@@ -154,7 +154,7 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      
+
     - name: Checkout ${{ inputs.backend_upper }} backend
       if: ${{ inputs.changed_curve == 'true' }}
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -163,7 +163,7 @@ jobs:
         path: ./icicle/backend/${{ inputs.backend }}
         ssh-key: ${{ secrets.backend_ssh_key }}
         ref: ${{ inputs.backend_branch }}
-        
+
     - name: Set feature and build flags
       id: feature_flags
       if: ${{ inputs.enable_conditional_testing && inputs.changed_curve == 'true' }}
@@ -172,7 +172,7 @@ jobs:
         CPP_TEST_REGEX="CurveSanity|CurveApi|ModArith|MatrixTest|Symbol|Program"
         RUST_TEST_FEATURES=""
         GO_TEST_BUILD_TAGS="icicle_exclude_all"
-        
+
         # MSM module
         if [[ "${{ inputs.changed_msm }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DMSM=ON -DG2=ON"
@@ -184,7 +184,7 @@ jobs:
             GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,msm,g2"
           fi
         fi
-        
+
         # NTT module (includes polynomials)
         if [[ "${{ inputs.changed_ntt }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DNTT=ON"
@@ -196,7 +196,7 @@ jobs:
             GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,ntt"
           fi
         fi
-        
+
         # ECNTT module
         if [[ "${{ inputs.changed_ecntt }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DECNTT=ON -DNTT=ON"
@@ -220,7 +220,7 @@ jobs:
             GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,pairing,g2"
           fi
         fi
-        
+
         # FRI module
         if [[ "${{ inputs.changed_fri }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DFRI=ON -DHASH=ON"
@@ -232,7 +232,7 @@ jobs:
             GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,fri"
           fi
         fi
-        
+
         # Sumcheck module
         if [[ "${{ inputs.changed_sumcheck }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DSUMCHECK=ON -DHASH=ON"
@@ -280,7 +280,7 @@ jobs:
 
         echo "GO_TEST_BUILD_TAGS: $GO_TEST_BUILD_TAGS"
         echo "GO_TEST_BUILD_TAGS=$GO_TEST_BUILD_TAGS" >> $GITHUB_OUTPUT
-        
+
     - name: Build curve
       working-directory: ./icicle
       if: ${{ !inputs.enable_conditional_testing || inputs.changed_curve == 'true' }}
@@ -301,13 +301,13 @@ jobs:
 
         export SKIP_TESTS="${{ inputs.skip-cpp-all-curves }}"
         echo "SKIP_TESTS: $SKIP_TESTS"
-        
+
         if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
           ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}" -E "$SKIP_TESTS"
         else
           ctest --output-on-failure -E "$SKIP_TESTS"
         fi
-        
+
     - name: Run Rust curve tests
       working-directory: ./wrappers/rust/icicle-curves
       if: ${{ !inputs.enable_conditional_testing || (inputs.changed_curve == 'true' && inputs.changed_rust == 'true') }}
@@ -317,7 +317,7 @@ jobs:
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
         export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
         cd ./$CURVE_DIR
-        
+
         export SKIP_RUST_TESTS="${{ inputs.skip-rust-all-curves }}"
 
         FEATURES=""
@@ -333,14 +333,14 @@ jobs:
         cargo test --release $FEATURES -- $SKIP_RUST_TESTS --skip phase2 --skip phase3 --skip phase4
         cargo test phase3 --release $FEATURES -- $SKIP_RUST_TESTS
         cargo test phase4 --release $FEATURES -- $SKIP_RUST_TESTS
-        
+
     - name: Setup go
       if: ${{ inputs.skip-golang-all-curves == 'false' && (!inputs.enable_conditional_testing || (inputs.changed_curve == 'true' && inputs.changed_go == 'true')) }}
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
         cache: false
-        
+
     - name: Run Golang curve tests
       working-directory: ./wrappers/golang/curves
       if: ${{ inputs.skip-golang-all-curves == 'false' && (!inputs.enable_conditional_testing || (inputs.changed_curve == 'true' && inputs.changed_go == 'true')) }}
@@ -349,10 +349,10 @@ jobs:
         CURVE_DIR=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
         export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
-        
+
         BUILD_TAGS=""
         if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
           BUILD_TAGS="-tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }}"
         fi
-        
+
         go test ./$CURVE_DIR/tests $BUILD_TAGS -count=1 -failfast -p 2 -timeout 10m -v 

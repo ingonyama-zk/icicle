@@ -42,7 +42,7 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-          
+
       - name: Build PQC
         working-directory: ./icicle
         if: ${{ !inputs.enable_conditional_testing || inputs.changed_pqc == 'true' }}
@@ -50,7 +50,7 @@ jobs:
           mkdir -p build && rm -rf build/*
           cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCUDA_PQC_BACKEND=ON -D${{ inputs.backend_upper }}_BACKEND=local -S . -B build
           cmake --build build
-          
+
       - name: Run C++ PQC Tests
         working-directory: ./icicle/build/tests
         if: ${{ !inputs.enable_conditional_testing || (inputs.changed_pqc == 'true' && (inputs.changed_cpp == 'true' || inputs.changed_cpu_backend == 'true' || inputs.changed_backend_api == 'true')) }}
