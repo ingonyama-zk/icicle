@@ -89,6 +89,17 @@ let rq_from_slice: Vec<PolyRing> = zq_random
     .collect();
 ```
 
+// TODO Yuval
+
+Some APIs are defined for `Zq` but are useful for `Rq` vectors too, interpreting them as a flat `Zq` vector. ICICLE solves it by reinterpreting icicle-slices.
+
+```rust
+
+// TODO Yuval
+
+```
+
+
 ## Negacyclic NTT
 
 ### Forward and Inverse NTT (Rq to/from Tq)
@@ -437,9 +448,104 @@ check_norm_bound(
 // Output[i] == true indicates that sub-vector i passed the norm bound.
 ```
 
-## Johnson-Lindenstrauss Projection
+## Johnson–Lindenstrauss (JL) Projection
 
-TODO
+ICICLE provides APIs for performing Johnson–Lindenstrauss (JL) projections, which reduce high-dimensional vectors into lower-dimensional spaces using pseudo-random sparse matrices.
+
+### Supported Capabilities
+
+- Seed-based projection of a vector of `Zq` elements using a sparse matrix with values in `{−1, 0, 1}`
+- Seed-based projection of a vector of `Rq` elements by reinterpreting them as `Zq` coefficients
+- Querying JL projection matrix rows deterministically:
+  - As raw `Zq` values (for verification)
+  - As grouped `Rq` polynomials, with optional conjugation (`a(X) → a(X⁻¹) mod Xⁿ + 1`) — useful for proof systems that prove the projection is computed correctly.
+
+### Main imports
+
+```rust
+### Main Imports
+
+```rust
+use icicle_core::jl_projection::{
+    jl_projection, 
+    get_jl_matrix_rows,
+    get_jl_matrix_rows_as_polyring,
+    JLProjection,
+    JLProjectionPolyRing
+};
+```
+
+### API
+
+```rust
+/// Projects a scalar vector into a lower-dimensional space using a pseudo-random JL matrix.
+///
+/// - `input.len()` = original dimensionality
+/// - `output_projection.len()` = target dimensionality
+/// - Projection matrix is seeded deterministically from `seed`
+pub fn jl_projection<T: FieldImpl>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
+    seed: &[u8],
+    cfg: &VecOpsConfig,
+    output_projection: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+) -> Result<(), eIcicleError>;
+
+
+/// Retrieves raw JL matrix rows over the scalar ring `T` in row-major order.
+///
+/// - Output layout: row 0 | row 1 | ... | row `num_rows - 1`
+/// - Each row contains `row_size` scalar elements
+pub fn get_jl_matrix_rows<T: FieldImpl>(
+    seed: &[u8],
+    row_size: usize,
+    start_row: usize,
+    num_rows: usize,
+    cfg: &VecOpsConfig,
+    output_rows: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+) -> Result<(), eIcicleError>;
+
+/// Retrieves JL matrix rows as `Rq` polynomials, optionally conjugated.
+///
+/// - Each row contains `row_size` polynomials of degree `P::DEGREE`
+/// - If `conjugate = true`, applies a(X) ↦ a(X⁻¹) mod Xⁿ + 1 to each polynomial
+/// - Output is laid out row-major: row 0 | row 1 | ...
+pub fn get_jl_matrix_rows_as_polyring<P: PolynomialRing>(
+    seed: &[u8],
+    row_size: usize,
+    start_row: usize,
+    num_rows: usize,
+    conjugate: bool,
+    cfg: &VecOpsConfig,
+    output_rows: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+) -> Result<(), eIcicleError>;
+
+### Example
+
+```rust
+/// Project a vector of Rq polyonmials
+
+use icicle_labrador::polynomial_ring::PolyRing as Rq;
+use icicle_core::polynomial_ring::flatten_polyring_slice;
+
+// Projecting 128 Rq polynomials (each degree-64) to a 256-element Zq vector
+let polynomials = Rq::generate_random(128);
+let mut projection = vec![Zq::zero(); 256];
+
+// Flatten the polynomial vector to a contiguous Zq slice (128 × 64 elements)
+let flat_polynomials_as_zq = flatten_polyring_slice(&polynomials);
+
+// Use a random seed (e.g., hash of transcript or Fiat–Shamir challenge)
+let mut seed = [0u8; 32];
+rand::thread_rng().fill(&mut seed);
+
+// Perform JL projection
+jl_projection(
+    &flat_polynomials_as_zq,
+    &seed,
+    &VecOpsConfig::default(),
+    HostSlice::from_mut_slice(&mut projection),
+).expect("JL projection failed");
+```
 
 ## Random Sampling
 
