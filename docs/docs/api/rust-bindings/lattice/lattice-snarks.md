@@ -39,6 +39,8 @@ The design is generic over ring constructions, enabling flexible use of differen
 
 The integer ring `Zq` represents integers modulo `q`, where `q` is typically a product of small prime fields for efficiency.
 
+// TODO show q
+
 
 // TODO: verify examples compile and work correctly before merging!
 // TODO: replace labrador with the final name that
@@ -46,9 +48,12 @@ The integer ring `Zq` represents integers modulo `q`, where `q` is typically a p
 ```rust
 use icicle_labrador::ring::{ScalarRing as Zq};
 use icicle_core::traits::{FieldImpl, GenerateRandom};
+
 // Generate random Zq elements
 let zq_random: Vec<Zq> = Zq::generate_random(size);
+// Generate zeros Zq elements
 let zq_zeros: Vec<Zq> = vec![Zq::zero(); size];
+// Generate elements from arbitrary bytes
 let element_size = std::mem::size_of::<Zq>();
 let zq_from_bytes = user_bytes
     .chunks(element_size)
@@ -81,98 +86,71 @@ let rq_from_slice: Vec<PolyRing> = zq_random
     .collect();
 ```
 
-## Configuration
-
-### VecOpsConfig
-
-Configuration for vector operations:
-
-```rust
-use icicle_core::vec_ops::VecOpsConfig;
-
-// Default configuration
-let config = VecOpsConfig::default();
-
-// Custom configuration
-let config = VecOpsConfig {
-    stream: None,                    // CUDA stream for async execution
-    use_extension_field: false,      // Use extension field (currently unsupported)
-    batch: 1,                        // Batch size for operations
-    are_inputs_on_device: false,     // Whether inputs are on device
-    is_async: false,                 // Run operations asynchronously
-    ext: None,                       // Backend-specific extensions
-};
-```
-
 ## Negacyclic NTT
 
-### Forward and Inverse NTT
+### Forward and Inverse NTT (Rq to/from Tq)
+
+The negacyclic Number-Theoretic Transform (NTT) converts polynomials in `Rq = Zq[X]/(Xⁿ + 1)` to the evaluations domain `Tq`, enabling efficient polynomial multiplication via element-wise operations.
+
+### Main Imports
+
+To use the NTT API, import the following symbols:
 
 ```rust
-use icicle_core::{
-    negacyclic_ntt::{NegacyclicNtt, NegacyclicNttConfig},
-    ntt::NTTDir,
+use icicle_core::negacyclic_ntt::{
+    NegacyclicNttConfig, // Configuration for backend/device/async
+    NegacyclicNtt,       // Trait implemented by polynomial types
+    ntt,                 // Out-of-place NTT wrapper
+    ntt_inplace,         // In-place NTT wrapper
+    NTTDir,              // Transform direction (Forward or Inverse)
 };
-use icicle_runtime::memory::{DeviceVec, HostSlice};
 
-// NTT configuration
-let config = NegacyclicNttConfig::default();
+```rust
+/// Performs a negacyclic Number-Theoretic Transform (NTT) over a polynomial ring.
+///
+/// - `input`: Input slice containing polynomials
+/// - `output`: Output slice to store the transformed result
+/// - `dir`: Transform direction (`Forward` or `Inverse`)
+/// - `cfg`: Execution configuration (device flags, stream, async mode)
+pub fn ntt<P: PolynomialRing + NegacyclicNtt<P>>(
+    input: &(impl HostOrDeviceSlice<P> + ?Sized),
+    dir: NTTDir,
+    cfg: &NegacyclicNttConfig,
+    output: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+) -> Result<(), eIcicleError> {
+    P::ntt(input, dir, cfg, output)
+}
 
-// Forward NTT (coefficient domain → evaluation domain)
-negacyclic_ntt::ntt_inplace(&mut device_input, NTTDir::kForward, &config)?;
-
-// Inverse NTT (evaluation domain → coefficient domain)
-negacyclic_ntt::ntt_inplace(&mut device_input, NTTDir::kInverse, &config)?;
-
-// Out-of-place NTT
-let mut output = vec![P::zero(); size];
-negacyclic_ntt::ntt(
-    &device_input,
-    NTTDir::kForward,
-    &config,
-    HostSlice::from_mut_slice(&mut output),
-)?;
+/// Performs an in-place negacyclic NTT over a polynomial ring.
+///
+/// Performs an in-place negacyclic Number-Theoretic Transform (NTT) over a polynomial ring
+///
+/// - `inout`: Buffer to transform in-place
+/// - `dir`: Transform direction (`Forward` or `Inverse`)
+/// - `cfg`: Execution configuration
+pub fn ntt_inplace<P: PolynomialRing + NegacyclicNtt<P>>(
+    inout: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+    dir: NTTDir,
+    cfg: &NegacyclicNttConfig,
+) -> Result<(), eIcicleError> {
+    P::ntt_inplace(inout, dir, cfg)
+}
 ```
 
-### Example: NTT Operations
+### Example:
 
 ```rust
-use icicle_core::{
-    negacyclic_ntt::{NegacyclicNtt, NegacyclicNttConfig},
-    ntt::NTTDir,
-    traits::GenerateRandom,
-};
-use icicle_runtime::memory::{DeviceVec, HostSlice};
+use icicle_labrador::PolyRing;
+// Generate random input on the host
+let input = PolyRing::generate_random(size); 
 
-fn negacyclic_ntt_example<P>(size: usize)
-where
-    P: PolynomialRing + NegacyclicNtt<P> + GenerateRandom<P>,
-    P::Base: FieldImpl,
-{
-    // Generate random input on the host
-    let input = P::generate_random(size);
+// Allocate and transfer to device memory
+let mut device_input = DeviceVec::<PolyRing>::device_malloc(size)?;
+device_input.copy_from_host(HostSlice::from_slice(&input))?;
 
-    // Allocate and transfer to device memory
-    let mut device_input = DeviceVec::<P>::device_malloc(size)?;
-    device_input.copy_from_host(HostSlice::from_slice(&input))?;
-
-    let config = NegacyclicNttConfig::default();
-
-    // In-place NTT on device memory
-    let start = std::time::Instant::now();
-    negacyclic_ntt::ntt_inplace(&mut device_input, NTTDir::kForward, &config)?;
-    let duration = start.elapsed();
-    println!("[NTT] In-place forward NTT completed in {:?} for {} polynomials", duration, size);
-
-    // Out-of-place NTT into host buffer
-    let mut output = vec![P::zero(); size];
-    negacyclic_ntt::ntt(
-        &device_input,
-        NTTDir::kForward,
-        &config,
-        HostSlice::from_mut_slice(&mut output),
-    )?;
-}
+// Compute in-place (or out of place)
+let config = NegacyclicNttConfig::default();    
+negacyclic_ntt::ntt_inplace(&mut device_input, NTTDir::kForward, &config);    
 ```
 
 ## Matrix Operations
