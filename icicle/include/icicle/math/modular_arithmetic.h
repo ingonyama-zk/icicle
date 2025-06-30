@@ -130,6 +130,7 @@ public:
     return sizeof(T::omegas_count) > 0;
   }
 
+  // private:
   typedef storage<TLC> ff_storage;
   typedef storage<2 * TLC> ff_wide_storage;
 
@@ -219,35 +220,6 @@ public:
     }
   }
 
-  /**
-   * This method reduces a Wide number `xs` modulo `p` and returns the result as a ModArith element.
-   *
-   * It is assumed that the high `2 * slack_bits` bits of `xs` are unset which is always the case for the product of 2
-   * numbers with their high `slack_bits` unset. Larger Wide numbers should be reduced by subtracting an appropriate
-   * factor of `modulus_squared` first.
-   *
-   * This function implements ["multi-precision Barrett"](https://github.com/ingonyama-zk/modular_multiplication). As
-   * opposed to Montgomery reduction, it doesn't require numbers to have a special representation but lets us work
-   * with them as-is. The general idea of Barrett reduction is to estimate the quotient \f$ l \approx
-   * \floor{\frac{xs}{p}} \f$ and return \f$ xs - l \cdot p \f$. But since \f$ l \f$ is inevitably computed with an
-   * error (it's always less or equal than the real quotient). So the modulus `p` might need to be subtracted several
-   * times before the result is in the desired range \f$ [0;p-1] \f$. The estimate of the error is as follows: \f[
-   * \frac{xs}{p} - l = \frac{xs}{p}
-   * - \frac{xs \cdot m}{2^{2n}} + \frac{xs \cdot m}{2^{2n}} - \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}}
-   *  + \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}} - l \leq p^2(\frac{1}{p}-\frac{m}{2^{2n}}) + \frac{m}{2^{2n-k}} +
-   * 2(TLC
-   * - 1) \cdot 2^{-32} \f] Here \f$ l \f$ is the result of [multiply_msb_raw](@ref multiply_msb_raw) function and the
-   * last term in the error is due to its approximation. \f$ n \f$ is the number of bits in \f$ p \f$ and \f$ k = 2n -
-   * 32\cdot TLC \f$. Overall, the error is always less than 2 so at most 2 reductions are needed. However, in most
-   * cases it's less than 1, so setting the [num_of_reductions](@ref num_of_reductions) variable for a field equal to
-   * 1 will cause only 1 reduction to be performed.
-   */
-  static constexpr HOST_DEVICE_INLINE Derived reduce(const Wide& xs)
-  {
-    return Derived{icicle_math::template barrett_reduce<TLC, slack_bits, num_of_reductions()>(
-      xs.limbs_storage, get_m(), get_modulus(), get_modulus<2>(), get_neg_modulus())};
-  }
-
   // return m
   static constexpr HOST_DEVICE_INLINE ff_storage get_m() { return CONFIG::m; }
 
@@ -303,6 +275,31 @@ public:
 public:
   ff_storage limbs_storage;
 
+  HOST_DEVICE_INLINE uint32_t* export_limbs() { return (uint32_t*)limbs_storage.limbs; }
+
+  HOST_DEVICE_INLINE unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
+  {
+    const uint32_t limb_lsb_idx = (digit_num * digit_width) / 32;
+    const uint32_t shift_bits = (digit_num * digit_width) % 32;
+    unsigned rv = limbs_storage.limbs[limb_lsb_idx] >> shift_bits;
+    if ((shift_bits + digit_width > 32) && (limb_lsb_idx + 1 < TLC)) {
+      rv += limbs_storage.limbs[limb_lsb_idx + 1] << (32 - shift_bits);
+    }
+    rv &= ((1 << digit_width) - 1);
+    return rv;
+  }
+
+  HOST_DEVICE_INLINE uint32_t get_scalar_bits(const unsigned lsb_idx, const unsigned width) const
+  {
+    ICICLE_ASSERT(width <= 8 * sizeof(*(limbs_storage.limbs)))
+      << "get_scalar_bits::width(" << width << ") should be < 32";
+    const uint32_t limb_lsb_idx = lsb_idx / (8 * sizeof(*(limbs_storage.limbs)));
+    const uint32_t shift_bits = lsb_idx % (8 * sizeof(*(limbs_storage.limbs)));
+    const uint64_t mask = (1 << width) - 1;
+    const uint64_t* rv = reinterpret_cast<const uint64_t*>(&(limbs_storage.limbs[limb_lsb_idx]));
+    return (((*rv) >> shift_bits) & mask);
+  }
+
   template <unsigned NLIMBS>
   static HOST_INLINE storage<NLIMBS> rand_storage(unsigned non_zero_limbs = NLIMBS)
   {
@@ -354,20 +351,6 @@ public:
     return os;
   }
 
-  HOST_DEVICE_INLINE uint32_t* export_limbs() { return (uint32_t*)limbs_storage.limbs; }
-
-  HOST_DEVICE_INLINE unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
-  {
-    const uint32_t limb_lsb_idx = (digit_num * digit_width) / 32;
-    const uint32_t shift_bits = (digit_num * digit_width) % 32;
-    unsigned rv = limbs_storage.limbs[limb_lsb_idx] >> shift_bits;
-    if ((shift_bits + digit_width > 32) && (limb_lsb_idx + 1 < TLC)) {
-      rv += limbs_storage.limbs[limb_lsb_idx + 1] << (32 - shift_bits);
-    }
-    rv &= ((1 << digit_width) - 1);
-    return rv;
-  }
-
   HOST_DEVICE Derived operator+(const Derived& ys) const
   {
     Derived rs = {};
@@ -390,6 +373,36 @@ public:
     Wide rs = {};
     multiply_raw(limbs_storage, ys.limbs_storage, rs.limbs_storage);
     return rs;
+  }
+
+  /**
+   * This method reduces a Wide number `xs` modulo `p` and returns the result as a ModArith element.
+   *
+   * It is assumed that the high `2 * slack_bits` bits of `xs` are unset which is always the case for the product of 2
+   * numbers with their high `slack_bits` unset. Larger Wide numbers should be reduced by subtracting an appropriate
+   * factor of `modulus_squared` first.
+   *
+   * This function implements ["multi-precision Barrett"](https://github.com/ingonyama-zk/modular_multiplication). As
+   * opposed to Montgomery reduction, it doesn't require numbers to have a special representation but lets us work
+   * with them as-is. The general idea of Barrett reduction is to estimate the quotient \f$ l \approx
+   * \floor{\frac{xs}{p}} \f$ and return \f$ xs - l \cdot p \f$. But since \f$ l \f$ is inevitably computed with an
+   * error (it's always less or equal than the real quotient). So the modulus `p` might need to be subtracted several
+   * times before the result is in the desired range \f$ [0;p-1] \f$. The estimate of the error is as follows: \f[
+   * \frac{xs}{p} - l = \frac{xs}{p}
+   * - \frac{xs \cdot m}{2^{2n}} + \frac{xs \cdot m}{2^{2n}} - \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}}
+   *  + \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}} - l \leq p^2(\frac{1}{p}-\frac{m}{2^{2n}}) + \frac{m}{2^{2n-k}} +
+   * 2(TLC
+   * - 1) \cdot 2^{-32} \f] Here \f$ l \f$ is the result of [multiply_msb_raw](@ref multiply_msb_raw) function and the
+   * last term in the error is due to its approximation. \f$ n \f$ is the number of bits in \f$ p \f$ and \f$ k = 2n -
+   * 32\cdot TLC \f$. Overall, the error is always less than 2 so at most 2 reductions are needed. However, in most
+   * cases it's less than 1, so setting the [num_of_reductions](@ref num_of_reductions) variable for a field equal to
+   * 1 will cause only 1 reduction to be performed.
+   */
+  template <unsigned MODULUS_MULTIPLE = 1>
+  static constexpr HOST_DEVICE_INLINE Derived reduce(const Wide& xs)
+  {
+    return Derived{icicle_math::template barrett_reduce<TLC, slack_bits, num_of_reductions()>(
+      xs.limbs_storage, get_m(), get_modulus(), get_modulus<2>(), get_neg_modulus())};
   }
 
   /* This function receives a storage object (currently supports up to 576 bits) and reduces it to a field element
@@ -483,6 +496,15 @@ public:
     return Wide{res}.reduce(); // finally, use barret reduction
   }
 
+  static constexpr HOST_DEVICE_INLINE Derived reduce_from_bytes(const std::byte* in)
+  {
+    Derived value;
+    memcpy(reinterpret_cast<std::byte*>(value.limbs_storage.limbs), in, TLC * 4);
+    while (lt(Derived{get_modulus()}, value))
+      value = value - Derived{get_modulus()};
+    return value;
+  }
+
   HOST_DEVICE Derived& operator=(Derived const& other)
   {
 #pragma unroll
@@ -534,11 +556,11 @@ public:
   #pragma unroll
 #endif
     for (unsigned i = 0; i < 32; i++) {
-      if (multiplier & (1 << i)) {
-        rs = is_zero ? temp : (rs + temp);
+      if ((multiplier >> i) == 0) { break; }
+      if ((multiplier >> i) & 1) {
+        rs = is_zero ? temp : rs + temp;
         is_zero = false;
       }
-      if (multiplier & ((1 << (31 - i - 1)) << (i + 1))) break;
       temp = temp + temp;
     }
     return rs;

@@ -1,3 +1,5 @@
+//go:build !icicle_exclude_all || msm
+
 package tests
 
 import (
@@ -332,12 +334,12 @@ type MSMTestSuite struct {
 }
 
 func (s *MSMTestSuite) TestMSM() {
-	s.Run("TestMSM", testWrapper(&s.Suite, testMSM))
-	s.Run("TestMSMBatch", testWrapper(&s.Suite, testMSMBatch))
-	s.Run("TestPrecomputePoints", testWrapper(&s.Suite, testPrecomputePoints))
-	s.Run("TestPrecomputePointsSharedBases", testWrapper(&s.Suite, testPrecomputePointsSharedBases))
-	s.Run("TestMSMSkewedDistribution", testWrapper(&s.Suite, testMSMSkewedDistribution))
-	// s.Run("TestMSMMultiDevice", testWrapper(&s.Suite, testMSMMultiDevice))
+	s.Run("TestMSM", test_helpers.TestWrapper(&s.Suite, testMSM))
+	s.Run("TestMSMBatch", test_helpers.TestWrapper(&s.Suite, testMSMBatch))
+	s.Run("TestPrecomputePoints", test_helpers.TestWrapper(&s.Suite, testPrecomputePoints))
+	s.Run("TestPrecomputePointsSharedBases", test_helpers.TestWrapper(&s.Suite, testPrecomputePointsSharedBases))
+	s.Run("TestMSMSkewedDistribution", test_helpers.TestWrapper(&s.Suite, testMSMSkewedDistribution))
+	// s.Run("TestMSMMultiDevice", test_helpers.TestWrapper(&s.Suite, testMSMMultiDevice))
 }
 
 func TestSuiteMSM(t *testing.T) {

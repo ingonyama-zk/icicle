@@ -9,10 +9,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 
+include(CMakeDependentOption)
 include(cmake/field.cmake)
 include(cmake/curve.cmake)
 include(cmake/ring.cmake)
 include(cmake/hash.cmake)
+include(cmake/pqc.cmake)
 
 # Prevent build if both SANITIZE and CUDA_BACKEND are enabled
 if(SANITIZE AND CUDA_BACKEND)
@@ -23,22 +25,24 @@ endif()
 option(BUILD_TESTS "Build unit test2s. Default=OFF" OFF)
 # Backends: typically CPU is built into the frontend, the rest are DSOs loaded at runtime from installation
 option(CPU_BACKEND "Build CPU backend. Default=ON" ON)
+option(CUDA_PQC_BACKEND "Build CUDA-PQC backend. Default=OFF" OFF)
 # To enable building backends, use the following options: (note they are in private repos)
 option(CUDA_BACKEND "Branch/commit to pull for CUDA backend or `local` if under icicle/backend/cuda. Default=OFF" OFF)
 option(METAL_BACKEND "Branch/commit to pull for METAL backend or `local` if under icicle/backend/metal. Default=OFF" OFF)
 option(VULKAN_BACKEND "Branch/commit to pull for VULKAN backend or `local` if under icicle/backend/vulkan. Default=OFF" OFF)
 
 # features that some fields/curves have and some don't.
-option(NTT "Build NTT" ON)
-option(ECNTT "Build ECNTT" ON)
-option(MSM "Build MSM" ON)
-option(G2 "Build G2 MSM" ON)
-option(EXT_FIELD "Build extension field" ON)
-option(HASH "Build hashes and tree builders" ON)
-option(POSEIDON "Build poseidon hash" ON)
-option(POSEIDON2 "Build poseidon2 hash" ON)
-option(SUMCHECK "Build sumcheck" ON)
-option(FRI "Build fri" ON)
+CMAKE_DEPENDENT_OPTION(NTT "Build NTT" OFF "INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(ECNTT "Build ECNTT" OFF "INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(MSM "Build MSM" OFF "INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(G2 "Build G2 MSM" OFF "INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(EXT_FIELD "Build extension field" OFF "INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(HASH "Build hashes and tree builders" OFF "INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(POSEIDON "Build poseidon hash" OFF "INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(POSEIDON2 "Build poseidon2 hash" OFF "INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(SUMCHECK "Build sumcheck" OFF "INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(FRI "Build fri" OFF "INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(PQC "Build pqc" OFF "INGO_CI_ENV" CUDA_PQC_BACKEND) # Post-Quantum Cryptography. TODO: default to ON? do we care about CPU too?
 option(SANITIZE "Enable memory address sanitizer" OFF)
 
 # address sanitizer
@@ -98,6 +102,10 @@ endif()
 
 if (HASH)
   setup_hash_target()
+endif()
+
+if (PQC)
+  setup_pqc_target()
 endif()
 
 if (CPU_BACKEND)

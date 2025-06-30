@@ -318,6 +318,33 @@ namespace icicle {
   eIcicleError
   matrix_transpose(const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out);
 
+  /**
+   * @brief Multiplies two matrices.
+   *
+   * @tparam T Type of the elements in the matrices.
+   * @param mat_a Pointer to the first input matrix.
+   * @param nof_rows_a Number of rows in the first input matrix.
+   * @param nof_cols_a Number of columns in the first input matrix.
+   * @param mat_b Pointer to the second input matrix.
+   * @param nof_rows_b Number of rows in the second input matrix.
+   * @param nof_cols_b Number of columns in the second input matrix.
+   * @param config Configuration for the operation.
+   * @param mat_out Pointer to the output matrix where the results will be stored.
+   * @return eIcicleError Error code indicating success or failure.
+   * @note The input matrices are assumed to be stored in row-major order.
+   *       This function multiplies an matrix A  or a batch of matrices with matrix B.
+   */
+  template <typename T>
+  eIcicleError matmul(
+    const T* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const T* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    T* mat_out);
+
   // Miscellaneous operations
 
   /**

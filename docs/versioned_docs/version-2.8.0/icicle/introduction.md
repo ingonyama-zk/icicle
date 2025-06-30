@@ -24,8 +24,8 @@ ICICLE Core would typically be compiled into a static library and either used in
 
 ### ICICLE Rust and Golang bindings
 
-- [ICICLE Rust bindings](/icicle/rust-bindings)
-- [ICICLE Golang bindings](/icicle/golang-bindings)
+- [ICICLE Rust bindings](./rust-bindings)
+- [ICICLE Golang bindings](./golang-bindings)
 
 These bindings allow you to easily use ICICLE in a Rust or Golang project. Setting up Golang bindings requires a bit of extra steps compared to the Rust bindings which utilize the `cargo build` tool.
 

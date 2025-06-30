@@ -9,6 +9,9 @@ members = [
     "poseidon2", 
     "sumcheck",
 ]
+exclude = [
+    "install-and-use-icicle",
+]
 
 [workspace.dependencies]
 # Add any shared dependencies here
