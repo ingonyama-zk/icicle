@@ -529,10 +529,10 @@ namespace icicle {
 
   using ringZqRandomSamplingImpl = std::function<eIcicleError(
     const Device& device,
-    uint64_t size,
+    size_t size,
     bool fast_mode,
     const std::byte* seed,
-    uint64_t seed_len,
+    size_t seed_len,
     const VecOpsConfig& cfg,
     field_t* output)>;
   void register_ring_zq_random_sampling(const std::string& deviceType, ringZqRandomSamplingImpl);
@@ -550,7 +550,7 @@ namespace icicle {
   using challengeSpacePolynomialsSamplingImpl = std::function<eIcicleError(
     const Device& device,
     const std::byte* seed,
-    uint64_t seed_len,
+    size_t seed_len,
     size_t size,
     uint32_t ones,
     uint32_t twos,

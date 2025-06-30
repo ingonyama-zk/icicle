@@ -7,7 +7,7 @@
 int get_nof_workers(const VecOpsConfig& config); // defined in cpu_vec_ops.cpp
 
 void fast_mode_random_sampling(
-  uint64_t size, const std::byte* seed, uint64_t seed_len, const VecOpsConfig& cfg, field_t* output)
+  size_t size, const std::byte* seed, size_t seed_len, const VecOpsConfig& cfg, field_t* output)
 {
   // Use keccak to get deterministic uniform distribution
   auto keccak512 = Keccak512::create();
@@ -56,7 +56,7 @@ void fast_mode_random_sampling(
 }
 
 void slow_mode_random_sampling(
-  uint64_t size, const std::byte* seed, uint64_t seed_len, const VecOpsConfig& cfg, field_t* output)
+  size_t size, const std::byte* seed, size_t seed_len, const VecOpsConfig& cfg, field_t* output)
 {
   // Use keccak to get deterministic uniform distribution
   auto keccak512 = Keccak512::create();
@@ -106,10 +106,10 @@ void slow_mode_random_sampling(
 
 eIcicleError cpu_random_sampling(
   const Device& device,
-  uint64_t size,
+  size_t size,
   bool fast_mode,
   const std::byte* seed,
-  uint64_t seed_len,
+  size_t seed_len,
   const VecOpsConfig& cfg,
   field_t* output)
 {
@@ -209,7 +209,7 @@ void merge_shuffle(
 eIcicleError cpu_challenge_space_polynomials_sampling(
   const Device& device,
   const std::byte* seed,
-  uint64_t seed_len,
+  size_t seed_len,
   size_t size,
   uint32_t ones,
   uint32_t twos,
