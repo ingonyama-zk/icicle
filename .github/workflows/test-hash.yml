@@ -90,7 +90,7 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      
+
     - name: Checkout ${{ inputs.backend_upper }} backend
       if: ${{ !inputs.enable_conditional_testing || inputs.changed_hash == 'true' }}
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -107,7 +107,7 @@ jobs:
         mkdir -p build && rm -rf build/*
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DHASH=ON -D${{ inputs.backend_upper }}_BACKEND=local -S . -B build
         cmake --build build
-        
+
     - name: Run C++ hash tests
       working-directory: ./icicle/build/tests
       if: ${{ !inputs.enable_conditional_testing || (inputs.changed_hash == 'true' && (inputs.changed_cpp == 'true' || inputs.changed_cpu_backend == 'true' || inputs.changed_backend_api == 'true')) }}
@@ -124,14 +124,14 @@ jobs:
 
         rustup override set nightly
         cargo test --release --verbose -- ${{ inputs.skip-rust }}
-        
+
     - name: Setup go
       if: ${{ (!inputs.enable_conditional_testing || (inputs.changed_hash == 'true' && inputs.changed_go == 'true')) }}
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
         cache: false
-        
+
     - name: Run Go hash and merkle tree tests
       working-directory: ./wrappers/golang
       if: ${{ (!inputs.enable_conditional_testing || (inputs.changed_hash == 'true' && inputs.changed_go == 'true')) }}

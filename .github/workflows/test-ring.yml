@@ -103,7 +103,7 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      
+
     - name: Checkout ${{ inputs.backend_upper }} backend
       if: ${{ !inputs.enable_conditional_testing || inputs.changed_ring == 'true' }}
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -112,7 +112,7 @@ jobs:
         path: ./icicle/backend/${{ inputs.backend }}
         ssh-key: ${{ secrets.backend_ssh_key }}
         ref: ${{ inputs.backend_branch }}
-    
+
     - name: Set feature and build flags
       id: feature_flags
       if: ${{ inputs.enable_conditional_testing && inputs.changed_ring == 'true' }}
@@ -121,7 +121,7 @@ jobs:
         CPP_TEST_REGEX="RingTest|ModArith|MatrixTest|Symbol|Program"
         RUST_TEST_FEATURES=""
         GO_TEST_BUILD_TAGS="icicle_exclude_all"
-        
+
         # NTT module (includes polynomials)
         if [[ "${{ inputs.changed_ntt }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DNTT=ON"
@@ -145,7 +145,7 @@ jobs:
 
         echo "GO_TEST_BUILD_TAGS: $GO_TEST_BUILD_TAGS"
         echo "GO_TEST_BUILD_TAGS=$GO_TEST_BUILD_TAGS" >> $GITHUB_OUTPUT
-    
+
     - name: Build ring
       working-directory: ./icicle
       if: ${{ !inputs.enable_conditional_testing || inputs.changed_ring == 'true' }}
@@ -165,7 +165,7 @@ jobs:
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
         export SKIP_TESTS="${{ inputs.skip-cpp-all-rings }}"
         echo "SKIP_TESTS: $SKIP_TESTS"
-        
+
         if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
           ctest --output-on-failure -R "Ring" -E "$SKIP_TESTS"
         else
@@ -181,9 +181,9 @@ jobs:
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
         export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
         cd ./$RING_DIR
-        
+
         export SKIP_RUST_TESTS="${{ inputs.skip-rust-all-rings }}"
-        
+
         FEATURES=""
         if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
           if [[ -z "${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}" ]]; then
