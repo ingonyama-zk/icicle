@@ -1,6 +1,5 @@
 pub mod balanced_decomposition;
 pub mod jl_projection;
-pub mod matrix_ops;
 pub mod norm;
 #[cfg(feature = "ntt")]
 pub mod ntt;

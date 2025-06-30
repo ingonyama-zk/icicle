@@ -217,7 +217,7 @@ public:
       FWide ab = c0.mul_wide(ys.c1);
       FWide ba = c1.mul_wide(ys.c0);
       FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
-      nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
+      nonresidue_times_im = CONFIG::nonresidue_is_negative ? nonresidue_times_im.neg() : nonresidue_times_im;
       return Wide{real_prod + nonresidue_times_im, ab + ba};
     }
   }
@@ -243,13 +243,11 @@ public:
     return xy.reduce();
   }
 
-  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const ComplexExtensionField& xs, const FF& ys)
-  {
-    Wide xy = xs.mul_wide(ys);
-    return xy.reduce();
-  }
-
-  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const FF& ys, const ComplexExtensionField& xs)
+  template <
+    class T2,
+    typename = typename std::enable_if<
+      !std::is_same<T2, ComplexExtensionField>() && !std::is_base_of<ComplexExtensionField, T2>()>::type>
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const T2& ys, const ComplexExtensionField& xs)
   {
     return xs * ys;
   }

@@ -189,13 +189,8 @@ where
     assert_eq!(proj_points, proj_points_copy);
 }
 
-pub fn check_generator<C: Curve>() {
-    let generator = C::get_generator();
-    let zero = Projective::<C>::zero();
-    assert_ne!(generator, zero);
-    assert!(C::is_on_curve(generator));
-}
-
+/// Verifies that the zero polynomial is correctly initialized and that
+/// from_slice correctly constructs a polynomial from a slice of base field elements.
 pub fn check_zero_and_from_slice<P: PolynomialRing>()
 where
     P::Base: FieldImpl,

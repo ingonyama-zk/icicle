@@ -43,7 +43,7 @@ void fast_mode_random_sampling(
         field_t prev_element = field_t::reduce_from_bytes(reinterpret_cast<std::byte*>(hash_output.data()));
         batch_output[t * size_per_task] = prev_element;
         for (int i = 1; i < size_per_task && (t * size_per_task + i) < size; i++) {
-          field_t next_element = field_t::sqr(prev_element);
+          field_t next_element = prev_element.sqr();
           prev_element = next_element;
           batch_output[t * size_per_task + i] = next_element;
         }
