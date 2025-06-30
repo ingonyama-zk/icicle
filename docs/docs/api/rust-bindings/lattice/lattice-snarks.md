@@ -324,47 +324,144 @@ pub fn matrix_transpose<T>(
 ### Example
 
 ```rust
-    use icicle_core::matrix_ops::{matmul, matrix_transpose, VecOpsConfig};
-    use icicle_core::traits::GenerateRandom;
-    use icicle_labrador::polynomial_ring::PolyRing;
-    use icicle_runtime::memory::{DeviceVec, HostSlice};
+use icicle_core::matrix_ops::{matmul, matrix_transpose, VecOpsConfig};
+use icicle_core::traits::GenerateRandom;
+use icicle_labrador::polynomial_ring::PolyRing;
+use icicle_runtime::memory::{DeviceVec, HostSlice};
 
-    let n = 8;
-    let m = 64;
-    let cfg = VecOpsConfig::default();
+let n = 8;
+let m = 64;
+let cfg = VecOpsConfig::default();
 
-    // Generate a random matrix A ∈ [n × m] on the host (row-major layout)
-    let host_a = PolyRing::generate_random((n * m) as usize);
+// Generate a random matrix A ∈ [n × m] on the host (row-major layout)
+let host_a = PolyRing::generate_random((n * m) as usize);
 
-    // Allocate device buffer for Aᵗ ∈ [m × n]
-    let mut device_a_transposed =
-        DeviceVec::<PolyRing>::device_malloc((n * m) as usize).expect("Failed to allocate transpose output");
+// Allocate device buffer for Aᵗ ∈ [m × n]
+let mut device_a_transposed =
+    DeviceVec::<PolyRing>::device_malloc((n * m) as usize).expect("Failed to allocate transpose output");
 
-    // Transpose Aᵗ = transpose(A) (from host memory to device memory)
-    matrix_transpose(HostSlice::from_slice(&host_a), n, m, &cfg, &mut device_a_transposed).expect("Transpose failed");
+// Transpose Aᵗ = transpose(A) (from host memory to device memory)
+matrix_transpose(
+    HostSlice::from_slice(&host_a), n, m,
+    &cfg,
+    &mut device_a_transposed).expect("Transpose failed");
 
-    // Allocate output buffer for (Aᵗ)A ∈ [m × m]
-    let mut device_a_transposed_a =
-        DeviceVec::<PolyRing>::device_malloc((m * m) as usize).expect("Failed to allocate output matrix");
+// Allocate output buffer for (Aᵗ)A ∈ [m × m]
+let mut device_a_transposed_a =
+    DeviceVec::<PolyRing>::device_malloc((m * m) as usize).expect("Failed to allocate output matrix");
 
-    // Compute (Aᵗ)A
-    // Note that one matrix is on host memory and the other on device memory
-    matmul(
-        &device_a_transposed,
-        m,
-        n,
-        HostSlice::from_slice(&host_a),
-        n,
-        m,
-        &cfg,
-        &mut device_a_transposed_a,
-    )
-    .expect("Matmul failed");
+// Compute (Aᵗ)A
+// Note that one matrix is on host memory and the other on device memory
+matmul(
+    &device_a_transposed, m, n,
+    HostSlice::from_slice(&host_a), n, m,
+    &cfg,
+    &mut device_a_transposed_a).expect("Matmul failed");
 ```
 
-## Vector operations
+## Polynomial Ring Vector Operations
 
-TODO
+ICICLE provides efficient vector operations over polynomial ring slices (e.g., Rq, Tq).
+These operations are defined generically for any type implementing the PolynomialRing trait and operate on buffers that implement the HostOrDeviceSlice trait abstraction.
+
+### Supported VecOps
+
+- **polyvec_add** – Elementwise addition: out[i] = a[i] + b[i]
+- **polyvec_sub** – Elementwise subtraction: out[i] = a[i] - b[i]
+- **polyvec_mul** – Elementwise multiplication (supported only for NTT domain Tq)
+- **polyvec_mul_by_scalar** – Multiply each polynomial by a corresponding Zq scalar
+- **polyvec_sum_reduce** – Sum all polynomials into a single output: out = Σᵢ a[i]
+
+### API
+
+```rust
+/// Multiply each polynomial by its corresponding scalar
+pub fn polyvec_mul_by_scalar<P>(
+    input_polyvec: &(impl HostOrDeviceSlice<P> + ?Sized),
+    input_scalarvec: &(impl HostOrDeviceSlice<P::Base> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>;
+```
+
+```rust
+/// Elementwise multiply two vectors of polynomials (valid for NTT form `Tq`)
+pub fn polyvec_mul<P>(
+    input_polyvec_a: &(impl HostOrDeviceSlice<P> + ?Sized),
+    input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>;
+```
+
+```rust
+/// Elementwise addition: result[i] = a[i] + b[i]
+pub fn polyvec_add<P>(
+    input_polyvec_a: &(impl HostOrDeviceSlice<P> + ?Sized),
+    input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>;
+```
+
+```rust
+/// Elementwise subtraction: result[i] = a[i] - b[i]
+pub fn polyvec_sub<P>(
+    input_polyvec_a: &(impl HostOrDeviceSlice<P> + ?Sized),
+    input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>;
+```
+
+```rust
+/// Reduce a vector to a single polynomial: result[0] = sum(a)
+pub fn polyvec_sum_reduce<P>(
+    input_polyvec: &(impl HostOrDeviceSlice<P> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>;
+```
+
+### Example
+
+```rust
+use icicle_core::polynomial_ring::PolynomialRing;
+use icicle_core::traits::{FieldImpl, GenerateRandom};
+use icicle_core::vec_ops::poly_vecops::{polyvec_mul_by_scalar, polyvec_sum_reduce, VecOpsConfig};
+use icicle_labrador::polynomial_ring::PolyRing as Rq;
+use icicle_labrador::ring::ScalarRing as Zq;
+use icicle_runtime::memory::{DeviceVec, HostSlice};
+
+let size = 10;
+
+// Generate a random vector of Zq scalars and a vector of Rq polynomials
+let scalars = <Zq as FieldImpl>::Config::generate_random(size);
+let polynomials = Rq::generate_random(size);
+
+// Allocate device memory for the output of scalar × polynomial multiplication
+let mut scaled_polynomials = DeviceVec::<Rq>::device_malloc(size).expect("Failed to allocate device memory");
+
+// Perform elementwise multiplication: result[i] = scalars[i] × polynomials[i]
+polyvec_mul_by_scalar(
+    HostSlice::from_slice(&polynomials),
+    HostSlice::from_slice(&scalars),
+    &mut scaled_polynomials,
+    &VecOpsConfig::default(),
+)
+.expect("polyvec_mul_by_scalar failed");
+
+// Allocate a single Rq element to hold the sum-reduced result
+let mut reduced = vec![Rq::zero(); 1];
+
+// Reduce the vector of polynomials to a single polynomial by summation
+polyvec_sum_reduce(
+    &scaled_polynomials,
+    HostSlice::from_mut_slice(&mut reduced),
+    &VecOpsConfig::default(),
+)
+.expect("polyvec_sum_reduce failed");
+```
 
 ## Balanced Base Decomposition
 
@@ -372,7 +469,6 @@ TODO
 
 Balanced base decomposition expresses each ring element (e.g. `Zq`, `Rq`) as a sequence of digits in a given base `b`, where each digit lies in the interval `(-b/2, b/2]`.
 
----
 
 ### Output Layout
 
@@ -386,7 +482,6 @@ For an input slice of `n` elements and a digit count `d = count_digits(base)`:
 - Conceptually, this forms a matrix of shape `[d × n]`, where each row corresponds to a digit index and each column to an element.
 - If you allocate fewer than `d` digit rows (i.e., a shorter output buffer), decomposition will truncate early.
   - **Warning**: recomposition will only reconstruct the original values correctly if all omitted most significant digits were zero.
----
 
 ### Main Imports
 
@@ -406,7 +501,9 @@ use icicle_core::balanced_decomposition::{
 ///
 /// Each digit lies in the interval (-b/2, b/2], and the number of digits depends on the modulus.
 fn count_digits<T: BalancedDecomposition<T>>(base: u32) -> u32
+```
 
+```rust
 /// Decomposes a slice of elements into balanced base-`b` digits (digit-major layout).
 ///
 /// - `input.len()` = number of elements to decompose
@@ -419,7 +516,9 @@ fn decompose<T: BalancedDecomposition<T>>(
     base: u32,
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
+```
 
+```rust
 /// Recomposes original elements from digit-major base-`b` decomposition.
 ///
 /// - `input.len()` must be `output.len() × num_digits`, where `num_digits ∈ [1, count_digits(base)]`
@@ -436,27 +535,32 @@ fn recompose<T: BalancedDecomposition<T>>(
 ### Examples
 
 ```rust
+use icicle_core::balanced_decomposition;
+use icicle_core::traits::GenerateRandom;
+use icicle_core::vec_ops::VecOpsConfig;
+use icicle_labrador::polynomial_ring::PolyRing as Rq;
+use icicle_runtime::memory::{DeviceVec, HostSlice};
+
 let base = 4; // Typically set to q^(1/t) for small t (e.g., t = 2, 4, 6)
 let size = 1024;
 // Compute number of digits per element for the given base
-let digits = balanced_decomposition::count_digits::<P>(base);
+let digits = balanced_decomposition::count_digits::<Rq>(base);
 let output_len = size * digits as usize;
 
-// Allocate device memory for digit-major output
-let mut decomposed = DeviceVec::<P>::device_malloc(output_len)
-    .expect("Failed to allocate device memory");
-
 // Generate input vector
-let input = P::generate_random(size);
+let input = Rq::generate_random(size);
+
+// Allocate device memory for digit-major output
+let mut decomposed = DeviceVec::<Rq>::device_malloc(output_len).expect("Failed to allocate device memory");
 
 // Perform balanced base decomposition
-let cfg = VecOpsConfig::default();
-balanced_decomposition::decompose::<P>(
+balanced_decomposition::decompose::<Rq>(
     HostSlice::from_slice(&input),
     &mut decomposed,
     base,
-    &cfg,
-).expect("Decomposition failed");
+    &VecOpsConfig::default(),
+)
+.expect("Decomposition failed");
 ```
 
 
