@@ -610,7 +610,7 @@ pub enum NormType {
 /// - `input`: Input slice of field elements (`Zq`)
 /// - `norm_type`: `L2` or `LInfinity`
 /// - `norm_bound`: The norm upper bound
-/// - `cfg`: Backend execution configuration
+/// - `cfg`: execution configuration
 /// - `output`: Boolean results per batch
 ///
 /// Interpretation:
@@ -805,7 +805,64 @@ pub fn get_jl_matrix_rows_as_polyring<P: PolynomialRing>(
 
 ## Seeded Random Sampling
 
-TODO
+ICICLE provides an API for pseudorandom sampling of Zq and Rq elements on the device. This is useful for generating secret vectors, noise, or challenge polynomials in zero-knowledge protocols.
+
+### Main imports
+
+```rust
+use icicle_core::random_sampling;
+```
+
+### API
+
+```rust
+/// Randomly samples elements of type `T` from a seeded uniform distribution.
+///
+/// This function fills the `output` buffer with pseudorandom elements of type `T`,
+/// using the given `seed`.
+/// 
+/// # Parameters
+/// - `fast_mode`:  Whether to use fast (non-cryptographic) sampling or secure sampling.
+/// - `seed`:  byte slice used to deterministically seed the pseudorandom generator.
+/// - `cfg`: execution configuration
+/// - `output`:  Output buffer to store sampled elements
+pub fn random_sampling<T: FieldImpl>(
+    fast_mode: bool,
+    seed: &[u8],
+    cfg: &VecOpsConfig,
+    output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+) -> Result<(), eIcicleError>;
+```
+
+### Example 
+
+```rust
+use icicle_core::{polynomial_ring::flatten_polyring_slice_mut, random_sampling, vec_ops::VecOpsConfig};
+use icicle_labrador::polynomial_ring::PolyRing as Rq;
+use icicle_labrador::ring::ScalarRing as Zq;
+use icicle_runtime::memory::DeviceVec;
+use rand::RngCore;
+
+let size = 4096;
+let fast_mode = true;
+let cfg = VecOpsConfig::default();
+
+// Generate a non-zero 32-byte seed for deterministic sampling
+let mut seed = [0u8; 32];
+rand::thread_rng().fill_bytes(&mut seed);
+
+// --- Sample Zq elements ---
+let mut zq_output = DeviceVec::<Zq>::device_malloc(size).expect("Zq alloc failed");
+random_sampling::random_sampling(fast_mode, &seed, &cfg, &mut zq_output).expect("Zq sampling failed");
+
+// --- Sample Rq polynomials ---
+let mut rq_output = DeviceVec::<Rq>::device_malloc(size).expect("Rq alloc failed");
+{
+    // This scope is not necessary but we prefer to explicitly end the lifetime of the rq_as_zq reference
+    let mut rq_as_zq = flatten_polyring_slice_mut(&mut rq_output);
+    random_sampling::random_sampling(fast_mode, &seed, &cfg, &mut rq_as_zq).expect("Rq sampling failed");
+}
+```
 
 ## Chellenge sampling with OpNorm rejection
 
