@@ -269,7 +269,7 @@ jobs:
       if: needs.check-changed-files.outputs.curve == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DCURVE=${{ matrix.curve.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -DCURVE=${{ matrix.curve.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
         cmake --build build
 
     - name: Run C++ curve tests
@@ -507,7 +507,7 @@ jobs:
       if: needs.check-changed-files.outputs.field == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DFIELD=${{ matrix.field.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -DFIELD=${{ matrix.field.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
         cmake --build build
 
     - name: Run C++ field tests
@@ -626,7 +626,7 @@ jobs:
       if: needs.check-changed-files.outputs.ring == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DRING=${{ matrix.ring.name }} -DCUDA_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -DRING=${{ matrix.ring.name }} -DCUDA_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
         cmake --build build
     - name: Run C++ ring tests
       working-directory: ./icicle/build/tests
@@ -707,7 +707,7 @@ jobs:
       if: needs.check-changed-files.outputs.hash == 'true'
       run:  |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DHASH=ON -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -DHASH=ON -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
         cmake --build build
     - name: Run C++ hash tests
       working-directory: ./icicle/build/tests
@@ -786,7 +786,7 @@ jobs:
         if: needs.check-changed-files.outputs.runtime == 'true'
         run: |
           mkdir -p build && rm -rf build/*
-          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -D${{ matrix.backend_upper }}_BACKEND=local -S . -B build
+          cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -D${{ matrix.backend_upper }}_BACKEND=local -S . -B build
           cmake --build build
       - name: Run C++ Runtime Tests
         working-directory: ./icicle/build/tests
@@ -830,7 +830,7 @@ jobs:
       if: needs.check-changed-files.outputs.pqc == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DCUDA_PQC_BACKEND=ON -S . -B build
+        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -DCUDA_PQC_BACKEND=ON -S . -B build
         cmake --build build -j
 
     - name: Run backend specific PQC Tests
