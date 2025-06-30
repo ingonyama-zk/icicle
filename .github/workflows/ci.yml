@@ -115,7 +115,7 @@ jobs:
       changed_poseidon: ${{ needs.check-changed-files.outputs.poseidon }}
       changed_poseidon2: ${{ needs.check-changed-files.outputs.poseidon2 }}
     secrets:
-      backend_ssh_key: ${{ matrix.secret_key }}
+      backend_ssh_key: ${{ secrets[matrix.secret_key] }}
     strategy:
       matrix:
         backend: [cuda]
@@ -123,7 +123,7 @@ jobs:
         include:
           - backend: cuda
             backend_upper: CUDA
-            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            secret_key: CUDA_PULL_KEY
             runner: '["self-hosted", "Linux", "X64", "icicle"]'
             backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
             skip-rust-all-curves: ""
@@ -132,7 +132,7 @@ jobs:
             initial-support: false
           # - backend: metal
           #   backend_upper: METAL
-          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   secret_key: METAL_PULL_KEY
           #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
           #   backend_branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}
           #   skip-rust-all-curves: "--skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared --skip msm_skewed_distributions --skip vec_ops_scalars_inv --skip pairing --skip fri"
@@ -169,7 +169,7 @@ jobs:
       changed_poseidon: ${{ needs.check-changed-files.outputs.poseidon }}
       changed_poseidon2: ${{ needs.check-changed-files.outputs.poseidon2 }}
     secrets:
-      backend_ssh_key: ${{ matrix.secret_key }}
+      backend_ssh_key: ${{ secrets[matrix.secret_key] }}
     strategy:
       matrix:
         backend: [cuda]
@@ -177,7 +177,7 @@ jobs:
         include:
           - backend: cuda
             backend_upper: CUDA
-            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            secret_key: CUDA_PULL_KEY
             runner: '["self-hosted", "Linux", "X64", "icicle"]'
             backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
             skip-rust-all-curves: ""
@@ -186,7 +186,7 @@ jobs:
             initial-support: false
           # - backend: metal
           #   backend_upper: METAL
-          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   secret_key: METAL_PULL_KEY
           #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
           #   backend_branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}
           #   skip-rust-all-curves: "--skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared --skip msm_skewed_distributions --skip vec_ops_scalars_inv --skip pairing --skip fri"
@@ -217,7 +217,7 @@ jobs:
       changed_cpu_backend: ${{ needs.check-changed-files.outputs.cpu-backend }}
       changed_backend_api: ${{ needs.check-changed-files.outputs.backend-api }}
     secrets:
-      backend_ssh_key: ${{ matrix.secret_key }}
+      backend_ssh_key: ${{ secrets[matrix.secret_key] }}
     strategy:
       matrix:
         backend: [cuda]
@@ -225,7 +225,7 @@ jobs:
         include:
           - backend: cuda
             backend_upper: CUDA
-            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            secret_key: CUDA_PULL_KEY
             runner: '["self-hosted", "Linux", "X64", "icicle"]'
             backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
             skip-rust: ""
@@ -234,7 +234,7 @@ jobs:
             initial-support: false
           # - backend: metal
           #   backend_upper: METAL
-          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   secret_key: METAL_PULL_KEY
           #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
           #   backend_branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}
           #   skip-rust: ""
@@ -260,7 +260,7 @@ jobs:
       changed_backend_api: ${{ needs.check-changed-files.outputs.backend-api }}
       changed_ntt: ${{ needs.check-changed-files.outputs.ntt }}
     secrets:
-      backend_ssh_key: ${{ matrix.secret_key }}
+      backend_ssh_key: ${{ secrets[matrix.secret_key] }}
     strategy:
       matrix:
         backend: [cuda]
@@ -268,13 +268,13 @@ jobs:
         include:
           - backend: cuda
             backend_upper: CUDA
-            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            secret_key: CUDA_PULL_KEY
             runner: '["self-hosted", "Linux", "X64", "icicle"]'
             backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
             initial-support: false
           # - backend: metal
           #   backend_upper: METAL
-          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   secret_key: METAL_PULL_KEY
           #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
           #   backend_branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}
           #   initial-support: true
@@ -297,7 +297,7 @@ jobs:
       changed_go: ${{ needs.check-changed-files.outputs.go }}
       changed_cpu_backend: ${{ needs.check-changed-files.outputs.cpu-backend }}
     secrets:
-      backend_ssh_key: ${{ matrix.secret_key }}
+      backend_ssh_key: ${{ secrets[matrix.secret_key] }}
     strategy:
       matrix:
         backend: [cuda]
@@ -305,13 +305,13 @@ jobs:
         include:
           - backend: cuda
             backend_upper: CUDA
-            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            secret_key: CUDA_PULL_KEY
             runner: '["self-hosted", "Linux", "X64", "icicle"]'
             backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
             initial-support: false
           # - backend: metal
           #   backend_upper: METAL
-          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   secret_key: METAL_PULL_KEY
           #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
           #   backend_branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}
           #   initial-support: true
