@@ -81,6 +81,13 @@ const navBarRightSide = [
   },
 
   {
+          label: 'Leave Feedback',
+          position: 'right',
+          href: 'https://forms.monday.com/forms/7b51e0bdad766b71da8869704c301472?r=use1',
+          target: '_blank',
+        },
+
+  {
     type: 'html',
     position: 'right',
     value: `

@@ -1,4 +1,4 @@
-//go:build !icicle_exclude_all || msm
+//go:build !icicle_exclude_all || (msm && g2)
 
 package g2
 

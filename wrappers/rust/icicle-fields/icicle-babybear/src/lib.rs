@@ -1,7 +1,6 @@
 pub mod field;
 #[cfg(feature = "fri")]
 pub mod fri;
-mod merkle; // tests only
 #[cfg(feature = "ntt")]
 pub mod ntt;
 #[cfg(feature = "ntt")]

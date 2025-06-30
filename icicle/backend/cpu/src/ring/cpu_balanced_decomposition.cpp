@@ -87,63 +87,75 @@ static eIcicleError cpu_decompose_balanced_digits(
 
   auto q = get_q<field_t>();
 
-  const size_t digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
-  if (output_size < input_size * digits_per_element) {
-    ICICLE_LOG_ERROR << "Output buffer too small for balanced decomposition.";
+  // Check that the sizes make sense and that we have enough digits.
+  // Note that not enough digits might be an issue but treated as warning.
+  const size_t digits_per_element = output_size / input_size;
+  if (output_size % input_size != 0) {
+    ICICLE_LOG_ERROR << "Balanced decomposition: output size must divide input size.";
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  const int64_t* input_i64 = reinterpret_cast<const int64_t*>(input);
-  int64_t* output_i64 = reinterpret_cast<int64_t*>(output);
+  const size_t expected_digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
+  if (digits_per_element < expected_digits_per_element) {
+    ICICLE_LOG_WARNING << "Balanced Decomposition: Output buffer may be too small to decompose input polynomials. "
+                          "Decomposition will stop after "
+                       << digits_per_element << " digits, based on output size.";
+  }
 
   const auto base_div2 = base / 2;
   const auto q_div2 = q / 2;
 
-  tf::Taskflow taskflow;
-  tf::Executor executor;
-  const uint64_t total_nof_operations = input_size * config.batch_size;
-  const int nof_workers = get_nof_workers(config);
-  const uint64_t worker_task_size = (total_nof_operations + nof_workers - 1) / nof_workers; // round up
+  tf::Taskflow tasks;
+  tf::Executor executor(get_nof_workers(config));
 
-  std::atomic<bool> error = false;
-  for (uint64_t start_idx = 0; start_idx < total_nof_operations; start_idx += worker_task_size) {
-    taskflow.emplace([=, &error]() {
-      const uint64_t end_idx = std::min(start_idx + worker_task_size, total_nof_operations);
-      for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
-        int64_t val = input_i64[idx];
-        int64_t digit = 0;
-        // we need to handle case where val>q/2 by subtracting q (only for base>2)
-        if (base > 2 && val > q_div2) { val = val - q; }
+  const size_t total_size = input_size * config.batch_size;
+  constexpr size_t task_size = 256; // Seems to perform well
+  const size_t nof_tasks = (total_size + task_size - 1) / task_size;
 
-        for (size_t digit_idx = 0; digit_idx < digits_per_element; ++digit_idx) {
+  for (int task_idx = 0; task_idx < nof_tasks; ++task_idx) {
+    const size_t start = task_idx * task_size;
+    const size_t end = std::min(total_size, start + task_size);
+    const size_t nof_elements = end - start;
+
+    tasks.emplace([=] {
+      // Temporary buffer to hold intermediate remainders during decomposition.
+      int64_t remainder[task_size];
+      const int64_t* input_data_i64 = reinterpret_cast<const int64_t*>(input + task_idx * task_size);
+      std::memcpy(remainder, input_data_i64, sizeof(remainder));
+
+      for (int digit_idx = 0; digit_idx < digits_per_element; ++digit_idx) {
+        int64_t digit_buf[task_size];
+
+        for (int i = 0; i < nof_elements; ++i) {
+          int64_t val = remainder[i];
+          int64_t digit = 0;
+
+          // we need to handle case where val>q/2 by subtracting q (only for base>2)
+          if (base > 2 && val > q_div2) { val -= q; }
+
           std::tie(val, digit) = divmod(val, base);
-
           // Shift into balanced digit range [-b/2, b/2)
           if (digit > base_div2) {
             digit -= base;
             ++val;
           }
 
-          // Wrap negative digits to [0, q) for representation in field_t
-          output_i64[idx * digits_per_element + digit_idx] = digit < 0 ? digit + q : digit;
+          remainder[i] = val;
+          digit_buf[i] = digit < 0 ? digit + q : digit;
         }
-        if (val != 0) {
-          if (error) { return; } // stop processing if another thread already failed
-          ICICLE_LOG_ERROR << "Balanced decomposition failed: input value too large.";
-          error.store(true, std::memory_order_relaxed); // mark failure
-          return;
-        }
+        int64_t* output_data = reinterpret_cast<int64_t*>(output + digit_idx * total_size + task_idx * task_size);
+        std::memcpy(output_data, digit_buf, sizeof(int64_t) * nof_elements);
       }
     });
   }
 
-  executor.run(taskflow).wait();
-  taskflow.clear();
+  executor.run(tasks).wait();
+  tasks.clear();
 
-  return error ? eIcicleError::INVALID_ARGUMENT : eIcicleError::SUCCESS;
+  return eIcicleError::SUCCESS;
 }
 
-// Recompose Zq elements from balanced base-b digits.
+// Recompose Zq elements from balanced base-b digits
 static eIcicleError cpu_recompose_from_balanced_digits(
   const Device& device,
   const field_t* input,
@@ -162,157 +174,29 @@ static eIcicleError cpu_recompose_from_balanced_digits(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  field_t base_as_field = field_t::from(base);
-
-  tf::Taskflow taskflow;
-  tf::Executor executor;
-  const uint64_t total_nof_operations = output_size * config.batch_size;
-  const int nof_workers = get_nof_workers(config);
-  const uint64_t worker_task_size = (total_nof_operations + nof_workers - 1) / nof_workers; // round up
-
-  for (uint64_t start_idx = 0; start_idx < total_nof_operations; start_idx += worker_task_size) {
-    taskflow.emplace([=]() {
-      const uint64_t end_idx = std::min(start_idx + worker_task_size, total_nof_operations);
-      for (uint64_t out_idx = start_idx; out_idx < end_idx; ++out_idx) {
-        field_t acc = field_t::zero();
-        // computing 'x ≡ ∑ r_i * b^i mod q' in field_t
-        for (int digit_idx = digits_per_element - 1; digit_idx >= 0; --digit_idx) {
-          auto digit = input[out_idx * digits_per_element + digit_idx];
-          acc = acc * base_as_field + digit;
-        }
-        output[out_idx] = acc;
-      }
-    });
-  }
-
-  executor.run(taskflow).wait();
-  taskflow.clear();
-
-  return eIcicleError::SUCCESS;
-}
-
-REGISTER_BALANCED_DECOMPOSITION_BACKEND("CPU", cpu_decompose_balanced_digits, cpu_recompose_from_balanced_digits);
-
-// Decompose PolyRing polynomials into balanced base-b digits
-static eIcicleError cpu_decompose_balanced_digits_PolyRing(
-  const Device& device,
-  const PolyRing* input,
-  size_t input_size,
-  uint32_t base,
-  const VecOpsConfig& config,
-  PolyRing* output,
-  size_t output_size)
-{
-  auto params_valid = verify_params<PolyRing::Base>(
-    (PolyRing::Base*)input, input_size, base, config, (PolyRing::Base*)output, output_size);
-  if (eIcicleError::SUCCESS != params_valid) { return params_valid; }
-
-  auto q = get_q<PolyRing::Base>();
-
-  // Check that the sizes make sense and that we have enough digits.
-  // Note that not enough digits might be an issue but treated as warning.
-  const size_t digits_per_element = output_size / input_size;
-  if (output_size % input_size != 0) {
-    ICICLE_LOG_ERROR << "Balanced decomposition: output size must divide input size.";
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-
-  const size_t expected_digits_per_element = balanced_decomposition::compute_nof_digits<PolyRing::Base>(base);
-  if (digits_per_element < expected_digits_per_element) {
-    ICICLE_LOG_WARNING << "Balanced Decomposition: Output buffer may be too small to decompose input polynomials. "
-                          "Decomposition will stop after "
-                       << digits_per_element << "digits, based on output size.";
-  }
-
-  const auto base_div2 = base / 2;
-  const auto q_div2 = q / 2;
-
-  tf::Taskflow tasks;
-  tf::Executor executor(get_nof_workers(config));
-
-  // To decompose PolyRing polynomials into balanced digits, we decompose all d coefficients, in num_digits steps,
-  // creating a polynomial on each step.
-  const size_t total_size = input_size * config.batch_size;
-  for (int poly_idx = 0; poly_idx < total_size; ++poly_idx) {
-    tasks.emplace([=] {
-      const PolyRing& input_poly = input[poly_idx];
-      const int64_t* input_coeffs = reinterpret_cast<const int64_t*>(input_poly.values);
-
-      // Temporary buffer to hold intermediate remainders during decomposition.
-      int64_t remainder[PolyRing::d];
-      std::memcpy(remainder, input_coeffs, sizeof(remainder));
-
-      for (int digit_idx = 0; digit_idx < digits_per_element; ++digit_idx) {
-        PolyRing& output_poly = output[digit_idx * total_size + poly_idx];
-        int64_t* output_coeffs = reinterpret_cast<int64_t*>(output_poly.values);
-
-        for (int coeff_idx = 0; coeff_idx < PolyRing::d; ++coeff_idx) {
-          int64_t val = remainder[coeff_idx];
-          int64_t digit = 0;
-
-          // we need to handle case where val>q/2 by subtracting q (only for base>2)
-          if (base > 2 && val > q_div2) { val -= q; }
-
-          std::tie(val, digit) = divmod(val, base);
-          // Shift into balanced digit range [-b/2, b/2)
-          if (digit > base_div2) {
-            digit -= base;
-            ++val;
-          }
-
-          remainder[coeff_idx] = val;
-          output_coeffs[coeff_idx] = digit < 0 ? digit + q : digit;
-        }
-      }
-    });
-  }
-
-  executor.run(tasks).wait();
-  tasks.clear();
-
-  return eIcicleError::SUCCESS;
-}
-
-// Recompose PolyRing polynomials from balanced base-b digits
-static eIcicleError cpu_recompose_from_balanced_digits_PolyRing(
-  const Device& device,
-  const PolyRing* input,
-  size_t input_size,
-  uint32_t base,
-  const VecOpsConfig& config,
-  PolyRing* output,
-  size_t output_size)
-{
-  auto params_valid = verify_params<PolyRing::Base>(
-    (PolyRing::Base*)input, input_size, base, config, (PolyRing::Base*)output, output_size);
-  if (eIcicleError::SUCCESS != params_valid) { return params_valid; }
-
-  const size_t digits_per_element = input_size / output_size;
-  if (input_size % output_size != 0) {
-    ICICLE_LOG_ERROR << "Balanced recomposition: output size must divide input size.";
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-
-  const PolyRing::Base base_as_field = PolyRing::Base::from(base);
+  const field_t base_as_field = field_t::from(base);
 
   tf::Taskflow tasks;
   tf::Executor executor(get_nof_workers(config));
 
   const size_t total_size = output_size * config.batch_size;
-  for (int poly_idx = 0; poly_idx < total_size; ++poly_idx) {
+  constexpr size_t task_size = 256; // Seems to perform well
+  const size_t nof_tasks = (total_size + task_size - 1) / task_size;
+  for (int task_idx = 0; task_idx < nof_tasks; ++task_idx) {
+    const size_t start = task_idx * task_size;
+    const size_t end = std::min(total_size, start + task_size);
+    const size_t nof_elements = end - start;
     tasks.emplace([=]() {
-      PolyRing result;
-      // Recompose a single output polynomial from its digit-wise components
-      for (int coeff_idx = 0; coeff_idx < PolyRing::d; ++coeff_idx) {
-        PolyRing::Base acc = PolyRing::Base::zero();
+      for (int i = 0; i < nof_elements; ++i) {
+        field_t acc = field_t::zero();
         // Accumulate from most significant digit to least
         for (int digit_idx = digits_per_element - 1; digit_idx >= 0; --digit_idx) {
-          const PolyRing& input_poly = input[digit_idx * total_size + poly_idx];
-          acc = acc * base_as_field + input_poly.values[coeff_idx];
+          // input is organized digit-major
+          const field_t& val = *(input + digit_idx * total_size + task_idx * task_size + i);
+          acc = acc * base_as_field + val;
         }
-        result.values[coeff_idx] = acc;
+        *(output + task_idx * task_size + i) = acc;
       }
-      output[poly_idx] = result;
     });
   }
 
@@ -322,5 +206,4 @@ static eIcicleError cpu_recompose_from_balanced_digits_PolyRing(
   return eIcicleError::SUCCESS;
 }
 
-REGISTER_BALANCED_DECOMPOSITION_POLYRING_BACKEND(
-  "CPU", cpu_decompose_balanced_digits_PolyRing, cpu_recompose_from_balanced_digits_PolyRing);
+REGISTER_BALANCED_DECOMPOSITION_BACKEND("CPU", cpu_decompose_balanced_digits, cpu_recompose_from_balanced_digits);

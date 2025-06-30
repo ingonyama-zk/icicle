@@ -88,7 +88,7 @@ public:
     }
 
     // Use decision tree to predict the optimal number of workers
-    double field_size_to_fixed_size_ratio = scalar_size / FIXED_SCALAR_SIZE_CORES_TREE;
+    double field_size_to_fixed_size_ratio = (double)scalar_size / FIXED_SCALAR_SIZE_CORES_TREE;
     double pcm = (double)precompute_factor;
     double msm_log_size = (double)std::log2(msm_size * field_size_to_fixed_size_ratio);
     double features[NOF_FEATURES_CORES_TREE] = {msm_log_size, pcm};
@@ -111,7 +111,7 @@ public:
     if (config.c > 0) { return config.c; }
 
     // Use decision tree to predict the optimal c
-    double field_size_to_fixed_size_ratio = scalar_size / FIXED_SCALAR_SIZE_C_TREE;
+    double field_size_to_fixed_size_ratio = (double)scalar_size / FIXED_SCALAR_SIZE_C_TREE;
     double pcm = (double)precompute_factor;
     double msm_log_size = (double)std::log2(msm_size * field_size_to_fixed_size_ratio);
     double nof_cores = (double)nof_workers;
@@ -172,13 +172,15 @@ private:
   };
 
   // members
-  tf::Taskflow m_taskflow;       // Accumulate tasks
-  tf::Executor m_executor;       // execute all tasks accumulated on multiple threads
-  const int m_msm_size;          // number of scalars in the problem
-  const MSMConfig& m_config;     // extra parameters for the problem
-  uint32_t m_scalar_size;        // the number of bits at the scalar
-  uint32_t m_c;                  // the number of bits each bucket module is responsible for
-  uint32_t m_bm_size;            // number of buckets in a single bucket module.
+  tf::Taskflow m_taskflow;           // Accumulate tasks
+  tf::Executor m_executor;           // execute all tasks accumulated on multiple threads
+  const int m_msm_size;              // number of scalars in the problem
+  const MSMConfig& m_config;         // extra parameters for the problem
+  bool m_is_chopped_scalar;          // indication if scalar size is smaller than NBITS
+  uint32_t m_scalar_size_with_carry; // the scalar size that needs to be handles with carry bit from signed operation
+  uint32_t m_scalar_size;            // the number of bits at the scalar
+  uint32_t m_c;                      // the number of bits each bucket module is responsible for
+  uint32_t m_bm_size;                // number of buckets in a single bucket module.
   uint32_t m_nof_buckets_module; // number of bucket modules. Each BM contains m_bm_size buckets except for the last one
   uint64_t m_nof_total_buckets;  // total number of buckets across all bucket modules
   uint32_t m_precompute_factor;  // the number of bases precomputed for each scalar
@@ -197,16 +199,20 @@ private:
   void calc_optimal_parameters()
   {
     m_precompute_factor = m_config.precompute_factor;
-    m_scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
+    m_scalar_size = m_config.bitsize != 0 ? m_config.bitsize : scalar_t::NBITS;
     m_nof_workers = get_optimal_nof_workers(m_config, m_msm_size, m_scalar_size, m_precompute_factor);
+    m_is_chopped_scalar = (m_scalar_size != scalar_t::NBITS);
 
     // phase 1 properties
     m_c = get_optimal_c(m_config, m_msm_size, m_scalar_size, m_precompute_factor, m_nof_workers, m_cpu_vendor);
 
-    m_nof_buckets_module = ((m_scalar_size - 1) / (m_config.precompute_factor * m_c)) + 1;
+    // if scalar is chopped then the negative scalar trick cannot work and we need to add another bit
+    m_scalar_size_with_carry = m_is_chopped_scalar ? m_scalar_size + 1 : m_scalar_size;
+    m_nof_buckets_module = ((m_scalar_size_with_carry - 1) / (m_config.precompute_factor * m_c)) + 1;
     m_bm_size = 1 << (m_c - 1);
+
     const uint64_t last_bm_size =
-      m_precompute_factor > 1 ? m_bm_size : 1 << (m_scalar_size - ((m_nof_buckets_module - 1) * m_c));
+      m_precompute_factor > 1 ? m_bm_size : 1 << (m_scalar_size_with_carry - ((m_nof_buckets_module - 1) * m_c));
     m_nof_total_buckets = (m_nof_buckets_module - 1) * m_bm_size + last_bm_size;
 
     // phase 2 properties
@@ -260,16 +266,16 @@ private:
     const int coeff_bit_mask_no_sign_bit = m_bm_size - 1;
     const int coeff_bit_mask_with_sign_bit = (1 << m_c) - 1;
     // NUmber of windows / additions per scalar in case num_bms * precompute_factor exceed scalar width
-    const int num_bms_before_precompute = ((m_scalar_size - 1) / m_c) + 1; // +1 for ceiling
+    const int num_bms_before_precompute = ((m_scalar_size_with_carry - 1) / m_c) + 1; // +1 for ceiling
     int carry = 0;
     for (int i = 0; i < msm_size; i++) {
       carry = 0;
       // Handle required preprocess of scalar
       scalar_t scalar =
         m_config.are_scalars_montgomery_form ? scalar_t::from_montgomery(scalars[i]) : scalars[i]; // TBD: avoid copy
-      bool negate_p_and_s = scalar.get_scalar_digit(m_scalar_size - 1, 1) > 0;
+      bool negate_p_and_s = (!m_is_chopped_scalar) && scalar.get_scalar_bits(m_scalar_size - 1, 1) > 0;
       if (negate_p_and_s) { scalar = scalar_t::neg(scalar); } // TBD: inplace
-
+      int scalar_offset = 0;
       for (int j = 0; j < m_precompute_factor; j++) {
         // Handle required preprocess of base P. Note: no need to convert to montgomery. Projective point handles it)
         const A& base = bases[m_precompute_factor * i + j];
@@ -279,16 +285,14 @@ private:
         for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
           // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
           if (m_nof_buckets_module * j + bm_i >= num_bms_before_precompute) { break; }
-
-          uint32_t curr_coeff = scalar.get_scalar_digit(m_nof_buckets_module * j + bm_i, m_c) + carry;
-
+          const unsigned coeff_width = std::min(m_c, m_scalar_size - scalar_offset);
+          const uint32_t curr_coeff = scalar.get_scalar_bits(scalar_offset, coeff_width) + carry;
           // For the edge case of curr_coeff = c (limb=c-1, carry=1) use the sign bit mask
           if ((curr_coeff & coeff_bit_mask_with_sign_bit) != 0) {
             // Remove sign to infer the bkt idx.
             carry = curr_coeff > m_bm_size;
             int bkt_idx = carry ? m_bm_size * bm_i + ((-curr_coeff) & coeff_bit_mask_no_sign_bit)
                                 : m_bm_size * bm_i + (curr_coeff & coeff_bit_mask_no_sign_bit);
-
             // Check for collision in that bucket and either dispatch an addition or store the P accordingly.
             if (buckets_busy[bkt_idx]) {
               buckets[bkt_idx].point =
@@ -303,27 +307,11 @@ private:
             // coeff & coeff_mask == 0 but there is a carry to propagate to the next segment
             carry = curr_coeff >> m_c;
           }
+          scalar_offset += m_c;
         }
       }
     }
   }
-
-  //   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
-  //   void phase2_collapse_segments()
-  //   {
-  //     for (int worker_i = 0; worker_i < 10;
-  //       worker_i++) { // TBD: divide the work among m_nof_workers only.
-  //       // Each thread is responsible for a sinעle thread
-  //       m_taskflow.emplace([&, worker_i]() {
-  //         for (int segment_idx = worker_i*16; segment_idx < worker_i*16+16; segment_idx++) {
-  //         const uint64_t bucket_start = segment_idx * m_segment_size;
-  //         const uint32_t segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
-  //         worker_collapse_segment(m_segments[segment_idx], bucket_start, segment_size);
-  //         }
-  //       });
-  //     }
-  //     run_workers_and_wait();
-  //   }
 
   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
   void phase2_collapse_segments()
@@ -472,7 +460,7 @@ eIcicleError cpu_msm_precompute_bases(
   A* output_bases) // Pre assigned?
 {
   const int precompute_factor = config.precompute_factor;
-  const uint scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
+  const uint scalar_size = config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
   const std::string cpu_vendor = get_cpu_vendor();
   const uint32_t nof_workers = Msm<A, P>::get_optimal_nof_workers(config, nof_bases, scalar_size, precompute_factor);
   const int c = Msm<A, P>::get_optimal_c(config, nof_bases, scalar_size, precompute_factor, nof_workers, cpu_vendor);
