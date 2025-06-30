@@ -79,7 +79,7 @@ namespace ntt_cpu {
       S omega = primitive_root;
       const unsigned omegas_count = S::get_omegas_count();
       for (int i = 0; i < omegas_count; i++) {
-        omega = S::sqr(omega);
+        omega = omega.sqr();
         if (!found_logn) {
           ++s_ntt_domain.max_log_size;
           found_logn = omega == S::one();
@@ -157,9 +157,9 @@ namespace ntt_cpu {
         temp_win16_twiddles[12] = (s_ntt_domain.twiddles[basic_tw_idx * 1] - s_ntt_domain.twiddles[basic_tw_idx * 3] -
                                    s_ntt_domain.twiddles[basic_tw_idx * 5] + s_ntt_domain.twiddles[basic_tw_idx * 7]) *
                                   S::inv_log_size(1);
-        temp_win16_twiddles[13] = S::neg(
+        temp_win16_twiddles[13] = (
                                     s_ntt_domain.twiddles[basic_tw_idx * 1] + s_ntt_domain.twiddles[basic_tw_idx * 3] +
-                                    s_ntt_domain.twiddles[basic_tw_idx * 5] + s_ntt_domain.twiddles[basic_tw_idx * 7]) *
+                                    s_ntt_domain.twiddles[basic_tw_idx * 5] + s_ntt_domain.twiddles[basic_tw_idx * 7]).neg() *
                                   S::inv_log_size(1);
         temp_win16_twiddles[14] =
           (s_ntt_domain.twiddles[basic_tw_idx * 3] + s_ntt_domain.twiddles[basic_tw_idx * 5]) * S::inv_log_size(1);
@@ -201,11 +201,11 @@ namespace ntt_cpu {
                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 5] +
                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 7]) *
                                       S::inv_log_size(1);
-        temp_win16_twiddles_inv[13] = S::neg(
+        temp_win16_twiddles_inv[13] = (
                                         s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 1] +
                                         s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 3] +
                                         s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 5] +
-                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 7]) *
+                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 7]).neg() *
                                       S::inv_log_size(1);
         temp_win16_twiddles_inv[14] = (s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 3] +
                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 5]) *
@@ -256,7 +256,7 @@ namespace ntt_cpu {
         temp_win32_twiddles[12] = (s_ntt_domain.twiddles[basic_tw_idx * 1] - s_ntt_domain.twiddles[basic_tw_idx * 3] -
                                    s_ntt_domain.twiddles[basic_tw_idx * 5] + s_ntt_domain.twiddles[basic_tw_idx * 7]) *
                                   S::inv_log_size(1);
-        temp_win32_twiddles[13] = S::neg(
+        temp_win32_twiddles[13] = (
                                     s_ntt_domain.twiddles[basic_tw_idx * 1] + s_ntt_domain.twiddles[basic_tw_idx * 3] +
                                     s_ntt_domain.twiddles[basic_tw_idx * 5] + s_ntt_domain.twiddles[basic_tw_idx * 7]) *
                                   S::inv_log_size(1);
@@ -286,7 +286,7 @@ namespace ntt_cpu {
                                    s_ntt_domain.twiddles[basic_tw_idx * 6] - s_ntt_domain.twiddles[basic_tw_idx * 10]) *
                                   S::inv_log_size(1);
         temp_win32_twiddles[23] =
-          S::neg(
+          (
             s_ntt_domain.twiddles[basic_tw_idx * 2] + s_ntt_domain.twiddles[basic_tw_idx * 14] +
             s_ntt_domain.twiddles[basic_tw_idx * 6] + s_ntt_domain.twiddles[basic_tw_idx * 10]) *
           S::inv_log_size(1);
@@ -335,9 +335,9 @@ namespace ntt_cpu {
                                    s_ntt_domain.twiddles[basic_tw_idx * 3] - s_ntt_domain.twiddles[basic_tw_idx * 13]) *
                                   S::inv_log_size(1);
         temp_win32_twiddles[35] =
-          (S::neg(
+          (
             s_ntt_domain.twiddles[basic_tw_idx * 5] + s_ntt_domain.twiddles[basic_tw_idx * 11] +
-            s_ntt_domain.twiddles[basic_tw_idx * 3] + s_ntt_domain.twiddles[basic_tw_idx * 13])) *
+            s_ntt_domain.twiddles[basic_tw_idx * 3] + s_ntt_domain.twiddles[basic_tw_idx * 13]).neg() *
           S::inv_log_size(1);
         temp_win32_twiddles[36] =
           (s_ntt_domain.twiddles[basic_tw_idx * 3] + s_ntt_domain.twiddles[basic_tw_idx * 13]) * S::inv_log_size(1);
@@ -409,11 +409,11 @@ namespace ntt_cpu {
                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 5] +
                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 7]) *
                                       S::inv_log_size(1);
-        temp_win32_twiddles_inv[13] = S::neg(
+        temp_win32_twiddles_inv[13] = (
                                         s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 1] +
                                         s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 3] +
                                         s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 5] +
-                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 7]) *
+                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 7]).neg() *
                                       S::inv_log_size(1);
         temp_win32_twiddles_inv[14] = (s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 3] +
                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 5]) *
@@ -450,11 +450,11 @@ namespace ntt_cpu {
                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 6] -
                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 10]) *
                                       S::inv_log_size(1);
-        temp_win32_twiddles_inv[23] = S::neg(
+        temp_win32_twiddles_inv[23] = (
                                         s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 2] +
                                         s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 14] +
                                         s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 6] +
-                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 10]) *
+                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 10]).neg() *
                                       S::inv_log_size(1);
 
         temp_win32_twiddles_inv[24] = (s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 6] +
@@ -527,11 +527,11 @@ namespace ntt_cpu {
                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 3] -
                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 13]) *
                                       S::inv_log_size(1);
-        temp_win32_twiddles_inv[35] = (S::neg(
+        temp_win32_twiddles_inv[35] = (
                                         s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 5] +
                                         s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 11] +
                                         s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 3] +
-                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 13])) *
+                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 13]).neg() *
                                       S::inv_log_size(1);
         temp_win32_twiddles_inv[36] = (s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 3] +
                                        s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx * 13]) *

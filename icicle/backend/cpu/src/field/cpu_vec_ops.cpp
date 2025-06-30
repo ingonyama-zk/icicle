@@ -159,28 +159,28 @@ private:
   void vector_div()
   {
     for (uint64_t i = 0; i < m_nof_operations; ++i) {
-      m_output[i] = m_op_a[i] * U::inverse(m_op_b[i]);
+      m_output[i] = m_op_a[i] * m_op_b[i].inverse();
     }
   }
   // Single worker functionality to execute vector inv (^-1)
   void vector_inv()
   {
     for (uint64_t i = 0; i < m_nof_operations; ++i) {
-      m_output[i] = T::inverse(m_op_a[i]);
+      m_output[i] = m_op_a[i].inverse();
     }
   }
   // Single worker functionality to execute conversion from barret to montgomery
   void convert_to_montgomery()
   {
     for (uint64_t i = 0; i < m_nof_operations; ++i) {
-      m_output[i] = T::to_montgomery(m_op_a[i]);
+      m_output[i] = m_op_a[i].to_montgomery();
     }
   }
   // Single worker functionality to execute conversion from montgomery to barret
   void convert_from_montgomery()
   {
     for (uint64_t i = 0; i < m_nof_operations; ++i) {
-      m_output[i] = T::from_montgomery(m_op_a[i]);
+      m_output[i] = m_op_a[i].from_montgomery();
     }
   }
   // Single worker functionality to execute sum(vector)
@@ -766,7 +766,7 @@ eIcicleError cpu_poly_divide(
     T* curr_r_out = config.columns_batch ? r_out + idx_in_batch : r_out + idx_in_batch * r_size;
 
     // invert largest coeff of b
-    const T& lc_b_inv = T::inverse(curr_denominator[denominator_deg[idx_in_batch] * stride]);
+    const T& lc_b_inv = curr_denominator[denominator_deg[idx_in_batch] * stride].inverse();
     deg_r[idx_in_batch] = numerator_deg[idx_in_batch];
     while (deg_r[idx_in_batch] >= denominator_deg[idx_in_batch]) {
       // each iteration is removing the largest monomial in r until deg(r)<deg(b)

@@ -272,15 +272,15 @@ private:
       carry = 0;
       // Handle required preprocess of scalar
       scalar_t scalar =
-        m_config.are_scalars_montgomery_form ? scalar_t::from_montgomery(scalars[i]) : scalars[i]; // TBD: avoid copy
+        m_config.are_scalars_montgomery_form ? scalars[i].from_montgomery() : scalars[i]; // TBD: avoid copy
       bool negate_p_and_s = (!m_is_chopped_scalar) && scalar.get_scalar_bits(m_scalar_size - 1, 1) > 0;
-      if (negate_p_and_s) { scalar = scalar_t::neg(scalar); } // TBD: inplace
+      if (negate_p_and_s) { scalar = scalar.neg(); } // TBD: inplace
       int scalar_offset = 0;
       for (int j = 0; j < m_precompute_factor; j++) {
         // Handle required preprocess of base P. Note: no need to convert to montgomery. Projective point handles it)
         const A& base = bases[m_precompute_factor * i + j];
         if (base == A::zero()) { continue; } // TBD: why is that? can be done more efficiently?
-        const A base_neg = A::neg(base);
+        const A base_neg = base.neg();
 
         for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
           // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
@@ -388,7 +388,7 @@ private:
       // Convert weighted lines sum to rectangles sum by doubling
       int num_doubles = m_c - 1 - log_nof_segments_per_bm;
       for (int k = 0; k < num_doubles; k++) {
-        m_segments[nof_segments_per_bm * i].line_sum = P::dbl(m_segments[nof_segments_per_bm * i].line_sum);
+        m_segments[nof_segments_per_bm * i].line_sum = m_segments[nof_segments_per_bm * i].line_sum.dbl();
       }
 
       // Sum triangles within bm linearly
@@ -410,7 +410,7 @@ private:
     for (int i = m_nof_buckets_module - 2; i >= 0; i--) {
       // Multiply by the BM digit factor 2^c - i.e. c doublings
       for (int j = 0; j < m_c; j++) {
-        *result = P::dbl(*result);
+        *result = result->dbl();
       }
       *result = *result + m_segments[nof_segments_per_bm * i].triangle_sum;
     }
@@ -469,12 +469,12 @@ eIcicleError cpu_msm_precompute_bases(
   const unsigned int shift = c * ((num_bms_no_precomp - 1) / precompute_factor + 1);
   for (int i = 0; i < nof_bases; i++) {
     output_bases[precompute_factor * i] = input_bases[i];
-    P point = P::from_affine(is_mont ? A::from_montgomery(input_bases[i]) : input_bases[i]);
+    P point = P::from_affine(is_mont ? input_bases[i].from_montgomery() : input_bases[i]);
     for (int j = 1; j < precompute_factor; j++) { // TBD parallelize this
       for (int k = 0; k < shift; k++) {
-        point = P::dbl(point);
+        point = point.dbl();
       }
-      output_bases[precompute_factor * i + j] = is_mont ? A::to_montgomery(P::to_affine(point)) : P::to_affine(point);
+      output_bases[precompute_factor * i + j] = is_mont ? point.to_affine().to_montgomery() : point.to_affine();
     }
   }
   return eIcicleError::SUCCESS;

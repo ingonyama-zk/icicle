@@ -25,12 +25,12 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, mul)(scalar_t* scalar1, scalar_
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, inv)(scalar_t* scalar1, scalar_t* result)
 {
-  *result = scalar_t::inverse(*scalar1);
+  *result = (*scalar1).inverse();
 }
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, pow)(scalar_t* base, int exp, scalar_t* result)
 {
-  *result = scalar_t::pow(*base, exp);
+  *result = (*base).pow(exp);
 }
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, from_u32)(uint32_t val, scalar_t* result)

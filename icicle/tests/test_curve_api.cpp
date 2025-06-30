@@ -72,8 +72,8 @@ public:
     run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
-      ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
-      ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
+      ASSERT_EQ(true, result_main[res_idx].is_on_curve());
+      ASSERT_EQ(true, result_ref[res_idx].is_on_curve());
       ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
     }
   }
@@ -115,8 +115,8 @@ public:
       run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
       run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
       for (int res_idx = 0; res_idx < batch; ++res_idx) {
-        ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
-        ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
+        ASSERT_EQ(true, result_main[res_idx].is_on_curve());
+        ASSERT_EQ(true, result_ref[res_idx].is_on_curve());
         ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
       }
     }
@@ -164,8 +164,8 @@ public:
     run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
-      ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
-      ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
+      ASSERT_EQ(true, result_main[res_idx].is_on_curve());
+      ASSERT_EQ(true, result_ref[res_idx].is_on_curve());
       ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
     }
   }
@@ -221,8 +221,8 @@ public:
       run(IcicleTestBase::reference_device(), result_single_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
 
       for (int res_idx = 0; res_idx < batch; ++res_idx) {
-        ASSERT_EQ(true, P::is_on_curve(result_multi_thread[res_idx]));
-        ASSERT_EQ(true, P::is_on_curve(result_single_thread[res_idx]));
+        ASSERT_EQ(true, result_multi_thread[res_idx].is_on_curve());
+        ASSERT_EQ(true, result_single_thread[res_idx].is_on_curve());
         ASSERT_EQ(result_multi_thread[res_idx], result_single_thread[res_idx]);
       }
     }
@@ -420,7 +420,7 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
 {
   auto a = TypeParam::rand_host();
   auto b = TypeParam::rand_host();
-  ASSERT_EQ(true, TypeParam::is_on_curve(a) && TypeParam::is_on_curve(b));               // rand is on curve
+  ASSERT_EQ(true, a.is_on_curve() && b.is_on_curve());               // rand is on curve
   ASSERT_EQ(a + TypeParam::zero(), a);                                                   // zero addition
   ASSERT_EQ(a + b - a, b);                                                               // addition,subtraction cancel
   ASSERT_EQ(a + TypeParam::neg(a), TypeParam::zero());                                   // addition with neg cancel

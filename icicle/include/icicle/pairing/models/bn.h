@@ -20,7 +20,7 @@ namespace icicle_bn_pairing {
 
     constexpr size_t ate_loop_bits = sizeof(Config::ATE_LOOP_BITS) / sizeof(int);
     for (int j = ate_loop_bits - 2; j >= 0; j--) {
-      if (j != ate_loop_bits - 1) { f = Fp12::sqr(f); }
+      if (j != ate_loop_bits - 1) { f = f.sqr(); }
       ell<Config>(f, q_coeffs[i++], p);
       if (Config::ATE_LOOP_BITS[j]) { ell<Config>(f, q_coeffs[i++], p); }
     }
@@ -42,7 +42,7 @@ namespace icicle_bn_pairing {
     f1.c1 = -f1.c1;
 
     // f2 = f^(-1)
-    Fp12 f2 = Fp12::inverse(f);
+    Fp12 f2 = f.inverse();
     if (f2 == Fp12::zero()) { // Handle potential inverse failure if necessary
       f = Fp12::one();        // Or some other defined behavior for non-invertible input
       return;
@@ -62,11 +62,11 @@ namespace icicle_bn_pairing {
     // Hard part from Laura Fuentes-Castaneda et al. "Faster hashing to G2"
 
     Fp12 y0 = exp_by_z<Config, true>(r);
-    Fp12 y1 = Fp12::sqr(y0);
-    Fp12 y2 = Fp12::sqr(y1);
+    Fp12 y1 = y0.sqr();
+    Fp12 y2 = y1.sqr();
     Fp12 y3 = y2 * y1;
     Fp12 y4 = exp_by_z<Config, true>(y3);
-    Fp12 y5 = Fp12::sqr(y4);
+    Fp12 y5 = y4.sqr();
     Fp12 y6 = exp_by_z<Config, true>(y5);
 
     y3.c1 = -y3.c1;
@@ -107,12 +107,12 @@ namespace icicle_bn_pairing {
   template <typename Config>
   std::vector<typename Config::Fp6> prepare_q(const typename Config::G2Affine& q)
   {
-    typename Config::Fp two_inv = Config::Fp::inverse(Config::Fp::one() + Config::Fp::one());
+    typename Config::Fp two_inv = (Config::Fp::one() + Config::Fp::one()).inverse();
     std::vector<typename Config::Fp6> coeffs;
     typename Config::Fp6 r = {q.x, q.y, Config::Fp2::one()};
 
     typename Config::G2Affine neg_q =
-      Config::G2Projective::to_affine(Config::G2Projective::neg(Config::G2Projective::from_affine(q)));
+      Config::G2Projective::from_affine(q).neg().to_affine();
 
     constexpr size_t ate_loop_bits = sizeof(Config::ATE_LOOP_BITS) / sizeof(int);
     for (int i = ate_loop_bits - 2; i >= 0; i--) {
@@ -128,7 +128,7 @@ namespace icicle_bn_pairing {
     typename Config::G2Affine q1 = mul_by_char<Config>(q);
     typename Config::G2Affine q2 = mul_by_char<Config>(q1);
 
-    q2.y = Config::Fp2::neg(q2.y);
+    q2.y = q2.y.neg();
 
     coeffs.push_back(add_in_place<Config>(r, q1));
     coeffs.push_back(add_in_place<Config>(r, q2));
