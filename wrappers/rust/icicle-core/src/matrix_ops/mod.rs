@@ -1,4 +1,4 @@
-use crate::vec_ops::VecOpsConfig;
+pub use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;

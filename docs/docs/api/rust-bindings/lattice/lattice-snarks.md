@@ -104,6 +104,9 @@ use icicle_core::negacyclic_ntt::{
     ntt_inplace,         // In-place NTT wrapper
     NTTDir,              // Transform direction (Forward or Inverse)
 };
+```
+
+### API
 
 ```rust
 /// Performs a negacyclic Number-Theoretic Transform (NTT) over a polynomial ring.
@@ -155,76 +158,99 @@ negacyclic_ntt::ntt_inplace(&mut device_input, NTTDir::kForward, &config);
 
 ## Matrix Operations
 
-### Matrix Multiplication
+### Matrix Multiplication and Transpose over Ring Elements
+
+ICICLE provides generic APIs for performing matrix operations over ring elements such as `Zq` and `PolyRing`.
+
+Supported operations include:
+
+- Dense matrix multiplication (row-major layout)
+- Matrix transposition (row-major input)
+
+These are useful for vector dot-products, Ajtai-style commitments, and other algebraic primitives in lattice-based SNARKs.
+
+---
+
+### Main Imports
 
 ```rust
-use icicle_core::matrix_ops::MatrixOps;
-
-// Matrix multiplication for polynomial rings
-matrix_ops::matmul::<P>(
-    &device_a,      // Input matrix A [n × m]
-    n,              // Number of rows in A
-    m,              // Number of columns in A
-    &device_b,      // Input matrix B [m × k]
-    m,              // Number of rows in B
-    k,              // Number of columns in B
-    &config,        // Configuration
-    &mut device_c   // Output matrix C [n × k]
-)?;
-```
-
-### Matrix Transpose
-
-```rust
-use icicle_core::matrix_ops::MatrixOps;
-
-// Matrix transpose for polynomial rings
-matrix_ops::transpose::<P>(
-    &device_input,  // Input matrix [rows × cols]
-    rows,           // Number of rows
-    cols,           // Number of columns
-    &config,        // Configuration
-    &mut device_output // Output matrix [cols × rows]
-)?;
-```
-
-### Example: Matrix Operations
-
-```rust
-use icicle_core::{
-    matrix_ops::MatrixOps,
-    traits::GenerateRandom,
+use icicle_core::matrix_ops::{
+    matmul,                 // Matrix multiplication
+    matrix_transpose,       // Matrix transpose
+    VecOpsConfig,           // Backend and execution configuration
+    MatrixOps,              // Trait for matmul    
 };
+```
+
+
+### Matrix multiplication API
+
+```rust
+/// Computes C = A × B for two row-major matrices.
+///
+/// - `a`: Matrix A, shape (a_rows × a_cols)
+/// - `b`: Matrix B, shape (b_rows × b_cols)
+/// - `cfg`: Execution configuration
+/// - `result`: Output buffer, shape (a_rows × b_cols)
+pub fn matmul<T>(
+    a: &(impl HostOrDeviceSlice<T> + ?Sized),
+    a_rows: u32,
+    a_cols: u32,
+    b: &(impl HostOrDeviceSlice<T> + ?Sized),
+    b_rows: u32,
+    b_cols: u32,
+    cfg: &VecOpsConfig,
+    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+) -> Result<(), eIcicleError>;
+```
+
+### Matrix transpose API
+
+```rust
+/// Transposes a row-major matrix: result(i, j) = input(j, i)
+///
+/// - `input`: Source matrix of shape (rows × cols)
+/// - `result`: Output buffer of shape (cols × rows)
+/// - `cfg`: Execution configuration
+pub fn matrix_transpose<T>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
+    nof_rows: u32,
+    nof_cols: u32,
+    cfg: &VecOpsConfig,
+    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+) -> Result<(), eIcicleError>;
+```
+
+### Example
+
+```rust
+use icicle_labrador::PolyRing;
+use icicle_core::matrix_ops::{matmul, matrix_transpose, VecOpsConfig};
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 
-fn matmul_example<P>(n: u32, m: u32, k: u32)
-where
-    P: PolynomialRing + MatrixOps<P> + GenerateRandom<P>,
-{
-    let config = VecOpsConfig::default();
-    let a_len = (n * m) as usize;
-    let b_len = (m * k) as usize;
-    let c_len = (n * k) as usize;
+let n = 8;
+let m = 64;
+let cfg = VecOpsConfig::default();
 
-    // Generate random host-side input matrices
-    let host_a: Vec<P> = P::generate_random(a_len);
-    let host_b: Vec<P> = P::generate_random(b_len);
+// Generate a random matrix A ∈ [n × m] on the host (row-major layout)
+let host_a = PolyRing::generate_random((n * m) as usize);
 
-    // Allocate device memory for inputs and output
-    let mut device_a = DeviceVec::<P>::device_malloc(a_len)?;
-    let mut device_b = DeviceVec::<P>::device_malloc(b_len)?;
-    let mut device_c = DeviceVec::<P>::device_malloc(c_len)?;
+// Allocate device buffer for Aᵗ ∈ [m × n]
+let mut device_a_transposed = DeviceVec::<PolyRing>::device_malloc((n * m) as usize)
+    .expect("Failed to allocate transpose output");
 
-    // Transfer inputs to device
-    device_a.copy_from_host(HostSlice::from_slice(&host_a))?;
-    device_b.copy_from_host(HostSlice::from_slice(&host_b))?;
+// Transpose Aᵗ = transpose(A) (from host memory to device memory)
+matrix_transpose(HostSlice::from_slice(&host_a), n, m, &cfg, &mut device_a_transposed)
+    .expect("Transpose failed");
 
-    // Perform matrix multiplication on device: C = A × B
-    let start = std::time::Instant::now();
-    matrix_ops::matmul::<P>(&device_a, n, m, &device_b, m, k, &config, &mut device_c)?;
-    let elapsed = start.elapsed();
-    println!("[Matmul] Completed in {:?}", elapsed);
-}
+// Allocate output buffer for (Aᵗ)A ∈ [m × m]
+let mut device_a_transposed_a = DeviceVec::<PolyRing>::device_malloc((m * m) as usize)
+    .expect("Failed to allocate output matrix");
+
+// Compute (Aᵗ)A
+// Note that one matrix is on host memory and the other on device memory
+matmul(&device_a_transposed, m, n, HostSlice::from_slice(&host_a), n, m, &cfg, &mut device_a_transposed_a)
+    .expect("Matmul failed");
 ```
 
 ## Balanced Decomposition
