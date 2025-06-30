@@ -108,6 +108,8 @@ let rq_from_slice: Vec<Rq> = zq_zeros
 // Or from arbitrary bytes
 ```
 
+### Reinterpreting Rq and Zq slices
+
 Many ICICLE APIs are defined over scalar rings like Zq, but can be applied to polynomial ring vectors (Rq) by flattening the polynomials into a contiguous Zq slice. This is useful for operations like JL projection.
 
 To enable this, ICICLE provides utilities to reinterpret slices of polynomials as slices of their base field elements, using the HostOrDeviceSlice trait abstraction.
