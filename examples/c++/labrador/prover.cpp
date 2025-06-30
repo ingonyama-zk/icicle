@@ -526,11 +526,8 @@ LabradorProver::prepare_recursion_witness(const LabradorBaseCaseProof& pf, uint3
   size_t l0 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base0);
 
   // Decompose all elements first
-  // TODO: simply make the output size = 2n
-  std::vector<Rq> z_tilde(l0 * n);
+  std::vector<Rq> z_tilde(2 * n);
   ICICLE_CHECK(decompose(z.data(), n, base0, {}, z_tilde.data(), z_tilde.size()));
-  // Keep only first 2n elements- all the rest should be 0
-  z_tilde.resize(2 * n);
 
   // Step 3:
   // z0 = z_tilde[:n]

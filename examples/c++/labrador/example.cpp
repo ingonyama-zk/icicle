@@ -116,23 +116,23 @@ int main(int argc, char* argv[])
     std::cout << "Base proof verification failed\n";
   }
 
-  // std::cout << "Beginning recursion... \n";
-  // uint32_t base0 = 1 << 3;
-  // size_t mu = 1 << 3, nu = 1 << 3;
-  // LabradorInstance rec_inst = prepare_recursion_instance(
-  //   param,                                        // prev_param
-  //   base_prover.lab_inst.equality_constraints[0], // final_const,
-  //   trs, base0, mu, nu);
-  // LabradorProver dummy_prover{lab_inst, S, 1};
-  // std::vector<Rq> rec_S = dummy_prover.prepare_recursion_witness(base_proof, base0, mu, nu);
-  // std::cout << "rec_inst.r = " << rec_inst.param.r << std::endl;
-  // std::cout << "rec_inst.n = " << rec_inst.param.n << std::endl;
-  // std::cout << "Num rec_inst.equality_constraints = " << rec_inst.equality_constraints.size() << std::endl;
-  // std::cout << "Num rec_inst.const_zero_constraints = " << rec_inst.const_zero_constraints.size() << std::endl;
+  std::cout << "Beginning recursion... \n";
+  uint32_t base0 = 1 << 3;
+  size_t mu = 1 << 3, nu = 1 << 3;
+  LabradorInstance rec_inst = prepare_recursion_instance(
+    param,                                        // prev_param
+    base_prover.lab_inst.equality_constraints[0], // final_const,
+    trs, base0, mu, nu);
+  LabradorProver dummy_prover{lab_inst, S, 1};
+  std::vector<Rq> rec_S = dummy_prover.prepare_recursion_witness(base_proof, base0, mu, nu);
+  std::cout << "rec_inst.r = " << rec_inst.param.r << std::endl;
+  std::cout << "rec_inst.n = " << rec_inst.param.n << std::endl;
+  std::cout << "Num rec_inst.equality_constraints = " << rec_inst.equality_constraints.size() << std::endl;
+  std::cout << "Num rec_inst.const_zero_constraints = " << rec_inst.const_zero_constraints.size() << std::endl;
 
-  // std::cout << "\tTesting rec-witness validity...";
-  // assert(lab_witness_legit(rec_inst, rec_S));
-  // std::cout << "VALID\n";
+  std::cout << "\tTesting rec-witness validity...";
+  assert(lab_witness_legit(rec_inst, rec_S));
+  std::cout << "VALID\n";
 
   std::cout << "Hello\n";
   return 0;
