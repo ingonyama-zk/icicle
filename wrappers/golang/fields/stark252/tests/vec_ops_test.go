@@ -124,10 +124,10 @@ type Stark252VecOpsTestSuite struct {
 }
 
 func (s *Stark252VecOpsTestSuite) TestStark252VecOps() {
-	s.Run("TestStark252VecOps", test_helpers.TestWrapper(&s.Suite, testStark252VecOps))
-	s.Run("TestStark252Transpose", test_helpers.TestWrapper(&s.Suite, testStark252Transpose))
-	s.Run("TestStark252Sum", test_helpers.TestWrapper(&s.Suite, testStark252Sum))
-	s.Run("TestStark252Product", test_helpers.TestWrapper(&s.Suite, testStark252Product))
+	s.Run("TestStark252VecOps", testWrapper(&s.Suite, testStark252VecOps))
+	s.Run("TestStark252Transpose", testWrapper(&s.Suite, testStark252Transpose))
+	s.Run("TestStark252Sum", testWrapper(&s.Suite, testStark252Sum))
+	s.Run("TestStark252Product", testWrapper(&s.Suite, testStark252Product))
 }
 
 func TestSuiteStark252VecOps(t *testing.T) {

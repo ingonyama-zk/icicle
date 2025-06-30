@@ -149,11 +149,11 @@ type NTTTestSuite struct {
 }
 
 func (s *NTTTestSuite) TestNTT() {
-	s.Run("TestNTTGetDefaultConfig", test_helpers.TestWrapper(&s.Suite, testNTTGetDefaultConfig))
-	s.Run("TestNTT", test_helpers.TestWrapper(&s.Suite, testNtt))
-	s.Run("TestNttDeviceAsync", test_helpers.TestWrapper(&s.Suite, testNttDeviceAsync))
-	s.Run("TestNttBatch", test_helpers.TestWrapper(&s.Suite, testNttBatch))
-	s.Run("TestGetRootOfUnity", test_helpers.TestWrapper(&s.Suite, testGetRootOfUnity))
+	s.Run("TestNTTGetDefaultConfig", testWrapper(&s.Suite, testNTTGetDefaultConfig))
+	s.Run("TestNTT", testWrapper(&s.Suite, testNtt))
+	s.Run("TestNttDeviceAsync", testWrapper(&s.Suite, testNttDeviceAsync))
+	s.Run("TestNttBatch", testWrapper(&s.Suite, testNttBatch))
+	s.Run("TestGetRootOfUnity", testWrapper(&s.Suite, testGetRootOfUnity))
 }
 
 func TestSuiteNTT(t *testing.T) {

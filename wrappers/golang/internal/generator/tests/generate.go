@@ -22,7 +22,4 @@ func Generate(baseDir, field, fieldPrefix, gnarkImport string, supportsNTT bool)
 	}
 
 	generator.GenerateFile("tests/templates/main_test.go.tmpl", path.Join(baseDir, "tests"), "", "", data)
-	if supportsNTT {
-		generator.GenerateFile("tests/templates/main_ntt_support_test.go.tmpl", path.Join(baseDir, "tests"), "", "", data)
-	}
 }

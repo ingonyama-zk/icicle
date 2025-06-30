@@ -6,29 +6,23 @@ namespace icicle {
   namespace balanced_decomposition {
 
     /**
-     * @brief Balanced base-b decomposition for elements in Zq or polynomial rings over Zq.
+     * @brief Compute the number of digits required to represent any element
+     *        using balanced base-b decomposition.
      *
-     * Supported types:
-     *   - Scalar rings: Zq
-     *   - Polynomial rings: Rq = Zq[x]/(X^d + 1), modeled as PolynomialRing<Zq, d>
+     * Supports both:
+     *   - Scalar rings (e.g., Zq)
+     *   - Polynomial rings (e.g., Rq = Zq[x]/(X^d + 1), modeled as PolynomialRing<Zq, d>)
      *
-     * In all cases, the layout is **digit-major**:
-     *   - The output is organized as a matrix where each row corresponds to a digit index.
-     *   - Each row contains all elements’ values at that digit position (e.g., r₀, then r₁, etc.).
-     */
-
-    /**
-     * @brief Compute the number of digits required to represent any Zq element using balanced base-b decomposition.
+     * The number of digits is computed per scalar coefficient (Zq), and applies
+     * equally to each coefficient in a polynomial.
      *
-     * The result applies per scalar coefficient and extends naturally to polynomials by applying it to each
-     * coefficient.
+     * Each Zq element is represented using digits in the range (-b/2, b/2], and
+     * an extra digit is added when base > 2 to handle carry propagation.
      *
-     * Each Zq element is represented with digits in the range (-b/2, b/2], and an extra digit is added when `base > 2`
-     * to account for possible carry propagation.
-     *
-     * @tparam T    Element type.
+     * @tparam T    Element type. Must define `T::TLC == 2` and `T::get_modulus()`.
+     *              Typically `Zq` or `PolynomialRing<Zq, d>`.
      * @param base  Decomposition base b (must be ≥ 2).
-     * @return      Number of digits required to represent a single Zq element in balanced base-b form.
+     * @return      Number of balanced digits required to represent any element of type T.
      */
     template <typename T>
     static constexpr inline uint32_t compute_nof_digits(uint32_t base)
@@ -47,38 +41,35 @@ namespace icicle {
     }
 
     /**
-     * @brief Decompose a vector of elements into balanced base-b digits.
+     * @brief Decomposes elements into balanced base-b digits.
      *
-     * For Zq scalars:
+     * For scalars (T = Zq):
      *   Each element x ∈ Zq is decomposed as:
      *
      *     x ≡ r₀ + b·r₁ + b²·r₂ + ... + b^{t−1}·r_{t−1} mod q
      *
-     *   The output is digit-major: all r₀ values first, then r₁, and so on.
-     *   This results in a flat array of `t × input_size` Zq values.
+     *   The output layout is **element-major**, meaning all t digits of the first
+     *   element are stored consecutively, followed by the digits of the second element, and so on.
      *
-     * For PolynomialRing<Zq, d>:
-     *   The input is a vector of `input_size` polynomials P(x) = ∑ aᵢ·xⁱ,
-     *   where each coefficient aᵢ ∈ Zq.
+     * For polynomials (T = PolynomialRing<Zq, d>):
+     *   Each coefficient a_j ∈ Zq of a polynomial P(x) is decomposed independently into t digits:
      *
-     *   Each coefficient is decomposed independently:
+     *     a_j = r_{j,0} + b·r_{j,1} + ... + b^{t−1}·r_{j,t−1}
      *
-     *     aᵢ = rᵢ₀ + b·rᵢ₁ + ... + b^{t−1}·rᵢ_{t−1}
+     *   The result is a sequence of t polynomials:
      *
-     *   The output is a vector of `t × input_size` polynomials.
-     *   Each group of `input_size` polynomials corresponds to one digit:
-     *     - Rows-0 contains digit-0 polynomials (P₀(x) for all inputs)
-     *     - Rows-1 contains digit-1 polynomials (P₁(x)), etc.
+     *     P(x) = P₀(x) + b·P₁(x) + b²·P₂(x) + ... + b^{t−1}·P_{t−1}(x)
      *
-     *   This layout is **digit-major**, meaning each row encodes the same digit across all input polynomials.
+     *   The output layout is **digit-major**, meaning all first digits of all input polynomials
+     *   come first (as polynomials), followed by all second digits, and so on.
      *
      * @tparam T             Element type (`Zq` or `PolynomialRing<Zq, d>`)
      * @param input          Pointer to input elements.
-     * @param input_size     Number of input elements (Zq scalars or polynomials).
-     * @param base           Decomposition base `b` (must be ≥ 2).
-     * @param config         Device execution and memory layout settings.
-     * @param output         Output buffer: must hold `input_size × digits` elements.
-     * @param output_size    Number of output elements (should be `input_size × digits`).
+     * @param input_size     Number of input elements.
+     * @param base           Decomposition base `b`.
+     * @param config         Vectorization and device configuration.
+     * @param output         Output buffer (must hold input_size × digits elements).
+     * @param output_size    Number of output elements.
      * @return               eIcicleError indicating success or failure.
      */
     template <typename T>
@@ -86,19 +77,25 @@ namespace icicle {
       const T* input, size_t input_size, uint32_t base, const VecOpsConfig& config, T* output, size_t output_size);
 
     /**
-     * @brief Recompose elements from their balanced base-b digit representation.
+     * @brief Recomposes elements from balanced base-b digits.
      *
-     * Reconstructs each element x ∈ T as:
+     * For each element x ∈ T, reconstructs:
      *
-     *     x = ∑ rᵢ · bⁱ mod q
+     *     x = ∑ r_i · b^i mod q
      *
-     * Input layout must be digit-major (i.e., match the layout from `decompose()`).
+     * For PolynomialRing<Zq, d>, this applies to each coefficient independently.
+     *
+     * Input layout expectations:
+     *   - For scalars (Zq): the digits are stored element-major (each element's digits in sequence).
+     *   - For polynomials: the digits are stored digit-major (all P₀(x), then all P₁(x), ...).
+     *
+     * The layout must match that produced by `decompose()`.
      *
      * @tparam T             Element type (`Zq` or `PolynomialRing<Zq, d>`)
-     * @param input          Pointer to input digits (Zq or polynomials), in digit-major order.
-     * @param input_size     Total number of input digits (should be `output_size × digits`).
-     * @param base           Decomposition base `b`.
-     * @param config         Execution configuration.
+     * @param input          Pointer to flattened input digits.
+     * @param input_size     Number of input elements (digits × input_size).
+     * @param base           The base `b` used in decomposition.
+     * @param config         Vectorization and device configuration.
      * @param output         Output buffer to store recomposed elements.
      * @param output_size    Number of elements to reconstruct.
      * @return               eIcicleError indicating success or failure.

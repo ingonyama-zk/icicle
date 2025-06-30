@@ -128,9 +128,9 @@ type PoseidonTestSuite struct {
 }
 
 func (s *PoseidonTestSuite) TestPoseidon() {
-	s.Run("TestPoseidonHash", test_helpers.TestWrapper(&s.Suite, testPoseidonHash))
-	s.Run("TestPoseidonHashSponge", test_helpers.TestWrapper(&s.Suite, testPoseidonHashSponge))
-	s.Run("TestPoseidonHashTree", test_helpers.TestWrapper(&s.Suite, testPoseidonHashTree))
+	s.Run("TestPoseidonHash", testWrapper(&s.Suite, testPoseidonHash))
+	s.Run("TestPoseidonHashSponge", testWrapper(&s.Suite, testPoseidonHashSponge))
+	s.Run("TestPoseidonHashTree", testWrapper(&s.Suite, testPoseidonHashTree))
 }
 
 func TestSuitePoseidon(t *testing.T) {

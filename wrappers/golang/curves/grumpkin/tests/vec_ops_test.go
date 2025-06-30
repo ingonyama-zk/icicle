@@ -124,10 +124,10 @@ type GrumpkinVecOpsTestSuite struct {
 }
 
 func (s *GrumpkinVecOpsTestSuite) TestGrumpkinVecOps() {
-	s.Run("TestGrumpkinVecOps", test_helpers.TestWrapper(&s.Suite, testGrumpkinVecOps))
-	s.Run("TestGrumpkinTranspose", test_helpers.TestWrapper(&s.Suite, testGrumpkinTranspose))
-	s.Run("TestGrumpkinSum", test_helpers.TestWrapper(&s.Suite, testGrumpkinSum))
-	s.Run("TestGrumpkinProduct", test_helpers.TestWrapper(&s.Suite, testGrumpkinProduct))
+	s.Run("TestGrumpkinVecOps", testWrapper(&s.Suite, testGrumpkinVecOps))
+	s.Run("TestGrumpkinTranspose", testWrapper(&s.Suite, testGrumpkinTranspose))
+	s.Run("TestGrumpkinSum", testWrapper(&s.Suite, testGrumpkinSum))
+	s.Run("TestGrumpkinProduct", testWrapper(&s.Suite, testGrumpkinProduct))
 }
 
 func TestSuiteGrumpkinVecOps(t *testing.T) {

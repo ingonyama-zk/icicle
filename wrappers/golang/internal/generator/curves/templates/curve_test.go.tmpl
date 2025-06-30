@@ -123,13 +123,13 @@ type {{.CurvePrefix}}CurveTestSuite struct {
 }
 
 func (s *{{.CurvePrefix}}CurveTestSuite) Test{{.CurvePrefix}}Curve() {
-	s.Run("Test{{.CurvePrefix}}AffineZero", test_helpers.TestWrapper(&s.Suite, test{{.CurvePrefix}}AffineZero))
-	s.Run("Test{{.CurvePrefix}}AffineFromLimbs", test_helpers.TestWrapper(&s.Suite, test{{.CurvePrefix}}AffineFromLimbs))
-	s.Run("Test{{.CurvePrefix}}AffineToProjective", test_helpers.TestWrapper(&s.Suite, test{{.CurvePrefix}}AffineToProjective))
-	s.Run("Test{{.CurvePrefix}}ProjectiveZero", test_helpers.TestWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveZero))
-	s.Run("Test{{.CurvePrefix}}ProjectiveFromLimbs", test_helpers.TestWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveFromLimbs))
-	s.Run("Test{{.CurvePrefix}}ProjectiveFromAffine", test_helpers.TestWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveFromAffine))
-	s.Run("Test{{.CurvePrefix}}ProjectiveArithmetic", test_helpers.TestWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveArithmetic))
+	s.Run("Test{{.CurvePrefix}}AffineZero", testWrapper(&s.Suite, test{{.CurvePrefix}}AffineZero))
+	s.Run("Test{{.CurvePrefix}}AffineFromLimbs", testWrapper(&s.Suite, test{{.CurvePrefix}}AffineFromLimbs))
+	s.Run("Test{{.CurvePrefix}}AffineToProjective", testWrapper(&s.Suite, test{{.CurvePrefix}}AffineToProjective))
+	s.Run("Test{{.CurvePrefix}}ProjectiveZero", testWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveZero))
+	s.Run("Test{{.CurvePrefix}}ProjectiveFromLimbs", testWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveFromLimbs))
+	s.Run("Test{{.CurvePrefix}}ProjectiveFromAffine", testWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveFromAffine))
+	s.Run("Test{{.CurvePrefix}}ProjectiveArithmetic", testWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveArithmetic))
 }
 
 func TestSuite{{.CurvePrefix}}Curve(t *testing.T) {

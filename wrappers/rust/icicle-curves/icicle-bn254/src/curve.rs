@@ -32,7 +32,6 @@ impl_curve!(
 #[cfg(test)]
 mod tests {
     use super::{CurveCfg, ScalarField, BASE_LIMBS};
-    #[cfg(feature = "g2")]
     use super::{G2CurveCfg, G2_BASE_LIMBS};
     use icicle_core::curve::Curve;
     use icicle_core::tests::*;

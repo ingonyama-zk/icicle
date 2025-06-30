@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "@headlessui/react": "^2.2.4",
-    "@heroicons/react": "^2.2.0",
-    "papaparse": "^5.5.3",
-    "react-medium-image-zoom": "^5.2.14"
-  }
-}
