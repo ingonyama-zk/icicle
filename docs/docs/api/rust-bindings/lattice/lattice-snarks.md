@@ -1,3 +1,7 @@
+// TODO: verify examples compile and work correctly before merging!
+
+// TODO: replace labrador with the final name that
+
 # Lattice-Based SNARKs — Rust API Overview
 
 ## Overview
@@ -7,27 +11,40 @@ ICICLE provides a modular, high-performance Rust API for lattice-based SNARK con
 The design is generic over ring constructions, enabling flexible use of different `Zq` and `Rq` instantiations for cryptographic protocols like **Labrador**.
 
 
-TODO link to rust example
-
 ## Key Capabilities
 
-- **Core Types**
-  - `Zq`: Integer rings modulo \( q \)
-  - `Rq` / `Tq`: Polynomial rings `Zq[X]/(Xⁿ + 1)`
+### 🧮 Core Types
+  - **`Zq`** — Integer rings modulo \( q \)
+  - **`Rq` / `Tq`** — Polynomial rings `Zq[X]/(Xⁿ + 1)`
+    - `Rq` refers to the coefficient (standard) representation.
+    - `Tq` refers to the evaluation (NTT-transformed) representation.
+    - In ICICLE, both share a single unified trait.
 
-- **Algebraic Operations**
-  - Number-Theoretic Transforms (NTT)
-  - Matrix multiplication and transpose
-  - Balanced base decomposition
-  - JL projection
+### ⚙️ Supported Operations
+- **Negacyclic Number-Theoretic Transforms (NTT)**  
+  For fast polynomial multiplication in `Tq`
+- **Matrix Operations**  
+  Matrix multiplication and transpose
+- **Balanced Base Decomposition**  
+  Represent elements in base-`b` with digits in `(-b/2, b/2]`
+- **Johnson–Lindenstrauss (JL) Projection**  
+  Randomized projection with reproducible seeds
+- **Vector Operations**  
+  Elementwise arithmetic, sum-reduction, scalar ops
+- **Norm Computation**  
+  ℓ₂ and ℓ∞ norms with bound checking
+- **Random Vector Sampling**  
+  Efficient, seedable generation of vectors over `Zq` or `Rq`
+- **Challenge Sampling**  
+  Rejection sampling of polynomials satisfying operator norm bounds
 
-- **Vector and Ring Operations**
-  - Elementwise addition, subtraction, multiplication, sum-reduce
 
-- **Cryptographic Primitives**
-  - Norm computation (ℓ₂ and operator norm)
-  - Random vector sampling
-  - Challenge sampling with rejection based on operator norm
+For example, the **Labrador** protocol builds on this foundation to implement a lattice-based zk-SNARK with modular components and device acceleration.
+
+## Example
+
+See the full Rust example here:  
+[**github.com/ingonyama-zk/icicle/tree/main/examples/rust/lattice-snarks**](https://github.com/ingonyama-zk/icicle/tree/main/examples/rust/lattice-snarks)
 
 ## Core Types
 
@@ -44,8 +61,6 @@ q = P_babybear × P_koalabear
   = 4289678649214369793
 ```
 
-// TODO: verify examples compile and work correctly before merging!
-// TODO: replace labrador with the final name that
 
 ```rust
 use icicle_labrador::ring::{ScalarRing as Zq};
