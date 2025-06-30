@@ -16,7 +16,7 @@ static devices: [&str; 2] = ["main", "ref"];
 //static devices: [&str; 1] = ["ref"];
 //static devices: [&str; 1] = ["main"];
 
-const LOG_N: std::ops::Range<i32> = 15..18;
+const LOG_N: std::ops::Range<i32> = 15..21;
 const LOG_R: std::ops::Range<i32> = 8..10;
 
 const ON_DEVICE: bool = true;
@@ -98,16 +98,15 @@ fn benchmark<P: PolynomialRing + MatrixOps<P> + GenerateRandom<P>>(
     }
 }
 
-/// Generate benchmark functions that iterate over N and R
+/// Generate benchmark functions that iterate over N with R = ceil(N/2)
 macro_rules! bench_dual {
     ($f:ident, $id:literal, $n_range:expr, $r_range:expr, $ra:tt, $ca:tt, $rb:tt, $cb:tt) => {
         fn $f<P: PolynomialRing + MatrixOps<P> + GenerateRandom<P>>(c: &mut Criterion) {
             initialize();
             for log_n in $n_range {
-                for log_r in $r_range {
-                    let (N, R) = (1 << log_n, 1 << log_r);
-                    benchmark::<P>(c, $id, N, Some(R), bench_dual!(@eval $ra, N, R), bench_dual!(@eval $ca, N, R), bench_dual!(@eval $rb, N, R), bench_dual!(@eval $cb, N, R));
-                }
+                let N = 1 << log_n;
+                let R = (N + 1) / 2; // ceil(N/2)
+                benchmark::<P>(c, $id, N, Some(R), bench_dual!(@eval $ra, N, R), bench_dual!(@eval $ca, N, R), bench_dual!(@eval $rb, N, R), bench_dual!(@eval $cb, N, R));
             }
         }
     };
