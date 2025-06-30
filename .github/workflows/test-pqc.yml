@@ -37,7 +37,7 @@ on:
 
 jobs:
   test-pqc-ml-kem:
-    name: Test PQC ML-KEM on ${{ inputs.backend }}
+    name: Test PQC ML-KEM
     runs-on: ${{ fromJson(inputs.runner) }}
     steps:
       - name: Checkout Repo
@@ -55,7 +55,6 @@ jobs:
         working-directory: ./icicle/build/tests
         if: ${{ !inputs.enable_conditional_testing || (inputs.changed_pqc == 'true' && (inputs.changed_cpp == 'true' || inputs.changed_cpu_backend == 'true' || inputs.changed_backend_api == 'true')) }}
         run: |
-          export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
           ctest --output-on-failure -R "KyberTest"
 
       - name: Run Rust ML-KEM Tests
