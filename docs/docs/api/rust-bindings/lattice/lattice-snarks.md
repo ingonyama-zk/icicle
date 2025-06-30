@@ -574,7 +574,6 @@ The API supports:
 - ℓ∞ norm checking (maximum absolute value)
 - Batch support
 
----
 
 ### Main Imports
 
@@ -587,6 +586,15 @@ use icicle_core::norm::{
 ```
 
 ### API
+
+```rust
+pub enum NormType {
+    /// ℓ₂ norm: sqrt(sum of squares)
+    L2,
+    /// ℓ∞ norm: max absolute value
+    LInfinity,
+}
+```
 
 ```rust
 /// Checks whether the norm of a vector (or batch of vectors) is within a given bound.
@@ -607,28 +615,24 @@ pub fn check_norm_bound<T: FieldImpl>(
     cfg: &VecOpsConfig,
     output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
 ) -> Result<(), eIcicleError>;
-
-pub enum NormType {
-    /// ℓ₂ norm: sqrt(sum of squares)
-    L2,
-    /// ℓ∞ norm: max absolute value
-    LInfinity,
-}
 ```
 
 ### Example
 
 ```rust
-use icicle_core::norm::{check_norm_bound, NormType};
+use icicle_core::norm;
+use icicle_core::traits::FieldImpl;
 use icicle_core::vec_ops::VecOpsConfig;
+use icicle_labrador::ring::ScalarRing as Zq;
 use icicle_runtime::memory::HostSlice;
-use icicle_labrador::ScalarRing as Zq;
 
 let size = 1024;
 let batch = 4;
 let bound = 1000;
 
-let input = Zq::generate_random(size);
+let input: Vec<Zq> = (0..size)
+    .map(Zq::from_u32)
+    .collect();
 let mut output = vec![false; batch];
 
 let cfg = VecOpsConfig::default();
@@ -636,13 +640,14 @@ let cfg = VecOpsConfig::default();
 // Interpretation:
 // If output has 4 elements, the input is split into 4 sub-vectors (256 each).
 // Norm is computed per sub-vector.
-check_norm_bound(
+norm::check_norm_bound(
     HostSlice::from_slice(&input),
-    NormType::L2, // or NormType::LInfinity
+    norm::NormType::L2, // or NormType::LInfinity
     bound,
     &cfg,
     HostSlice::from_mut_slice(&mut output),
-).expect("Norm check failed");
+)
+.expect("Norm check failed");
 
 // Output[i] == true indicates that sub-vector i passed the norm bound.
 ```
