@@ -63,19 +63,23 @@ q = P_babybear × P_koalabear
 
 
 ```rust
-use icicle_labrador::ring::{ScalarRing as Zq};
 use icicle_core::traits::{FieldImpl, GenerateRandom};
+use icicle_labrador::ring::ScalarRing as Zq;
 
 // Generate random Zq elements
+let size = 100;
 let zq_random: Vec<Zq> = Zq::generate_random(size);
+
 // Generate zeros Zq elements
 let zq_zeros: Vec<Zq> = vec![Zq::zero(); size];
+
 // Generate elements from arbitrary bytes
 let element_size = std::mem::size_of::<Zq>();
-let zq_from_bytes = user_bytes
+let some_bytes: Vec<u8> = vec![0; element_size * size];
+let zq_from_bytes: Vec<Zq> = some_bytes
     .chunks(element_size)
     .map(Zq::from_bytes_le)
-    .collect()
+    .collect();
 ```
 
 ### Polynomial Ring: Rq
@@ -83,24 +87,24 @@ let zq_from_bytes = user_bytes
 The polynomial ring `Rq = Zq[X]/(X^d + 1)` represents polynomials of degree less than `d` with coefficients in `Zq`.
 
 ```rust
-use icicle_labrador::polynomial_ring::PolyRing;
-use icicle_core::traits::GenerateRandom;
-
-// Polynomial ring Rq = Zq[X]/(X^d + 1) where d = 64
-type PolyRing = icicle_labrador::polynomial_ring::PolyRing;
-type Rq = PolyRing;  // Alias for coefficient domain
-type Tq = PolyRing;  // Alias for NTT domain
+use icicle_core::polynomial_ring::PolynomialRing; // trait
+use icicle_core::traits::{FieldImpl, GenerateRandom};
+use icicle_labrador::polynomial_ring::PolyRing as Rq; // concrete type
+use icicle_labrador::ring::ScalarRing as Zq;
 
 // Generate random polynomials
 let size = 8;
-let rq_random: Vec<PolyRing> = PolyRing::generate_random(size);
-let rq_zeros: Vec<PolyRing> = vec![PolyRing::zero(); size];
+let rq_random: Vec<Rq> = Rq::generate_random(size);
+let rq_zeros: Vec<Rq> = vec![Rq::zero(); size];
 
 // Convert Zq chunks to Rq polynomials
-let rq_from_slice: Vec<PolyRing> = zq_random
-    .chunks(PolyRing::DEGREE)
-    .map(PolyRing::from_slice)
+let zq_zeros: Vec<Zq> = vec![Zq::zero(); size * Rq::DEGREE];
+let rq_from_slice: Vec<Rq> = zq_zeros
+    .chunks(Rq::DEGREE)
+    .map(Rq::from_slice)
     .collect();
+
+// Or from arbitrary bytes
 ```
 
 Many ICICLE APIs are defined over scalar rings like Zq, but can be applied to polynomial ring vectors (Rq) by flattening the polynomials into a contiguous Zq slice. This is useful for operations like JL projection.
@@ -108,6 +112,9 @@ Many ICICLE APIs are defined over scalar rings like Zq, but can be applied to po
 To enable this, ICICLE provides utilities to reinterpret slices of polynomials as slices of their base field elements, using the HostOrDeviceSlice trait abstraction.
 
 ```rust
+/// # Source
+/// [`icicle_runtime::memory`]
+/// 
 /// Reinterprets a slice of polynomials as a flat slice of their base field elements.
 ///
 /// This enables treating `&[P]` (e.g. Rq) as `&[P::Base]` (e.g. Zq) for scalar operations.
@@ -144,7 +151,7 @@ where
 ```
 
 :::note
-These helpers use the general reinterpret_slice utility, which reinterprets memory across types when their sizes and alignments match.
+These helpers use the general **reinterpret_slice** utility, which reinterprets memory across types when their sizes and alignments match.
 :::
 
 
@@ -152,8 +159,11 @@ These helpers use the general reinterpret_slice utility, which reinterprets memo
 
 ```rust
 use icicle_core::polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut};
+use icicle_core::traits::GenerateRandom;
+use icicle_labrador::polynomial_ring::PolyRing as Rq;
+use icicle_runtime::memory::HostSlice; // concrete type
 
-let polynomials = P::generate_random(5);
+let polynomials = Rq::generate_random(5);
 let poly_slice = HostSlice::from_slice(&polynomials);
 
 // Flatten into a Zq slice (5 × DEGREE elements)
@@ -183,7 +193,7 @@ use icicle_core::negacyclic_ntt::{
 };
 ```
 
-### API
+### NTT API
 
 ```rust
 /// Performs a negacyclic Number-Theoretic Transform (NTT) over a polynomial ring.
@@ -200,6 +210,10 @@ pub fn ntt<P: PolynomialRing + NegacyclicNtt<P>>(
 ) -> Result<(), eIcicleError> {
     P::ntt(input, dir, cfg, output)
 }
+```
+### Inplace NTT API
+
+```rust
 
 /// Performs an in-place negacyclic NTT over a polynomial ring.
 ///
@@ -220,24 +234,35 @@ pub fn ntt_inplace<P: PolynomialRing + NegacyclicNtt<P>>(
 ### Example:
 
 ```rust
-use icicle_labrador::PolyRing;
+use icicle_core::negacyclic_ntt::{
+    ntt_inplace,         // In-place NTT wrapper
+    NTTDir,              // Transform direction (Forward or Inverse)
+    NegacyclicNttConfig, // Configuration for backend/device/async
+};
+use icicle_core::traits::GenerateRandom;
+use icicle_labrador::polynomial_ring::PolyRing;
+use icicle_runtime::memory::{DeviceVec, HostSlice};
+
 // Generate random input on the host
-let input = PolyRing::generate_random(size); 
+let size = 16;
+let input = PolyRing::generate_random(size);
 
 // Allocate and transfer to device memory
-let mut device_input = DeviceVec::<PolyRing>::device_malloc(size)?;
-device_input.copy_from_host(HostSlice::from_slice(&input))?;
+let mut device_input = DeviceVec::<PolyRing>::device_malloc(size).expect("malloc failed");
+device_input
+    .copy_from_host(HostSlice::from_slice(&input))
+    .expect("copy failed");
 
 // Compute in-place (or out of place)
-let config = NegacyclicNttConfig::default();    
-negacyclic_ntt::ntt_inplace(&mut device_input, NTTDir::kForward, &config);    
+let config = NegacyclicNttConfig::default();
+ntt_inplace(&mut device_input, NTTDir::kForward, &config).expect("ntt failed"); 
 ```
 
 ## Matrix Operations
 
 ### Matrix Multiplication and Transpose over Ring Elements
 
-ICICLE provides generic APIs for performing matrix operations over ring elements such as `Zq` and `PolyRing`.
+ICICLE provides generic APIs for performing matrix operations over Polynomial rings.
 
 Supported operations include:
 
@@ -245,8 +270,6 @@ Supported operations include:
 - Matrix transposition (row-major input)
 
 These are useful for vector dot-products, Ajtai-style commitments, and other algebraic primitives in lattice-based SNARKs.
-
----
 
 ### Main Imports
 
@@ -301,32 +324,41 @@ pub fn matrix_transpose<T>(
 ### Example
 
 ```rust
-use icicle_labrador::PolyRing;
-use icicle_core::matrix_ops::{matmul, matrix_transpose, VecOpsConfig};
-use icicle_runtime::memory::{DeviceVec, HostSlice};
+    use icicle_core::matrix_ops::{matmul, matrix_transpose, VecOpsConfig};
+    use icicle_core::traits::GenerateRandom;
+    use icicle_labrador::polynomial_ring::PolyRing;
+    use icicle_runtime::memory::{DeviceVec, HostSlice};
 
-let n = 8;
-let m = 64;
-let cfg = VecOpsConfig::default();
+    let n = 8;
+    let m = 64;
+    let cfg = VecOpsConfig::default();
 
-// Generate a random matrix A ∈ [n × m] on the host (row-major layout)
-let host_a = PolyRing::generate_random((n * m) as usize);
+    // Generate a random matrix A ∈ [n × m] on the host (row-major layout)
+    let host_a = PolyRing::generate_random((n * m) as usize);
 
-// Allocate device buffer for Aᵗ ∈ [m × n]
-let mut device_a_transposed = DeviceVec::<PolyRing>::device_malloc((n * m) as usize)
-    .expect("Failed to allocate transpose output");
+    // Allocate device buffer for Aᵗ ∈ [m × n]
+    let mut device_a_transposed =
+        DeviceVec::<PolyRing>::device_malloc((n * m) as usize).expect("Failed to allocate transpose output");
 
-// Transpose Aᵗ = transpose(A) (from host memory to device memory)
-matrix_transpose(HostSlice::from_slice(&host_a), n, m, &cfg, &mut device_a_transposed)
-    .expect("Transpose failed");
+    // Transpose Aᵗ = transpose(A) (from host memory to device memory)
+    matrix_transpose(HostSlice::from_slice(&host_a), n, m, &cfg, &mut device_a_transposed).expect("Transpose failed");
 
-// Allocate output buffer for (Aᵗ)A ∈ [m × m]
-let mut device_a_transposed_a = DeviceVec::<PolyRing>::device_malloc((m * m) as usize)
-    .expect("Failed to allocate output matrix");
+    // Allocate output buffer for (Aᵗ)A ∈ [m × m]
+    let mut device_a_transposed_a =
+        DeviceVec::<PolyRing>::device_malloc((m * m) as usize).expect("Failed to allocate output matrix");
 
-// Compute (Aᵗ)A
-// Note that one matrix is on host memory and the other on device memory
-matmul(&device_a_transposed, m, n, HostSlice::from_slice(&host_a), n, m, &cfg, &mut device_a_transposed_a)
+    // Compute (Aᵗ)A
+    // Note that one matrix is on host memory and the other on device memory
+    matmul(
+        &device_a_transposed,
+        m,
+        n,
+        HostSlice::from_slice(&host_a),
+        n,
+        m,
+        &cfg,
+        &mut device_a_transposed_a,
+    )
     .expect("Matmul failed");
 ```
 
