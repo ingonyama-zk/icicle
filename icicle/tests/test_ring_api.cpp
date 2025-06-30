@@ -1363,3 +1363,42 @@ TEST_F(RingTestBase, RandomSampling)
   test_random_sampling(true);
   test_random_sampling(false);
 }
+
+#include "icicle/operator_norm.h"
+TEST_F(RingTestBase, ComplexFFT_Simple)
+{
+  using namespace opnorm_cpu;
+  Poly poly{};
+  for (size_t i = 0; i < N; ++i)
+    poly[i] = i * 100;
+
+  uint64_t opnorm = operator_norm(poly); // returns u64 now
+  ASSERT_LT(opnorm, 152851);             // Python computed 152849.98 but losing precision with f32
+  std::cout << "Operator norm (simple): " << opnorm << "\n";
+}
+
+TEST_F(RingTestBase, ComplexFFT_Alternating)
+{
+  using namespace opnorm_cpu;
+  Poly poly{};
+  for (size_t i = 0; i < N; ++i)
+    poly[i] = (i % 2 == 0) ? 5000 : 0;
+
+  uint64_t opnorm = operator_norm(poly); // returns u64
+  ASSERT_LT(opnorm, 101902);             // Python computed '101900.08' but losing precision with f32
+  std::cout << "Operator norm (alternating): " << opnorm << "\n";
+}
+
+// TODO Roman: make this test pass by balancing [0,q) --> (-q/2,q/2]. See Python for reference
+TEST_F(RingTestBase, ComplexFFT_QMinus2X)
+{
+  using namespace opnorm_cpu;
+  constexpr uint64_t q = (1ULL << 62) - 57;
+
+  Poly poly{};
+  poly[1] = q - 2; // Balanced as -2 in operator_norm()
+
+  uint64_t opnorm = operator_norm(poly);
+  ASSERT_EQ(opnorm, 2.1); // FFT of -2*X has magnitude 2 everywhere
+  std::cout << "Operator norm ((q - 2)*X): " << opnorm << "\n";
+}
