@@ -124,10 +124,10 @@ type BabybearVecOpsTestSuite struct {
 }
 
 func (s *BabybearVecOpsTestSuite) TestBabybearVecOps() {
-	s.Run("TestBabybearVecOps", test_helpers.TestWrapper(&s.Suite, testBabybearVecOps))
-	s.Run("TestBabybearTranspose", test_helpers.TestWrapper(&s.Suite, testBabybearTranspose))
-	s.Run("TestBabybearSum", test_helpers.TestWrapper(&s.Suite, testBabybearSum))
-	s.Run("TestBabybearProduct", test_helpers.TestWrapper(&s.Suite, testBabybearProduct))
+	s.Run("TestBabybearVecOps", testWrapper(&s.Suite, testBabybearVecOps))
+	s.Run("TestBabybearTranspose", testWrapper(&s.Suite, testBabybearTranspose))
+	s.Run("TestBabybearSum", testWrapper(&s.Suite, testBabybearSum))
+	s.Run("TestBabybearProduct", testWrapper(&s.Suite, testBabybearProduct))
 }
 
 func TestSuiteBabybearVecOps(t *testing.T) {

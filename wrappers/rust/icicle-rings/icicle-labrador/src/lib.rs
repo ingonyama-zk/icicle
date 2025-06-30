@@ -1,12 +1,10 @@
 pub mod balanced_decomposition;
 pub mod jl_projection;
-pub mod matrix_ops;
 pub mod norm;
 #[cfg(feature = "ntt")]
 pub mod ntt;
 pub mod polynomial_ring;
 pub mod program;
-pub mod random_sampling;
 pub mod ring;
 pub mod rns;
 pub mod symbol;

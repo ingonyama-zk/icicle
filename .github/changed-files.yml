@@ -18,23 +18,18 @@ cpp-base: &cpp-base
   - icicle/src/matrix_ops.cpp
   - icicle/include/icicle/matrix_ops.h
   - icicle/include/icicle/backend/vec_ops_backend.h
-  - icicle/tests/test_mod_arithmetic_api.cpp
-  - icicle/tests/test_matrix_api.h
 cpp-field: &cpp-field
   - *cpp-base
   - icicle/src/fields/**/*
   - icicle/include/icicle/fields/**/*
-  - icicle/tests/test_field_api.cpp
 cpp-curve: &cpp-curve
   - *cpp-field
   - icicle/src/curves/**/*
   - icicle/include/icicle/curves/**/*
-  - icicle/tests/test_curve_api.cpp
 cpp-ring: &cpp-ring
   - *cpp-base
   - icicle/src/rings/**/*
   - icicle/include/icicle/rings/**/*
-  - icicle/tests/test_ring_api.cpp
   - icicle/src/balanced_decomposition.cpp
   - icicle/include/icicle/balanced_decomposition.h
   - icicle/src/jl_projection.cpp
@@ -45,7 +40,6 @@ cpp-ring: &cpp-ring
 cpp-pqc: &cpp-pqc
   - icicle/src/pqc/**/*
   - icicle/include/icicle/pqc/**/*
-  - icicle/tests/test_pqc_api.cpp
 
 # C/C++ feature-specific file patterns
 cpp-msm: &cpp-msm
@@ -57,7 +51,6 @@ cpp-ntt: &cpp-ntt
   - icicle/src/ntt.cpp
   - icicle/include/icicle/ntt.h
   - icicle/src/polynomials/**/*
-  - icicle/tests/test_polynomial_api.cpp
   - icicle/include/icicle/polynomials/**/*
   - icicle/include/icicle/backend/ntt_backend.h
   - icicle/include/icicle/backend/ntt_config.h
@@ -95,7 +88,6 @@ cpp-hash: &cpp-hash
   - icicle/include/icicle/hash/**/*
   - icicle/include/icicle/backend/hash/**/*
   - icicle/include/icicle/backend/merkle/**/*
-  - icicle/tests/test_hash_api.cpp
   - "!icicle/src/hash/poseidon*"
   - "!icicle/include/icicle/hash/poseidon*"
   - "!icicle/include/icicle/backend/hash/poseidon_backend.h"
@@ -105,16 +97,24 @@ cpp-hash: &cpp-hash
 cpp-runtime: &cpp-runtime
   - icicle/src/runtime.cpp
   - icicle/include/icicle/runtime.h
-  - icicle/tests/test_device_api.cpp
 
 # Rust file feature mappings
 rust-program: &rust-program
-  - wrappers/rust/**/program/**/*.rs
-  - wrappers/rust/**/symbol/**/*.rs
+  - wrappers/rust/icicle-core/src/program/**/*.rs
+  - wrappers/rust/icicle-core/src/symbol/**/*.rs
+  - wrappers/rust/icicle-curves/**/src/program/**/*.rs
+  - wrappers/rust/icicle-fields/**/src/program/**/*.rs
+  - wrappers/rust/icicle-rings/**/src/program/**/*.rs
+  - wrappers/rust/icicle-curves/**/src/symbol/**/*.rs
+  - wrappers/rust/icicle-fields/**/src/symbol/**/*.rs
+  - wrappers/rust/icicle-rings/**/src/symbol/**/*.rs
 rust-base: &rust-base
   - *rust-program
-  - wrappers/rust/**/vec_ops/**/*.rs
-  - wrappers/rust/**/matrix_ops/**/*.rs
+  - wrappers/rust/icicle-core/src/vec_ops/**/*.rs
+  - wrappers/rust/icicle-core/src/vec_ops/**/*.rs
+  - wrappers/rust/icicle-curves/**/src/vec_ops/**/*.rs
+  - wrappers/rust/icicle-fields/**/src/vec_ops/**/*.rs
+  - wrappers/rust/icicle-rings/**/src/vec_ops/**/*.rs
 rust-field: &rust-field
   - *rust-base
   - wrappers/rust/icicle-core/src/field.rs
@@ -137,30 +137,44 @@ rust-pqc: &rust-pqc
 
 # Rust feature-specific file patterns
 rust-msm: &rust-msm
-  - wrappers/rust/**/msm/**/*.rs
+  - wrappers/rust/icicle-core/src/msm/**/*.rs
+  - wrappers/rust/icicle-curves/**/msm/**/*.rs
 rust-ntt: &rust-ntt
-  - wrappers/rust/**/ntt/**/*.rs
-  - wrappers/rust/**/polynomials/**/*.rs
+  - wrappers/rust/icicle-core/src/ntt/**/*.rs
+  - wrappers/rust/icicle-core/src/polynomials/**/*.rs
+  - wrappers/rust/icicle-curves/**/ntt/**/*.rs
+  - wrappers/rust/icicle-fields/**/ntt/**/*.rs
+  - wrappers/rust/icicle-rings/**/ntt/**/*.rs
 rust-ecntt: &rust-ecntt
-  - wrappers/rust/**/ecntt/**/*.rs
+  - wrappers/rust/icicle-core/src/ecntt/**/*.rs
+  - wrappers/rust/icicle-curves/**/ecntt/**/*.rs
 rust-fri: &rust-fri
-  - wrappers/rust/**/fri/**/*.rs
+  - wrappers/rust/icicle-core/src/fri/**/*.rs
+  - wrappers/rust/icicle-curves/**/fri/**/*.rs
+  - wrappers/rust/icicle-fields/**/fri/**/*.rs
 rust-sumcheck: &rust-sumcheck
   - *rust-program
-  - wrappers/rust/**/sumcheck/**/*.rs
+  - wrappers/rust/icicle-core/src/sumcheck/**/*.rs
+  - wrappers/rust/icicle-curves/**/sumcheck/**/*.rs
+  - wrappers/rust/icicle-fields/**/sumcheck/**/*.rs
 rust-pairing: &rust-pairing
-  - wrappers/rust/**/pairing/**/*.rs
+  - wrappers/rust/icicle-core/src/pairing/**/*.rs
+  - wrappers/rust/icicle-curves/**/pairing/**/*.rs
 rust-poseidon: &rust-poseidon
-  - wrappers/rust/**/poseidon/**/*.rs
+  - wrappers/rust/icicle-core/src/poseidon/**/*.rs
+  - wrappers/rust/icicle-curves/**/poseidon/**/*.rs
+  - wrappers/rust/icicle-fields/**/poseidon/**/*.rs
 rust-poseidon2: &rust-poseidon2
-  - wrappers/rust/**/poseidon2/**/*.rs
+  - wrappers/rust/icicle-core/src/poseidon2/**/*.rs
+  - wrappers/rust/icicle-curves/**/poseidon2/**/*.rs
+  - wrappers/rust/icicle-fields/**/poseidon2/**/*.rs
 rust-hash: &rust-hash
   - wrappers/rust/icicle-core/src/hash/**/*.rs
   - wrappers/rust/icicle-core/src/merkle/**/*.rs
   - wrappers/rust/icicle-hash/**/*.rs
 rust-runtime: &rust-runtime
   - wrappers/rust/icicle-runtime/**/*.rs
-
+  
 # Go file feature mappings
 go-program: &go-program
   - wrappers/golang/internal/generator/program/**/*.go
@@ -256,7 +270,7 @@ cpu-backend-curve: &cpu-backend-curve
 cpu-backend-ring: &cpu-backend-ring
   - icicle/backend/cpu/src/ring/**/*
 
-# CUDA-PQC backend
+# 
 cuda-pqc-backend: &cuda-pqc-backend
   - icicle/backend/cuda_pqc/**/*
   - '!icicle/backend/cuda_pqc/README.md'
@@ -327,7 +341,7 @@ curve:
   - *msm
   - *ecntt
   - *pairing
-
+  
 ring:
   - *cpp-ring
   - *rust-ring
@@ -360,11 +374,11 @@ cpp: &cpp
 
 rust:
   - *cpp
-  - wrappers/rust/**/*
+  - wrappers/rust
 
 go:
   - *cpp
-  - wrappers/golang/**/*
+  - wrappers/golang
   - '!wrappers/golang/README.md'
   - '!wrappers/golang/internal/generator/main.go'
   - '!wrappers/golang/internal/build-libs.go'

@@ -93,14 +93,14 @@ type BaseFieldTestSuite struct {
 }
 
 func (s *BaseFieldTestSuite) TestBaseField() {
-	s.Run("TestBaseFieldFromLimbs", test_helpers.TestWrapper(&s.Suite, testBaseFieldFromLimbs))
-	s.Run("TestBaseFieldGetLimbs", test_helpers.TestWrapper(&s.Suite, testBaseFieldGetLimbs))
-	s.Run("TestBaseFieldOne", test_helpers.TestWrapper(&s.Suite, testBaseFieldOne))
-	s.Run("TestBaseFieldZero", test_helpers.TestWrapper(&s.Suite, testBaseFieldZero))
-	s.Run("TestBaseFieldSize", test_helpers.TestWrapper(&s.Suite, testBaseFieldSize))
-	s.Run("TestBaseFieldAsPointer", test_helpers.TestWrapper(&s.Suite, testBaseFieldAsPointer))
-	s.Run("TestBaseFieldFromBytes", test_helpers.TestWrapper(&s.Suite, testBaseFieldFromBytes))
-	s.Run("TestBaseFieldToBytes", test_helpers.TestWrapper(&s.Suite, testBaseFieldToBytes))
+	s.Run("TestBaseFieldFromLimbs", testWrapper(&s.Suite, testBaseFieldFromLimbs))
+	s.Run("TestBaseFieldGetLimbs", testWrapper(&s.Suite, testBaseFieldGetLimbs))
+	s.Run("TestBaseFieldOne", testWrapper(&s.Suite, testBaseFieldOne))
+	s.Run("TestBaseFieldZero", testWrapper(&s.Suite, testBaseFieldZero))
+	s.Run("TestBaseFieldSize", testWrapper(&s.Suite, testBaseFieldSize))
+	s.Run("TestBaseFieldAsPointer", testWrapper(&s.Suite, testBaseFieldAsPointer))
+	s.Run("TestBaseFieldFromBytes", testWrapper(&s.Suite, testBaseFieldFromBytes))
+	s.Run("TestBaseFieldToBytes", testWrapper(&s.Suite, testBaseFieldToBytes))
 
 }
 

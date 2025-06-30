@@ -23,7 +23,7 @@ import Link from '@docusaurus/Link';
     <div className="card-box">
       <img alt="Programmer's Guide Icon" className="card-icon-left prog-icon" />
       <h3>Programmer's Guide</h3>
-      <p>Step-by-step setup and usage instructions for ICICLE.</p>
+      <p>Consistent cryptographic APIs: NTT, MSM, ECNTT, polynomials.</p>
     </div>
   </Link>
 
@@ -39,7 +39,7 @@ import Link from '@docusaurus/Link';
     <div className="card-box">
       <img alt="API Icon" className="card-icon-left api-icon" />
       <h3>API</h3>
-      <p>Low-level API docs and language bindings.</p>
+      <p>Core ICICLE APIs: MSM, NTT, hashing with examples.</p>
     </div>
   </Link>
 

@@ -1,6 +1,6 @@
 # Contributor's Guide
 
-We welcome all contributions with open arms. At Ingonyama we take a village approach, believing it takes many hands and minds to build a ecosystem. See full CLA [here](https://github.com/ingonyama-zk/icicle/blob/main/Contributor_License_Agreement_v1.pdf)
+We welcome all contributions with open arms. At Ingonyama we take a village approach, believing it takes many hands and minds to build a ecosystem.
 
 ## Contributing to ICICLE
 

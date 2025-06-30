@@ -8,6 +8,33 @@ using namespace field_config; // Defines Zq and PolyRing for the active configur
 namespace icicle {
 
   //==============================================================================
+  // vector_add<PolyRing, PolyRing>
+  //
+  // Performs element-wise addition of PolyRing[i] + PolyRing[i] → PolyRing[i],
+  // for i in [0, size). Assumes inputs are in the evaluation domain (NTT).
+  //
+  // Only supports row-major layout with batch_size == 1.
+  //==============================================================================
+  template <>
+  eIcicleError
+  vector_add(const PolyRing* vec_a, const PolyRing* vec_b, uint64_t size, const VecOpsConfig& config, PolyRing* vec_res)
+  {
+    if (config.columns_batch || config.batch_size != 1) {
+      ICICLE_LOG_ERROR << "vector_add<PolyRing, PolyRing> requires batch_size == 1 and row-major layout";
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+
+    const Zq* a_zq = reinterpret_cast<const Zq*>(vec_a);
+    const Zq* b_zq = reinterpret_cast<const Zq*>(vec_b);
+    Zq* res_zq = reinterpret_cast<Zq*>(vec_res);
+
+    VecOpsConfig inner_cfg = config;
+    inner_cfg.batch_size = size; // number of PolyRing elements
+
+    return vector_add(a_zq, b_zq, PolyRing::d, inner_cfg, res_zq);
+  }
+
+  //==============================================================================
   // vector_mul<PolyRing, Zq>
   //
   // Performs element-wise multiplication of PolyRing[i] * Zq[i] → PolyRing[i],

@@ -146,12 +146,12 @@ type {{capitalize .Field}}VecOpsTestSuite struct {
 }
 
 func (s *{{capitalize .Field}}VecOpsTestSuite) Test{{capitalize .Field}}VecOps() {
-	s.Run("Test{{capitalize .Field}}VecOps", test_helpers.TestWrapper(&s.Suite, test{{capitalize .Field}}VecOps))
-	s.Run("Test{{capitalize .Field}}Transpose", test_helpers.TestWrapper(&s.Suite, test{{capitalize .Field}}Transpose))
-	s.Run("Test{{capitalize .Field}}Sum", test_helpers.TestWrapper(&s.Suite, test{{capitalize .Field}}Sum))
-	s.Run("Test{{capitalize .Field}}Product", test_helpers.TestWrapper(&s.Suite, test{{capitalize .Field}}Product))
+	s.Run("Test{{capitalize .Field}}VecOps", testWrapper(&s.Suite, test{{capitalize .Field}}VecOps))
+	s.Run("Test{{capitalize .Field}}Transpose", testWrapper(&s.Suite, test{{capitalize .Field}}Transpose))
+	s.Run("Test{{capitalize .Field}}Sum", testWrapper(&s.Suite, test{{capitalize .Field}}Sum))
+	s.Run("Test{{capitalize .Field}}Product", testWrapper(&s.Suite, test{{capitalize .Field}}Product))
 	{{- if eq .FieldPrefix "Extension"}}
-	s.Run("Test{{capitalize .Field}}MixedVecOps", test_helpers.TestWrapper(&s.Suite, test{{capitalize .Field}}MixedVecOps)){{end}}
+	s.Run("Test{{capitalize .Field}}MixedVecOps", testWrapper(&s.Suite, test{{capitalize .Field}}MixedVecOps)){{end}}
 }
 
 func TestSuite{{capitalize .Field}}VecOps(t *testing.T) {
