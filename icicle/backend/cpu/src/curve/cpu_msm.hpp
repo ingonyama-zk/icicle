@@ -388,7 +388,7 @@ private:
       // Convert weighted lines sum to rectangles sum by doubling
       int num_doubles = m_c - 1 - log_nof_segments_per_bm;
       for (int k = 0; k < num_doubles; k++) {
-        m_segments[nof_segments_per_bm * i].line_sum = m_segments[nof_segments_per_bm * i].line_sum.dbl();
+        m_segments[nof_segments_per_bm * i].line_sum = (m_segments[nof_segments_per_bm * i].line_sum).dbl();
       }
 
       // Sum triangles within bm linearly
@@ -410,7 +410,7 @@ private:
     for (int i = m_nof_buckets_module - 2; i >= 0; i--) {
       // Multiply by the BM digit factor 2^c - i.e. c doublings
       for (int j = 0; j < m_c; j++) {
-        *result = result->dbl();
+        *result = (*result).dbl();
       }
       *result = *result + m_segments[nof_segments_per_bm * i].triangle_sum;
     }

@@ -258,7 +258,7 @@ namespace ntt_cpu {
                                   S::inv_log_size(1);
         temp_win32_twiddles[13] = (
                                     s_ntt_domain.twiddles[basic_tw_idx * 1] + s_ntt_domain.twiddles[basic_tw_idx * 3] +
-                                    s_ntt_domain.twiddles[basic_tw_idx * 5] + s_ntt_domain.twiddles[basic_tw_idx * 7]) *
+                                    s_ntt_domain.twiddles[basic_tw_idx * 5] + s_ntt_domain.twiddles[basic_tw_idx * 7]).neg() *
                                   S::inv_log_size(1);
         temp_win32_twiddles[14] =
           (s_ntt_domain.twiddles[basic_tw_idx * 3] + s_ntt_domain.twiddles[basic_tw_idx * 5]) * S::inv_log_size(1);
@@ -288,7 +288,7 @@ namespace ntt_cpu {
         temp_win32_twiddles[23] =
           (
             s_ntt_domain.twiddles[basic_tw_idx * 2] + s_ntt_domain.twiddles[basic_tw_idx * 14] +
-            s_ntt_domain.twiddles[basic_tw_idx * 6] + s_ntt_domain.twiddles[basic_tw_idx * 10]) *
+            s_ntt_domain.twiddles[basic_tw_idx * 6] + s_ntt_domain.twiddles[basic_tw_idx * 10]).neg() *
           S::inv_log_size(1);
 
         temp_win32_twiddles[24] =
