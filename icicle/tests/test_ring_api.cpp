@@ -1307,7 +1307,7 @@ TEST_F(RingTestBase, ChallengePolynomialsSampling)
   size_t twos = 10;
   int64_t norm = 15;
 
-  const int N = 1;
+  const int N = 5;
   for (int i = 0; i < N; ++i) {
     for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
       ICICLE_CHECK(icicle_set_device(s_registered_devices[device_index]));
@@ -1322,9 +1322,6 @@ TEST_F(RingTestBase, ChallengePolynomialsSampling)
 
   for (size_t device_index = 1; device_index < s_registered_devices.size(); ++device_index) {
     for (size_t i = 0; i < size; ++i) {
-      if (outputs[device_index][i] != outputs[0][i]) {
-        std::cout << "MISMATCH: " << i << std::endl;
-      }
       ASSERT_EQ(outputs[device_index][i], outputs[0][i]);
       const auto& poly = outputs[device_index][i];
       std::unordered_map<field_t, size_t> coeff_counts;
