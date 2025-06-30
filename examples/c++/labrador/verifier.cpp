@@ -289,7 +289,7 @@ void LabradorBaseVerifier::agg_const_zero_constraints(size_t num_aggregation_rou
     return k * JL_out + l;
   };
 
-  std::vector<Zq> verif_test_b0(num_aggregation_rounds, Zq::zero());
+  std::vector<Zq> test_b0(num_aggregation_rounds, Zq::zero());
 
   for (size_t k = 0; k < num_aggregation_rounds; k++) {
     EqualityInstance new_constraint(r, n);
@@ -370,13 +370,60 @@ bool LabradorBaseVerifier::verify()
   size_t n = lab_inst.param.n;
   size_t d = Rq::d;
   size_t JL_out = lab_inst.param.JL_out;
-  // construct the final constraint correctly
+  size_t num_aggregation_rounds = lab_inst.param.num_aggregation_rounds;
 
+  const std::vector<Zq>& p = trs.prover_msg.p;
+  const std::vector<Tq>& b_agg = trs.prover_msg.b_agg;
+  const std::vector<Zq>& psi = trs.psi;
+  const std::vector<Zq>& omega = trs.omega;
+
+  std::vector<Rq> b_agg_unhat(b_agg.size());
+  ICICLE_CHECK(ntt(b_agg.data(), b_agg.size(), NTTDir::kInverse, {}, b_agg_unhat.data()));
+
+  // create_transcript called in constructor - so transcript is ready to be used
+
+  // check p norm
+  bool JL_check = false;
+  double beta = lab_inst.param.beta;
+  ICICLE_CHECK(check_norm_bound(p.data(), JL_out, eNormType::L2, uint64_t(sqrt(JL_out / 2) * beta), {}, &JL_check));
+  if (!JL_check) {
+    std::cout << "verify(): p-norm check failed" << std::endl;
+    return false;
+  }
+
+  // b_agg have correct const term
+  std::vector<Zq> test_b0(num_aggregation_rounds, Zq::zero());
+  const size_t L = lab_inst.const_zero_constraints.size();
+
+  auto psi_index = [num_aggregation_rounds, L](size_t k, size_t l) {
+    assert(l < L);
+    assert(k < num_aggregation_rounds);
+    return k * L + l;
+  };
+  auto omega_index = [num_aggregation_rounds, JL_out](size_t k, size_t l) {
+    assert(l < JL_out);
+    assert(k < num_aggregation_rounds);
+    return k * JL_out + l;
+  };
+  for (size_t k = 0; k < num_aggregation_rounds; k++) {
+    for (size_t l = 0; l < L; l++) {
+      test_b0[k] = test_b0[k] + psi[psi_index(k, l)] * lab_inst.const_zero_constraints[l].b;
+    }
+    for (size_t l = 0; l < JL_out; l++) {
+      test_b0[k] = test_b0[k] - omega[omega_index(k, l)] * p[l];
+    }
+
+    if (test_b0[k] != b_agg_unhat[k].values[0]) {
+      std::cout << "verify(): b0 test failed for " << k << std::endl;
+      return false;
+    }
+  }
+
+  // construct the final constraint correctly
   std::vector<Rq> Q = compute_Q_poly(n, r, JL_out, trs.seed1.data(), trs.seed1.size(), trs.prover_msg.JL_i);
   std::vector<Tq> Q_hat(JL_out * r * n);
   // Q_hat = NTT(Q)
   ICICLE_CHECK(ntt(Q.data(), Q.size(), NTTDir::kForward, {}, Q_hat.data()));
-  const size_t num_aggregation_rounds = std::ceil(128.0 / std::log2(get_q<Zq>()));
 
   agg_const_zero_constraints(num_aggregation_rounds, Q_hat);
   lab_inst.agg_equality_constraints(trs.alpha_hat);

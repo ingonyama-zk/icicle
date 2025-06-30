@@ -57,9 +57,6 @@ int main(int argc, char* argv[])
 
   std::string oracle_seed = "ORACLE_SEED";
 
-  // Oracle o1(reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size()),
-  //   o2(reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size());
-
   LabradorBaseProver base_prover{
     lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size()};
 
@@ -73,43 +70,43 @@ int main(int argc, char* argv[])
     verif_lab_inst, trs.prover_msg, base_proof, reinterpret_cast<const std::byte*>(oracle_seed.data()),
     oracle_seed.size()};
 
-  // Assert that Verifier trs and Prover trs are equal
-  auto bytes_eq = [](const std::vector<std::byte>& a, const std::vector<std::byte>& b) { return a == b; };
-  auto zq_vec_eq = [](const std::vector<Zq>& a, const std::vector<Zq>& b) {
-    if (a.size() != b.size()) return false;
-    for (size_t i = 0; i < a.size(); ++i)
-      if (a[i] != b[i]) return false;
-    return true;
-  };
+  // // Assert that Verifier trs and Prover trs are equal
+  // auto bytes_eq = [](const std::vector<std::byte>& a, const std::vector<std::byte>& b) { return a == b; };
+  // auto zq_vec_eq = [](const std::vector<Zq>& a, const std::vector<Zq>& b) {
+  //   if (a.size() != b.size()) return false;
+  //   for (size_t i = 0; i < a.size(); ++i)
+  //     if (a[i] != b[i]) return false;
+  //   return true;
+  // };
 
-  const auto& trs_P = trs;               // Prover's transcript
-  const auto& trs_V = base_verifier.trs; // Verifier's transcript
+  // const auto& trs_P = trs;               // Prover's transcript
+  // const auto& trs_V = base_verifier.trs; // Verifier's transcript
 
-  auto report = [&](bool ok, const std::string& name) {
-    if (!ok) std::cout << "  • " << name << " mismatch\n";
-    return ok;
-  };
+  // auto report = [&](bool ok, const std::string& name) {
+  //   if (!ok) std::cout << "  • " << name << " mismatch\n";
+  //   return ok;
+  // };
 
-  bool ok = true;
-  ok &= report(bytes_eq(trs_P.seed1, trs_V.seed1), "seed1");
-  ok &= report(bytes_eq(trs_P.seed2, trs_V.seed2), "seed2");
-  ok &= report(bytes_eq(trs_P.seed3, trs_V.seed3), "seed3");
-  ok &= report(bytes_eq(trs_P.seed4, trs_V.seed4), "seed4");
+  // bool ok = true;
+  // ok &= report(bytes_eq(trs_P.seed1, trs_V.seed1), "seed1");
+  // ok &= report(bytes_eq(trs_P.seed2, trs_V.seed2), "seed2");
+  // ok &= report(bytes_eq(trs_P.seed3, trs_V.seed3), "seed3");
+  // ok &= report(bytes_eq(trs_P.seed4, trs_V.seed4), "seed4");
 
-  ok &= report(zq_vec_eq(trs_P.psi, trs_V.psi), "psi");
-  ok &= report(zq_vec_eq(trs_P.omega, trs_V.omega), "omega");
+  // ok &= report(zq_vec_eq(trs_P.psi, trs_V.psi), "psi");
+  // ok &= report(zq_vec_eq(trs_P.omega, trs_V.omega), "omega");
 
-  ok &= report(poly_vec_eq(trs_P.alpha_hat.data(), trs_V.alpha_hat.data(), trs_P.alpha_hat.size()), "alpha_hat");
+  // ok &= report(poly_vec_eq(trs_P.alpha_hat.data(), trs_V.alpha_hat.data(), trs_P.alpha_hat.size()), "alpha_hat");
 
-  ok &= report(
-    poly_vec_eq(trs_P.challenges_hat.data(), trs_V.challenges_hat.data(), trs_P.challenges_hat.size()),
-    "challenges_hat");
+  // ok &= report(
+  //   poly_vec_eq(trs_P.challenges_hat.data(), trs_V.challenges_hat.data(), trs_P.challenges_hat.size()),
+  //   "challenges_hat");
 
-  if (!ok) {
-    std::cerr << "\nTranscript mismatch detected above.\n";
-    return 1;
-  }
-  std::cout << "Transcript check passed ✅\n";
+  // if (!ok) {
+  //   std::cerr << "\nTranscript mismatch detected above.\n";
+  //   return 1;
+  // }
+  // std::cout << "Transcript check passed ✅\n";
 
   bool verification_result = base_verifier.verify();
 

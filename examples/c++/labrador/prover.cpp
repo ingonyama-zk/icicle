@@ -39,8 +39,6 @@ std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std:
 // modifies the instance
 // returns num_aggregation_rounds number of polynomials
 std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
-  size_t num_aggregation_rounds,
-  size_t JL_out,
   const std::vector<Tq>& S_hat,
   const std::vector<Tq>& G_hat,
   const std::vector<Zq>& p,
@@ -51,6 +49,8 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
   size_t r = lab_inst.param.r;
   size_t n = lab_inst.param.n;
   size_t d = Rq::d;
+  size_t num_aggregation_rounds = lab_inst.param.num_aggregation_rounds;
+  size_t JL_out = lab_inst.param.JL_out;
   const size_t L = lab_inst.const_zero_constraints.size();
 
   // indexes into multidim arrays: psi[k][l] and omega[k][l]
@@ -333,7 +333,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // For 0 ≤ k < ceil(128/log(q)), sample the following random vectors:
   const size_t L = lab_inst.const_zero_constraints.size();
   // TODO: make this a shared param between P,V
-  const size_t num_aggregation_rounds = std::ceil(128.0 / std::log2(get_q<Zq>()));
+  const size_t num_aggregation_rounds = lab_inst.param.num_aggregation_rounds;
 
   std::vector<Zq> psi(num_aggregation_rounds * L), omega(num_aggregation_rounds * JL_out);
 
@@ -373,7 +373,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
     if (Q_testing) { std::cout << "\tQ-constraint-check passed... " << "\n"; }
   }
 
-  std::vector<Tq> msg3 = agg_const_zero_constraints(num_aggregation_rounds, JL_out, S_hat, G_hat, p, Q_hat, psi, omega);
+  std::vector<Tq> msg3 = agg_const_zero_constraints(S_hat, G_hat, p, Q_hat, psi, omega);
   std::cout << "Step 19 completed: Aggregated ConstZeroInstance constraints" << std::endl;
 
   if (TESTING) {
