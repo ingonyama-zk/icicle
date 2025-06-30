@@ -198,7 +198,7 @@ macro_rules! impl_matrix_transpose {
             use icicle_runtime::memory::HostOrDeviceSlice;
 
             extern "C" {
-                #[link_name = concat!($prefix, "_transpose")]
+                #[link_name = concat!($prefix, "_matrix_transpose")]
                 pub(crate) fn matrix_transpose_ffi(
                     input: *const $poly_type,
                     nof_rows: u32,
