@@ -5,14 +5,20 @@
 #include "types.h"
 #include "utils.h"
 #include "shared.h"
+#include "oracle.h"
 #include "test_helpers.h"
 
 struct LabradorBaseProver {
   LabradorInstance lab_inst;
   // S consists of r vectors of dim n arranged in row major order
   std::vector<Rq> S;
+  Oracle oracle;
 
-  LabradorBaseProver(const LabradorInstance& lab_inst, const std::vector<Rq>& S) : lab_inst(lab_inst), S(S)
+  // Constructs a prover with an optional external seed for the random oracle.
+  // The oracle is initialised with (oracle_seed || bytes(lab_inst)).
+  LabradorBaseProver(
+    const LabradorInstance& lab_inst, const std::vector<Rq>& S, const std::byte* oracle_seed, size_t oracle_seed_len)
+      : lab_inst(lab_inst), S(S), oracle(create_oracle_seed(oracle_seed, oracle_seed_len, lab_inst))
   {
     if (S.size() != lab_inst.param.r * lab_inst.param.n) { throw std::invalid_argument("S must have size r * n"); }
   }
@@ -41,8 +47,7 @@ struct LabradorProver {
   {
   }
 
-  std::vector<Rq> prepare_recursion_witness(
-    const PartialTranscript& trs, const LabradorBaseCaseProof& pf, uint32_t base0, size_t mu, size_t nu);
+  std::vector<Rq> prepare_recursion_witness(const LabradorBaseCaseProof& pf, uint32_t base0, size_t mu, size_t nu);
 
   std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> prove();
 };

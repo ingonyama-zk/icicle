@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
   const size_t n = 1 << 5;
   const size_t r = 1 << 3;
   constexpr size_t d = Rq::d;
-  const std::vector<Rq> S = rand_poly_vec(r * n, 1);
+  const std::vector<Rq> S = rand_poly_vec(r * n, 1); // S = 2^14 Zq elements
   EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
   assert(witness_legit_eq(eq_inst, S));
   ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(n, r, S);
@@ -55,14 +55,19 @@ int main(int argc, char* argv[])
   lab_inst.add_equality_constraint(eq_inst);
   lab_inst.add_const_zero_constraint(const_zero_inst);
 
-  LabradorBaseProver base_prover{lab_inst, S};
+  std::string oracle_seed = "ORACLE_SEED";
+  LabradorBaseProver base_prover{
+    lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size()};
+
   auto [base_proof, trs] = base_prover.base_case_prover();
 
   LabradorInstance verif_lab_inst{param};
   verif_lab_inst.add_equality_constraint(eq_inst);
   verif_lab_inst.add_const_zero_constraint(const_zero_inst);
 
-  LabradorBaseVerifier base_verifier{verif_lab_inst, trs, base_proof};
+  LabradorBaseVerifier base_verifier{
+    verif_lab_inst, trs.prover_msg, base_proof, reinterpret_cast<const std::byte*>(oracle_seed.data()),
+    oracle_seed.size()};
   bool verification_result = base_verifier._verify_base_proof();
 
   if (verification_result) {
@@ -70,6 +75,7 @@ int main(int argc, char* argv[])
   } else {
     std::cout << "Base proof verification failed\n";
   }
+  std::cout << "Beginning recursion... \n";
   uint32_t base0 = 1 << 3;
   size_t mu = 1 << 3, nu = 1 << 3;
   LabradorInstance rec_inst = prepare_recursion_instance(
@@ -77,7 +83,7 @@ int main(int argc, char* argv[])
     base_proof.final_const, // final_const,
     trs, base0, mu, nu);
   LabradorProver dummy_prover{lab_inst, S, 1};
-  std::vector<Rq> rec_S = dummy_prover.prepare_recursion_witness(trs, base_proof, base0, mu, nu);
+  std::vector<Rq> rec_S = dummy_prover.prepare_recursion_witness(base_proof, base0, mu, nu);
   std::cout << "rec_inst.r = " << rec_inst.param.r << std::endl;
   std::cout << "rec_inst.n = " << rec_inst.param.n << std::endl;
   std::cout << "Num rec_inst.equality_constraints = " << rec_inst.equality_constraints.size() << std::endl;

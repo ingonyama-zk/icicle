@@ -12,6 +12,7 @@ add_executable(example
   verifier.cpp
   shared.cpp
   types.cpp
+  oracle.cpp
   test_helpers.cpp
 )
 install(TARGETS example

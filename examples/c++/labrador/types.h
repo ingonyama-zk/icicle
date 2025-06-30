@@ -152,13 +152,25 @@ struct LabradorInstance {
 /* ======================================================================
  *  Transcript + base-case proof
  * ====================================================================*/
-struct PartialTranscript {
+
+struct BaseProverMessages {
   // committed by the Prover
   std::vector<Tq> u1;
   size_t JL_i;
   std::vector<Zq> p;
   std::vector<Tq> b_agg;
   std::vector<Tq> u2;
+
+  BaseProverMessages() = default;
+
+  size_t proof_size()
+  {
+    return sizeof(Zq) * (u1.size() * Tq::d + p.size() + b_agg.size() * Tq::d + u2.size() * Tq::d) + sizeof(size_t);
+  }
+};
+
+struct PartialTranscript {
+  BaseProverMessages prover_msg;
 
   // hash evaluations
   std::vector<std::byte> seed1, seed2, seed3, seed4;
@@ -167,10 +179,9 @@ struct PartialTranscript {
   std::vector<Zq> psi, omega;
   std::vector<Tq> alpha_hat, challenges_hat;
 
-  size_t proof_size()
-  {
-    return sizeof(Zq) * (u1.size() * Tq::d + p.size() + b_agg.size() * Tq::d + u2.size() * Tq::d) + sizeof(size_t);
-  }
+  PartialTranscript() = default;
+
+  inline size_t proof_size() { return prover_msg.proof_size(); }
 };
 
 /// Encapsulates the problem and witness for the reduced instance

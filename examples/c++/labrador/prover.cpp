@@ -294,17 +294,12 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
   std::cout << "Step 10 completed: Computed u1" << std::endl;
 
-  // Step 11: hash (lab_inst, ajtai_seed, u1) to get seed1
-  // hash and get a challenge
-  Hash hasher = Sha3_256::create();
-  // TODO: add serialization to lab_inst, ajtai_seed, u1 and put them in the placeholder
-  std::vector<std::byte> seed1(hasher.output_size());
-  {
-    const char* hash_input = "Placeholder1";
-    hasher.hash(hash_input, strlen(hash_input), {}, seed1.data());
-  }
+  // Step 11: derive seed1 using the oracle and the actual bytes of u1
+  const std::byte* u1_bytes = reinterpret_cast<const std::byte*>(u1.data());
+  const size_t u1_bytes_len = u1.size() * sizeof(Tq);
+  std::vector<std::byte> seed1 = oracle.generate(u1_bytes, u1_bytes_len);
   // add u1 to the trs
-  trs.u1 = u1;
+  trs.prover_msg.u1 = u1;
   trs.seed1 = seed1;
   std::cout << "Step 11 completed: Generated seed1" << std::endl;
 
@@ -313,16 +308,14 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   auto [JL_i, p] = select_valid_jl_proj(seed1.data(), seed1.size());
   std::cout << "Step 12 completed: Selected JL projection" << std::endl;
 
-  // Step 13: send (JL_i, p) to the Verifier and get a challenge
-  trs.JL_i = JL_i;
-  trs.p = p;
+  // Step 13: serialize (JL_i, p) into bytes and feed to oracle for seed2
+  std::vector<std::byte> jl_buf(sizeof(size_t));
+  std::memcpy(jl_buf.data(), &JL_i, sizeof(size_t));
+  jl_buf.insert(
+    jl_buf.end(), reinterpret_cast<const std::byte*>(p.data()),
+    reinterpret_cast<const std::byte*>(p.data()) + p.size() * sizeof(Zq));
 
-  // TODO: add serialization to p and JL_i and put them in the placeholder
-  std::vector<std::byte> seed2(hasher.output_size());
-  {
-    const char* hash_input = "Placeholder2";
-    hasher.hash(hash_input, strlen(hash_input), {}, seed2.data());
-  }
+  std::vector<std::byte> seed2 = oracle.generate(jl_buf.data(), jl_buf.size());
   trs.seed2 = seed2;
   std::cout << "Step 13 completed: Generated seed2" << std::endl;
 
@@ -341,11 +334,13 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Zq> psi(num_aggregation_rounds * L), omega(num_aggregation_rounds * JL_out);
 
   // sample psi
+  // psi seed = seed2 || 0x01
   std::vector<std::byte> psi_seed(seed2);
   psi_seed.push_back(std::byte('1'));
   ICICLE_CHECK(random_sampling(psi_seed.data(), psi_seed.size(), false, {}, psi.data(), psi.size()));
 
   // Sample omega
+  // omega seed = seed2 || 0x02
   std::vector<std::byte> omega_seed(seed2);
   omega_seed.push_back(std::byte('2'));
   ICICLE_CHECK(random_sampling(omega_seed.data(), omega_seed.size(), false, {}, omega.data(), omega.size()));
@@ -383,12 +378,12 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
     std::cout << "VALID\n";
   }
 
-  // Step 20: seed3 = hash(seed2, msg3)
-  // TODO: add serialization to msg3 and put them in the placeholder
-  std::vector<std::byte> seed3(hasher.output_size());
-  hasher.hash("Placeholder3", 12, {}, seed3.data());
+  // Step 20: derive seed3 from the oracle using the actual bytes of msg3
+  const std::byte* msg3_bytes = reinterpret_cast<const std::byte*>(msg3.data());
+  const size_t msg3_bytes_len = msg3.size() * sizeof(Tq);
+  std::vector<std::byte> seed3 = oracle.generate(msg3_bytes, msg3_bytes_len);
 
-  trs.b_agg = msg3;
+  trs.prover_msg.b_agg = msg3;
   trs.seed3 = seed3;
   std::cout << "Step 20 completed: Generated seed3" << std::endl;
 
@@ -465,11 +460,12 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // Step 27:
   // add u2 to the trs
-  trs.u2 = u2;
+  trs.prover_msg.u2 = u2;
 
-  // TODO: add serialization to u2 and put them in the placeholder
-  std::vector<std::byte> seed4(hasher.output_size());
-  hasher.hash("Placeholder4", 12, {}, seed4.data());
+  // Derive seed4 from oracle using bytes of u2
+  const std::byte* u2_bytes = reinterpret_cast<const std::byte*>(u2.data());
+  const size_t u2_bytes_len = u2.size() * sizeof(Tq);
+  std::vector<std::byte> seed4 = oracle.generate(u2_bytes, u2_bytes_len);
 
   trs.seed4 = seed4;
   std::cout << "Step 27 completed: Generated seed4" << std::endl;
@@ -512,8 +508,8 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   return std::make_pair(final_proof, trs);
 }
 
-std::vector<Rq> LabradorProver::prepare_recursion_witness(
-  const PartialTranscript& trs, const LabradorBaseCaseProof& pf, uint32_t base0, size_t mu, size_t nu)
+std::vector<Rq>
+LabradorProver::prepare_recursion_witness(const LabradorBaseCaseProof& pf, uint32_t base0, size_t mu, size_t nu)
 {
   // Step 1: Convert z_hat back to polynomial domain
   size_t n = lab_inst.param.n;
@@ -563,12 +559,13 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
   std::vector<PartialTranscript> trs;
   PartialTranscript part_trs;
   LabradorBaseCaseProof base_proof(lab_inst.param.r, lab_inst.param.n);
+  const char* placeholder = "HELLO";
   for (size_t i = 0; i < NUM_REC; i++) {
-    LabradorBaseProver base_prover(lab_inst, S);
+    LabradorBaseProver base_prover(lab_inst, S, reinterpret_cast<const std::byte*>(placeholder), sizeof(char) * 5);
     std::tie(base_proof, part_trs) = base_prover.base_case_prover();
     // TODO: figure out param using Lattirust code
     size_t base0 = 1 << 8, mu = 1 << 8, nu = 1 << 8;
-    S = prepare_recursion_witness(part_trs, base_proof, base0, mu, nu);
+    S = prepare_recursion_witness(base_proof, base0, mu, nu);
     lab_inst = prepare_recursion_instance(base_prover.lab_inst.param, base_proof.final_const, part_trs, base0, mu, nu);
     trs.push_back(part_trs);
   }

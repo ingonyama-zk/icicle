@@ -68,6 +68,14 @@ std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, std::byte* seed, 
   return challenge;
 }
 
+Oracle create_oracle_seed(const std::byte* seed, size_t seed_len, const LabradorInstance& inst)
+{
+  std::vector<std::byte> buf(seed, seed + seed_len);
+  buf.insert(
+    buf.end(), reinterpret_cast<const std::byte*>(&inst), reinterpret_cast<const std::byte*>(&inst) + sizeof(inst));
+  return Oracle(buf.data(), buf.size());
+}
+
 size_t RecursionPreparer::z0_begin_idx() const { return 0; }
 
 size_t RecursionPreparer::z1_begin_idx() const { return nu * n_prime; }
@@ -120,8 +128,8 @@ LabradorInstance prepare_recursion_instance(
   const size_t n = final_const.n;
   constexpr size_t d = Rq::d;
 
-  std::vector<Tq> u1 = trs.u1;
-  std::vector<Tq> u2 = trs.u2;
+  std::vector<Tq> u1 = trs.prover_msg.u1;
+  std::vector<Tq> u2 = trs.prover_msg.u2;
   std::vector<Tq> challenges_hat = trs.challenges_hat;
 
   RecursionPreparer preparer{prev_param, mu, nu, base0};

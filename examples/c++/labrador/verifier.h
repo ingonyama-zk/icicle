@@ -5,20 +5,33 @@
 #include "types.h"
 #include "utils.h"
 #include "shared.h"
+#include "oracle.h"
 #include "test_helpers.h"
 
 struct LabradorBaseVerifier {
   LabradorInstance lab_inst;
   PartialTranscript trs;
   LabradorBaseCaseProof base_proof;
+  Oracle oracle;
 
   LabradorBaseVerifier(
-    const LabradorInstance& lab_inst, const PartialTranscript& trs, const LabradorBaseCaseProof& base_proof)
-      : lab_inst(lab_inst), trs(trs), base_proof(base_proof)
+    const LabradorInstance& lab_inst,
+    const BaseProverMessages& prover_msg,
+    const LabradorBaseCaseProof& base_proof,
+    const std::byte* oracle_seed,
+    size_t oracle_seed_len)
+      : lab_inst(lab_inst), trs(), base_proof(base_proof),
+        oracle(create_oracle_seed(oracle_seed, oracle_seed_len, lab_inst))
   {
+    trs.prover_msg = prover_msg;
+    create_transcript();
   }
+
   bool _verify_base_proof() const;
   bool verify() const;
+
+  // internal
+  void create_transcript();
 };
 
 struct LabradorVerifier {

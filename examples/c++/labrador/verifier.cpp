@@ -83,7 +83,7 @@ bool LabradorBaseVerifier::_verify_base_proof() const
   vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
 
   // check t_tilde, g_tilde open u1 in trs
-  if (!(poly_vec_eq(u1.data(), trs.u1.data(), kappa1))) {
+  if (!(poly_vec_eq(u1.data(), trs.prover_msg.u1.data(), kappa1))) {
     std::cout << "t_tilde, g_tilde don't open u1 \n";
     return false;
   }
@@ -94,7 +94,7 @@ bool LabradorBaseVerifier::_verify_base_proof() const
     ajtai_commitment(seed_D.data(), seed_D.size(), h_tilde_hat.size(), kappa2, h_tilde_hat.data(), h_tilde_hat.size());
 
   // check h_tilde opens to u2 in trs
-  if (!(poly_vec_eq(u2.data(), trs.u2.data(), kappa2))) {
+  if (!(poly_vec_eq(u2.data(), trs.prover_msg.u2.data(), kappa2))) {
     std::cout << "h_tilde doesn't open u2 \n";
     return false;
   }
@@ -197,3 +197,66 @@ bool LabradorBaseVerifier::_verify_base_proof() const
   }
   return true;
 }
+
+void LabradorBaseVerifier::create_transcript()
+{
+  const size_t d = Rq::d;
+  // 1. seed1 from u1
+  const auto& u1 = trs.prover_msg.u1;
+  const std::byte* u1_bytes = reinterpret_cast<const std::byte*>(u1.data());
+  size_t u1_len = u1.size() * sizeof(Tq);
+  trs.seed1 = oracle.generate(u1_bytes, u1_len);
+
+  // 2. seed2 from JL_i and p
+  size_t JL_i = trs.prover_msg.JL_i;
+  const std::vector<Zq>& p = trs.prover_msg.p;
+  std::vector<std::byte> jl_buf(sizeof(size_t));
+  std::memcpy(jl_buf.data(), &JL_i, sizeof(size_t));
+  jl_buf.insert(
+    jl_buf.end(), reinterpret_cast<const std::byte*>(p.data()),
+    reinterpret_cast<const std::byte*>(p.data()) + p.size() * sizeof(Zq));
+  trs.seed2 = oracle.generate(jl_buf.data(), jl_buf.size());
+
+  // 3. psi and omega sampling
+  const size_t L = lab_inst.const_zero_constraints.size();
+  const size_t JL_out = lab_inst.param.JL_out;
+  const size_t num_agg_rounds = std::ceil(128.0 / std::log2(get_q<Zq>()));
+  trs.psi.resize(num_agg_rounds * L);
+  trs.omega.resize(num_agg_rounds * JL_out);
+  // psi seed = seed2 || 0x01
+  std::vector<std::byte> psi_seed(trs.seed2);
+  psi_seed.push_back(std::byte('1'));
+  random_sampling(psi_seed.data(), psi_seed.size(), false, {}, trs.psi.data(), trs.psi.size());
+  // omega seed = seed2 || 0x02
+  std::vector<std::byte> omega_seed(trs.seed2);
+  omega_seed.push_back(std::byte('2'));
+  random_sampling(omega_seed.data(), omega_seed.size(), false, {}, trs.omega.data(), trs.omega.size());
+
+  // 4. seed3 from msg3 (b_agg)
+  const auto& msg3 = trs.prover_msg.b_agg;
+  const std::byte* msg3_bytes = reinterpret_cast<const std::byte*>(msg3.data());
+  size_t msg3_len = msg3.size() * sizeof(Tq);
+  trs.seed3 = oracle.generate(msg3_bytes, msg3_len);
+
+  // 5. alpha_hat sampling
+  const size_t K = lab_inst.equality_constraints.size();
+  trs.alpha_hat.resize(K);
+  std::vector<std::byte> alpha_seed(trs.seed3);
+  alpha_seed.push_back(std::byte('1'));
+  random_sampling(alpha_seed.data(), alpha_seed.size(), false, {}, trs.alpha_hat.data(), K);
+
+  // 6. seed4 from u2
+  const auto& u2 = trs.prover_msg.u2;
+  const std::byte* u2_bytes = reinterpret_cast<const std::byte*>(u2.data());
+  size_t u2_bytes_len = u2.size() * sizeof(Tq);
+  trs.seed4 = oracle.generate(u2_bytes, u2_bytes_len);
+
+  // 7. challenges_hat sampling
+  size_t n = lab_inst.param.n;
+  size_t r = lab_inst.param.r;
+  std::vector<Rq> challenge = sample_low_norm_challenges(n, r, trs.seed4.data(), trs.seed4.size());
+  trs.challenges_hat.resize(r);
+  ntt(challenge.data(), challenge.size(), NTTDir::kForward, {}, trs.challenges_hat.data());
+}
+
+bool LabradorBaseVerifier::verify() const { return true; }
