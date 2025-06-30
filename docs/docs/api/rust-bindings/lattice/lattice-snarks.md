@@ -1,4 +1,5 @@
 // TODO: verify examples compile and work correctly before merging!
+//       They worked when this doc was written, but depend on V4 redesign
 
 // TODO: replace labrador with the final name that
 
@@ -13,26 +14,26 @@ The design is generic over ring constructions, enabling flexible use of differen
 
 ## Key Capabilities
 
-### 🧮 Core Types
+### Core Types
   - **`Zq`** — Integer rings modulo \( q \)
   - **`Rq` / `Tq`** — Polynomial rings `Zq[X]/(Xⁿ + 1)`
     - `Rq` refers to the coefficient (standard) representation.
     - `Tq` refers to the evaluation (NTT-transformed) representation.
     - In ICICLE, both share a single unified trait.
 
-### ⚙️ Supported Operations
+### Supported Operations
 - **Negacyclic Number-Theoretic Transforms (NTT)**  
   For fast polynomial multiplication in `Tq`
 - **Matrix Operations**  
   Matrix multiplication and transpose
-- **Balanced Base Decomposition**  
-  Represent elements in base-`b` with digits in `(-b/2, b/2]`
-- **Johnson–Lindenstrauss (JL) Projection**  
-  Randomized projection with reproducible seeds
 - **Vector Operations**  
   Elementwise arithmetic, sum-reduction, scalar ops
+- **Balanced Base Decomposition**  
+  Represent elements in base-`b` with digits in `(-b/2, b/2]`
 - **Norm Computation**  
   ℓ₂ and ℓ∞ norms with bound checking
+- **Johnson–Lindenstrauss (JL) Projection**  
+  Randomized projection with reproducible seeds
 - **Random Vector Sampling**  
   Efficient, seedable generation of vectors over `Zq` or `Rq`
 - **Challenge Sampling**  
@@ -41,10 +42,7 @@ The design is generic over ring constructions, enabling flexible use of differen
 
 For example, the **Labrador** protocol builds on this foundation to implement a lattice-based zk-SNARK with modular components and device acceleration.
 
-## Example
-
-See the full Rust example here:  
-[**github.com/ingonyama-zk/icicle/tree/main/examples/rust/lattice-snarks**](https://github.com/ingonyama-zk/icicle/tree/main/examples/rust/lattice-snarks)
+## [See a full Rust example here.](https://github.com/ingonyama-zk/icicle/tree/main/examples/rust/lattice-snarks)
 
 ## Core Types
 
@@ -61,6 +59,7 @@ q = P_babybear × P_koalabear
   = 4289678649214369793
 ```
 
+#### Example 
 
 ```rust
 use icicle_core::traits::{FieldImpl, GenerateRandom};
@@ -85,6 +84,8 @@ let zq_from_bytes: Vec<Zq> = some_bytes
 ### Polynomial Ring: Rq
 
 The polynomial ring `Rq = Zq[X]/(X^d + 1)` represents polynomials of degree less than `d` with coefficients in `Zq`.
+
+#### Example
 
 ```rust
 use icicle_core::polynomial_ring::PolynomialRing; // trait
@@ -132,7 +133,12 @@ where
 {
     unsafe { reinterpret_slice::<P, P::Base>(input).expect("Invalid slice cast") }
 }
+```
 
+```rust
+/// # Source
+/// [`icicle_runtime::memory`]
+/// 
 /// Reinterprets a mutable slice of polynomials as a flat mutable slice of their base field elements.
 ///
 /// # Safety
@@ -169,7 +175,7 @@ let poly_slice = HostSlice::from_slice(&polynomials);
 // Flatten into a Zq slice (5 × DEGREE elements)
 let scalar_slice = flatten_polyring_slice(poly_slice);
 
-// This can now be passed into scalar-only APIs like `jl_projection`, `norm::check_norm_bound`, etc.
+// This can now be passed into scalar-only APIs like `jl_projection`, `check_norm_bound`, etc.
 ```
 
 
@@ -667,9 +673,6 @@ ICICLE provides APIs for performing Johnson–Lindenstrauss (JL) projections, wh
 ### Main imports
 
 ```rust
-### Main Imports
-
-```rust
 use icicle_core::jl_projection::{
     jl_projection, 
     get_jl_matrix_rows,
@@ -798,7 +801,11 @@ pub fn get_jl_matrix_rows_as_polyring<P: PolynomialRing>(
     .expect("Failed to generate JL matrix rows as Rq (conjugated)");
 ```
 
-## Random Sampling
+## Seeded Random Sampling
+
+TODO
+
+## Chellenge sampling with OpNorm rejection
 
 TODO
 
