@@ -6,6 +6,9 @@ ICICLE provides a modular, high-performance Rust API for lattice-based SNARK con
 
 The design is generic over ring constructions, enabling flexible use of different `Zq` and `Rq` instantiations for cryptographic protocols like **Labrador**.
 
+
+TODO link to rust example
+
 ## Key Capabilities
 
 - **Core Types**
@@ -253,6 +256,10 @@ matmul(&device_a_transposed, m, n, HostSlice::from_slice(&host_a), n, m, &cfg, &
     .expect("Matmul failed");
 ```
 
+## Vector operations
+
+TODO
+
 ## Balanced Base Decomposition
 
 ### Decompose and Recompose Ring Elements
@@ -347,435 +354,96 @@ balanced_decomposition::decompose::<P>(
 ```
 
 
-## Norm Checking
+## Norm Bound Checking
 
-### L2 and L∞ Norm Verification
+ICICLE provides an API to check whether the norm of a `Zq` vector is within a specified bound.
+
+The API supports:
+
+- ℓ₂ norm checking (sum of squares)
+- ℓ∞ norm checking (maximum absolute value)
+- Batch support
+
+---
+
+### Main Imports
 
 ```rust
-use icicle_core::norm::{Norm, NormType};
-
-// Check if vector satisfies norm bound
-norm::check_norm_bound(
-    &device_input,
-    NormType::L2,           // Type of norm to check
-    upper_bound,            // Norm bound to check against
-    &config,                // Configuration
-    HostSlice::from_mut_slice(&mut output), // Output: true if bound satisfied
-)?;
+use icicle_core::norm::{
+    check_norm_bound, // Public wrapper function
+    NormType,          // Enum to select ℓ₂ or ℓ∞ norm
+    Norm,              // Trait implemented per field type
+};
 ```
 
-### Example: Norm Checking
+### API
 
 ```rust
-use icicle_core::{
-    norm::{Norm, NormType},
-    traits::GenerateRandom,
-};
-use icicle_runtime::memory::{DeviceVec, HostSlice};
+/// Checks whether the norm of a vector (or batch of vectors) is within a given bound.
+///
+/// - `input`: Input slice of field elements (`Zq`)
+/// - `norm_type`: `L2` or `LInfinity`
+/// - `norm_bound`: The norm upper bound
+/// - `cfg`: Backend execution configuration
+/// - `output`: Boolean results per batch
+///
+/// Interpretation:
+/// - If `output.len() == 1`, checks the full input vector
+/// - If `output.len() == B`, input is treated as `B` contiguous vectors (input.len() must be divisible by B)
+pub fn check_norm_bound<T: FieldImpl>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
+    norm_type: NormType,
+    norm_bound: u64,
+    cfg: &VecOpsConfig,
+    output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
+) -> Result<(), eIcicleError>;
 
-fn norm_checking_example<T>(size: usize)
-where
-    T: FieldImpl,
-    <T as FieldImpl>::Config: Norm<T> + GenerateRandom<T>,
-{
-    let max_val: u32 = 1 << 30;
-    let mut l2_squared: u128 = 0;
-    let mut l_infinity_norm: u32 = 0;
-
-    // Generate random input and compute norms
-    let input: Vec<T> = (0..size)
-        .map(|_| {
-            let rand_val: u32 = rand::thread_rng().gen_range(0..=max_val);
-            l2_squared += (rand_val as u128) * (rand_val as u128);
-            l_infinity_norm = l_infinity_norm.max(rand_val);
-            T::from_u32(rand_val)
-        })
-        .collect();
-
-    let l2_norm: u64 = l2_squared.isqrt() as u64;
-
-    // Upload to device
-    let mut device_input = DeviceVec::<T>::device_malloc(size)?;
-    device_input.copy_from_host(HostSlice::from_slice(&input))?;
-
-    let config = VecOpsConfig::default();
-
-    // ℓ₂ norm check — upper bound (should pass)
-    let mut output = vec![false; 1];
-    let upper_bound = l2_norm + 1;
-    norm::check_norm_bound(
-        &device_input,
-        NormType::L2,
-        upper_bound,
-        &config,
-        HostSlice::from_mut_slice(&mut output),
-    )?;
-    assert!(output[0], "ℓ₂ norm check failed unexpectedly");
-
-    // ℓ₂ norm check — tight bound (should fail)
-    let lower_bound = l2_norm;
-    norm::check_norm_bound(
-        &device_input,
-        NormType::L2,
-        lower_bound,
-        &config,
-        HostSlice::from_mut_slice(&mut output),
-    )?;
-    assert!(!output[0], "ℓ₂ norm check unexpectedly passed");
-
-    // ℓ∞ norm check for batch vectors
-    let batch = 4;
-    let mut output = vec![false; batch];
-    norm::check_norm_bound(
-        &device_input,
-        NormType::LInfinity,
-        l_infinity_norm as u64 + 1,
-        &config,
-        HostSlice::from_mut_slice(&mut output),
-    )?;
-    assert!(output.iter().all(|&x| x), "ℓ∞ norm check failed");
+pub enum NormType {
+    /// ℓ₂ norm: sqrt(sum of squares)
+    L2,
+    /// ℓ∞ norm: max absolute value
+    LInfinity,
 }
+```
+
+### Example
+
+```rust
+use icicle_core::norm::{check_norm_bound, NormType};
+use icicle_core::vec_ops::VecOpsConfig;
+use icicle_runtime::memory::HostSlice;
+use icicle_labrador::ScalarRing as Zq;
+
+let size = 1024;
+let batch = 4;
+let bound = 1000;
+
+let input = Zq::generate_random(size);
+let mut output = vec![false; batch];
+
+let cfg = VecOpsConfig::default();
+
+// Interpretation:
+// If output has 4 elements, the input is split into 4 sub-vectors (256 each).
+// Norm is computed per sub-vector.
+check_norm_bound(
+    HostSlice::from_slice(&input),
+    NormType::L2, // or NormType::LInfinity
+    bound,
+    &cfg,
+    HostSlice::from_mut_slice(&mut output),
+).expect("Norm check failed");
+
+// Output[i] == true indicates that sub-vector i passed the norm bound.
 ```
 
 ## Johnson-Lindenstrauss Projection
 
-### JL Projection and Matrix Row Generation
-
-```rust
-use icicle_core::jl_projection::{JLProjection, JLProjectionPolyRing};
-
-// Perform JL projection
-jl_projection::jl_projection(
-    &zq_device_slice,       // Input vector (flattened Zq)
-    &seed,                  // Random seed
-    &config,                // Configuration
-    &mut device_output      // Output vector
-)?;
-
-// Get JL matrix rows as polynomial ring elements
-jl_projection::get_jl_matrix_rows_as_polyring(
-    &seed,                  // Random seed
-    row_size,               // Number of input polynomials per row
-    0,                      // Starting row index
-    num_rows,               // Number of rows to generate
-    true,                   // conjugated = true
-    &config,                // Configuration
-    &mut jl_rows            // Output matrix rows
-)?;
-```
-
-### Example: JL Projection
-
-```rust
-use icicle_core::{
-    jl_projection::{JLProjection, JLProjectionPolyRing},
-    polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut},
-    traits::GenerateRandom,
-};
-use icicle_runtime::memory::{DeviceVec, HostSlice};
-
-fn jl_projection_example<P>(size: usize, projection_dim: usize)
-where
-    P: PolynomialRing + GenerateRandom<P>,
-    P::Base: FieldImpl,
-    <P::Base as FieldImpl>::Config: JLProjection<P::Base>,
-    P: JLProjectionPolyRing<P>,
-{
-    let config = VecOpsConfig::default();
-    let mut seed = [0u8; 32];
-    rand::thread_rng().fill(&mut seed);
-
-    // Generate input and copy to device
-    let host_input: Vec<P> = P::generate_random(size);
-    let mut device_input = DeviceVec::<P>::device_malloc(size)?;
-    device_input.copy_from_host(HostSlice::from_slice(&host_input))?;
-
-    // JL projection on flattened device memory
-    let zq_device_slice = flatten_polyring_slice(&device_input);
-    let mut device_output = DeviceVec::<P::Base>::device_malloc(projection_dim)?;
-
-    let t_start = std::time::Instant::now();
-    jl_projection::jl_projection(&zq_device_slice, &seed, &config, &mut device_output)?;
-    let t_elapsed = t_start.elapsed();
-
-    // Retrieve conjugated JL matrix rows as PolyRing polynomials
-    let row_size = size;
-    let num_rows = 1;
-    let mut jl_rows = DeviceVec::<P>::device_malloc(num_rows * row_size)?;
-
-    let t_start = std::time::Instant::now();
-    jl_projection::get_jl_matrix_rows_as_polyring(
-        &seed,
-        row_size,
-        0,
-        num_rows,
-        true, // conjugated = true
-        &config,
-        &mut jl_rows,
-    )?;
-    let t_elapsed = t_start.elapsed();
-}
-```
+TODO
 
 ## Random Sampling
 
-### Seeded Random Generation
+TODO
 
-```rust
-use icicle_core::random_sampling::RandomSampling;
 
-// Generate pseudorandom elements
-random_sampling::random_sampling(
-    fast_mode,              // Use fast sampling mode
-    &seed,                  // Random seed
-    &config,                // Configuration
-    &mut output_zq          // Output array
-)?;
-```
 
-### Example: Random Sampling
-
-```rust
-use icicle_core::{
-    random_sampling::RandomSampling,
-    polynomial_ring::flatten_polyring_slice_mut,
-};
-use icicle_runtime::memory::{DeviceVec, HostSlice};
-
-fn random_sampling_example<P>(size: usize)
-where
-    P: PolynomialRing,
-    P::Base: FieldImpl,
-    <P::Base as FieldImpl>::Config: RandomSampling<P::Base>,
-{
-    let mut seed = [0u8; 32];
-    rand::thread_rng().fill_bytes(&mut seed);
-
-    let fast_mode = true;
-    let config = VecOpsConfig::default();
-
-    // Sample Zq elements
-    let mut output_zq = DeviceVec::<P::Base>::device_malloc(size)?;
-    let start = std::time::Instant::now();
-    random_sampling::random_sampling(fast_mode, &seed, &config, &mut output_zq)?;
-    let duration = start.elapsed();
-
-    // Sample Rq polynomials by reinterpreting as Zq elements
-    let mut output_rq = DeviceVec::<P>::device_malloc(size)?;
-    let mut output_rq_coeffs = flatten_polyring_slice_mut(&mut output_rq);
-
-    let start = std::time::Instant::now();
-    random_sampling::random_sampling(fast_mode, &seed, &config, &mut output_rq_coeffs)?;
-    let duration = start.elapsed();
-}
-```
-
-## Vector Operations for Polynomial Rings
-
-### Polynomial Vector Operations
-
-```rust
-use icicle_core::vec_ops::poly_vecops;
-
-// Element-wise addition of polynomial vectors
-poly_vecops::polyvec_add(&polyvec, &polyvec_b, &mut result, &config)?;
-
-// Element-wise subtraction of polynomial vectors
-poly_vecops::polyvec_sub(&polyvec, &polyvec_b, &mut result, &config)?;
-
-// Element-wise multiplication of polynomial vectors
-poly_vecops::polyvec_mul(&polyvec, &polyvec_b, &mut result, &config)?;
-
-// Scalar multiplication of polynomial vector
-poly_vecops::polyvec_mul_by_scalar(&polyvec, &scalarvec, &mut result, &config)?;
-
-// Sum reduction of polynomial vector
-poly_vecops::polyvec_sum_reduce(&mul_result, &mut reduced, &config)?;
-```
-
-### Example: Vector Operations
-
-```rust
-use icicle_core::{
-    vec_ops::{poly_vecops, VecOpsConfig},
-    random_sampling::RandomSampling,
-    polynomial_ring::flatten_polyring_slice_mut,
-};
-use icicle_runtime::memory::{DeviceVec, HostSlice};
-
-fn polynomial_vecops_example<P>(size: usize)
-where
-    P: PolynomialRing,
-    P::Base: FieldImpl,
-    <P::Base as FieldImpl>::Config: VecOps<P::Base> + RandomSampling<P::Base>,
-{
-    let config = VecOpsConfig::default();
-    let fast_mode = true;
-
-    // Generate a random seed
-    let mut seed = [0u8; 32];
-    rand::thread_rng().fill_bytes(&mut seed);
-
-    // Allocate and sample a vector of polynomials
-    let mut polyvec = DeviceVec::<P>::device_malloc(size)?;
-    {
-        let mut polyvec_flat = flatten_polyring_slice_mut(&mut polyvec);
-        random_sampling::random_sampling(fast_mode, &seed, &config, &mut polyvec_flat)?;
-    }
-
-    // Allocate and sample a vector of scalars
-    let mut scalarvec = DeviceVec::<P::Base>::device_malloc(size)?;
-    random_sampling::random_sampling(fast_mode, &seed, &config, &mut scalarvec)?;
-
-    // Allocate result buffer for the pointwise multiplication
-    let mut mul_result = DeviceVec::<P>::device_malloc(size)?;
-
-    // Perform polyvec_mul_by_scalar
-    let start = std::time::Instant::now();
-    poly_vecops::polyvec_mul_by_scalar(&polyvec, &scalarvec, &mut mul_result, &config)?;
-    println!("polyvec_mul_by_scalar completed in {:?}", start.elapsed());
-
-    // Allocate output for sum-reduction into a single polynomial
-    let mut reduced = DeviceVec::<P>::device_malloc(1)?;
-
-    // Reduce with polyvec_sum_reduce
-    let start = std::time::Instant::now();
-    poly_vecops::polyvec_sum_reduce(&mul_result, &mut reduced, &config)?;
-    println!("polyvec_sum_reduce completed in {:?}", start.elapsed());
-}
-```
-
-## Parameters and Configuration
-
-### Labrador Configuration
-
-The Labrador protocol uses specific parameters optimized for lattice-based SNARKs:
-
-```rust
-use icicle_labrador::{
-    polynomial_ring::PolyRing,
-    ring::{ScalarCfg as ZqCfg, ScalarRing as Zq},
-};
-
-// Integer ring configuration
-// Zq represents the integer ring Z/qZ where q = P_bb * P_kb
-type Zq = ScalarRing<ScalarCfg>;
-
-// Polynomial ring configuration
-// Rq = Zq[X]/(X^d + 1) where d = 64
-type PolyRing = icicle_labrador::polynomial_ring::PolyRing;
-type Rq = PolyRing;
-type Tq = PolyRing;
-```
-
-### Performance Considerations
-
-- **Memory Layout**: Polynomial ring operations use digit-major layout for balanced decomposition
-- **Batch Processing**: Vector operations support batch processing for improved throughput
-- **Device Memory**: Operations can be performed on CPU or GPU with automatic memory management
-- **Async Operations**: Support for asynchronous execution using CUDA streams
-
-### Error Handling
-
-All functions return `Result<T, E>` where `E` implements `std::error::Error`:
-
-```rust
-// Example error handling
-match negacyclic_ntt::ntt_inplace(&mut device_input, NTTDir::kForward, &config) {
-    Ok(()) => println!("NTT completed successfully"),
-    Err(e) => eprintln!("NTT failed: {}", e),
-}
-```
-
-## Complete Example
-
-Here's a complete example demonstrating key lattice SNARK operations:
-
-```rust
-use icicle_core::{
-    balanced_decomposition, jl_projection, matrix_ops, negacyclic_ntt,
-    ntt::NTTDir,
-    polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut, PolynomialRing},
-    random_sampling,
-    traits::{Arithmetic, FieldImpl, GenerateRandom},
-    vec_ops,
-    vec_ops::{poly_vecops, VecOpsConfig},
-};
-use icicle_labrador::{
-    polynomial_ring::PolyRing,
-    ring::{ScalarCfg as ZqCfg, ScalarRing as Zq},
-};
-use icicle_runtime::memory::{DeviceVec, HostSlice};
-
-fn lattice_snark_example() -> Result<(), Box<dyn std::error::Error>> {
-    let size = 1 << 10; // Adjustable test size
-
-    // 1. Integer ring: Zq
-    let zq_random: Vec<Zq> = ZqCfg::generate_random(size);
-    println!("[Integer ring Zq] Generated {} random Zq elements", zq_random.len());
-
-    // 2. Polynomial ring: PolyRing = Zq[X]/(X^n + 1)
-    let rq_random: Vec<PolyRing> = PolyRing::generate_random(size);
-    let rq_from_slice: Vec<PolyRing> = zq_random
-        .chunks(PolyRing::DEGREE)
-        .map(PolyRing::from_slice)
-        .collect();
-    println!("[Polynomial Ring Rq] Converted {} Zq chunks into Rq polynomials", rq_from_slice.len());
-
-    // 3. Negacyclic NTT for polynomial rings
-    negacyclic_ntt_example::<PolyRing>(size)?;
-
-    // 4. Polynomial Ring Matrix Multiplication
-    matmul_example::<PolyRing>(size as u32 >> 3, size as u32, size as u32 >> 2)?;
-
-    // 5. Balanced base decomposition for polynomial rings
-    balanced_decomposition_example::<PolyRing>(size)?;
-
-    // 6. Norm Checking for Integer Ring (Zq)
-    norm_checking_example::<Zq>(size)?;
-
-    // 7. Johnson–Lindenstrauss Projection for Zq
-    jl_projection_example::<PolyRing>(size, 256)?;
-
-    // 8. Vector APIs for Polynomial Rings
-    polynomial_vecops_example::<PolyRing>(size)?;
-
-    // 9. Matrix Transpose for Polynomial Rings
-    transpose_example::<PolyRing>(size as u32, size as u32 >> 2)?;
-
-    // 10. Random Sampling for Zq and PolyRing
-    random_sampling_example::<PolyRing>(size)?;
-
-    Ok(())
-}
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("==================== Lattice SNARK Example ====================");
-    
-    // Set up device (CPU or CUDA)
-    let device_type = std::env::args().nth(1).unwrap_or_else(|| "CPU".to_string());
-    if device_type != "CPU" {
-        icicle_runtime::runtime::load_backend_from_env_or_default()?;
-    }
-    let device = icicle_runtime::Device::new(&device_type, 0);
-    icicle_runtime::set_device(&device)?;
-    
-    lattice_snark_example()?;
-    
-    Ok(())
-}
-```
-
-## Running the Example
-
-To run the lattice SNARKs example:
-
-```bash
-# Run on CPU
-cargo run --release
-
-# Run on CUDA
-cargo run --release --features cuda -- --device-type CUDA
-```
-
-This documentation covers the complete Rust API for lattice-based SNARKs in ICICLE, providing all the necessary types, functions, and examples for implementing protocols like Labrador. 
