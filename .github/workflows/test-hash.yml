@@ -11,10 +11,6 @@ on:
         description: 'Backend name in uppercase'
         required: true
         type: string
-      secret_key:
-        description: 'Secret key for backend checkout'
-        required: true
-        type: string
       runner:
         description: 'Runner labels as JSON array'
         required: true
@@ -109,11 +105,7 @@ jobs:
       if: ${{ !inputs.enable_conditional_testing || inputs.changed_hash == 'true' }}
       run: |
         mkdir -p build && rm -rf build/*
-        EXTRA_FLAGS=""
-        if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
-          EXTRA_FLAGS="-DINGO_CI_ENV=ON"
-        fi
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DHASH=ON -D${{ inputs.backend_upper }}_BACKEND=local $EXTRA_FLAGS -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DHASH=ON -D${{ inputs.backend_upper }}_BACKEND=local -S . -B build
         cmake --build build
         
     - name: Run C++ hash tests

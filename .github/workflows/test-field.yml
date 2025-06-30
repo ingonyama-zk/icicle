@@ -11,10 +11,6 @@ on:
         description: 'Backend name in uppercase'
         required: true
         type: string
-      secret_key:
-        description: 'Secret key for backend checkout'
-        required: true
-        type: string
       runner:
         description: 'Runner labels as JSON array'
         required: true
@@ -44,11 +40,6 @@ on:
         required: false
         type: string
         default: "main"
-      fields:
-        description: 'JSON array of field names to test'
-        required: false
-        type: string
-        default: '["babybear", "stark252", "m31", "koalabear", "goldilocks"]'
       # Feature flags for CI conditional testing
       enable_conditional_testing:
         description: 'Enable conditional testing based on changed files'

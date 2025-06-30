@@ -11,10 +11,6 @@ on:
         description: 'Backend name in uppercase'
         required: true
         type: string
-      secret_key:
-        description: 'Secret key for backend checkout'
-        required: true
-        type: string
       runner:
         description: 'Runner labels as JSON array'
         required: true
@@ -44,11 +40,6 @@ on:
         required: false
         type: string
         default: "main"
-      rings:
-        description: 'JSON array of ring names to test'
-        required: false
-        type: string
-        default: '["labrador"]'
       # Feature flags for CI conditional testing
       enable_conditional_testing:
         description: 'Enable conditional testing based on changed files'
@@ -163,8 +154,6 @@ jobs:
         EXTRA_FLAGS=""
         if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
           EXTRA_FLAGS="-DINGO_CI_ENV=ON ${{ steps.feature_flags.outputs.FEATURE_FLAGS }}"
-        else
-          EXTRA_FLAGS="-DHASH=ON -DNTT=ON"
         fi
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DRING=${{ matrix.ring.name }} -D${{ inputs.backend_upper }}_BACKEND=local $EXTRA_FLAGS -S . -B build
         cmake --build build
@@ -207,4 +196,5 @@ jobs:
         rustup override set nightly
         cargo test --release $FEATURES -- --skip phase2 $SKIP_RUST_TESTS
         cargo test phase2 --release $FEATURES -- $SKIP_RUST_TESTS
-    # TODO: Go tests 
+
+    # TODO: Go tests

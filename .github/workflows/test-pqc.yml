@@ -3,27 +3,10 @@ name: Test PQC ML-KEM
 on:
   workflow_call:
     inputs:
-      backend:
-        description: 'Backend to test (cuda, metal)'
-        required: true
-        type: string
-      backend_upper:
-        description: 'Backend name in uppercase'
-        required: true
-        type: string
-      secret_key:
-        description: 'Secret key for backend checkout'
-        required: true
-        type: string
       runner:
         description: 'Runner labels as JSON array'
         required: true
         type: string
-      backend_branch:
-        description: 'Backend branch to checkout'
-        required: false
-        type: string
-        default: "main"
       # Feature flags for CI conditional testing
       enable_conditional_testing:
         description: 'Enable conditional testing based on changed files'
@@ -51,10 +34,6 @@ on:
         required: false
         type: string
         default: "true"
-    secrets:
-      backend_ssh_key:
-        description: 'SSH key for backend repository'
-        required: true
 
 jobs:
   test-pqc-ml-kem:
@@ -63,26 +42,13 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        
-      - name: Checkout ${{ inputs.backend_upper }} backend
-        if: ${{ !inputs.enable_conditional_testing || inputs.changed_pqc == 'true' }}
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          repository: ingonyama-zk/icicle-${{ inputs.backend }}-backend
-          path: ./icicle/backend/${{ inputs.backend }}
-          ssh-key: ${{ secrets.backend_ssh_key }}
-          ref: ${{ inputs.backend_branch }}
           
       - name: Build PQC
         working-directory: ./icicle
         if: ${{ !inputs.enable_conditional_testing || inputs.changed_pqc == 'true' }}
         run: |
           mkdir -p build && rm -rf build/*
-          EXTRA_FLAGS=""
-          if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
-            EXTRA_FLAGS="-DINGO_CI_ENV=ON"
-          fi
-          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DPQC=ON -D${{ inputs.backend_upper }}_BACKEND=local $EXTRA_FLAGS -S . -B build
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCUDA_PQC_BACKEND=ON -D${{ inputs.backend_upper }}_BACKEND=local -S . -B build
           cmake --build build
           
       - name: Run C++ PQC Tests
@@ -90,4 +56,25 @@ jobs:
         if: ${{ !inputs.enable_conditional_testing || (inputs.changed_pqc == 'true' && (inputs.changed_cpp == 'true' || inputs.changed_cpu_backend == 'true' || inputs.changed_backend_api == 'true')) }}
         run: |
           export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
-          ctest --output-on-failure -R "KyberTest" 
+          ctest --output-on-failure -R "KyberTest"
+
+      - name: Run Rust ML-KEM Tests
+        working-directory: ./wrappers/rust/icicle-pqc
+        if: ${{ !inputs.enable_conditional_testing || (inputs.changed_pqc == 'true' && inputs.changed_rust == 'true') }}
+        run: |
+          export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
+          cargo test --release --verbose
+
+      - name: Setup go
+        if: ${{ !inputs.enable_conditional_testing || (inputs.changed_pqc == 'true' && inputs.changed_go == 'true') }}
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+        with:
+          go-version: '1.22.0'
+          cache: false
+
+      - name: Test GoLang PQC
+        working-directory: ./wrappers/golang/pqc
+        if: ${{ !inputs.enable_conditional_testing || (inputs.changed_pqc == 'true' && inputs.changed_go == 'true') }}
+        run: |
+          export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_pqc -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
+          go test ./tests -count=1 -failfast -p 2 -timeout 10m -v

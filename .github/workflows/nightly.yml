@@ -2,93 +2,133 @@ name: Nightly
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Run at midnight UTC
-  workflow_dispatch:  # Allow manual triggering
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
-  test-curve-cuda:
-    name: Test curves on CUDA (nightly)
+  test-curve:
+    name: Curves
     uses: ./.github/workflows/test-curve.yml
     with:
-      backend: cuda
-      backend_upper: CUDA
-      runner: '["self-hosted", "Linux", "X64", "icicle"]'
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
       enable_conditional_testing: false
     secrets:
-      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        # backend: [cuda, metal]
+        backend: [cuda]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
 
-  test-field-cuda:
-    name: Test fields on CUDA (nightly)
+  test-field:
+    name: Fields
     uses: ./.github/workflows/test-field.yml
     with:
-      backend: cuda
-      backend_upper: CUDA
-      secret_key: CUDA_PULL_KEY
-      runner: '["self-hosted", "Linux", "X64", "icicle"]'
-      backend_branch: main
-      fields: '["babybear", "stark252", "m31", "koalabear", "goldilocks"]'
-      skip-rust-all-fields: ""
-      skip-cpp-all-fields: ""
-      skip-golang-all-fields: "false"
-      initial-support: false
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
       enable_conditional_testing: false
     secrets:
-      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        # backend: [cuda, metal]
+        backend: [cuda]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
 
-  test-hash-cuda:
-    name: Test hash on CUDA (nightly)
+  test-hash:
+    name: Hashes
     uses: ./.github/workflows/test-hash.yml
     with:
-      backend: cuda
-      backend_upper: CUDA
-      secret_key: CUDA_PULL_KEY
-      runner: '["self-hosted", "Linux", "X64", "icicle"]'
-      backend_branch: main
-      skip-rust: ""
-      skip-cpp: ""
-      skip-golang: "false"
-      initial-support: false
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
       enable_conditional_testing: false
     secrets:
-      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        # backend: [cuda, metal]
+        backend: [cuda]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
 
-  test-runtime-cuda:
-    name: Test runtime on CUDA (nightly)
-    uses: ./.github/workflows/test-runtime.yml
-    with:
-      backend: cuda
-      backend_upper: CUDA
-      secret_key: CUDA_PULL_KEY
-      runner: '["self-hosted", "Linux", "X64", "icicle"]'
-      backend_branch: main
-      initial-support: false
-      enable_conditional_testing: false
-    secrets:
-      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
-
-  test-ring-cuda:
-    name: Test ring on CUDA (nightly)
+  test-ring:
+    name: Rings
     uses: ./.github/workflows/test-ring.yml
     with:
-      backend: cuda
-      backend_upper: CUDA
-      secret_key: CUDA_PULL_KEY
-      runner: '["self-hosted", "Linux", "X64", "icicle"]'
-      backend_branch: main
-      rings: '["labrador"]'
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
       enable_conditional_testing: false
     secrets:
-      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        # backend: [cuda, metal]
+        backend: [cuda]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
 
-  test-pqc-cuda:
-    name: Test PQC ML-KEM on CUDA (nightly)
+  test-runtime:
+    name: Runtime
+    uses: ./.github/workflows/test-runtime.yml
+    with:
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
+      enable_conditional_testing: false
+    secrets:
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        # backend: [cuda, metal]
+        backend: [cuda]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
+
+  test-pqc:
+    name: PQC ML-KEM
     uses: ./.github/workflows/test-pqc.yml
     with:
-      backend: cuda
-      backend_upper: CUDA
-      secret_key: CUDA_PULL_KEY
       runner: '["self-hosted", "Linux", "X64", "icicle"]'
-      backend_branch: main
       enable_conditional_testing: false
-    secrets:
-      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }} 
