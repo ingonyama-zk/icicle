@@ -693,8 +693,9 @@ pub fn jl_projection<T: FieldImpl>(
     cfg: &VecOpsConfig,
     output_projection: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), eIcicleError>;
+```
 
-
+```rust
 /// Retrieves raw JL matrix rows over the scalar ring `T` in row-major order.
 ///
 /// - Output layout: row 0 | row 1 | ... | row `num_rows - 1`
@@ -707,8 +708,9 @@ pub fn get_jl_matrix_rows<T: FieldImpl>(
     cfg: &VecOpsConfig,
     output_rows: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), eIcicleError>;
+```
 
-
+```rust
 /// Retrieves JL matrix rows as `Rq` polynomials, optionally conjugated.
 ///
 /// - Each row contains `row_size` polynomials of degree `P::DEGREE`
@@ -728,62 +730,72 @@ pub fn get_jl_matrix_rows_as_polyring<P: PolynomialRing>(
 ### Example
 
 ```rust
-/// Project a vector of Rq polyonmials
 
-use icicle_labrador::polynomial_ring::PolyRing as Rq;
-use icicle_core::polynomial_ring::flatten_polyring_slice;
+    use icicle_core::jl_projection;
+    use icicle_core::polynomial_ring::flatten_polyring_slice;
+    use icicle_core::polynomial_ring::PolynomialRing;
+    use icicle_core::traits::{FieldImpl, GenerateRandom};
+    use icicle_core::vec_ops::VecOpsConfig;
+    use icicle_labrador::polynomial_ring::PolyRing as Rq;
+    use icicle_labrador::ring::ScalarRing as Zq;
+    use icicle_runtime::memory::{HostOrDeviceSlice, HostSlice};
+    use rand::Rng;
 
-// Projecting 128 Rq polynomials (each of degree 64) to a 256-element Zq vector
-let polynomials = Rq::generate_random(128);
-let mut projection = vec![Zq::zero(); 256];
+    // Project a vector of Rq polyonmials
+    // Projecting 128 Rq polynomials (each of degree 64) to a 256-element Zq vector
+    let polynomials = Rq::generate_random(128);
+    let mut projection = vec![Zq::zero(); 256];
 
-// Flatten the polynomials into a contiguous Zq slice (128 × 64 elements)
-let flat_polynomials_as_zq = flatten_polyring_slice(&polynomials);
+    // Flatten the polynomials into a contiguous Zq slice (128 × 64 elements)
+    let flat_polynomials_as_zq = flatten_polyring_slice(HostSlice::from_slice(&polynomials));
 
-// Use a random seed (e.g., hash of transcript or Fiat–Shamir challenge)
-let mut seed = [0u8; 32];
-rand::thread_rng().fill(&mut seed);
+    // Use a random seed (e.g., hash of transcript or Fiat–Shamir challenge)
+    let mut seed = [0u8; 32];
+    rand::thread_rng().fill(&mut seed);
 
-// Perform JL projection
-jl_projection(
-    &flat_polynomials_as_zq,
-    &seed,
-    &VecOpsConfig::default(),
-    HostSlice::from_mut_slice(&mut projection),
-).expect("JL projection failed");
+    // Perform JL projection
+    jl_projection::jl_projection(
+        &flat_polynomials_as_zq,
+        &seed,
+        &VecOpsConfig::default(),
+        HostSlice::from_mut_slice(&mut projection),
+    )
+    .expect("JL projection failed");
 
-// -----------------------------------------------------------------------------
-// 🔍 Matrix Inspection (Zq form)
-// -----------------------------------------------------------------------------
+    // -----------------------------------------------------------------------------
+    // 🔍 Matrix Inspection (Zq form)
+    // -----------------------------------------------------------------------------
 
-// Retrieve the first row of the JL matrix as Zq elements
-let row_size = flat_polynomials_as_zq.len(); // same as input dimension
-let mut output_rows = vec![Zq::zero(); row_size]; // 1 row × row_size elements
+    // Retrieve the first row of the JL matrix as Zq elements
+    let row_size = flat_polynomials_as_zq.len(); // same as input dimension
+    let mut output_rows = vec![Zq::zero(); row_size]; // 1 row × row_size elements
 
-get_jl_matrix_rows(
-    &seed,
-    row_size,            // row size (input dimension)
-    0,                   // start_row
-    1,                   // number of rows
-    &VecOpsConfig::default(),
-    HostSlice::from_mut_slice(&mut output_rows),
-).expect("Failed to generate JL matrix rows as Zq");
+    jl_projection::get_jl_matrix_rows(
+        &seed,
+        row_size, // row size (input dimension)
+        0,        // start_row
+        1,        // number of rows
+        &VecOpsConfig::default(),
+        HostSlice::from_mut_slice(&mut output_rows),
+    )
+    .expect("Failed to generate JL matrix rows as Zq");
 
-// -----------------------------------------------------------------------------
-// 🔁 Matrix Inspection (Rq form, with conjugation)
-// -----------------------------------------------------------------------------
+    // -----------------------------------------------------------------------------
+    // 🔁 Matrix Inspection (Rq form, with conjugation)
+    // -----------------------------------------------------------------------------
 
-let mut output_rows_as_poly = vec![Rq::zero(); polynomials.len()]; // 1 row of polynomials
+    let mut output_rows_as_poly = vec![Rq::zero(); polynomials.len()]; // 1 row of polynomials
 
-get_jl_matrix_rows_as_polyring(
-    &seed,
-    polynomials.len(),   // row size (number of polynomials per row)
-    0,                   // start_row
-    1,                   // number of rows
-    true,                // apply polynomial conjugation
-    &VecOpsConfig::default(),
-    HostSlice::from_mut_slice(&mut output_rows_as_poly),
-).expect("Failed to generate JL matrix rows as Rq (conjugated)");
+    jl_projection::get_jl_matrix_rows_as_polyring(
+        &seed,
+        polynomials.len(), // row size (number of polynomials per row)
+        0,                 // start_row
+        1,                 // number of rows
+        true,              // apply polynomial conjugation
+        &VecOpsConfig::default(),
+        HostSlice::from_mut_slice(&mut output_rows_as_poly),
+    )
+    .expect("Failed to generate JL matrix rows as Rq (conjugated)");
 ```
 
 ## Random Sampling
