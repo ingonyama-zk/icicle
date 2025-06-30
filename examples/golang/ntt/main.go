@@ -20,8 +20,6 @@ import (
 )
 
 func main() {
-	runtime.LoadBackendFromEnvOrDefault()
-
 	var logSize int
 	var deviceType string
 
@@ -29,8 +27,15 @@ func main() {
 	flag.StringVar(&deviceType, "device", "CUDA", "Device type")
 	flag.Parse()
 
+	if deviceType != "CPU" {
+		runtime.LoadBackendFromEnvOrDefault()
+	}
+
 	device := runtime.CreateDevice(deviceType, 0)
-	runtime.SetDevice(&device)
+	// NOTE: If you are only using a single device the entire time
+	// 			then this is ok. If you are using multiple devices
+	// 			then you should use runtime.RunOnDevice() instead.
+	runtime.SetDefaultDevice(&device)
 
 	size := 1 << logSize
 
@@ -76,7 +81,7 @@ func main() {
 
 	var nttResultBn254 core.DeviceSlice
 
-	_, e := nttResultBn254.MallocAsync(size*scalarsBn254.SizeOfElement(), 1, streamBn254)
+	_, e := nttResultBn254.MallocAsync(scalarsBn254.SizeOfElement(), size, streamBn254)
 	if e != runtime.Success {
 		errorString := fmt.Sprint(
 			"Bn254 Malloc failed: ", e)
@@ -94,7 +99,7 @@ func main() {
 
 	var nttResultBls12377 core.DeviceSlice
 
-	_, e = nttResultBls12377.MallocAsync(size*scalarsBls12377.SizeOfElement(), 1, streamBls12377)
+	_, e = nttResultBls12377.MallocAsync(scalarsBls12377.SizeOfElement(), size, streamBls12377)
 	if e != runtime.Success {
 		errorString := fmt.Sprint(
 			"Bls12_377 Malloc failed: ", e)

@@ -13,8 +13,6 @@ import (
 const BATCH = 1 << 12
 
 func main() {
-	runtime.LoadBackendFromEnvOrDefault()
-
 	// Allocate buffers on the host
 	params := mlkem.Kyber768
 	entropyLen := BATCH * mlkem.ENTROPY_BYTES
@@ -46,7 +44,10 @@ func main() {
 
 	// Initialize device
 	device := runtime.CreateDevice("CUDA-PQC", 0)
-	err := runtime.SetDevice(&device)
+	// NOTE: If you are only using a single device the entire time
+	// 			then this is ok. If you are using multiple devices
+	// 			then you should use runtime.RunOnDevice() instead.
+	err := runtime.SetDefaultDevice(&device)
 	if err != runtime.Success {
 		log.Fatalf("Failed to set device: %v", err)
 	}
