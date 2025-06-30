@@ -504,6 +504,7 @@ pub fn get_jl_matrix_rows<T: FieldImpl>(
     output_rows: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), eIcicleError>;
 
+
 /// Retrieves JL matrix rows as `Rq` polynomials, optionally conjugated.
 ///
 /// - Each row contains `row_size` polynomials of degree `P::DEGREE`
@@ -518,6 +519,7 @@ pub fn get_jl_matrix_rows_as_polyring<P: PolynomialRing>(
     cfg: &VecOpsConfig,
     output_rows: &mut (impl HostOrDeviceSlice<P> + ?Sized),
 ) -> Result<(), eIcicleError>;
+```
 
 ### Example
 
@@ -527,11 +529,11 @@ pub fn get_jl_matrix_rows_as_polyring<P: PolynomialRing>(
 use icicle_labrador::polynomial_ring::PolyRing as Rq;
 use icicle_core::polynomial_ring::flatten_polyring_slice;
 
-// Projecting 128 Rq polynomials (each degree-64) to a 256-element Zq vector
+// Projecting 128 Rq polynomials (each of degree 64) to a 256-element Zq vector
 let polynomials = Rq::generate_random(128);
 let mut projection = vec![Zq::zero(); 256];
 
-// Flatten the polynomial vector to a contiguous Zq slice (128 × 64 elements)
+// Flatten the polynomials into a contiguous Zq slice (128 × 64 elements)
 let flat_polynomials_as_zq = flatten_polyring_slice(&polynomials);
 
 // Use a random seed (e.g., hash of transcript or Fiat–Shamir challenge)
@@ -545,6 +547,39 @@ jl_projection(
     &VecOpsConfig::default(),
     HostSlice::from_mut_slice(&mut projection),
 ).expect("JL projection failed");
+
+// -----------------------------------------------------------------------------
+// 🔍 Matrix Inspection (Zq form)
+// -----------------------------------------------------------------------------
+
+// Retrieve the first row of the JL matrix as Zq elements
+let row_size = flat_polynomials_as_zq.len(); // same as input dimension
+let mut output_rows = vec![Zq::zero(); row_size]; // 1 row × row_size elements
+
+get_jl_matrix_rows(
+    &seed,
+    row_size,            // row size (input dimension)
+    0,                   // start_row
+    1,                   // number of rows
+    &VecOpsConfig::default(),
+    HostSlice::from_mut_slice(&mut output_rows),
+).expect("Failed to generate JL matrix rows as Zq");
+
+// -----------------------------------------------------------------------------
+// 🔁 Matrix Inspection (Rq form, with conjugation)
+// -----------------------------------------------------------------------------
+
+let mut output_rows_as_poly = vec![Rq::zero(); polynomials.len()]; // 1 row of polynomials
+
+get_jl_matrix_rows_as_polyring(
+    &seed,
+    polynomials.len(),   // row size (number of polynomials per row)
+    0,                   // start_row
+    1,                   // number of rows
+    true,                // apply polynomial conjugation
+    &VecOpsConfig::default(),
+    HostSlice::from_mut_slice(&mut output_rows_as_poly),
+).expect("Failed to generate JL matrix rows as Rq (conjugated)");
 ```
 
 ## Random Sampling
