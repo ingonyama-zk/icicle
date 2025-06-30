@@ -155,7 +155,7 @@ jobs:
         if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
           EXTRA_FLAGS="-DINGO_CI_ENV=ON ${{ steps.feature_flags.outputs.FEATURE_FLAGS }}"
         fi
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DRING=${{ matrix.ring.name }} -D${{ inputs.backend_upper }}_BACKEND=local $EXTRA_FLAGS -S . -B build
+        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DRING=${{ matrix.ring.name }} -D${{ inputs.backend_upper }}_BACKEND=local $EXTRA_FLAGS -S . -B build
         cmake --build build
 
     - name: Run C++ ring tests
