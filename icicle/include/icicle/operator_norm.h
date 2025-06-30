@@ -18,19 +18,20 @@
 namespace opnorm_cpu {
   // We have to use FixedPoint to get reproducible results on other devices
   struct FixedPoint {
-    int64_t value;
-    static constexpr int64_t scale = 100000000; // 8 decimal places
+    int32_t value;
+    static constexpr float scale = 1000000.0f; // 6 decimal places
 
-    HOST_DEVICE static FixedPoint from_double(double f) { return FixedPoint{static_cast<int64_t>(f * scale)}; }
-
-    HOST_DEVICE double to_double() const { return value / static_cast<double>(scale); }
+    HOST_DEVICE static FixedPoint from_float(float f) { return FixedPoint{static_cast<int32_t>(f * scale)}; }
+    HOST_DEVICE float to_float() const { return value / scale; }
 
     HOST_DEVICE FixedPoint operator+(const FixedPoint& other) const { return FixedPoint{value + other.value}; }
     HOST_DEVICE FixedPoint operator-(const FixedPoint& other) const { return FixedPoint{value - other.value}; }
-    HOST_DEVICE FixedPoint operator*(const FixedPoint& other) const { 
-        return FixedPoint{static_cast<int64_t>((__int128_t(value) * other.value) / scale)};
+    HOST_DEVICE FixedPoint operator*(const FixedPoint& other) const {
+        return FixedPoint{static_cast<int32_t>((static_cast<int64_t>(value) * other.value) / static_cast<int32_t>(scale))};
     }
-    HOST_DEVICE FixedPoint operator/(const FixedPoint& other) const { return FixedPoint{static_cast<int64_t>((__int128_t(value) * scale) / other.value)}; }
+    HOST_DEVICE FixedPoint operator/(const FixedPoint& other) const {
+        return FixedPoint{static_cast<int32_t>((static_cast<int64_t>(value) * static_cast<int32_t>(scale)) / other.value)};
+    }
 
     HOST_DEVICE bool operator>(const FixedPoint& other) const { return value > other.value; }
     HOST_DEVICE bool operator<(const FixedPoint& other) const { return value < other.value; }
@@ -54,10 +55,7 @@ namespace opnorm_cpu {
       return *this;
     }
     HOST_DEVICE FixedPoint abs() const {
-      // sqrt is not fixed-point, so convert to double for abs
-      // We can implement the fixed point sqrt if needed later
-      double sum = re.to_double() * re.to_double() + im.to_double() * im.to_double();
-      return FixedPoint::from_double(std::sqrt(sum));
+      return FixedPoint::from_float(sqrtf((re * re + im * im).to_float()));
     }
   };
 
@@ -65,79 +63,79 @@ namespace opnorm_cpu {
   constexpr double PI = 3.14159265358979323846;
 
   static const ComplexFixed twist[64] = {
-    {100000000, 0},
-    {99879546, 4906767},
-    {99518473, 9801714},
-    {98917651, 14673047},
-    {98078528, 19509032},
-    {97003125, 24298018},
-    {95694034, 29028468},
-    {94154407, 33688985},
-    {92387953, 38268343},
-    {90398929, 42755509},
-    {88192126, 47139674},
-    {85772861, 51410274},
-    {83146961, 55557023},
-    {80320753, 59569930},
-    {77301045, 63439328},
-    {74095113, 67155895},
-    {70710678, 70710678},
-    {67155895, 74095113},
-    {63439328, 77301045},
-    {59569930, 80320753},
-    {55557023, 83146961},
-    {51410274, 85772861},
-    {47139674, 88192126},
-    {42755509, 90398929},
-    {38268343, 92387953},
-    {33688985, 94154407},
-    {29028468, 95694034},
-    {24298018, 97003125},
-    {19509032, 98078528},
-    {14673047, 98917651},
-    {9801714, 99518473},
-    {4906767, 99879546},
-    {0, 100000000},
-    {-4906767, 99879546},
-    {-9801714, 99518473},
-    {-14673047, 98917651},
-    {-19509032, 98078528},
-    {-24298018, 97003125},
-    {-29028468, 95694034},
-    {-33688985, 94154407},
-    {-38268343, 92387953},
-    {-42755509, 90398929},
-    {-47139674, 88192126},
-    {-51410274, 85772861},
-    {-55557023, 83146961},
-    {-59569930, 80320753},
-    {-63439328, 77301045},
-    {-67155895, 74095113},
-    {-70710678, 70710678},
-    {-74095113, 67155895},
-    {-77301045, 63439328},
-    {-80320753, 59569930},
-    {-83146961, 55557023},
-    {-85772861, 51410274},
-    {-88192126, 47139674},
-    {-90398929, 42755509},
-    {-92387953, 38268343},
-    {-94154407, 33688985},
-    {-95694034, 29028468},
-    {-97003125, 24298018},
-    {-98078528, 19509032},
-    {-98917651, 14673047},
-    {-99518473, 9801714},
-    {-99879546, 4906767}
+    {1000000, 0},
+    {998795, 49067},
+    {995184, 98017},
+    {989176, 146730},
+    {980785, 195090},
+    {970031, 242980},
+    {956940, 290284},
+    {941544, 336889},
+    {923879, 382683},
+    {903989, 427555},
+    {881921, 471396},
+    {857728, 514102},
+    {831469, 555570},
+    {803207, 595699},
+    {773010, 634393},
+    {740951, 671558},
+    {707106, 707106},
+    {671558, 740951},
+    {634393, 773010},
+    {595699, 803207},
+    {555570, 831469},
+    {514102, 857728},
+    {471396, 881921},
+    {427555, 903989},
+    {382683, 923879},
+    {336889, 941544},
+    {290284, 956940},
+    {242980, 970031},
+    {195090, 980785},
+    {146730, 989176},
+    {98017, 995184},
+    {49067, 998795},
+    {0, 1000000},
+    {-49067, 998795},
+    {-98017, 995184},
+    {-146730, 989176},
+    {-195090, 980785},
+    {-242980, 970031},
+    {-290284, 956940},
+    {-336889, 941544},
+    {-382683, 923879},
+    {-427555, 903989},
+    {-471396, 881921},
+    {-514102, 857728},
+    {-555570, 831469},
+    {-595699, 803207},
+    {-634393, 773010},
+    {-671558, 740951},
+    {-707106, 707106},
+    {-740951, 671558},
+    {-773010, 634393},
+    {-803207, 595699},
+    {-831469, 555570},
+    {-857728, 514102},
+    {-881921, 471396},
+    {-903989, 427555},
+    {-923879, 382683},
+    {-941544, 336889},
+    {-956940, 290284},
+    {-970031, 242980},
+    {-980785, 195090},
+    {-989176, 146730},
+    {-995184, 98017},
+    {-998795, 49067}
   };
 
   static const ComplexFixed host_wlen_table[6] = {
-    { -100000000, 0 }, // len = 2
-    { 0, 100000000 }, // len = 4
-    { 70710678, 70710678 }, // len = 8
-    { 92387953, 38268343 }, // len = 16
-    { 98078528, 19509032 }, // len = 32
-    { 99518473, 9801714 }, // len = 64
+    { -1000000, 0 }, // len = 2
+    { 0, 1000000 }, // len = 4
+    { 707106, 707106 }, // len = 8
+    { 923879, 382683 }, // len = 16
+    { 980785, 195090 }, // len = 32
+    { 995184, 98017 }, // len = 64
   };
 
   using Poly = std::array<int64_t, N>;
@@ -169,9 +167,9 @@ namespace opnorm_cpu {
 
     for (size_t len = 2, stage = 0; len <= n; ++stage, len <<= 1) {
       ComplexFixed wlen = wlen_table[stage];
-      if (inverse) wlen.im = FixedPoint::from_double(-wlen.im.to_double());
+      if (inverse) wlen.im = FixedPoint::from_float(-wlen.im.to_float());
       for (size_t i = 0; i < n; i += len) {
-        ComplexFixed w = ComplexFixed{FixedPoint::from_double(1.0), FixedPoint::from_double(0)};
+        ComplexFixed w = ComplexFixed{FixedPoint::from_float(1.0f), FixedPoint::from_float(0.0f)};
         for (size_t j = 0; j < len / 2; ++j) {
           ComplexFixed u = a[i + j];
           ComplexFixed v = a[i + j + len / 2] * w;
@@ -183,7 +181,7 @@ namespace opnorm_cpu {
     }
 
     if (inverse) {
-      FixedPoint scale = FixedPoint::from_double(1.0 / static_cast<double>(n));
+      FixedPoint scale = FixedPoint::from_float(1.0f / static_cast<float>(n));
       for (ComplexFixed& x : a)
         x = ComplexFixed{x.re * scale, x.im * scale};
     }
@@ -194,7 +192,7 @@ namespace opnorm_cpu {
   {
     CPoly complex_a;
     for (size_t i = 0; i < N; ++i)
-      complex_a[i] = ComplexFixed{FixedPoint::from_double(static_cast<double>(a[i])), FixedPoint{0}} * twist[i];
+      complex_a[i] = ComplexFixed{FixedPoint::from_float(static_cast<float>(a[i])), FixedPoint::from_float(0.0f)} * twist[i];
 
     fft(complex_a, twist, host_wlen_table);
 
@@ -204,7 +202,7 @@ namespace opnorm_cpu {
       if (abs_val > max_norm) max_norm = abs_val;
     }
 
-    return static_cast<int64_t>(std::ceil(max_norm.to_double()));
+    return static_cast<int64_t>(ceilf(max_norm.to_float()));
   }
 
 } // namespace opnorm_cpu
