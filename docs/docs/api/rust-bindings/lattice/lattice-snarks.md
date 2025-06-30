@@ -253,90 +253,99 @@ matmul(&device_a_transposed, m, n, HostSlice::from_slice(&host_a), n, m, &cfg, &
     .expect("Matmul failed");
 ```
 
-## Balanced Decomposition
+## Balanced Base Decomposition
 
-### Decomposition and Recomposition
+### Decompose and Recompose Ring Elements
+
+Balanced base decomposition expresses each ring element (e.g. `Zq`, `Rq`) as a sequence of digits in a given base `b`, where each digit lies in the interval `(-b/2, b/2]`.
+
+---
+
+### Output Layout
+
+For an input slice of `n` elements and a digit count `d = count_digits(base)`:
+
+- The output vector has length `n × d`.
+- The layout is **digit-major** (not element-major):
+  - The first `n` entries are the **first digit** of all elements.
+  - The next `n` entries are the **second digit** of all elements.
+  - And so on, until all `d` digits are emitted.
+- Conceptually, this forms a matrix of shape `[d × n]`, where each row corresponds to a digit index and each column to an element.
+- If you allocate fewer than `d` digit rows (i.e., a shorter output buffer), decomposition will truncate early.
+  - **Warning**: recomposition will only reconstruct the original values correctly if all omitted most significant digits were zero.
+---
+
+### Main Imports
 
 ```rust
-use icicle_core::balanced_decomposition::BalancedDecomposition;
+use icicle_core::balanced_decomposition::{
+    decompose,            // Decomposition function
+    recompose,            // Recomposition function
+    count_digits,         // Compute number of digits needed
+    BalancedDecomposition // Trait for custom rings
+};
+```
 
-// Compute number of digits needed for base-b decomposition
-let digits_per_elem = balanced_decomposition::count_digits::<P>(base);
+### API
 
-// Decompose elements into balanced base-b digits
+```rust
+/// Returns the number of digits required to represent a ring element in balanced base-`b` form.
+///
+/// Each digit lies in the interval (-b/2, b/2], and the number of digits depends on the modulus.
+fn count_digits<T: BalancedDecomposition<T>>(base: u32) -> u32
+
+/// Decomposes a slice of elements into balanced base-`b` digits (digit-major layout).
+///
+/// - `input.len()` = number of elements to decompose
+/// - `output.len()` must be `input.len() × num_digits`, where `num_digits ∈ [1, count_digits(base)]`
+///
+/// Digits are written in order of increasing significance, grouped by digit index.
+fn decompose<T: BalancedDecomposition<T>>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
+    output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+    base: u32,
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+
+/// Recomposes original elements from digit-major base-`b` decomposition.
+///
+/// - `input.len()` must be `output.len() × num_digits`, where `num_digits ∈ [1, count_digits(base)]`
+///
+/// Recomposition is exact only if all omitted higher-order digits were zero.
+fn recompose<T: BalancedDecomposition<T>>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
+    output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+    base: u32,
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+```
+
+### Examples
+
+```rust
+let base = 4; // Typically set to q^(1/t) for small t (e.g., t = 2, 4, 6)
+let size = 1024;
+// Compute number of digits per element for the given base
+let digits = balanced_decomposition::count_digits::<P>(base);
+let output_len = size * digits as usize;
+
+// Allocate device memory for digit-major output
+let mut decomposed = DeviceVec::<P>::device_malloc(output_len)
+    .expect("Failed to allocate device memory");
+
+// Generate input vector
+let input = P::generate_random(size);
+
+// Perform balanced base decomposition
+let cfg = VecOpsConfig::default();
 balanced_decomposition::decompose::<P>(
     HostSlice::from_slice(&input),
-    &mut decomposed[..],
+    &mut decomposed,
     base,
-    &config,
-)?;
-
-// Recompose elements from balanced base-b digits
-balanced_decomposition::recompose::<P>(
-    &decomposed[..],
-    HostSlice::from_mut_slice(&mut recomposed),
-    base,
-    &config,
-)?;
+    &cfg,
+).expect("Decomposition failed");
 ```
 
-### Example: Balanced Decomposition
-
-```rust
-use icicle_core::{
-    balanced_decomposition::BalancedDecomposition,
-    traits::GenerateRandom,
-};
-use icicle_runtime::memory::{DeviceVec, HostSlice};
-
-fn balanced_decomposition_example<P>(size: usize)
-where
-    P: PolynomialRing + BalancedDecomposition<P> + GenerateRandom<P>,
-    P::Base: FieldImpl + Arithmetic,
-{
-    let q = modulus::<P::Base>();
-    let ts = [2, 4, 6];
-    let bases: Vec<u32> = ts
-        .iter()
-        .map(|t| (q as f64).powf(1.0 / *t as f64).floor() as u32)
-        .collect();
-
-    // Generate input data
-    let input = P::generate_random(size);
-    let mut recomposed = vec![P::zero(); size];
-    let config = VecOpsConfig::default();
-
-    for (i, base) in bases.iter().enumerate() {
-        let digits_per_elem = balanced_decomposition::count_digits::<P>(*base);
-        let decomposed_len = size * digits_per_elem as usize;
-
-        let mut decomposed = DeviceVec::<P>::device_malloc(decomposed_len)?;
-
-        // Decompose
-        let t0 = std::time::Instant::now();
-        balanced_decomposition::decompose::<P>(
-            HostSlice::from_slice(&input),
-            &mut decomposed[..],
-            *base,
-            &config,
-        )?;
-        let decompose_time = t0.elapsed();
-
-        // Recompose
-        let t1 = std::time::Instant::now();
-        balanced_decomposition::recompose::<P>(
-            &decomposed[..],
-            HostSlice::from_mut_slice(&mut recomposed),
-            *base,
-            &config,
-        )?;
-        let recompose_time = t1.elapsed();
-
-        // Verification
-        assert_eq!(input, recomposed);
-    }
-}
-```
 
 ## Norm Checking
 
