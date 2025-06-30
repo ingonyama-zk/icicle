@@ -19,23 +19,9 @@ where
     rand::thread_rng().fill(&mut seed);
 
     test_utilities::test_set_main_device();
-    random_sampling(
-        output_size,
-        false,
-        &seed,
-        &cfg,
-        HostSlice::from_mut_slice(&mut output_a),
-    )
-    .expect("random sampling failed");
+    random_sampling(false, &seed, &cfg, HostSlice::from_mut_slice(&mut output_a)).expect("random sampling failed");
     test_utilities::test_set_ref_device();
-    random_sampling(
-        output_size,
-        false,
-        &seed,
-        &cfg,
-        HostSlice::from_mut_slice(&mut output_b),
-    )
-    .expect("random sampling failed");
+    random_sampling(false, &seed, &cfg, HostSlice::from_mut_slice(&mut output_b)).expect("random sampling failed");
 
     for i in 0..output_size {
         assert_eq!(output_a[i], output_b[i], "random sampling mismatch at index {}", i);

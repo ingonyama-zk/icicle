@@ -105,8 +105,10 @@ macro_rules! impl_norm {
 
         fn norm_check_args(
             input: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+            output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
             cfg: &mut VecOpsConfig,
         ) -> Result<(), eIcicleError> {
+            cfg.batch_size = output.len() as i32;
             if input.len() % (cfg.batch_size as usize) != 0 {
                 eprintln!(
                     "Batch size {} must divide input size {}",
@@ -118,6 +120,11 @@ macro_rules! impl_norm {
 
             if input.is_on_device() && !input.is_on_active_device() {
                 eprintln!("Input is on an inactive device");
+                return Err(eIcicleError::InvalidArgument);
+            }
+
+            if output.is_on_device() {
+                eprintln!("Output is expected to be on host, but it is on device");
                 return Err(eIcicleError::InvalidArgument);
             }
 
@@ -136,7 +143,7 @@ macro_rules! impl_norm {
                 output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
             ) -> Result<(), eIcicleError> {
                 let mut cfg = cfg.clone();
-                norm_check_args(input, &mut cfg)?;
+                norm_check_args(input, output, &mut cfg)?;
 
                 unsafe {
                     check_norm_bound(
@@ -161,8 +168,8 @@ macro_rules! impl_norm {
                 output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
             ) -> Result<(), eIcicleError> {
                 let mut cfg = cfg.clone();
-                norm_check_args(input_a, &mut cfg)?;
-                norm_check_args(input_b, &mut cfg)?;
+                norm_check_args(input_a, output, &mut cfg)?;
+                norm_check_args(input_b, output, &mut cfg)?;
 
                 if input_a.len() != input_b.len() {
                     return Err(eIcicleError::InvalidArgument);
