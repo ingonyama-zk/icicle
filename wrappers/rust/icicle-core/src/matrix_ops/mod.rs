@@ -30,6 +30,28 @@ pub trait MatrixOps<T> {
     ) -> Result<(), eIcicleError>;
 }
 
+/// Trait defining matrix transpose operations for types stored in host or device memory.
+///
+/// ### Supported Operations
+/// - **Matrix transpose (`matrix_transpose`)**
+///   Transposes a matrix `input` stored in **row-major** order,
+///   and writes the result to `result`, also in row-major order.
+///
+///   Dimensions must satisfy:
+///   - `input` is of shape `(nof_rows × nof_cols)`
+///   - `result` must be sized to hold `(nof_cols × nof_rows)` elements
+///
+///   Memory for all inputs and the result can reside on either the host or device.
+pub trait MatrixTranspose<T> {
+    fn matrix_transpose(
+        input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        nof_rows: u32,
+        nof_cols: u32,
+        cfg: &VecOpsConfig,
+        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+    ) -> Result<(), eIcicleError>;
+}
+
 pub fn matmul<T>(
     a: &(impl HostOrDeviceSlice<T> + ?Sized),
     a_rows: u32,
@@ -44,6 +66,19 @@ where
     T: MatrixOps<T>,
 {
     T::matmul(a, a_rows, a_cols, b, b_rows, b_cols, cfg, result)
+}
+
+pub fn matrix_transpose<T>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
+    nof_rows: u32,
+    nof_cols: u32,
+    cfg: &VecOpsConfig,
+    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+) -> Result<(), eIcicleError>
+where
+    T: MatrixTranspose<T>,
+{
+    T::matrix_transpose(input, nof_rows, nof_cols, cfg, result)
 }
 
 /// Implements matrix multiplication over polynomial rings via FFI
@@ -153,6 +188,87 @@ macro_rules! impl_matmul {
     };
 }
 
+/// Implements matrix transpose over polynomial rings via FFI
+#[macro_export]
+macro_rules! impl_matrix_transpose {
+    ($prefix: literal, $poly_type: ty) => {
+        mod transpose {
+            use icicle_core::{matrix_ops::MatrixTranspose, vec_ops::VecOpsConfig};
+            use icicle_runtime::errors::eIcicleError;
+            use icicle_runtime::memory::HostOrDeviceSlice;
+
+            extern "C" {
+                #[link_name = "labrador_poly_matrix_transpose"]
+                pub(crate) fn matrix_transpose_ffi(
+                    input: *const $poly_type,
+                    nof_rows: u32,
+                    nof_cols: u32,
+                    cfg: *const VecOpsConfig,
+                    result: *mut $poly_type,
+                ) -> eIcicleError;
+            }
+
+            impl MatrixTranspose<$poly_type> for $poly_type {
+                fn matrix_transpose(
+                    input: &(impl HostOrDeviceSlice<$poly_type> + ?Sized),
+                    nof_rows: u32,
+                    nof_cols: u32,
+                    cfg: &VecOpsConfig,
+                    result: &mut (impl HostOrDeviceSlice<$poly_type> + ?Sized),
+                ) -> Result<(), eIcicleError> {
+                    if input.len() as u32 != nof_rows * nof_cols {
+                        eprintln!(
+                            "Input matrix has invalid size: got {}, expected {} ({} × {})",
+                            input.len(),
+                            nof_rows * nof_cols,
+                            nof_rows,
+                            nof_cols
+                        );
+                        return Err(eIcicleError::InvalidArgument);
+                    }
+
+                    if result.len() as u32 != nof_rows * nof_cols {
+                        eprintln!(
+                            "Result matrix has invalid size: got {}, expected {} ({} × {})",
+                            result.len(),
+                            nof_rows * nof_cols,
+                            nof_cols,
+                            nof_rows
+                        );
+                        return Err(eIcicleError::InvalidArgument);
+                    }
+
+                    if result.is_on_device() && !result.is_on_active_device() {
+                        eprintln!("Result matrix is on an inactive device");
+                        return Err(eIcicleError::InvalidArgument);
+                    }
+
+                    if input.is_on_device() && !input.is_on_active_device() {
+                        eprintln!("Input matrix is on an inactive device");
+                        return Err(eIcicleError::InvalidArgument);
+                    }
+
+                    let mut cfg_clone = cfg.clone();
+                    cfg_clone.is_a_on_device = input.is_on_device();
+                    cfg_clone.is_b_on_device = false; // Not used for transpose
+                    cfg_clone.is_result_on_device = result.is_on_device();
+
+                    unsafe {
+                        matrix_transpose_ffi(
+                            input.as_ptr(),
+                            nof_rows,
+                            nof_cols,
+                            &cfg_clone,
+                            result.as_mut_ptr(),
+                        )
+                        .wrap()
+                    }
+                }
+            }
+        }
+    };
+}
+
 #[macro_export]
 macro_rules! impl_matmul_device_tests {
     ($poly:ty) => {
@@ -171,6 +287,29 @@ macro_rules! impl_matmul_device_tests {
             fn test_matmul_device_memory() {
                 initialize();
                 check_matmul_device_memory::<$poly>();
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_matrix_transpose_device_tests {
+    ($poly:ty) => {
+        #[cfg(test)]
+        mod test_matrix_transpose_device_memory {
+
+            use icicle_core::matrix_ops::tests::*;
+            use icicle_runtime::test_utilities;
+
+            pub fn initialize() {
+                test_utilities::test_load_and_init_devices();
+                test_utilities::test_set_main_device();
+            }
+
+            #[test]
+            fn test_matrix_transpose_device_memory() {
+                initialize();
+                check_matrix_transpose_device_memory::<$poly>();
             }
         }
     };

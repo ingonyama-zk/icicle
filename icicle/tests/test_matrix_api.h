@@ -477,6 +477,35 @@ TEST_F(MatrixTestBase, VectorTimesVector)
   }
 }
 
+TEST_F(MatrixTestBase, PolyRingMatMul1x1)
+{
+  // Test 1x1 matrix multiplication
+  // This tests that matmul(A, B) where A and B are 1x1 matrices
+  // produces the same result as the reference matrix multiplication
+  
+  std::vector<PolyRing> matrix_a(1); // 1x1 matrix A
+  std::vector<PolyRing> matrix_b(1); // 1x1 matrix B
+  std::vector<PolyRing> expected(1); // Expected result using reference implementation
+  std::vector<PolyRing> result(1);   // 1x1 result matrix
+  
+  // Generate random PolyRing elements
+  Zq::rand_host_many(reinterpret_cast<Zq*>(matrix_a.data()), PolyRing::d * 1);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(matrix_b.data()), PolyRing::d * 1);
+  
+  matmul_ref(matrix_a, matrix_b, expected, 1, 1, 1);
+  
+  VecOpsConfig cfg{};
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    ICICLE_CHECK(matmul(matrix_a.data(), 1, 1, matrix_b.data(), 1, 1, cfg, result.data()));
+    END_TIMER(matmul_1x1, timer_label.str().c_str(), true);    
+
+    ASSERT_EQ(0, std::memcmp(expected.data(), result.data(), sizeof(PolyRing)))
+      << "1x1 PolyRing matrix multiplication broken on device " << device;
+  }
+}
+
 #endif
 
 TYPED_TEST(MatrixTest, matrixTranspose)
