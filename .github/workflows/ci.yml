@@ -84,19 +84,19 @@ jobs:
   #     pr-number: ${{ needs.calculate-conditions.outputs.pr-number }}
   #     backend-type: metal
   
-  test-curve-cuda:
-    name: Test curves on CUDA
+  test-curve:
+    name: Curves
     needs: [check-changed-files, check-format, extract-cuda-backend-branch]
     uses: ./.github/workflows/test-curve.yml
     with:
-      backend: cuda
-      backend_upper: CUDA
-      runner: '["self-hosted", "Linux", "X64", "icicle"]'
-      backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
-      skip-rust-all-curves: ""
-      skip-cpp-all-curves: ""
-      skip-golang-all-curves: "false"
-      initial-support: false
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
+      backend_branch: ${{ matrix.backend_branch }}
+      skip-rust-all-curves: ${{ matrix.skip-rust-all-curves }}
+      skip-cpp-all-curves: ${{ matrix.skip-cpp-all-curves }}
+      skip-golang-all-curves: ${{ matrix.skip-golang-all-curves }}
+      initial-support: ${{ matrix.initial-support }}
       enable_conditional_testing: true
       # Changed files flags
       changed_curve: ${{ needs.check-changed-files.outputs.curve }}
@@ -115,58 +115,45 @@ jobs:
       changed_poseidon: ${{ needs.check-changed-files.outputs.poseidon }}
       changed_poseidon2: ${{ needs.check-changed-files.outputs.poseidon2 }}
     secrets:
-      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        backend: [cuda]
+        # backend: [cuda, metal]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+            backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
+            skip-rust-all-curves: ""
+            skip-cpp-all-curves: ""
+            skip-golang-all-curves: "false"
+            initial-support: false
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
+          #   backend_branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}
+          #   skip-rust-all-curves: "--skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared --skip msm_skewed_distributions --skip vec_ops_scalars_inv --skip pairing --skip fri"
+          #   skip-cpp-all-curves: ".*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge"
+          #   skip-golang-all-curves: "true"
+          #   initial-support: true
+          #   supported_features: '["msm"]' # TODO: Since Metal doesn't support all features, we need to specify the supported features
 
-  # test-curve-metal:
-  #   name: Test curves on Metal
-  #   needs: [check-changed-files, check-format, extract-metal-backend-branch]
-  #   uses: ./.github/workflows/test-curve.yml
-  #   with:
-  #     backend: metal
-  #     backend_upper: METAL
-  #     secret_key: METAL_PULL_KEY
-  #     runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
-  #     backend_branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}
-  #     curves: '["bn254", "bls12_381", "bls12_377", "bw6_761", "grumpkin"]'
-  #     skip-rust-all-curves: "--skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared --skip msm_skewed_distributions --skip vec_ops_scalars_inv --skip pairing --skip fri"
-  #     skip-cpp-all-curves: ".*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge"
-  #     skip-golang-all-curves: "true"
-  #     initial-support: true
-  #     enable_conditional_testing: true
-  #     # Changed files flags
-  #     changed_curve: ${{ needs.check-changed-files.outputs.curve }}
-  #     changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
-  #     changed_rust: ${{ needs.check-changed-files.outputs.rust }}
-  #     changed_go: ${{ needs.check-changed-files.outputs.go }}
-  #     changed_cpu_backend: ${{ needs.check-changed-files.outputs.cpu-backend }}
-  #     changed_backend_api: ${{ needs.check-changed-files.outputs.backend-api }}
-  #     # Feature change flags
-  #     changed_msm: ${{ needs.check-changed-files.outputs.msm }}
-  #     changed_ntt: ${{ needs.check-changed-files.outputs.ntt }}
-  #     changed_ecntt: ${{ needs.check-changed-files.outputs.ecntt }}
-  #     changed_pairing: ${{ needs.check-changed-files.outputs.pairing }}
-  #     changed_fri: ${{ needs.check-changed-files.outputs.fri }}
-  #     changed_sumcheck: ${{ needs.check-changed-files.outputs.sumcheck }}
-  #     changed_poseidon: ${{ needs.check-changed-files.outputs.poseidon }}
-  #     changed_poseidon2: ${{ needs.check-changed-files.outputs.poseidon2 }}
-  #   secrets:
-  #     backend_ssh_key: ${{ secrets.METAL_PULL_KEY }}
-
-  test-field-cuda:
-    name: Test fields on CUDA
+  test-field:
+    name: Fields
     needs: [check-changed-files, check-format, extract-cuda-backend-branch]
     uses: ./.github/workflows/test-field.yml
     with:
-      backend: cuda
-      backend_upper: CUDA
-      secret_key: CUDA_PULL_KEY
-      runner: '["self-hosted", "Linux", "X64", "icicle"]'
-      backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
-      fields: '["babybear", "stark252", "m31", "koalabear", "goldilocks"]'
-      skip-rust-all-fields: ""
-      skip-cpp-all-fields: ""
-      skip-golang-all-fields: "false"
-      initial-support: false
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
+      backend_branch: ${{ matrix.backend_branch }}
+      skip-rust-all-fields: ${{ matrix.skip-rust-all-fields }}
+      skip-cpp-all-fields: ${{ matrix.skip-cpp-all-fields }}
+      skip-golang-all-fields: ${{ matrix.skip-golang-all-fields }}
+      initial-support: ${{ matrix.initial-support }}
       enable_conditional_testing: true
       # Changed files flags
       changed_field: ${{ needs.check-changed-files.outputs.field }}
@@ -182,22 +169,45 @@ jobs:
       changed_poseidon: ${{ needs.check-changed-files.outputs.poseidon }}
       changed_poseidon2: ${{ needs.check-changed-files.outputs.poseidon2 }}
     secrets:
-      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        backend: [cuda]
+        # backend: [cuda, metal]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+            backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
+            skip-rust-all-curves: ""
+            skip-cpp-all-curves: ""
+            skip-golang-all-curves: "false"
+            initial-support: false
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
+          #   backend_branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}
+          #   skip-rust-all-curves: "--skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared --skip msm_skewed_distributions --skip vec_ops_scalars_inv --skip pairing --skip fri"
+          #   skip-cpp-all-curves: ".*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge"
+          #   skip-golang-all-curves: "true"
+          #   initial-support: true
+          #   supported_features: '["msm"]'
 
-  test-hash-cuda:
-    name: Test hash on CUDA
+  test-hash:
+    name: Hashes
     needs: [check-changed-files, check-format, extract-cuda-backend-branch]
     uses: ./.github/workflows/test-hash.yml
     with:
-      backend: cuda
-      backend_upper: CUDA
-      secret_key: CUDA_PULL_KEY
-      runner: '["self-hosted", "Linux", "X64", "icicle"]'
-      backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
-      skip-rust: ""
-      skip-cpp: ""
-      skip-golang: "false"
-      initial-support: false
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
+      backend_branch: ${{ matrix.backend_branch }}
+      skip-rust: ${{ matrix.skip-rust }}
+      skip-cpp: ${{ matrix.skip-cpp }}
+      skip-golang: ${{ matrix.skip-golang }}
+      initial-support: ${{ matrix.initial-support }}
       enable_conditional_testing: true
       # Changed files flags
       changed_hash: ${{ needs.check-changed-files.outputs.hash }}
@@ -207,41 +217,40 @@ jobs:
       changed_cpu_backend: ${{ needs.check-changed-files.outputs.cpu-backend }}
       changed_backend_api: ${{ needs.check-changed-files.outputs.backend-api }}
     secrets:
-      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        backend: [cuda]
+        # backend: [cuda, metal]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+            backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
+            skip-rust: ""
+            skip-cpp: ""
+            skip-golang: "false"
+            initial-support: false
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
+          #   backend_branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}
+          #   skip-rust: ""
+          #   skip-cpp: ""
+          #   skip-golang: "true"
+          #   initial-support: true
 
-  test-runtime-cuda:
-    name: Test runtime on CUDA
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
-    uses: ./.github/workflows/test-runtime.yml
-    with:
-      backend: cuda
-      backend_upper: CUDA
-      secret_key: CUDA_PULL_KEY
-      runner: '["self-hosted", "Linux", "X64", "icicle"]'
-      backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
-      initial-support: false
-      enable_conditional_testing: true
-      # Changed files flags
-      changed_runtime: ${{ needs.check-changed-files.outputs.runtime }}
-      changed_field: ${{ needs.check-changed-files.outputs.field }}
-      changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
-      changed_rust: ${{ needs.check-changed-files.outputs.rust }}
-      changed_go: ${{ needs.check-changed-files.outputs.go }}
-      changed_cpu_backend: ${{ needs.check-changed-files.outputs.cpu-backend }}
-    secrets:
-      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
-
-  test-ring-cuda:
-    name: Test ring on CUDA
+  test-ring:
+    name: Rings
     needs: [check-changed-files, check-format, extract-cuda-backend-branch]
     uses: ./.github/workflows/test-ring.yml
     with:
-      backend: cuda
-      backend_upper: CUDA
-      secret_key: CUDA_PULL_KEY
-      runner: '["self-hosted", "Linux", "X64", "icicle"]'
-      backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
-      rings: '["labrador"]'
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
+      backend_branch: ${{ matrix.backend_branch }}
       enable_conditional_testing: true
       # Changed files flags
       changed_ring: ${{ needs.check-changed-files.outputs.ring }}
@@ -251,23 +260,71 @@ jobs:
       changed_backend_api: ${{ needs.check-changed-files.outputs.backend-api }}
       changed_ntt: ${{ needs.check-changed-files.outputs.ntt }}
     secrets:
-      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        backend: [cuda]
+        # backend: [cuda, metal]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+            backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
+            initial-support: false
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
+          #   backend_branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}
+          #   initial-support: true
 
-  test-pqc-cuda:
-    name: Test PQC ML-KEM on CUDA
+  test-runtime:
+    name: Runtime
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    uses: ./.github/workflows/test-runtime.yml
+    with:
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
+      backend_branch: ${{ matrix.backend_branch }}
+      initial-support: ${{ matrix.initial-support }}
+      enable_conditional_testing: true
+      # Changed files flags
+      changed_runtime: ${{ needs.check-changed-files.outputs.runtime }}
+      changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
+      changed_rust: ${{ needs.check-changed-files.outputs.rust }}
+      changed_go: ${{ needs.check-changed-files.outputs.go }}
+      changed_cpu_backend: ${{ needs.check-changed-files.outputs.cpu-backend }}
+    secrets:
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        backend: [cuda]
+        # backend: [cuda, metal]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+            backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
+            initial-support: false
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
+          #   backend_branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}
+          #   initial-support: true
+
+  test-pqc:
+    name: PQC ML-KEM
     needs: [check-changed-files, check-format, extract-cuda-backend-branch]
     uses: ./.github/workflows/test-pqc.yml
     with:
-      backend: cuda
-      backend_upper: CUDA
-      secret_key: CUDA_PULL_KEY
       runner: '["self-hosted", "Linux", "X64", "icicle"]'
-      backend_branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
       enable_conditional_testing: true
       # Changed files flags
       changed_pqc: ${{ needs.check-changed-files.outputs.pqc }}
       changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
       changed_cpu_backend: ${{ needs.check-changed-files.outputs.cpu-backend }}
       changed_backend_api: ${{ needs.check-changed-files.outputs.backend-api }}
-    secrets:
-      backend_ssh_key: ${{ secrets.CUDA_PULL_KEY }}

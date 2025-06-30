@@ -11,10 +11,6 @@ on:
         description: 'Backend name in uppercase'
         required: true
         type: string
-      secret_key:
-        description: 'Secret key for backend checkout'
-        required: true
-        type: string
       runner:
         description: 'Runner labels as JSON array'
         required: true
@@ -38,11 +34,6 @@ on:
       # Changed files flags (only used when enable_conditional_testing is true)
       changed_runtime:
         description: 'Whether runtime files changed'
-        required: false
-        type: string
-        default: "true"
-      changed_field:
-        description: 'Whether field files changed'
         required: false
         type: string
         default: "true"
@@ -81,7 +72,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         
       - name: Checkout ${{ inputs.backend_upper }} backend
-        if: ${{ !inputs.enable_conditional_testing || inputs.changed_field == 'true' }}
+        if: ${{ !inputs.enable_conditional_testing || inputs.changed_runtime == 'true' }}
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: ingonyama-zk/icicle-${{ inputs.backend }}-backend
@@ -94,11 +85,7 @@ jobs:
         if: ${{ !inputs.enable_conditional_testing || inputs.changed_runtime == 'true' }}
         run: |
           mkdir -p build && rm -rf build/*
-          EXTRA_FLAGS=""
-          if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
-            EXTRA_FLAGS="-DINGO_CI_ENV=ON"
-          fi
-          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -D${{ inputs.backend_upper }}_BACKEND=local $EXTRA_FLAGS -S . -B build
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -D${{ inputs.backend_upper }}_BACKEND=local -S . -B build
           cmake --build build
           
       - name: Run C++ Runtime Tests
