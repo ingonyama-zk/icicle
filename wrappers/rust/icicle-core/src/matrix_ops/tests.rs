@@ -1,5 +1,5 @@
 use crate::{
-    matrix_ops::{matmul, MatrixOps, VecOpsConfig},
+    matrix_ops::{matmul, matrix_transpose, MatrixOps, MatrixTranspose, VecOpsConfig},
     polynomial_ring::PolynomialRing,
     traits::{FieldImpl, GenerateRandom},
 };
@@ -137,6 +137,110 @@ where
 
         //compare (1) and (5)
         assert_eq!(output_host_case_1, output_host_case_5);
+
+        output_host_case_1
+    };
+
+    // Compare main and ref devices
+    let device_out = test_single_device(true);
+    let ref_out = test_single_device(false);
+
+    assert_eq!(device_out, ref_out);
+}
+
+/// Ensure host memory and device memory behaviour matches for matrix transpose.
+/// We test the following combinations:
+///     (1) input, result on host
+///     (2) input on host; result on device
+///     (3) input on device; result on host
+///     (4) input, result on device
+/// Correctness is already ensured by the C++ tests.
+pub fn check_matrix_transpose_device_memory<P: PolynomialRing + MatrixTranspose<P>>()
+where
+    P::Base: FieldImpl,
+    P: GenerateRandom<P>,
+{
+    let cfg = VecOpsConfig::default();
+
+    let nof_rows = 1 << 5;
+    let nof_cols = 1 << 6;
+    let matrix_size = nof_rows * nof_cols;
+    let input_matrix = P::generate_random(matrix_size);
+
+    let test_single_device = |main_device: bool| {
+        if main_device {
+            test_utilities::test_set_main_device();
+        } else {
+            test_utilities::test_set_ref_device();
+        }
+        
+        // case (1) transpose host memory input -> host_memory output
+        let mut output_host_case_1 = vec![P::zero(); matrix_size];
+        matrix_transpose(
+            HostSlice::from_slice(&input_matrix),
+            nof_rows as u32,
+            nof_cols as u32,
+            &cfg,
+            HostSlice::from_mut_slice(&mut output_host_case_1),
+        )
+        .unwrap();
+
+        // case (2) transpose host memory input -> device memory output
+        let mut device_mem_output = DeviceVec::<P>::device_malloc(matrix_size).unwrap();
+        matrix_transpose(
+            HostSlice::from_slice(&input_matrix),
+            nof_rows as u32,
+            nof_cols as u32,
+            &cfg,
+            &mut device_mem_output,
+        )
+        .unwrap();
+
+        // compare (1) and (2)
+        let mut output_host_case_2 = vec![P::zero(); matrix_size];
+        device_mem_output
+            .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_2))
+            .unwrap();
+        assert_eq!(output_host_case_1, output_host_case_2);
+
+        // case (3) transpose device memory input, host memory output
+        /* Allocate input on device, and copy from host */
+        let mut device_mem_input = DeviceVec::<P>::device_malloc(matrix_size).unwrap();
+        device_mem_input
+            .copy_from_host(HostSlice::from_slice(&input_matrix))
+            .unwrap();
+
+        let mut output_host_case_3 = vec![P::zero(); matrix_size];
+        matrix_transpose(
+            &device_mem_input,
+            nof_rows as u32,
+            nof_cols as u32,
+            &cfg,
+            HostSlice::from_mut_slice(&mut output_host_case_3),
+        )
+        .unwrap();
+
+        // compare (1) and (3)
+        assert_eq!(output_host_case_1, output_host_case_3);
+
+        // case (4) transpose device memory input, device memory output
+        let mut device_mem_output = DeviceVec::<P>::device_malloc(matrix_size).unwrap();
+        matrix_transpose(
+            &device_mem_input,
+            nof_rows as u32,
+            nof_cols as u32,
+            &cfg,
+            &mut device_mem_output,
+        )
+        .unwrap();
+
+        /* Zero out host_buffer, copy result of (4) to host_buffer */
+        let mut output_host_case_4 = vec![P::zero(); matrix_size];
+        device_mem_output
+            .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_4))
+            .unwrap();
+
+        assert_eq!(output_host_case_1, output_host_case_4);
 
         output_host_case_1
     };
