@@ -163,8 +163,7 @@ where
 
     // Transpose
     let start = std::time::Instant::now();
-    // TODO uncomment
-    // matrix_ops::transpose::<P>(&device_input, rows, cols, &cfg, &mut device_output).expect("Transpose failed");
+    matrix_ops::matrix_transpose::<P>(&device_input, rows, cols, &cfg, &mut device_output).expect("Transpose failed");
     let elapsed = start.elapsed();
 
     println!("[Transpose] Completed in {:.2?}", elapsed);
