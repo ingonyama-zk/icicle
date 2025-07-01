@@ -31,8 +31,7 @@ namespace opnorm {
     }
 
     HOST_DEVICE static FixedPoint from_int32_t(int32_t f) {
-        int64_t scaled = static_cast<int64_t>(f) * static_cast<int64_t>(scale);
-        return FixedPoint{reduce(scaled, static_cast<int64_t>(scale))};
+        return FixedPoint{f * static_cast<int32_t>(scale)};
     }
     HOST_DEVICE static FixedPoint from_float(float f) { return FixedPoint{static_cast<int32_t>(f * scale)}; }
     HOST_DEVICE float to_float() const { return value / scale; }
@@ -70,8 +69,9 @@ namespace opnorm {
       re = real;
       return *this;
     }
-    HOST_DEVICE FixedPoint abs() const {
-      return FixedPoint::from_float(sqrtf((re * re + im * im).to_float()));
+    HOST_DEVICE float abs() const {
+      float sum = re.to_float() * re.to_float() + im.to_float() * im.to_float();
+      return sqrtf(sum);
     }
   };
 
@@ -212,13 +212,14 @@ namespace opnorm {
 
     fft(complex_a, twist, host_wlen_table);
 
-    FixedPoint max_norm{0};
+    float max_norm = 0.0f;
     for (const auto& x : complex_a) {
-      FixedPoint abs_val = x.abs();
+      printf("(%f, %f)\n", x.re.to_float(), x.im.to_float());
+      float abs_val = x.abs();
       if (abs_val > max_norm) max_norm = abs_val;
     }
-
-    return static_cast<int64_t>(ceilf(max_norm.to_float()));
+    printf("max_norm: %f\n", max_norm);
+    return static_cast<int64_t>(ceilf(max_norm));
   }
 
 } // namespace opnorm_cpu

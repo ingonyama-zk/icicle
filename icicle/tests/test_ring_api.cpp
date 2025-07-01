@@ -1344,6 +1344,7 @@ TEST_F(RingTestBase, ComplexFFT_Simple)
     poly[i] = i * 100;
 
   uint64_t opnorm = operator_norm(poly);
+  printf("opnorm: %lu\n", opnorm);
   ASSERT_LT(opnorm, 152851);             // Python computed 152849.98 but losing precision with f32
 }
 
