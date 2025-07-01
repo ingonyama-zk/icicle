@@ -202,8 +202,10 @@ struct LabradorBaseCaseProof {
   std::vector<Rq> t, g, h;
 
   LabradorBaseCaseProof() = default;
-  LabradorBaseCaseProof(std::vector<Tq> z_hat, std::vector<Tq> t, std::vector<Tq> g, std::vector<Tq> h)
+  LabradorBaseCaseProof(
+    const std::vector<Tq>& z_hat, const std::vector<Tq>& t, const std::vector<Tq>& g, const std::vector<Tq>& h)
       : z_hat(z_hat), t(t), g(g), h(h)
   {
   }
+  LabradorBaseCaseProof(const LabradorBaseCaseProof& other) : z_hat(other.z_hat), t(other.t), g(other.g), h(other.h) {}
 };

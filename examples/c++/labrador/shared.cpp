@@ -489,7 +489,9 @@ LabradorInstance prepare_recursion_instance(
 // returns a choice of mu, nu given n, m
 std::pair<size_t, size_t> get_rec_param(size_t n, size_t m)
 {
-  size_t nu = size_t(pow((double)n, 0.66));
-  size_t mu = m * nu / n;
+  // size_t nu = size_t(pow((double)n, 0.66));
+  // size_t mu = m * nu / n;
+  // TODO set these right:
+  size_t nu = 1 << 3, mu = 1 << 3;
   return std::make_pair(mu, nu);
 }

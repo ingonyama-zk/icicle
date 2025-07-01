@@ -364,7 +364,9 @@ void LabradorBaseVerifier::agg_const_zero_constraints(size_t num_aggregation_rou
   lab_inst.const_zero_constraints.shrink_to_fit();
 }
 
-bool LabradorBaseVerifier::verify(const LabradorBaseCaseProof& base_proof)
+// Verifies transcript messages are valid
+// Also aggregates the lab_inst into the correct final constraint
+bool LabradorBaseVerifier::part_verify()
 {
   size_t r = lab_inst.param.r;
   size_t n = lab_inst.param.n;
@@ -428,5 +430,50 @@ bool LabradorBaseVerifier::verify(const LabradorBaseCaseProof& base_proof)
   agg_const_zero_constraints(num_aggregation_rounds, Q_hat);
   lab_inst.agg_equality_constraints(trs.alpha_hat);
 
-  return _verify_base_proof(base_proof);
+  return true;
+}
+
+bool LabradorBaseVerifier::fully_verify(const LabradorBaseCaseProof& base_proof)
+{
+  if (part_verify()) {
+    return _verify_base_proof(base_proof);
+  } else {
+    return false;
+  }
+}
+
+bool LabradorVerifier::verify()
+{
+  LabradorInstance lab_inst_i = lab_inst;
+  for (size_t i = 0; i < NUM_REC - 1; i++) {
+    std::cout << "Verifier::Recursion iteration = " << i << "\n";
+    LabradorBaseVerifier base_verifier(lab_inst_i, prover_msgs[i], oracle);
+    if (!base_verifier.part_verify()) {
+      std::cout << "\tProver message verification failed\n";
+      return false;
+    }
+
+    // TODO: figure out param using Lattirust code
+    // make it 2^32-1 - so that z always decomposes to 2 limbs
+    uint32_t base0 = -1;
+    size_t m = base_verifier.lab_inst.param.t_len() + base_verifier.lab_inst.param.g_len() +
+               base_verifier.lab_inst.param.h_len();
+    auto [mu, nu] = get_rec_param(base_verifier.lab_inst.param.n, m);
+
+    // Prepare recursion problem
+    EqualityInstance final_const = base_verifier.lab_inst.equality_constraints[0];
+    lab_inst_i =
+      prepare_recursion_instance(base_verifier.lab_inst.param, final_const, base_verifier.trs, base0, mu, nu);
+    oracle = base_verifier.oracle;
+
+    std::cout << "\tVerifier::Recursion problem prepared\n";
+    std::cout << "\tn= " << lab_inst_i.param.n << ", r= " << lab_inst_i.param.r << "\n";
+  }
+  std::cout << "Verifier::Recursion iteration = " << NUM_REC - 1 << "\n";
+  LabradorBaseVerifier base_verifier(lab_inst_i, prover_msgs[NUM_REC - 1], oracle);
+  if (!base_verifier.fully_verify(final_proof)) {
+    std::cout << "\tVerifier- Final verification failed\n";
+    return false;
+  }
+  return true;
 }
