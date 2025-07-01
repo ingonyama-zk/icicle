@@ -1,4 +1,10 @@
-use icicle_core::{impl_matmul, impl_matmul_device_tests};
+use icicle_core::impl_matrix_ops;
 
-impl_matmul!("labrador_poly_ring", crate::polynomial_ring::PolyRing);
-impl_matmul_device_tests!(crate::polynomial_ring::PolyRing);
+impl_matrix_ops!("labrador_poly_ring", crate::polynomial_ring::PolyRing);
+
+#[cfg(test)]
+mod test_polyring_matrix_ops {
+    use icicle_core::impl_matrix_ops_tests;
+
+    impl_matrix_ops_tests!(test_polyring_matrix_ops, crate::polynomial_ring::PolyRing);
+}
