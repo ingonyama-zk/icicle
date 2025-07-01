@@ -554,7 +554,7 @@ namespace icicle {
     size_t size,
     uint32_t ones,
     uint32_t twos,
-    int64_t norm,
+    uint64_t norm,
     const VecOpsConfig& cfg,
     Rq* output)>;
   void

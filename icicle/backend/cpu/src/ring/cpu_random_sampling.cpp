@@ -258,14 +258,14 @@ eIcicleError cpu_challenge_space_polynomials_sampling(
       Rq* output_polynomial = output + poly_idx;
       int64_t opnorm = 0;
 
+      std::vector<std::byte> hash_input(seed_len + sizeof(poly_idx) + sizeof(retry_idx));
+      std::memcpy(hash_input.data(), seed, seed_len);
+      std::memcpy(hash_input.data() + seed_len, &poly_idx, sizeof(poly_idx));
+      std::vector<uint64_t> hash_output(keccak512.output_size());
+      HashConfig hash_cfg{};
       do {
         // Setup the random bits iterator
-        HashConfig hash_cfg{};
-        std::vector<std::byte> hash_input(seed_len + sizeof(poly_idx) + sizeof(retry_idx));
-        std::memcpy(hash_input.data(), seed, seed_len);
-        std::memcpy(hash_input.data() + seed_len, &poly_idx, sizeof(poly_idx));
         std::memcpy(hash_input.data() + seed_len + sizeof(poly_idx), &retry_idx, sizeof(retry_idx));
-        std::vector<uint64_t> hash_output(keccak512.output_size());
         keccak512.hash(hash_input.data(), hash_input.size(), hash_cfg, hash_output.data());
         RandomBitIterator random_bit_iterator(hash_output);
 
@@ -291,11 +291,11 @@ eIcicleError cpu_challenge_space_polynomials_sampling(
           random_bit_iterator);
 
         if (norm) {
-          opnorm_cpu::Poly poly{};
+          opnorm::Poly poly{};
           for (int i = 0; i < Rq::d; ++i) {
             poly[i] = balanced_table.at(output_polynomial->values[i]);
           }
-          opnorm = opnorm_cpu::operator_norm(poly);
+          opnorm = opnorm::operator_norm(poly);
           retry_idx++;
           ICICLE_ASSERT(retry_idx <= 0xFFFFFF);
         }

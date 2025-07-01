@@ -107,7 +107,6 @@ macro_rules! impl_random_sampling_tests {
 
 pub trait ChallengeSpacePolynomialsSampling<T: PolynomialRing> {
     fn challenge_space_polynomials_sampling(
-        size: usize,
         seed: &[u8],
         cfg: &VecOpsConfig,
         ones: usize,
@@ -127,19 +126,17 @@ pub trait ChallengeSpacePolynomialsSampling<T: PolynomialRing> {
 /// 4. If `norm` is nonzero, only polynomials with operator norm less than or equal to `norm` are accepted.
 ///
 /// # Parameters
-/// - `size`: Number of polynomials to sample.
 /// - `seed`: Seed buffer for deterministic sampling.
 /// - `cfg`: Vector operations configuration (e.g., backend, device).
 /// - `ones`: Number of ±1 coefficients in each polynomial.
 /// - `twos`: Number of ±2 coefficients in each polynomial.
-/// - `norm`: Only sample polynomials for which operator norm is less than or equal to this value. If set to zero,
-///   no norm constraint is applied.
+/// - `norm`: If greater than zero, computes operator norm for the sampled polynomials and reject the ones with norm
+/// greater than this value.
 /// - `output`: Output buffer to store the sampled Rq polynomials. Should be of size `cfg.batch_size`.
 ///
 /// # Returns
 /// - `Ok(())` on success, or an error code on failure.
 pub fn challenge_space_polynomials_sampling<T>(
-    size: usize,
     seed: &[u8],
     cfg: &VecOpsConfig,
     ones: usize,
@@ -152,7 +149,7 @@ where
     T::Base: FieldImpl,
     T: ChallengeSpacePolynomialsSampling<T>,
 {
-    T::challenge_space_polynomials_sampling(size, seed, cfg, ones, twos, norm, output)
+    T::challenge_space_polynomials_sampling(seed, cfg, ones, twos, norm, output)
 }
 
 /// Implements ChallengeSpacePolynomialsSampling for a PolyRing type using FFI.
@@ -169,7 +166,7 @@ macro_rules! impl_challenge_space_polynomials_sampling {
                 size: usize,
                 ones: u32,
                 twos: u32,
-                norm: i64,
+                norm: u64,
                 cfg: *const VecOpsConfig,
                 output: *mut $poly_ring_type,
             ) -> eIcicleError;
@@ -177,7 +174,6 @@ macro_rules! impl_challenge_space_polynomials_sampling {
 
         impl ChallengeSpacePolynomialsSampling<$poly_ring_type> for $poly_ring_type {
             fn challenge_space_polynomials_sampling(
-                size: usize,
                 seed: &[u8],
                 cfg: &VecOpsConfig,
                 ones: usize,
@@ -197,10 +193,10 @@ macro_rules! impl_challenge_space_polynomials_sampling {
                     challenge_space_polynomials_sampling_ffi(
                         seed.as_ptr(),
                         seed.len(),
-                        size,
+                        output.len(),
                         ones as u32,
                         twos as u32,
-                        norm as i64,
+                        norm as u64,
                         &cfg_clone,
                         output.as_mut_ptr(),
                     )

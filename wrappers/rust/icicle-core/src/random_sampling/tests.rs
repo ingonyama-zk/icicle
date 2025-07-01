@@ -66,7 +66,6 @@ where
 
     test_utilities::test_set_main_device();
     challenge_space_polynomials_sampling(
-        output_size,
         &seed,
         &cfg,
         ones,
@@ -78,7 +77,6 @@ where
 
     test_utilities::test_set_ref_device();
     challenge_space_polynomials_sampling(
-        output_size,
         &seed,
         &cfg,
         ones,

@@ -38,8 +38,8 @@ namespace icicle {
    * @param size Number of polynomials to sample.
    * @param ones Number of 1s coefficients in each polynomial.
    * @param twos Number of 2s coefficients in each polynomial.
-   * @param norm Only sample polynomials for which operator norm is less than or equal to this value. If set to zero,
-   * no norm constraint is applied.
+   * @param norm If greater than zero, computes operator norm for the sampled polynomials and reject the ones with norm
+   * greater than this value.
    * @param output Output buffer to store the sampled Rq polynomials. Should be of size config.batch_size.
    * @return eIcicleError::SUCCESS on success, or an error code on failure.
    *
@@ -51,7 +51,7 @@ namespace icicle {
     size_t size,
     uint32_t ones,
     uint32_t twos,
-    int64_t norm,
+    uint64_t norm,
     const VecOpsConfig& config,
     T* output);
 } // namespace icicle

@@ -1338,7 +1338,7 @@ TEST_F(RingTestBase, ChallengePolynomialsSampling)
 #include "icicle/operator_norm.h"
 TEST_F(RingTestBase, ComplexFFT_Simple)
 {
-  using namespace opnorm_cpu;
+  using namespace opnorm;
   Poly poly{};
   for (size_t i = 0; i < N; ++i)
     poly[i] = i * 100;
@@ -1349,7 +1349,7 @@ TEST_F(RingTestBase, ComplexFFT_Simple)
 
 TEST_F(RingTestBase, ComplexFFT_Alternating)
 {
-  using namespace opnorm_cpu;
+  using namespace opnorm;
   Poly poly{};
   for (size_t i = 0; i < N; ++i)
     poly[i] = (i % 2 == 0) ? 5000 : 0;
@@ -1360,7 +1360,7 @@ TEST_F(RingTestBase, ComplexFFT_Alternating)
 
 TEST_F(RingTestBase, ComplexFFT_QMinus2X)
 {
-  using namespace opnorm_cpu;
+  using namespace opnorm;
   constexpr uint64_t q = (1ULL << 62) - 57;
 
   Poly poly{};

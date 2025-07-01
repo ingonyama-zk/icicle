@@ -15,22 +15,38 @@
 #include <cmath>
 #include <algorithm>
 
-namespace opnorm_cpu {
+namespace opnorm {
   // We have to use FixedPoint to get reproducible results on other devices
   struct FixedPoint {
     int32_t value;
     static constexpr float scale = 1000000.0f; // 6 decimal places
 
+    HOST_DEVICE static int32_t reduce(int64_t num, int64_t denom) {
+        int32_t result;
+        if (num >= 0)
+            result = static_cast<int32_t>((num + (denom / 2)) / denom);
+        else
+            result = static_cast<int32_t>((num - (denom / 2)) / denom);
+        return result;
+    }
+
+    HOST_DEVICE static FixedPoint from_int32_t(int32_t f) {
+        int64_t scaled = static_cast<int64_t>(f) * static_cast<int64_t>(scale);
+        return FixedPoint{reduce(scaled, static_cast<int64_t>(scale))};
+    }
     HOST_DEVICE static FixedPoint from_float(float f) { return FixedPoint{static_cast<int32_t>(f * scale)}; }
     HOST_DEVICE float to_float() const { return value / scale; }
 
     HOST_DEVICE FixedPoint operator+(const FixedPoint& other) const { return FixedPoint{value + other.value}; }
     HOST_DEVICE FixedPoint operator-(const FixedPoint& other) const { return FixedPoint{value - other.value}; }
+    HOST_DEVICE FixedPoint operator-() const { return FixedPoint{-value}; }
     HOST_DEVICE FixedPoint operator*(const FixedPoint& other) const {
-        return FixedPoint{static_cast<int32_t>((static_cast<int64_t>(value) * other.value) / static_cast<int32_t>(scale))};
+        int64_t prod = static_cast<int64_t>(value) * other.value;
+        return FixedPoint{reduce(prod, static_cast<int64_t>(scale))};
     }
     HOST_DEVICE FixedPoint operator/(const FixedPoint& other) const {
-        return FixedPoint{static_cast<int32_t>((static_cast<int64_t>(value) * static_cast<int32_t>(scale)) / other.value)};
+        int64_t num = static_cast<int64_t>(value) * static_cast<int64_t>(scale);
+        return FixedPoint{reduce(num, static_cast<int64_t>(other.value))};
     }
 
     HOST_DEVICE bool operator>(const FixedPoint& other) const { return value > other.value; }
@@ -62,7 +78,7 @@ namespace opnorm_cpu {
   constexpr size_t N = 64;
   constexpr double PI = 3.14159265358979323846;
 
-  static const ComplexFixed twist[64] = {
+  constexpr static const ComplexFixed twist[64] = {
     {1000000, 0},
     {998795, 49067},
     {995184, 98017},
@@ -129,7 +145,7 @@ namespace opnorm_cpu {
     {-998795, 49067}
   };
 
-  static const ComplexFixed host_wlen_table[6] = {
+  constexpr static const ComplexFixed host_wlen_table[6] = {
     { -1000000, 0 }, // len = 2
     { 0, 1000000 }, // len = 4
     { 707106, 707106 }, // len = 8
@@ -167,7 +183,7 @@ namespace opnorm_cpu {
 
     for (size_t len = 2, stage = 0; len <= n; ++stage, len <<= 1) {
       ComplexFixed wlen = wlen_table[stage];
-      if (inverse) wlen.im = FixedPoint::from_float(-wlen.im.to_float());
+      if (inverse) wlen.im = -wlen.im;
       for (size_t i = 0; i < n; i += len) {
         ComplexFixed w = ComplexFixed{FixedPoint::from_float(1.0f), FixedPoint::from_float(0.0f)};
         for (size_t j = 0; j < len / 2; ++j) {
@@ -192,7 +208,7 @@ namespace opnorm_cpu {
   {
     CPoly complex_a;
     for (size_t i = 0; i < N; ++i)
-      complex_a[i] = ComplexFixed{FixedPoint::from_float(static_cast<float>(a[i])), FixedPoint::from_float(0.0f)} * twist[i];
+      complex_a[i] = ComplexFixed{FixedPoint::from_int32_t(a[i]), FixedPoint{0}} * twist[i];
 
     fft(complex_a, twist, host_wlen_table);
 
