@@ -135,15 +135,15 @@ namespace m31 {
       }
     };
 
-    static constexpr HOST_DEVICE_INLINE MersenneField div2(const MersenneField& xs, const uint32_t& power = 1)
+    constexpr HOST_DEVICE_INLINE MersenneField div2(const uint32_t& power = 1) const
     {
-      uint32_t t = xs.get_limb();
+      uint32_t t = this->get_limb();
       return MersenneField{{((t >> power) | (t << (31 - power))) & MersenneField::get_modulus().limbs[0]}};
     }
 
-    static constexpr HOST_DEVICE_INLINE MersenneField neg(const MersenneField& xs)
+    constexpr HOST_DEVICE_INLINE MersenneField neg() const
     {
-      uint32_t t = xs.get_limb();
+      uint32_t t = this->get_limb();
       return MersenneField{{t == 0 ? t : MersenneField::get_modulus().limbs[0] - t}};
     }
 
@@ -156,9 +156,9 @@ namespace m31 {
       return MersenneField{{tmp == modulus ? 0 : tmp}};
     }
 
-    static constexpr HOST_DEVICE_INLINE MersenneField inverse(const MersenneField& x)
+    constexpr HOST_DEVICE_INLINE MersenneField inverse() const
     {
-      uint32_t xs = x.limbs_storage.limbs[0];
+      uint32_t xs = this->limbs_storage.limbs[0];
       if (xs <= 1) return xs;
       uint32_t a = 1, b = 0, y = xs, z = MersenneField::get_modulus().limbs[0], m = z;
       while (1) {
@@ -194,7 +194,7 @@ namespace m31 {
 
     friend HOST_DEVICE_INLINE MersenneField operator-(MersenneField xs, const MersenneField& ys)
     {
-      return xs + neg(ys);
+      return xs + ys.neg();
     }
 
     friend HOST_DEVICE_INLINE MersenneField operator*(MersenneField xs, const MersenneField& ys)
@@ -208,26 +208,27 @@ namespace m31 {
       return MersenneField{{t}};
     }
 
-    static constexpr HOST_DEVICE_INLINE Wide mul_wide(const MersenneField& xs, const MersenneField& ys)
+    constexpr HOST_DEVICE_INLINE Wide mul_wide() const
     {
-      return Wide::from_field(xs) * Wide::from_field(ys);
+      return Wide::from_field(*this) * Wide::from_field(*this);
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE Wide sqr_wide(const MersenneField& xs)
+    constexpr HOST_DEVICE_INLINE Wide sqr_wide() const
     {
-      return mul_wide(xs, xs);
+      return mul_wide(*this, *this);
     }
 
-    static constexpr HOST_DEVICE_INLINE MersenneField sqr(const MersenneField& xs) { return xs * xs; }
+    HOST_DEVICE_INLINE MersenneField sqr() const { return *this * *this; }
 
-    static constexpr HOST_DEVICE_INLINE MersenneField to_montgomery(const MersenneField& xs) { return xs; }
+    HOST_DEVICE_INLINE MersenneField to_montgomery() const { return *this; }
 
-    static constexpr HOST_DEVICE_INLINE MersenneField from_montgomery(const MersenneField& xs) { return xs; }
+    HOST_DEVICE_INLINE MersenneField from_montgomery() const { return *this; }
 
-    static constexpr HOST_DEVICE_INLINE MersenneField pow(MersenneField base, int exp)
+    HOST_DEVICE_INLINE MersenneField pow(int exp) const
     {
       MersenneField res = one();
+      MersenneField base = *this;
       while (exp > 0) {
         if (exp & 1) res = res * base;
         base = base * base;
