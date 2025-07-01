@@ -1,7 +1,7 @@
 #pragma once
 
 #include "icicle/math/storage.h"
-#include "icicle/fields/field.h"
+#include "icicle/math/modular_arithmetic.h"
 #include "icicle/fields/complex_extension.h"
 #include "icicle/fields/quartic_extension.h"
 #include "icicle/fields/params_gen.h"
@@ -12,8 +12,10 @@
 
 namespace m31 {
   template <class CONFIG>
-  class MersenneField : public Field<CONFIG>
+  class MersenneField : public ModArith<MersenneField<CONFIG>, CONFIG>
   {
+    using Base = ModArith<MersenneField<CONFIG>, CONFIG>;
+
   public:
     HOST_DEVICE_INLINE MersenneField(const MersenneField& other) : Field<CONFIG>(other) {}
     HOST_DEVICE_INLINE MersenneField(const uint32_t& x = 0) : Field<CONFIG>({x}) {}
@@ -24,7 +26,7 @@ namespace m31 {
 
     static constexpr HOST_DEVICE_INLINE MersenneField one() { return MersenneField{CONFIG::one}; }
 
-    static constexpr HOST_DEVICE_INLINE MersenneField from(uint32_t value) { return MersenneField(value); }
+    static constexpr HOST_DEVICE_INLINE MersenneField from(uint32_t value) { return Base::from(value); }
 
     /* This function receives a storage object (currently supports up to 576 bits) and reduces it to a field element
       between 0 and p. This is done using 2 steps:
@@ -78,8 +80,11 @@ namespace m31 {
       return MersenneField{{tmp == modulus ? 0 : tmp}};
     }
 
-    static HOST_INLINE MersenneField rand_host() { return MersenneField(Field<CONFIG>::rand_host()); }
-
+    static HOST_INLINE MersenneField rand_host()
+    {
+      Field<CONFIG> field_val = Field<CONFIG>::rand_host();
+      return MersenneField{{field_val.limbs_storage}};
+    }
     static void rand_host_many(MersenneField* out, int size)
     {
       for (int i = 0; i < size; i++)
@@ -109,30 +114,35 @@ namespace m31 {
         out.storage = xs;
         return out;
       }
-      friend HOST_DEVICE_INLINE Wide operator+(Wide xs, const Wide& ys)
+
+      HOST_DEVICE_INLINE Wide operator+(const Wide& ys) const
       {
-        uint64_t tmp = (uint64_t)xs.storage + ys.storage;                   // max: 2^33 - 2 = 2^32(1) + (2^32 - 2)
+        uint64_t tmp = (uint64_t)storage + ys.storage;                      // max: 2^33 - 2 = 2^32(1) + (2^32 - 2)
         tmp = ((tmp >> 32) << 1) + (uint32_t)(tmp);                         // 2(1)+(2^32-2) = 2^32(1)+(0)
         return from_number((uint32_t)((tmp >> 32) << 1) + (uint32_t)(tmp)); // max: 2(1) + 0 = 2
       }
-      friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys)
+
+      HOST_DEVICE_INLINE Wide operator-(const Wide& ys) const
       {
-        uint64_t tmp = CONFIG::modulus_3 + xs.storage -
-                       ys.storage; // max: 3(2^31-1) + 2^32-1 - 0 = 2^33 + 2^31-4 = 2^32(2) + (2^31-4)
+        uint64_t tmp =
+          CONFIG::modulus_3 + storage - ys.storage; // max: 3(2^31-1) + 2^32-1 - 0 = 2^33 + 2^31-4 = 2^32(2) + (2^31-4)
         return from_number(((uint32_t)(tmp >> 32) << 1) + (uint32_t)(tmp)); // max: 2(2)+(2^31-4) = 2^31
       }
-      template <unsigned MODULUS_MULTIPLE = 1>
-      static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs)
+
+      constexpr HOST_DEVICE_INLINE Wide neg() const
       {
-        uint64_t tmp = CONFIG::modulus_3 - xs.storage;                      // max: 3(2^31-1) - 0 = 2^32(1) + (2^31 - 3)
+        uint64_t tmp = CONFIG::modulus_3 - storage;                         // max: 3(2^31-1) - 0 = 2^32(1) + (2^31 - 3)
         return from_number(((uint32_t)(tmp >> 32) << 1) + (uint32_t)(tmp)); // max: 2(1)+(2^31-3) = 2^31 - 1
       }
-      friend HOST_DEVICE_INLINE Wide operator*(Wide xs, const Wide& ys)
+
+      HOST_DEVICE_INLINE Wide operator*(const Wide& ys) const
       {
-        uint64_t t1 = (uint64_t)xs.storage * ys.storage; // max: 2^64 - 2^33+1 = 2^32(2^32 - 2) + 1
-        t1 = ((t1 >> 32) << 1) + (uint32_t)(t1);         // max: 2(2^32 - 2) + 1 = 2^32(1) + (2^32 - 3)
+        uint64_t t1 = (uint64_t)storage * ys.storage; // max: 2^64 - 2^33+1 = 2^32(2^32 - 2) + 1
+        t1 = ((t1 >> 32) << 1) + (uint32_t)(t1);      // max: 2(2^32 - 2) + 1 = 2^32(1) + (2^32 - 3)
         return from_number((((uint32_t)(t1 >> 32)) << 1) + (uint32_t)(t1)); // max: 2(1) - (2^32 - 3) = 2^32 - 1
       }
+
+      constexpr HOST_DEVICE_INLINE MersenneField reduce() const { return this->reduce(); }
     };
 
     constexpr HOST_DEVICE_INLINE MersenneField div2(const uint32_t& power = 1) const
@@ -146,20 +156,19 @@ namespace m31 {
       uint32_t t = this->get_limb();
       return MersenneField{{t == 0 ? t : MersenneField::get_modulus().limbs[0] - t}};
     }
-
-    template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE MersenneField reduce(Wide xs)
+    template <unsigned LIMBS_COUNT = 1>
+    constexpr HOST_DEVICE_INLINE MersenneField reduce(const storage<LIMBS_COUNT>& xs) const
     {
       const uint32_t modulus = MersenneField::get_modulus().limbs[0];
-      uint32_t tmp = (xs.storage >> 31) + (xs.storage & modulus); // max: 1 + 2^31-1 = 2^31
-      tmp = (tmp >> 31) + (tmp & modulus);                        // max: 1 + 0 = 1
+      uint32_t tmp = ((uint64_t)xs.limbs[0] >> 31) + ((uint64_t)xs.limbs[0] & modulus); // max: 1 + 2^31-1 = 2^31
+      tmp = (tmp >> 31) + (tmp & modulus);                                              // max: 1 + 0 = 1
       return MersenneField{{tmp == modulus ? 0 : tmp}};
     }
 
     constexpr HOST_DEVICE_INLINE MersenneField inverse() const
     {
-      uint32_t xs = this->limbs_storage.limbs[0];
-      if (xs <= 1) return xs;
+      uint32_t xs = this->get_limb();
+      if (xs <= 1) return MersenneField{{xs}};
       uint32_t a = 1, b = 0, y = xs, z = MersenneField::get_modulus().limbs[0], m = z;
       while (1) {
 #ifdef __CUDA_ARCH__
@@ -173,7 +182,7 @@ namespace m31 {
           if (a == m) a = 0;
         }
         a = ((a >> e) | (a << (31 - e))) & m;
-        if (y == 1) return a;
+        if (y == 1) return MersenneField{{a}};
         e = a + b;
         b = a;
         a = e;
@@ -183,23 +192,20 @@ namespace m31 {
       }
     }
 
-    friend HOST_DEVICE_INLINE MersenneField operator+(MersenneField xs, const MersenneField& ys)
+    HOST_DEVICE_INLINE MersenneField operator+(const MersenneField& ys) const
     {
       uint32_t m = MersenneField::get_modulus().limbs[0];
-      uint32_t t = xs.get_limb() + ys.get_limb();
+      uint32_t t = get_limb() + ys.get_limb();
       if (t > m) t = (t & m) + (t >> 31);
       if (t == m) t = 0;
       return MersenneField{{t}};
     }
 
-    friend HOST_DEVICE_INLINE MersenneField operator-(MersenneField xs, const MersenneField& ys)
-    {
-      return xs + ys.neg();
-    }
+    HOST_DEVICE_INLINE MersenneField operator-(const MersenneField& ys) const { return *this + ys.neg(); }
 
-    friend HOST_DEVICE_INLINE MersenneField operator*(MersenneField xs, const MersenneField& ys)
+    HOST_DEVICE_INLINE MersenneField operator*(const MersenneField& ys) const
     {
-      uint64_t x = (uint64_t)(xs.get_limb()) * ys.get_limb();
+      uint64_t x = (uint64_t)(get_limb())*ys.get_limb();
       uint32_t t = ((x >> 31) + (x & MersenneField::get_modulus().limbs[0]));
       uint32_t m = MersenneField::get_modulus().limbs[0];
       if (t > m) t = (t & m) + (t >> 31);
@@ -208,17 +214,14 @@ namespace m31 {
       return MersenneField{{t}};
     }
 
-    constexpr HOST_DEVICE_INLINE Wide mul_wide() const { return Wide::from_field(*this) * Wide::from_field(*this); }
-
-    template <unsigned MODULUS_MULTIPLE = 1>
-    constexpr HOST_DEVICE_INLINE Wide sqr_wide() const
+    constexpr HOST_DEVICE_INLINE Wide mul_wide(const MersenneField& ys) const
     {
-      return mul_wide(*this, *this);
+      return Wide::from_field(*this) * Wide::from_field(ys);
     }
 
-    HOST_DEVICE_INLINE MersenneField sqr() const { return *this * *this; }
+    constexpr HOST_DEVICE_INLINE Wide sqr_wide() const { return mul_wide(*this); }
 
-    HOST_DEVICE_INLINE MersenneField to_montgomery() const { return *this; }
+    constexpr HOST_DEVICE_INLINE MersenneField to_montgomery() const { return *this; }
 
     HOST_DEVICE_INLINE MersenneField from_montgomery() const { return *this; }
 
