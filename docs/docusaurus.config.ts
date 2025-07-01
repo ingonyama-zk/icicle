@@ -13,7 +13,7 @@ const ingoPreset = {
   docs: {
     showLastUpdateAuthor: false,
     showLastUpdateTime: true,
-    includeCurrentVersion: true,
+    includeCurrentVersion: false,
     routeBasePath: '/',
     remarkPlugins: [math],
     rehypePlugins: [katex],
