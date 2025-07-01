@@ -1549,8 +1549,8 @@ TEST_F(HashApiTest, poseidon2_non_sponge_all_included_test)
         // }
         ASSERT_EQ(0, memcmp(outputs[1].get(), outputs[0].get(), config.batch * sizeof(scalar_t)));
       } // for (auto use_domain_tag : {false, true}) {
-    } // for (auto batch_size : {1, 16, 256}) {
-  } // for (auto t : {2, 3, 4, 8, 12, 16, 20, 24}) {
+    }   // for (auto batch_size : {1, 16, 256}) {
+  }     // for (auto t : {2, 3, 4, 8, 12, 16, 20, 24}) {
 } // poseidon2_non_sponge_inclusize_test
 
 TEST_F(HashApiTest, poseidon2_sponge_all_included_test)
@@ -1613,10 +1613,10 @@ TEST_F(HashApiTest, poseidon2_sponge_all_included_test)
             // }
             ASSERT_EQ(0, memcmp(outputs[1].get(), outputs[0].get(), config.batch * sizeof(scalar_t)));
           } // for (auto use_domain_tag : {false, true}) {
-        } // for (auto use_padding : {false, true}) {
-      } // for (auto nof_hashers : {1, 2, 16, 256}) {
-    } // for (auto batch_size : {1, 16, 256}) {
-  } // for (auto t : {2, 3, 4, 8, 12, 16, 20, 24}) {
+        }   // for (auto use_padding : {false, true}) {
+      }     // for (auto nof_hashers : {1, 2, 16, 256}) {
+    }       // for (auto batch_size : {1, 16, 256}) {
+  }         // for (auto t : {2, 3, 4, 8, 12, 16, 20, 24}) {
 } // poseidon2_sponge_all_included_test
 
 // Sponge, chain of 2 hashers, no padding, with domain tag.
