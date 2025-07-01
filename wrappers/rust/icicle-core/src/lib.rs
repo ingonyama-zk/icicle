@@ -25,3 +25,4 @@ pub mod symbol;
 pub mod tests;
 pub mod traits;
 pub mod vec_ops;
+pub use vec_ops::{VecOps, VecOpsConfig};
