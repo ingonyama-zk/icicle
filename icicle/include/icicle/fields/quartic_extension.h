@@ -21,19 +21,27 @@ public:
     FWide c2;
     FWide c3;
 
-    friend HOST_DEVICE_INLINE Wide operator+(Wide xs, const Wide& ys)
+    static constexpr Wide HOST_DEVICE_INLINE from_field(const QuarticExtensionField& xs)
     {
-      return Wide{xs.c0 + ys.c0, xs.c1 + ys.c1, xs.c2 + ys.c2, xs.c3 + ys.c3};
+      return Wide{
+        FWide::from_field(xs.c0), FWide::from_field(xs.c1), FWide::from_field(xs.c2), FWide::from_field(xs.c3)};
     }
 
-    friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys)
+    HOST_DEVICE_INLINE Wide operator+(const Wide& ys) const
     {
-      return Wide{xs.c0 - ys.c0, xs.c1 - ys.c1, xs.c2 - ys.c2, xs.c3 - ys.c3};
+      return Wide{c0 + ys.c0, c1 + ys.c1, c2 + ys.c2, c3 + ys.c3};
     }
 
-    static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs)
+    HOST_DEVICE_INLINE Wide operator-(const Wide& ys) const
     {
-      return Wide{FWide::neg(xs.c0), FWide::neg(xs.c1), FWide::neg(xs.c2), FWide::neg(xs.c3)};
+      return Wide{c0 - ys.c0, c1 - ys.c1, c2 - ys.c2, c3 - ys.c3};
+    }
+
+    constexpr HOST_DEVICE_INLINE Wide neg() const { return Wide{c0.neg(), c1.neg(), c2.neg(), c3.neg()}; }
+
+    constexpr HOST_DEVICE_INLINE QuarticExtensionField reduce() const
+    {
+      return QuarticExtensionField{c0.reduce(), c1.reduce(), c2.reduce(), c3.reduce()};
     }
   };
 
@@ -62,16 +70,15 @@ public:
     return QuarticExtensionField{FF::from(val), FF::zero(), FF::zero(), FF::zero()};
   }
 
-  static constexpr HOST_DEVICE_INLINE QuarticExtensionField to_montgomery(const QuarticExtensionField& xs)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField to_montgomery() const
   {
-    return QuarticExtensionField{
-      FF::to_montgomery(xs.c0), FF::to_montgomery(xs.c1), FF::to_montgomery(xs.c2), FF::to_montgomery(xs.c3)};
+    return QuarticExtensionField{c0.to_montgomery(), c1.to_montgomery(), c2.to_montgomery(), c3.to_montgomery()};
   }
 
-  static constexpr HOST_DEVICE_INLINE QuarticExtensionField from_montgomery(const QuarticExtensionField& xs)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField from_montgomery() const
   {
     return QuarticExtensionField{
-      FF::from_montgomery(xs.c0), FF::from_montgomery(xs.c1), FF::from_montgomery(xs.c2), FF::from_montgomery(xs.c3)};
+      c0.from_montgomery(), c1.from_montgomery(), c2.from_montgomery(), c3.from_montgomery()};
   }
 
   static HOST_INLINE QuarticExtensionField rand_host()
@@ -86,11 +93,11 @@ public:
   }
 
   template <unsigned REDUCTION_SIZE = 1>
-  static constexpr HOST_DEVICE_INLINE QuarticExtensionField sub_modulus(const QuarticExtensionField& xs)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField sub_modulus() const
   {
     return QuarticExtensionField{
-      FF::sub_modulus<REDUCTION_SIZE>(&xs.c0), FF::sub_modulus<REDUCTION_SIZE>(&xs.c1),
-      FF::sub_modulus<REDUCTION_SIZE>(&xs.c2), FF::sub_modulus<REDUCTION_SIZE>(&xs.c3)};
+      c0.template sub_modulus<REDUCTION_SIZE>(), c1.template sub_modulus<REDUCTION_SIZE>(),
+      c2.template sub_modulus<REDUCTION_SIZE>(), c3.template sub_modulus<REDUCTION_SIZE>()};
   }
 
   friend std::ostream& operator<<(std::ostream& os, const QuarticExtensionField& xs)
@@ -99,99 +106,114 @@ public:
     return os;
   }
 
-  friend HOST_DEVICE_INLINE QuarticExtensionField operator+(QuarticExtensionField xs, const QuarticExtensionField& ys)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField operator+(const QuarticExtensionField& ys) const
   {
-    return QuarticExtensionField{xs.c0 + ys.c0, xs.c1 + ys.c1, xs.c2 + ys.c2, xs.c3 + ys.c3};
+    return QuarticExtensionField{c0 + ys.c0, c1 + ys.c1, c2 + ys.c2, c3 + ys.c3};
   }
 
-  friend HOST_DEVICE_INLINE QuarticExtensionField operator-(QuarticExtensionField xs, const QuarticExtensionField& ys)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField operator-(const QuarticExtensionField& ys) const
   {
-    return QuarticExtensionField{xs.c0 - ys.c0, xs.c1 - ys.c1, xs.c2 - ys.c2, xs.c3 - ys.c3};
+    return QuarticExtensionField{c0 - ys.c0, c1 - ys.c1, c2 - ys.c2, c3 - ys.c3};
   }
 
-  friend HOST_DEVICE_INLINE QuarticExtensionField operator+(FF xs, const QuarticExtensionField& ys)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField operator+(const FF& ys) const
   {
-    return QuarticExtensionField{xs + ys.c0, ys.c1, ys.c2, ys.c3};
+    return QuarticExtensionField{c0 + ys, c1, c2, c3};
   }
 
-  friend HOST_DEVICE_INLINE QuarticExtensionField operator-(FF xs, const QuarticExtensionField& ys)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField operator-(const FF& ys) const
   {
-    return QuarticExtensionField{xs - ys.c0, FF::neg(ys.c1), FF::neg(ys.c2), FF::neg(ys.c3)};
+    return QuarticExtensionField{c0 - ys, c1, c2, c3};
   }
 
-  friend HOST_DEVICE_INLINE QuarticExtensionField operator+(QuarticExtensionField xs, const FF& ys)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField operator-() const { return neg(); }
+
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField& operator+=(const QuarticExtensionField& ys)
   {
-    return QuarticExtensionField{xs.c0 + ys, xs.c1, xs.c2, xs.c3};
+    *this = *this + ys;
+    return *this;
   }
 
-  friend HOST_DEVICE_INLINE QuarticExtensionField operator-(QuarticExtensionField xs, const FF& ys)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField& operator-=(const QuarticExtensionField& ys)
   {
-    return QuarticExtensionField{xs.c0 - ys, xs.c1, xs.c2, xs.c3};
+    *this = *this - ys;
+    return *this;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Wide mul_wide(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField& operator*=(const QuarticExtensionField& ys)
+  {
+    *this = *this * ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField& operator+=(const FF& ys)
+  {
+    *this = *this + ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField& operator-=(const FF& ys)
+  {
+    *this = *this - ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField& operator*=(const FF& ys)
+  {
+    *this = *this * ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE Wide mul_wide(const QuarticExtensionField& ys) const
   {
     if (CONFIG::nonresidue_is_negative)
       return Wide{
-        FF::mul_wide(xs.c0, ys.c0) -
-          FF::template mul_unsigned<CONFIG::nonresidue>(
-            FF::mul_wide(xs.c1, ys.c3) + FF::mul_wide(xs.c2, ys.c2) + FF::mul_wide(xs.c3, ys.c1)),
-        FF::mul_wide(xs.c0, ys.c1) + FF::mul_wide(xs.c1, ys.c0) -
-          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c2, ys.c3) + FF::mul_wide(xs.c3, ys.c2)),
-        FF::mul_wide(xs.c0, ys.c2) + FF::mul_wide(xs.c1, ys.c1) + FF::mul_wide(xs.c2, ys.c0) -
-          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c3, ys.c3)),
-        FF::mul_wide(xs.c0, ys.c3) + FF::mul_wide(xs.c1, ys.c2) + FF::mul_wide(xs.c2, ys.c1) +
-          FF::mul_wide(xs.c3, ys.c0)};
+        c0.mul_wide(ys.c0) -
+          FF::template mul_unsigned<CONFIG::nonresidue>(c1.mul_wide(ys.c3) + c2.mul_wide(ys.c2) + c3.mul_wide(ys.c1)),
+        c0.mul_wide(ys.c1) + c1.mul_wide(ys.c0) -
+          FF::template mul_unsigned<CONFIG::nonresidue>(c2.mul_wide(ys.c3) + c3.mul_wide(ys.c2)),
+        c0.mul_wide(ys.c2) + c1.mul_wide(ys.c1) + c2.mul_wide(ys.c0) -
+          FF::template mul_unsigned<CONFIG::nonresidue>(c3.mul_wide(ys.c3)),
+        c0.mul_wide(ys.c3) + c1.mul_wide(ys.c2) + c2.mul_wide(ys.c1) + c3.mul_wide(ys.c0)};
     else
       return Wide{
-        FF::mul_wide(xs.c0, ys.c0) +
-          FF::template mul_unsigned<CONFIG::nonresidue>(
-            FF::mul_wide(xs.c1, ys.c3) + FF::mul_wide(xs.c2, ys.c2) + FF::mul_wide(xs.c3, ys.c1)),
-        FF::mul_wide(xs.c0, ys.c1) + FF::mul_wide(xs.c1, ys.c0) +
-          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c2, ys.c3) + FF::mul_wide(xs.c3, ys.c2)),
-        FF::mul_wide(xs.c0, ys.c2) + FF::mul_wide(xs.c1, ys.c1) + FF::mul_wide(xs.c2, ys.c0) +
-          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c3, ys.c3)),
-        FF::mul_wide(xs.c0, ys.c3) + FF::mul_wide(xs.c1, ys.c2) + FF::mul_wide(xs.c2, ys.c1) +
-          FF::mul_wide(xs.c3, ys.c0)};
+        c0.mul_wide(ys.c0) +
+          FF::template mul_unsigned<CONFIG::nonresidue>(c1.mul_wide(ys.c3) + c2.mul_wide(ys.c2) + c3.mul_wide(ys.c1)),
+        c0.mul_wide(ys.c1) + c1.mul_wide(ys.c0) +
+          FF::template mul_unsigned<CONFIG::nonresidue>(c2.mul_wide(ys.c3) + c3.mul_wide(ys.c2)),
+        c0.mul_wide(ys.c2) + c1.mul_wide(ys.c1) + c2.mul_wide(ys.c0) +
+          FF::template mul_unsigned<CONFIG::nonresidue>(c3.mul_wide(ys.c3)),
+        c0.mul_wide(ys.c3) + c1.mul_wide(ys.c2) + c2.mul_wide(ys.c1) + c3.mul_wide(ys.c0)};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Wide mul_wide(const QuarticExtensionField& xs, const FF& ys)
+  constexpr HOST_DEVICE_INLINE Wide mul_wide(const FF& ys) const
   {
-    return Wide{FF::mul_wide(xs.c0, ys), FF::mul_wide(xs.c1, ys), FF::mul_wide(xs.c2, ys), FF::mul_wide(xs.c3, ys)};
+    return Wide{c0.mul_wide(ys), c1.mul_wide(ys), c2.mul_wide(ys), c3.mul_wide(ys)};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Wide mul_wide(const FF& xs, const QuarticExtensionField& ys)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField operator*(const QuarticExtensionField& ys) const
   {
-    return Wide{FF::mul_wide(xs, ys.c0), FF::mul_wide(xs, ys.c1), FF::mul_wide(xs, ys.c2), FF::mul_wide(xs, ys.c3)};
+    Wide xy = mul_wide(ys);
+    return xy.reduce();
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE QuarticExtensionField reduce(const Wide& xs)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField operator*(const FF& ys) const
   {
-    return QuarticExtensionField{
-      FF::template reduce<MODULUS_MULTIPLE>(xs.c0), FF::template reduce<MODULUS_MULTIPLE>(xs.c1),
-      FF::template reduce<MODULUS_MULTIPLE>(xs.c2), FF::template reduce<MODULUS_MULTIPLE>(xs.c3)};
+    Wide xy = mul_wide(ys);
+    return xy.reduce();
   }
 
-  template <class T1, class T2>
-  friend HOST_DEVICE_INLINE QuarticExtensionField operator*(const T1& xs, const T2& ys)
+  friend HOST_DEVICE_INLINE QuarticExtensionField operator*(const FF& xs, const QuarticExtensionField& ys)
   {
-    Wide xy = mul_wide(xs, ys);
-    return reduce(xy);
+    return ys * xs;
   }
 
-  friend HOST_DEVICE_INLINE bool operator==(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
+  constexpr HOST_DEVICE_INLINE bool operator==(const QuarticExtensionField& ys) const
   {
-    return (xs.c0 == ys.c0) && (xs.c1 == ys.c1) && (xs.c2 == ys.c2) && (xs.c3 == ys.c3);
+    return (c0 == ys.c0) && (c1 == ys.c1) && (c2 == ys.c2) && (c3 == ys.c3);
   }
 
-  friend HOST_DEVICE_INLINE bool operator!=(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
-  {
-    return !(xs == ys);
-  }
+  constexpr HOST_DEVICE_INLINE bool operator!=(const QuarticExtensionField& ys) const { return !(*this == ys); }
 
   template <uint32_t multiplier, unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField mul_unsigned(const QuarticExtensionField& xs)
@@ -201,68 +223,72 @@ public:
       FF::template mul_unsigned<multiplier>(xs.c2), FF::template mul_unsigned<multiplier>(xs.c3)};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Wide sqr_wide(const QuarticExtensionField& xs)
+  constexpr HOST_DEVICE_INLINE Wide sqr_wide() const
   {
     // TODO: change to a more efficient squaring
-    return mul_wide<MODULUS_MULTIPLE>(xs, xs);
+    return mul_wide(*this);
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE QuarticExtensionField sqr(const QuarticExtensionField& xs)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField sqr() const
   {
     // TODO: change to a more efficient squaring
-    return xs * xs;
+    return *this * *this;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE QuarticExtensionField neg(const QuarticExtensionField& xs)
-  {
-    return {FF::neg(xs.c0), FF::neg(xs.c1), FF::neg(xs.c2), FF::neg(xs.c3)};
-  }
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField neg() const { return {c0.neg(), c1.neg(), c2.neg(), c3.neg()}; }
 
-  // inverse of zero is set to be zero which is what we want most of the time
-  static constexpr HOST_DEVICE_INLINE QuarticExtensionField inverse(const QuarticExtensionField& xs)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField inverse() const
   {
-    FF x, x0, x2;
+    // Create temporary variables for intermediate calculations
+    FF x0, x2, x;
+
     if (CONFIG::nonresidue_is_negative) {
-      x0 = FF::reduce(
-        FF::sqr_wide(xs.c0) +
-        FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c1, xs.c3 + xs.c3) - FF::sqr_wide(xs.c2)));
-      x2 = FF::reduce(
-        FF::mul_wide(xs.c0, xs.c2 + xs.c2) - FF::sqr_wide(xs.c1) +
-        FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(xs.c3)));
-      x = FF::reduce(FF::sqr_wide(x0) + FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(x2)));
+      // Calculate intermediate values with proper type handling
+      FF c3_doubled = c3 + c3;
+      FF c1_c3_doubled = c1 * c3_doubled;
+      FF c2_squared = c2.sqr();
+      FF term1 = c1_c3_doubled - c2_squared;
+
+      x0 = (c0.sqr() + FF::template mul_unsigned<CONFIG::nonresidue>(term1)).reduce();
+      x2 = (c0 * (c2 + c2) - c1.sqr() + FF::template mul_unsigned<CONFIG::nonresidue>(c3.sqr())).reduce();
+      x = (x0.sqr() + FF::template mul_unsigned<CONFIG::nonresidue>(x2.sqr())).reduce();
     } else {
-      x0 = FF::reduce(
-        FF::sqr_wide(xs.c0) -
-        FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c1, xs.c3 + xs.c3) - FF::sqr_wide(xs.c2)));
-      x2 = FF::reduce(
-        FF::mul_wide(xs.c0, xs.c2 + xs.c2) - FF::sqr_wide(xs.c1) -
-        FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(xs.c3)));
-      x = FF::reduce(FF::sqr_wide(x0) - FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(x2)));
+      // Calculate intermediate values with proper type handling
+      FF c3_doubled = c3 + c3;
+      FF c1_c3_doubled = c1 * c3_doubled;
+      FF c2_squared = c2.sqr();
+      FF term1 = c1_c3_doubled - c2_squared;
+
+      x0 = (c0.sqr() - FF::template mul_unsigned<CONFIG::nonresidue>(term1)).reduce();
+      x2 = (c0 * (c2 + c2) - c1.sqr() - FF::template mul_unsigned<CONFIG::nonresidue>(c3.sqr())).reduce();
+      x = (x0.sqr() - FF::template mul_unsigned<CONFIG::nonresidue>(x2.sqr())).reduce();
     }
-    FF x_inv = FF::inverse(x);
+
+    // Calculate inverse and final components
+    FF x_inv = x.inverse();
     x0 = x0 * x_inv;
     x2 = x2 * x_inv;
-    return {
-      FF::reduce(
-        (CONFIG::nonresidue_is_negative
-           ? (FF::mul_wide(xs.c0, x0) + FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c2, x2)))
-           : (FF::mul_wide(xs.c0, x0))-FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c2, x2)))),
-      FF::reduce(
-        (CONFIG::nonresidue_is_negative
-           ? FWide::neg(FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c3, x2)))
-           : FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c3, x2))) -
-        FF::mul_wide(xs.c1, x0)),
-      FF::reduce(FF::mul_wide(xs.c2, x0) - FF::mul_wide(xs.c0, x2)),
-      FF::reduce(FF::mul_wide(xs.c1, x2) - FF::mul_wide(xs.c3, x0)),
-    };
+
+    FF c0_result, c1_result, c2_result, c3_result;
+
+    if (CONFIG::nonresidue_is_negative) {
+      c0_result = (c0 * x0 + FF::template mul_unsigned<CONFIG::nonresidue>(c2 * x2)).reduce();
+      c1_result = (FF::template mul_unsigned<CONFIG::nonresidue>(c3 * x2).neg() - c1 * x0).reduce();
+    } else {
+      c0_result = (c0 * x0 - FF::template mul_unsigned<CONFIG::nonresidue>(c2 * x2)).reduce();
+      c1_result = (FF::template mul_unsigned<CONFIG::nonresidue>(c3 * x2) - c1 * x0).reduce();
+    }
+
+    c2_result = c2 * x0 - c0 * x2;
+    c3_result = c1 * x2 - c3 * x0;
+
+    return QuarticExtensionField{c0_result, c1_result, c2_result, c3_result};
   }
 
-  static constexpr HOST_DEVICE QuarticExtensionField pow(QuarticExtensionField base, int exp)
+  constexpr HOST_DEVICE QuarticExtensionField pow(int exp) const
   {
     QuarticExtensionField res = one();
+    QuarticExtensionField base = *this;
     while (exp > 0) {
       if (exp & 1) res = res * base;
       base = base * base;
