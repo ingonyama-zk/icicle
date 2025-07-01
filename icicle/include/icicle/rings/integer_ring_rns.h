@@ -181,8 +181,7 @@ public:
 
   HOST_DEVICE_INLINE IntegerRingRns pow(int exp) const
   {
-    return apply_op_unary(
-      *this, [exp](auto x) { return x.pow(exp); }, std::make_index_sequence<nof_fields>{});
+    return apply_op_unary(*this, [exp](auto x) { return x.pow(exp); }, std::make_index_sequence<nof_fields>{});
   }
 
   HOST_DEVICE_INLINE IntegerRingRns to_montgomery() const

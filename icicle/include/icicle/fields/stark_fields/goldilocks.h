@@ -19,7 +19,7 @@ comparison. The specific details are documented in the relevant functions. */
 namespace goldilocks {
 
   template <class CONFIG>
-  class GoldilocksField : public ModArith<GoldilocksField <CONFIG>, CONFIG>
+  class GoldilocksField : public ModArith<GoldilocksField<CONFIG>, CONFIG>
   {
     using Base = ModArith<GoldilocksField<CONFIG>, CONFIG>;
 
@@ -134,15 +134,15 @@ namespace goldilocks {
     {
       GoldilocksField rs = {};
       icicle_math::goldi_add(
-        this->limbs_storage, ys.limbs_storage, Base::get_modulus(), Base::get_neg_modulus(),
-        rs.limbs_storage);
+        this->limbs_storage, ys.limbs_storage, Base::get_modulus(), Base::get_neg_modulus(), rs.limbs_storage);
       return rs;
     }
 
     HOST_DEVICE_INLINE GoldilocksField operator-(const GoldilocksField& ys) const
     {
       GoldilocksField rs = {};
-      icicle_math::goldi_add(this->limbs_storage, ys.neg().limbs_storage, Base::get_modulus(), Base::get_neg_modulus(), rs.limbs_storage);
+      icicle_math::goldi_add(
+        this->limbs_storage, ys.neg().limbs_storage, Base::get_modulus(), Base::get_neg_modulus(), rs.limbs_storage);
       return rs;
     }
 
@@ -153,8 +153,7 @@ namespace goldilocks {
     constexpr HOST_DEVICE_INLINE GoldilocksField reduce() const
     {
       GoldilocksField rs = {};
-      icicle_math::goldi_reduce(
-        this->limbs_storage, Base::get_modulus(), Base::get_neg_modulus(), rs.limbs_storage);
+      icicle_math::goldi_reduce(this->limbs_storage, Base::get_modulus(), Base::get_neg_modulus(), rs.limbs_storage);
       return static_cast<Base>(rs);
     }
 
@@ -172,8 +171,7 @@ namespace goldilocks {
         while (u.is_even()) {
           uint32_t carry = 0;
           u = u.div2();
-          if (b.is_odd())
-            carry = Base::template add_limbs<TLC, true>(b.limbs_storage, modulus, b.limbs_storage);
+          if (b.is_odd()) carry = Base::template add_limbs<TLC, true>(b.limbs_storage, modulus, b.limbs_storage);
           b = b.div2();
           if (carry) {
             b.limbs_storage.limbs[1] =
@@ -184,8 +182,7 @@ namespace goldilocks {
         while (v.is_even()) {
           uint32_t carry = 0;
           v = v.div2();
-          if (c.is_odd())
-            carry = Base::template add_limbs<TLC, true>(c.limbs_storage, modulus, c.limbs_storage);
+          if (c.is_odd()) carry = Base::template add_limbs<TLC, true>(c.limbs_storage, modulus, c.limbs_storage);
           c = c.div2();
           if (carry) {
             c.limbs_storage.limbs[1] =
@@ -242,10 +239,7 @@ namespace goldilocks {
 
     HOST_DEVICE_INLINE GoldilocksField sqr() const { return *this * *this; }
 
-    HOST_DEVICE_INLINE GoldilocksField to_montgomery() const
-    {
-      return *this * GoldilocksField{CONFIG::montgomery_r};
-    }
+    HOST_DEVICE_INLINE GoldilocksField to_montgomery() const { return *this * GoldilocksField{CONFIG::montgomery_r}; }
 
     HOST_DEVICE_INLINE GoldilocksField from_montgomery() const
     {
@@ -268,8 +262,7 @@ namespace goldilocks {
     static constexpr HOST_DEVICE_INLINE GoldilocksField reduce(const typename Base::Wide& wide)
     {
       GoldilocksField rs = {};
-      icicle_math::goldi_reduce(
-        wide.limbs_storage, Base::get_modulus(), Base::get_neg_modulus(), rs.limbs_storage);
+      icicle_math::goldi_reduce(wide.limbs_storage, Base::get_modulus(), Base::get_neg_modulus(), rs.limbs_storage);
       return rs;
     }
   };
@@ -377,15 +370,9 @@ namespace goldilocks {
         return Wide{xs.c0 + ys.c0, xs.c1 + ys.c1};
       }
 
-      HOST_DEVICE_INLINE Wide operator-(const Wide& ys) const
-      {
-        return Wide{c0 - ys.c0, c1 - ys.c1};
-      }
+      HOST_DEVICE_INLINE Wide operator-(const Wide& ys) const { return Wide{c0 - ys.c0, c1 - ys.c1}; }
 
-      constexpr HOST_DEVICE_INLINE Wide neg() const
-      {
-        return Wide{FWide::neg(c0), FWide::neg(c1)};
-      }
+      constexpr HOST_DEVICE_INLINE Wide neg() const { return Wide{FWide::neg(c0), FWide::neg(c1)}; }
 
       // Reduce the wide representation back to a GoldilocksComplexExtensionField element
       constexpr HOST_DEVICE_INLINE GoldilocksComplexExtensionField reduce() const
