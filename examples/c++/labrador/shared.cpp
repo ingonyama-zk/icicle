@@ -38,7 +38,6 @@ std::vector<Rq> compute_Q_poly(size_t n, size_t r, size_t JL_out, const std::byt
   return Q;
 }
 
-// TODO: Simply returns the polynomial x for every challenge rn
 std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, const std::byte* seed, size_t seed_len)
 {
   size_t d = Rq::d;
@@ -177,17 +176,18 @@ LabradorInstance prepare_recursion_instance(
   std::vector<std::byte> new_ajtai_seed(prev_param.ajtai_seed);
   new_ajtai_seed.push_back(std::byte('1'));
   // TODO: figure out param using Lattirust code
+  // TODO: beta needs to be set correctly for protocol to run
   LabradorParam recursion_param{
     r_prime,
     n_prime,
     new_ajtai_seed,
-    prev_param.kappa,      // kappa
-    prev_param.kappa1,     // kappa1
-    prev_param.kappa2,     // kappa2,
-    prev_param.base1,      // base1
-    prev_param.base2,      // base2
-    prev_param.base3,      // base3
-    100 * prev_param.beta, // beta
+    prev_param.kappa,            // kappa
+    prev_param.kappa1,           // kappa1
+    prev_param.kappa2,           // kappa2,
+    prev_param.base1,            // base1
+    prev_param.base2,            // base2
+    prev_param.base3,            // base3
+    r * n * d * prev_param.beta, // beta
   };
   LabradorInstance recursion_instance{recursion_param};
 
@@ -484,4 +484,12 @@ LabradorInstance prepare_recursion_instance(
   // Step 14: already done
 
   return recursion_instance;
+}
+
+// returns a choice of mu, nu given n, m
+std::pair<size_t, size_t> get_rec_param(size_t n, size_t m)
+{
+  size_t nu = size_t(pow((double)n, 0.66));
+  size_t mu = m * nu / n;
+  return std::make_pair(mu, nu);
 }

@@ -21,6 +21,8 @@ public:
 
   // Construct with an initial seed.
   Oracle(const std::byte* seed, size_t seed_len) : hasher_(Sha3_256::create()), state_(seed, seed + seed_len) {}
+  // Copy constructor
+  Oracle(const Oracle& other) : hasher_(Sha3_256::create()), state_(other.state_) {}
 
   /**
    * @brief Produce the next challenge.

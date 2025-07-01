@@ -188,11 +188,8 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   const size_t n = lab_inst.param.n; // Dimension of witness vectors
   constexpr size_t d = Rq::d;
 
-  if (TESTING) {
-    std::cout << "\tTesting witness validity...";
-    assert(lab_witness_legit(lab_inst, S));
-    std::cout << "VALID\n";
-  }
+  std::cout << "Number of constraints (Eq, Cz): " << lab_inst.equality_constraints.size() << ", "
+            << lab_inst.const_zero_constraints.size() << std::endl;
 
   PartialTranscript trs;
   std::cout << "Step 1 completed: Initialized variables" << std::endl;
@@ -332,7 +329,6 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // Step 18: Let L be the number of constZeroInstance constraints in LabradorInstance.
   // For 0 ≤ k < ceil(128/log(q)), sample the following random vectors:
   const size_t L = lab_inst.const_zero_constraints.size();
-  // TODO: make this a shared param between P,V
   const size_t num_aggregation_rounds = lab_inst.param.num_aggregation_rounds;
 
   std::vector<Zq> psi(num_aggregation_rounds * L), omega(num_aggregation_rounds * JL_out);
@@ -512,20 +508,17 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   return std::make_pair(final_proof, trs);
 }
 
-std::vector<Rq>
-LabradorProver::prepare_recursion_witness(const LabradorBaseCaseProof& pf, uint32_t base0, size_t mu, size_t nu)
+std::vector<Rq> LabradorProver::prepare_recursion_witness(
+  const LabradorParam& prev_param, const LabradorBaseCaseProof& pf, uint32_t base0, size_t mu, size_t nu)
 {
   // Step 1: Convert z_hat back to polynomial domain
-  size_t n = lab_inst.param.n;
-  size_t r = lab_inst.param.r;
+  size_t n = prev_param.n;
+  size_t r = prev_param.r;
 
   std::vector<Rq> z(n);
   ICICLE_CHECK(ntt(pf.z_hat.data(), pf.z_hat.size(), NTTDir::kInverse, {}, z.data()));
 
   // Step 2: Decompose z using base0
-  size_t l0 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base0);
-
-  // Decompose all elements first
   std::vector<Rq> z_tilde(2 * n);
   ICICLE_CHECK(decompose(z.data(), n, base0, {}, z_tilde.data(), z_tilde.size()));
 
@@ -533,7 +526,7 @@ LabradorProver::prepare_recursion_witness(const LabradorBaseCaseProof& pf, uint3
   // z0 = z_tilde[:n]
   // z1 = z_tilde[n:2*n]
 
-  RecursionPreparer preparer{lab_inst.param, mu, nu, base0};
+  RecursionPreparer preparer{prev_param, mu, nu, base0};
 
   std::vector<Rq> s_prime(preparer.r_prime * preparer.n_prime, zero());
 
@@ -560,16 +553,59 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
   std::vector<PartialTranscript> trs;
   PartialTranscript part_trs;
   LabradorBaseCaseProof base_proof;
-  const char* placeholder = "HELLO";
+  LabradorInstance lab_inst_i = lab_inst;
+  std::vector<Rq> S_i = S;
   for (size_t i = 0; i < NUM_REC; i++) {
-    LabradorBaseProver base_prover(lab_inst, S, reinterpret_cast<const std::byte*>(placeholder), sizeof(char) * 5);
-    std::tie(base_proof, part_trs) = base_prover.base_case_prover();
+    std::cout << "Recursion iteration = " << i << "\n";
+    LabradorBaseProver base_prover(lab_inst_i, S_i, oracle);
+    auto [base_proof, part_trs] = base_prover.base_case_prover();
     // TODO: figure out param using Lattirust code
-    size_t base0 = 1 << 8, mu = 1 << 8, nu = 1 << 8;
-    S = prepare_recursion_witness(base_proof, base0, mu, nu);
-    EqualityInstance final_const = lab_inst.equality_constraints[0];
-    lab_inst = prepare_recursion_instance(base_prover.lab_inst.param, final_const, part_trs, base0, mu, nu);
+    uint32_t base0 = 1 << 3;
+    // size_t m =
+    //   base_prover.lab_inst.param.t_len() + base_prover.lab_inst.param.g_len() + base_prover.lab_inst.param.h_len();
+    // auto [mu, nu] = get_rec_param(base_prover.lab_inst.param.n, m);
+
+    size_t mu = 1 << 3, nu = 1 << 3;
+
+    // Prepare recursion problem and witness
+    S_i = prepare_recursion_witness(lab_inst_i.param, base_proof, base0, mu, nu);
+    EqualityInstance final_const = base_prover.lab_inst.equality_constraints[0];
+    lab_inst_i = prepare_recursion_instance(base_prover.lab_inst.param, final_const, part_trs, base0, mu, nu);
     trs.push_back(part_trs);
+    oracle = base_prover.oracle;
+
+    std::cout << "\tRecursion problem prepared\n";
+    std::cout << "n= " << lab_inst_i.param.n << ", r= " << lab_inst_i.param.r << "\n";
+
+    if (TESTING) {
+      if (lab_witness_legit(lab_inst_i, S_i)) {
+        std::cout << "\tRecursion valid\n";
+      } else {
+        std::cout << "\tRecursion INVALID\n";
+        // Debug: check each constraint individually
+        std::cout << "\tDebugging constraints (iteration " << i << "):\n";
+        std::cout << "\tNumber of equality constraints: " << lab_inst_i.equality_constraints.size() << "\n";
+        std::cout << "\tNumber of const-zero constraints: " << lab_inst_i.const_zero_constraints.size() << "\n";
+        std::cout << "\tWitness size: " << S_i.size() << ", expected: " << lab_inst_i.param.r * lab_inst_i.param.n
+                  << "\n";
+
+        for (size_t j = 0; j < lab_inst_i.equality_constraints.size(); j++) {
+          if (!witness_legit_eq(lab_inst_i.equality_constraints[j], S_i)) {
+            std::cout << "\t\tEquality constraint " << j << " FAILED\n";
+          } else {
+            std::cout << "\t\tEquality constraint " << j << " passed\n";
+          }
+        }
+
+        for (size_t j = 0; j < lab_inst_i.const_zero_constraints.size(); j++) {
+          if (!witness_legit_const_zero(lab_inst_i.const_zero_constraints[j], S_i)) {
+            std::cout << "\t\tConst-zero constraint " << j << " FAILED\n";
+          } else {
+            std::cout << "\t\tConst-zero constraint " << j << " passed\n";
+          }
+        }
+      }
+    }
   }
   return std::make_pair(trs, base_proof);
 }

@@ -188,8 +188,6 @@ struct PartialTranscript {
 
 /// Encapsulates the problem and witness for the reduced instance
 ///
-/// final_const: is the EqualityInstance prepared in Step 22
-///
 /// z_hat: is the vector computed in Step 29
 ///
 /// t: vector computed in Step 9 (T_tilde in the code)
