@@ -1,9 +1,9 @@
 use crate::field::FieldArithmetic;
 use crate::program::{PreDefinedProgram, Program};
+use crate::symbol::Symbol;
 use crate::traits::{FieldImpl, GenerateRandom};
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::memory::HostSlice;
-use crate::symbol::Symbol;
 
 pub fn check_program<F, Prog>()
 where
@@ -44,7 +44,9 @@ where
     let program = Prog::new(example_lambda, 7).unwrap();
 
     let cfg = VecOpsConfig::default();
-    program.execute_program(&mut parameters, &cfg).expect("Program Failed");
+    program
+        .execute_program(&mut parameters, &cfg)
+        .expect("Program Failed");
 
     for i in 0..TEST_SIZE {
         let a = a[i];
@@ -108,7 +110,9 @@ where
     let program = Prog::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
 
     let cfg = VecOpsConfig::default();
-    program.execute_program(&mut parameters, &cfg).expect("Program Failed");
+    program
+        .execute_program(&mut parameters, &cfg)
+        .expect("Program Failed");
 
     for i in 0..TEST_SIZE {
         let a = parameters[0][i];
@@ -127,4 +131,4 @@ where
             )
         );
     }
-} 
+}

@@ -258,8 +258,6 @@ fn check_vec_ops_args_slice<F>(
     setup_config(input, input, output, cfg, batch_size)
 }
 
-
-
 /// Modify VecopsConfig according to the given vectors
 fn setup_config<F, T>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -508,8 +506,6 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
-
-
 #[macro_export]
 macro_rules! impl_vec_ops_field {
     (
@@ -646,7 +642,6 @@ macro_rules! impl_vec_ops_field {
                     cfg: *const VecOpsConfig,
                     output: *mut $field,
                 ) -> eIcicleError;
-
 
             }
         }

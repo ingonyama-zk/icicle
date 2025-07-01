@@ -1,7 +1,7 @@
 use crate::symbol::Symbol;
 use crate::traits::{FieldImpl, Handle};
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 use crate::VecOpsConfig;
+use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 use std::ffi::c_void;
 
 pub type Instruction = u32;
@@ -23,11 +23,7 @@ where
 
     fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
 
-    fn execute_program<Data>(
-        &self,
-        data: &mut Vec<&Data>,
-        cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>
+    fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), eIcicleError>
     where
         F: FieldImpl,
         Data: HostOrDeviceSlice<F> + ?Sized;
@@ -54,14 +50,14 @@ macro_rules! impl_program_field {
     $field_config:ident
   ) => {
         pub mod $field_prefix_ident {
-            use icicle_runtime::memory::HostOrDeviceSlice;
-            use icicle_core::vec_ops::VecOpsConfig;
             use crate::program::$field;
             use crate::symbol::$field_prefix_ident::FieldSymbol;
             use icicle_core::program::{Instruction, PreDefinedProgram, Program, ProgramHandle, ReturningValueProgram};
             use icicle_core::symbol::{Symbol, SymbolHandle};
             use icicle_core::traits::{FieldImpl, Handle};
+            use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
+            use icicle_runtime::memory::HostOrDeviceSlice;
             use std::ffi::c_void;
             use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
@@ -164,11 +160,7 @@ macro_rules! impl_program_field {
                     }
                 }
 
-                fn execute_program<Data>(
-                    &self,
-                    data: &mut Vec<&Data>,
-                    cfg: &VecOpsConfig,
-                ) -> Result<(), eIcicleError>
+                fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), eIcicleError>
                 where
                     $field: FieldImpl,
                     Data: HostOrDeviceSlice<$field> + ?Sized,
