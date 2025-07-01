@@ -163,7 +163,7 @@ static eIcicleError cpu_get_jl_matrix_rows(
       static const field_t JL_LUT[4] = {
         field_t::zero(),              // 0b00
         field_t::one(),               // 0b01
-        field_t::neg(field_t::one()), // 0b10
+        field_t::one().neg(), // 0b10
         field_t::zero()               // 0b11
       };
 

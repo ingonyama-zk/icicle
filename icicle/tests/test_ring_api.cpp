@@ -63,7 +63,7 @@ TYPED_TEST(RingTest, RingSanityTest)
 {
   auto a = TypeParam::rand_host();
   auto b = TypeParam::rand_host();
-  auto a_neg = TypeParam::neg(a);
+  auto a_neg = a.neg();
   ASSERT_EQ(a + TypeParam::zero(), a);
   ASSERT_EQ(a + b - a, b);
   ASSERT_EQ(a + a_neg, TypeParam::zero());
@@ -74,7 +74,7 @@ TYPED_TEST(RingTest, RingSanityTest)
   while (!TypeParam::has_inverse(invertible_element)) {
     invertible_element = TypeParam::rand_host();
   }
-  auto invertible_element_inv = TypeParam::inverse(invertible_element);
+  auto invertible_element_inv = invertible_element.inverse();
   ASSERT_EQ(invertible_element * a * invertible_element_inv, a);
   ASSERT_EQ(invertible_element * invertible_element_inv, TypeParam::one());
 }
@@ -88,13 +88,13 @@ TEST_F(RingTestBase, RingRnsConversion)
   }
 
   // check r * r^-1 = 1 in rns and direct
-  auto r_inv = scalar_t::inverse(r);
+  auto r_inv = r.inverse();
   ASSERT_EQ(r * r_inv, scalar_t::one());
 
   // convert direct to rns and check 'r * r^-1 = 1' in rns
   scalar_rns_t r_rns = scalar_rns_t::from_direct(r); // static method to convert direct to rns
   scalar_rns_t r_inv_rns_converted = scalar_rns_t::from_direct(r_inv);
-  scalar_rns_t r_inv_rns_computed = scalar_rns_t::inverse(r_rns);
+  scalar_rns_t r_inv_rns_computed = r_rns.inverse();
   ASSERT_EQ(r_inv_rns_converted, r_inv_rns_computed);
   ASSERT_EQ(r_rns * r_inv_rns_converted, scalar_rns_t::one());
 
