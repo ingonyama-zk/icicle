@@ -420,10 +420,10 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
 {
   auto a = TypeParam::rand_host();
   auto b = TypeParam::rand_host();
-  ASSERT_EQ(true, a.is_on_curve() && b.is_on_curve());               // rand is on curve
+  ASSERT_EQ(true, a.is_on_curve() && b.is_on_curve());                                   // rand is on curve
   ASSERT_EQ(a + TypeParam::zero(), a);                                                   // zero addition
   ASSERT_EQ(a + b - a, b);                                                               // addition,subtraction cancel
-  ASSERT_EQ(a + a.neg(), TypeParam::zero());                                   // addition with neg cancel
+  ASSERT_EQ(a + a.neg(), TypeParam::zero());                                             // addition with neg cancel
   ASSERT_EQ(a + a + a, scalar_t::from(3) * a);                                           // scalar multiplication
   ASSERT_EQ(scalar_t::from(3) * (a + b), scalar_t::from(3) * a + scalar_t::from(3) * b); // distributive
   ASSERT_EQ(a + b, a + b.to_affine()); // mixed addition projective+affine
@@ -472,7 +472,6 @@ TEST(CurveSanity, PairingBilinearityTest)
     ASSERT_EQ(f3.pow(coeff * coeff), f4); // e(ps, qs) == e(p, q) ^ (s^2)
   }
 }
-
 
 TEST(CurveSanity, FinalExponentiationTest)
 {
