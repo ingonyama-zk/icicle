@@ -120,7 +120,7 @@ namespace icicle {
   // Poly ring matrix transpose
   ICICLE_DISPATCHER_INST(ringPolyMatrixTransposeDispatcher, poly_ring_matrix_transpose, ringPolyRingMatrixOpImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_matrix_transpose)(
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matrix_transpose)(
     const PolyRing* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig* config, PolyRing* mat_out)
   {
     return ringPolyMatrixTransposeDispatcher::execute(mat_in, nof_rows, nof_cols, *config, mat_out);
@@ -130,7 +130,7 @@ namespace icicle {
   eIcicleError matrix_transpose(
     const PolyRing* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, PolyRing* mat_out)
   {
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_matrix_transpose)(mat_in, nof_rows, nof_cols, &config, mat_out);
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matrix_transpose)(mat_in, nof_rows, nof_cols, &config, mat_out);
   }
 
 #endif // RING
