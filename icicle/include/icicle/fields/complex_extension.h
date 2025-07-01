@@ -400,10 +400,11 @@ public:
   }
 
   template <unsigned NLIMBS>
-  static constexpr HOST_DEVICE ComplexExtensionField pow(ComplexExtensionField base, storage<NLIMBS> exp)
+  constexpr HOST_DEVICE ComplexExtensionField pow(storage<NLIMBS> exp) const
   {
     ComplexExtensionField res = one();
-    while (host_math::is_zero(exp)) {
+    ComplexExtensionField base = *this;
+    while (!host_math::is_zero(exp)) {
       if (host_math::get_bit<NLIMBS>(exp, 0)) res = res * base;
       base = base * base;
       exp = host_math::right_shift<NLIMBS, 1>(exp);
