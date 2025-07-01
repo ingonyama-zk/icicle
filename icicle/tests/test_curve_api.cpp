@@ -478,7 +478,7 @@ TEST(CurveSanity, FinalExponentiationTest)
   for (int i = 0; i < 10; i++) {
     TargetField f = TargetField::rand_host();
     final_exponentiation<PairingConfig>(f);
-    f = TargetField::pow(f, scalar_t::get_modulus());
+    f = f.pow(scalar_t::get_modulus());
     ASSERT_EQ(f, TargetField::one());
   }
 }

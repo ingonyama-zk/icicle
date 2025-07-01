@@ -17,10 +17,10 @@ namespace m31 {
     using Base = ModArith<MersenneField<CONFIG>, CONFIG>;
 
   public:
-    HOST_DEVICE_INLINE MersenneField(const MersenneField& other) : Field<CONFIG>(other) {}
-    HOST_DEVICE_INLINE MersenneField(const uint32_t& x = 0) : Field<CONFIG>({x}) {}
-    HOST_DEVICE_INLINE MersenneField(storage<CONFIG::limbs_count> x) : Field<CONFIG>{x} {}
-    HOST_DEVICE_INLINE MersenneField(const Field<CONFIG>& other) : Field<CONFIG>(other) {}
+    HOST_DEVICE_INLINE MersenneField(const MersenneField& other) : Base(other) {}
+    HOST_DEVICE_INLINE MersenneField(const uint32_t& x = 0) : Base({x}) {}
+    HOST_DEVICE_INLINE MersenneField(storage<CONFIG::limbs_count> x) : Base{x} {}
+    HOST_DEVICE_INLINE MersenneField(const Field<CONFIG>& other) : Base(other.limbs_storage) {}
 
     static constexpr HOST_DEVICE_INLINE MersenneField zero() { return MersenneField{CONFIG::zero}; }
 
@@ -82,7 +82,7 @@ namespace m31 {
 
     static HOST_INLINE MersenneField rand_host()
     {
-      Field<CONFIG> field_val = Field<CONFIG>::rand_host();
+      Base field_val = Base::rand_host();
       return MersenneField{{field_val.limbs_storage}};
     }
     static void rand_host_many(MersenneField* out, int size)
@@ -93,7 +93,7 @@ namespace m31 {
 
     HOST_DEVICE_INLINE MersenneField& operator=(const Field<CONFIG>& other)
     {
-      if (this != &other) { Field<CONFIG>::operator=(other); }
+      if (this != &other) { Base::operator=(other); }
       return *this;
     }
 
@@ -142,7 +142,7 @@ namespace m31 {
         return from_number((((uint32_t)(t1 >> 32)) << 1) + (uint32_t)(t1)); // max: 2(1) - (2^32 - 3) = 2^32 - 1
       }
 
-      constexpr HOST_DEVICE_INLINE MersenneField reduce() const { return this->reduce(); }
+      constexpr HOST_DEVICE_INLINE MersenneField reduce() const { return MersenneField::reduce(*this); }
     };
 
     constexpr HOST_DEVICE_INLINE MersenneField div2(const uint32_t& power = 1) const
@@ -157,11 +157,12 @@ namespace m31 {
       return MersenneField{{t == 0 ? t : MersenneField::get_modulus().limbs[0] - t}};
     }
     template <unsigned LIMBS_COUNT = 1>
-    constexpr HOST_DEVICE_INLINE MersenneField reduce(const storage<LIMBS_COUNT>& xs) const
+    constexpr HOST_DEVICE_INLINE MersenneField reduce() const
     {
       const uint32_t modulus = MersenneField::get_modulus().limbs[0];
-      uint32_t tmp = ((uint64_t)xs.limbs[0] >> 31) + ((uint64_t)xs.limbs[0] & modulus); // max: 1 + 2^31-1 = 2^31
-      tmp = (tmp >> 31) + (tmp & modulus);                                              // max: 1 + 0 = 1
+      uint32_t tmp =
+        ((uint64_t)this->get_limb() >> 31) + ((uint64_t)this->get_limb() & modulus); // max: 1 + 2^31-1 = 2^31
+      tmp = (tmp >> 31) + (tmp & modulus);                                           // max: 1 + 0 = 1
       return MersenneField{{tmp == modulus ? 0 : tmp}};
     }
 
@@ -235,6 +236,15 @@ namespace m31 {
         exp >>= 1;
       }
       return res;
+    }
+
+    // Add a static reduce method that accepts the Wide type
+    static constexpr HOST_DEVICE_INLINE MersenneField reduce(const Wide& wide)
+    {
+      const uint32_t modulus = MersenneField::get_modulus().limbs[0];
+      uint32_t tmp = ((uint64_t)wide.storage >> 31) + ((uint64_t)wide.storage & modulus); // max: 1 + 2^31-1 = 2^31
+      tmp = (tmp >> 31) + (tmp & modulus);                                                // max: 1 + 0 = 1
+      return MersenneField{{tmp == modulus ? 0 : tmp}};
     }
   };
   struct fp_config {
