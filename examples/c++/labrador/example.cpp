@@ -60,19 +60,19 @@ int main(int argc, char* argv[])
 
   std::string oracle_seed = "ORACLE_SEED";
 
-  // LabradorBaseProver base_prover{
-  //   lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size()};
+  LabradorBaseProver base_prover{
+    lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size()};
 
-  // auto [base_proof, trs] = base_prover.base_case_prover();
+  auto [base_proof, trs] = base_prover.base_case_prover();
 
-  // LabradorInstance verif_lab_inst{param};
-  // verif_lab_inst.add_equality_constraint(eq_inst);
-  // verif_lab_inst.add_const_zero_constraint(const_zero_inst);
-  // verif_lab_inst.add_const_zero_constraint(const_zero_inst2);
-
-  // LabradorBaseVerifier base_verifier{
-  //   verif_lab_inst, trs.prover_msg, base_proof, reinterpret_cast<const std::byte*>(oracle_seed.data()),
-  //   oracle_seed.size()};
+  LabradorInstance verif_lab_inst{param};
+  verif_lab_inst.add_equality_constraint(eq_inst);
+  verif_lab_inst.add_const_zero_constraint(const_zero_inst);
+  verif_lab_inst.add_const_zero_constraint(const_zero_inst2);
+  // to break verification:
+  // verif_lab_inst.const_zero_constraints[0].b = verif_lab_inst.const_zero_constraints[0].b + Zq::one();
+  LabradorBaseVerifier base_verifier{
+    verif_lab_inst, trs.prover_msg, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size()};
 
   // // // Assert that Verifier trs and Prover trs are equal
   // // auto bytes_eq = [](const std::vector<std::byte>& a, const std::vector<std::byte>& b) { return a == b; };
@@ -112,13 +112,13 @@ int main(int argc, char* argv[])
   // // }
   // // std::cout << "Transcript check passed ✅\n";
 
-  // bool verification_result = base_verifier.verify();
+  bool verification_result = base_verifier.verify(base_proof);
 
-  // if (verification_result) {
-  //   std::cout << "Base proof verification passed\n";
-  // } else {
-  //   std::cout << "Base proof verification failed\n";
-  // }
+  if (verification_result) {
+    std::cout << "Base proof verification passed\n";
+  } else {
+    std::cout << "Base proof verification failed\n";
+  }
 
   // std::cout << "Beginning recursion... \n";
   // uint32_t base0 = 1 << 3;
@@ -139,11 +139,11 @@ int main(int argc, char* argv[])
   // assert(lab_witness_legit(rec_inst, rec_S));
   // std::cout << "VALID\n";
 
-  size_t NUM_REC = 2;
-  LabradorProver prover{
-    lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size(), NUM_REC};
+  // size_t NUM_REC = 1;
+  // LabradorProver prover{
+  //   lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size(), NUM_REC};
 
-  auto [trs, base_proof] = prover.prove();
+  // auto [trs, base_proof] = prover.prove();
 
   std::cout << "Hello\n";
   return 0;

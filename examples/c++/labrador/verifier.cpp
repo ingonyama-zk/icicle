@@ -67,17 +67,17 @@ void LabradorBaseVerifier::create_transcript()
 
 // TODO: maybe make BaseProof more consistent by making everything Rq, since we have to convert z_hat to Rq before norm
 // check anyway
-bool LabradorBaseVerifier::_verify_base_proof() const
+bool LabradorBaseVerifier::_verify_base_proof(const LabradorBaseCaseProof& base_proof) const
 {
   size_t n = lab_inst.param.n;
   size_t r = lab_inst.param.r;
   size_t d = Rq::d;
 
-  auto z_hat = base_proof.z_hat;
-  auto t_tilde = base_proof.t;
-  auto g_tilde = base_proof.g;
-  auto h_tilde = base_proof.h;
-  auto challenges_hat = trs.challenges_hat;
+  auto& z_hat = base_proof.z_hat;
+  auto& t_tilde = base_proof.t;
+  auto& g_tilde = base_proof.g;
+  auto& h_tilde = base_proof.h;
+  auto& challenges_hat = trs.challenges_hat;
   auto final_const = lab_inst.equality_constraints[0];
 
   bool t_tilde_small = true, g_tilde_small = true, h_tilde_small = true;
@@ -88,13 +88,13 @@ bool LabradorBaseVerifier::_verify_base_proof() const
   // 1. LInfinity checks: check t_tilde, g_tilde, h_tilde are small- correctly decomposed
 
   ICICLE_CHECK(check_norm_bound(
-    reinterpret_cast<Zq*>(t_tilde.data()), t_tilde.size() * d, eNormType::LInfinity, (base1 + 1) / 2, {},
+    reinterpret_cast<const Zq*>(t_tilde.data()), t_tilde.size() * d, eNormType::LInfinity, (base1 + 1) / 2, {},
     &t_tilde_small));
   ICICLE_CHECK(check_norm_bound(
-    reinterpret_cast<Zq*>(h_tilde.data()), h_tilde.size() * d, eNormType::LInfinity, (base2 + 1) / 2, {},
+    reinterpret_cast<const Zq*>(h_tilde.data()), h_tilde.size() * d, eNormType::LInfinity, (base2 + 1) / 2, {},
     &h_tilde_small));
   ICICLE_CHECK(check_norm_bound(
-    reinterpret_cast<Zq*>(g_tilde.data()), g_tilde.size() * d, eNormType::LInfinity, (base3 + 1) / 2, {},
+    reinterpret_cast<const Zq*>(g_tilde.data()), g_tilde.size() * d, eNormType::LInfinity, (base3 + 1) / 2, {},
     &g_tilde_small));
 
   // Fail if any of the LInfinity are large
@@ -364,7 +364,7 @@ void LabradorBaseVerifier::agg_const_zero_constraints(size_t num_aggregation_rou
   lab_inst.const_zero_constraints.shrink_to_fit();
 }
 
-bool LabradorBaseVerifier::verify()
+bool LabradorBaseVerifier::verify(const LabradorBaseCaseProof& base_proof)
 {
   size_t r = lab_inst.param.r;
   size_t n = lab_inst.param.n;
@@ -428,5 +428,5 @@ bool LabradorBaseVerifier::verify()
   agg_const_zero_constraints(num_aggregation_rounds, Q_hat);
   lab_inst.agg_equality_constraints(trs.alpha_hat);
 
-  return _verify_base_proof();
+  return _verify_base_proof(base_proof);
 }

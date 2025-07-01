@@ -576,35 +576,35 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
     oracle = base_prover.oracle;
 
     std::cout << "\tRecursion problem prepared\n";
-    std::cout << "n= " << lab_inst_i.param.n << ", r= " << lab_inst_i.param.r << "\n";
+    std::cout << "\tn= " << lab_inst_i.param.n << ", r= " << lab_inst_i.param.r << "\n";
 
     if (TESTING) {
       if (lab_witness_legit(lab_inst_i, S_i)) {
         std::cout << "\tRecursion valid\n";
       } else {
         std::cout << "\tRecursion INVALID\n";
-        // Debug: check each constraint individually
-        std::cout << "\tDebugging constraints (iteration " << i << "):\n";
-        std::cout << "\tNumber of equality constraints: " << lab_inst_i.equality_constraints.size() << "\n";
-        std::cout << "\tNumber of const-zero constraints: " << lab_inst_i.const_zero_constraints.size() << "\n";
-        std::cout << "\tWitness size: " << S_i.size() << ", expected: " << lab_inst_i.param.r * lab_inst_i.param.n
-                  << "\n";
+        // // Debug: check each constraint individually
+        // std::cout << "\tDebugging constraints (iteration " << i << "):\n";
+        // std::cout << "\tNumber of equality constraints: " << lab_inst_i.equality_constraints.size() << "\n";
+        // std::cout << "\tNumber of const-zero constraints: " << lab_inst_i.const_zero_constraints.size() << "\n";
+        // std::cout << "\tWitness size: " << S_i.size() << ", expected: " << lab_inst_i.param.r * lab_inst_i.param.n
+        //           << "\n";
 
-        for (size_t j = 0; j < lab_inst_i.equality_constraints.size(); j++) {
-          if (!witness_legit_eq(lab_inst_i.equality_constraints[j], S_i)) {
-            std::cout << "\t\tEquality constraint " << j << " FAILED\n";
-          } else {
-            std::cout << "\t\tEquality constraint " << j << " passed\n";
-          }
-        }
+        // for (size_t j = 0; j < lab_inst_i.equality_constraints.size(); j++) {
+        //   if (!witness_legit_eq(lab_inst_i.equality_constraints[j], S_i)) {
+        //     std::cout << "\t\tEquality constraint " << j << " FAILED\n";
+        //   } else {
+        //     std::cout << "\t\tEquality constraint " << j << " passed\n";
+        //   }
+        // }
 
-        for (size_t j = 0; j < lab_inst_i.const_zero_constraints.size(); j++) {
-          if (!witness_legit_const_zero(lab_inst_i.const_zero_constraints[j], S_i)) {
-            std::cout << "\t\tConst-zero constraint " << j << " FAILED\n";
-          } else {
-            std::cout << "\t\tConst-zero constraint " << j << " passed\n";
-          }
-        }
+        // for (size_t j = 0; j < lab_inst_i.const_zero_constraints.size(); j++) {
+        //   if (!witness_legit_const_zero(lab_inst_i.const_zero_constraints[j], S_i)) {
+        //     std::cout << "\t\tConst-zero constraint " << j << " FAILED\n";
+        //   } else {
+        //     std::cout << "\t\tConst-zero constraint " << j << " passed\n";
+        //   }
+        // }
       }
     }
   }
