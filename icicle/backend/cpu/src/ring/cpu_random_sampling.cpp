@@ -12,10 +12,10 @@ void fast_mode_random_sampling(
   // Use keccak to get deterministic uniform distribution
   auto keccak512 = Keccak512::create();
   const size_t element_size = sizeof(field_t::limbs_storage);
-  const size_t elements_per_hash = std::max(keccak512.output_size() / element_size, size_t(1));
+  const size_t elements_per_hash =  size_t(std::max(keccak512.output_size() / element_size, uint64_t(1)));
   // To support elements that are larger than 32 bytes
   const size_t hashes_per_element =
-    std::max((element_size + keccak512.output_size() - 1) / keccak512.output_size(), size_t(1));
+    size_t(std::max((element_size + keccak512.output_size() - 1) / keccak512.output_size(), uint64_t(1)));
   const size_t size_per_task =
     (size + RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS - 1) / RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS;
 
@@ -61,9 +61,9 @@ void slow_mode_random_sampling(
   // Use keccak to get deterministic uniform distribution
   auto keccak512 = Keccak512::create();
   const size_t element_size = sizeof(field_t::limbs_storage);
-  const size_t elements_per_hash = std::max(keccak512.output_size() / element_size, size_t(1));
+  const size_t elements_per_hash = size_t(std::max(keccak512.output_size() / element_size, uint64_t(1)));
   // To support elements that are larger than 32 bytes
-  const size_t hashes_per_element = std::max(element_size / keccak512.output_size(), size_t(1));
+  const size_t hashes_per_element = size_t(std::max(element_size / keccak512.output_size(), uint64_t(1)));
   const size_t hashes_per_batch = size / elements_per_hash;
 
   const int nof_workers = std::min((int)(hashes_per_batch), get_nof_workers(cfg));
