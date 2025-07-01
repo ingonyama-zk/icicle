@@ -9,3 +9,9 @@ impl_program_field!(
     ExtensionField,
     ExtensionCfg
 );
+
+#[cfg(test)]
+use icicle_core::impl_program_tests;
+
+#[cfg(test)]
+impl_program_tests!(goldilocks, ScalarField);

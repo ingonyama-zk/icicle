@@ -1,6 +1,7 @@
 use crate::symbol::Symbol;
 use crate::traits::{FieldImpl, Handle};
-use icicle_runtime::errors::eIcicleError;
+use crate::VecOpsConfig;
+use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 use std::ffi::c_void;
 
 pub type Instruction = u32;
@@ -21,6 +22,11 @@ where
     fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>), nof_parameters: u32) -> Result<Self, eIcicleError>;
 
     fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
+
+    fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), eIcicleError>
+    where
+        F: FieldImpl,
+        Data: HostOrDeviceSlice<F> + ?Sized;
 }
 
 pub trait ReturningValueProgram: Sized + Handle {
@@ -49,7 +55,9 @@ macro_rules! impl_program_field {
             use icicle_core::program::{Instruction, PreDefinedProgram, Program, ProgramHandle, ReturningValueProgram};
             use icicle_core::symbol::{Symbol, SymbolHandle};
             use icicle_core::traits::{FieldImpl, Handle};
+            use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
+            use icicle_runtime::memory::HostOrDeviceSlice;
             use std::ffi::c_void;
             use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
@@ -90,6 +98,15 @@ macro_rules! impl_program_field {
 
                 #[link_name = "delete_program"]
                 pub(crate) fn ffi_delete_program(program: ProgramHandle) -> eIcicleError;
+
+                #[link_name = concat!($field_prefix, "_execute_program")]
+                pub(crate) fn execute_program_ffi(
+                    data_ptr: *const *const $field,
+                    nof_params: u64,
+                    program: ProgramHandle,
+                    nof_iterations: u64,
+                    cfg: *const VecOpsConfig,
+                ) -> eIcicleError;
             }
 
             // Program trait implementation
@@ -140,6 +157,27 @@ macro_rules! impl_program_field {
                                 m_handle: prog_handle,
                             })
                         }
+                    }
+                }
+
+                fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), eIcicleError>
+                where
+                    $field: FieldImpl,
+                    Data: HostOrDeviceSlice<$field> + ?Sized,
+                {
+                    unsafe {
+                        let data_vec: Vec<*const $field> = data
+                            .iter()
+                            .map(|s| s.as_ptr())
+                            .collect();
+                        execute_program_ffi(
+                            data_vec.as_ptr(),
+                            data.len() as u64,
+                            self.handle(),
+                            data[0].len() as u64,
+                            cfg as *const VecOpsConfig,
+                        )
+                        .wrap()
                     }
                 }
             }
@@ -240,3 +278,44 @@ macro_rules! impl_program_field {
         }
     };
 }
+
+#[macro_export]
+macro_rules! impl_program_tests {
+    (
+      $field_prefix_ident: ident,
+      $field:ident
+    ) => {
+        pub(crate) mod test_program {
+            use super::*;
+            use crate::program::$field_prefix_ident::{FieldProgram, FieldReturningValueProgram};
+            use icicle_runtime::test_utilities;
+            use icicle_runtime::{device::Device, runtime};
+            use std::sync::Once;
+
+            fn initialize() {
+                test_utilities::test_load_and_init_devices();
+                test_utilities::test_set_main_device();
+            }
+
+            #[test]
+            pub fn test_program() {
+                initialize();
+                test_utilities::test_set_main_device();
+                icicle_core::program::tests::check_program::<$field, FieldProgram>();
+                test_utilities::test_set_ref_device();
+                icicle_core::program::tests::check_program::<$field, FieldProgram>()
+            }
+
+            #[test]
+            pub fn test_predefined_program() {
+                initialize();
+                test_utilities::test_set_main_device();
+                icicle_core::program::tests::check_predefined_program::<$field, FieldProgram>();
+                test_utilities::test_set_ref_device();
+                icicle_core::program::tests::check_predefined_program::<$field, FieldProgram>()
+            }
+        }
+    };
+}
+
+pub mod tests;

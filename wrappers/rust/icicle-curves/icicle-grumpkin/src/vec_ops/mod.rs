@@ -5,9 +5,6 @@ use icicle_core::{
 };
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
-use icicle_core::program::Program;
-use icicle_core::traits::FieldImpl;
-
 impl_vec_ops_field!("grumpkin", grumpkin, ScalarField, ScalarCfg);
 #[cfg(test)]
 pub(crate) mod tests {
