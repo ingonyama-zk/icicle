@@ -268,9 +268,8 @@ public:
            ? (xs.c0.mul_wide(x0) + FF::template mul_unsigned<CONFIG::nonresidue>(xs.c2.mul_wide(x2)))
            : (xs.c0.mul_wide(x0) - FF::template mul_unsigned<CONFIG::nonresidue>(xs.c2.mul_wide(x2))))),
       FF::reduce(
-        (CONFIG::nonresidue_is_negative
-           ? (FF::template mul_unsigned<CONFIG::nonresidue>(xs.c3.mul_wide(x2))).neg()
-           : FF::template mul_unsigned<CONFIG::nonresidue>(xs.c3.mul_wide(x2))) -
+        (CONFIG::nonresidue_is_negative ? (FF::template mul_unsigned<CONFIG::nonresidue>(xs.c3.mul_wide(x2))).neg()
+                                        : FF::template mul_unsigned<CONFIG::nonresidue>(xs.c3.mul_wide(x2))) -
         xs.c1.mul_wide(x0)),
       FF::reduce(xs.c2.mul_wide(x0) - xs.c0.mul_wide(x2)),
       FF::reduce(xs.c1.mul_wide(x2) - xs.c3.mul_wide(x0)),
