@@ -237,52 +237,44 @@ public:
 
   constexpr HOST_DEVICE_INLINE QuarticExtensionField neg() const { return {c0.neg(), c1.neg(), c2.neg(), c3.neg()}; }
 
+  // inverse of zero is set to be zero which is what we want most of the time
   constexpr HOST_DEVICE_INLINE QuarticExtensionField inverse() const
   {
-    // Create temporary variables for intermediate calculations
-    FF x0, x2, x;
-
+    FF x, x0, x2;
+    const QuarticExtensionField& xs = *this;
     if (CONFIG::nonresidue_is_negative) {
-      // Calculate intermediate values with proper type handling
-      FF c3_doubled = c3 + c3;
-      FF c1_c3_doubled = c1 * c3_doubled;
-      FF c2_squared = c2.sqr();
-      FF term1 = c1_c3_doubled - c2_squared;
-
-      x0 = (c0.sqr() + FF::template mul_unsigned<CONFIG::nonresidue>(term1)).reduce();
-      x2 = (c0 * (c2 + c2) - c1.sqr() + FF::template mul_unsigned<CONFIG::nonresidue>(c3.sqr())).reduce();
-      x = (x0.sqr() + FF::template mul_unsigned<CONFIG::nonresidue>(x2.sqr())).reduce();
+      x0 = FF::reduce(
+        xs.c0.sqr_wide() +
+        FF::template mul_unsigned<CONFIG::nonresidue>(xs.c1.mul_wide(xs.c3 + xs.c3) - xs.c2.sqr_wide()));
+      x2 = FF::reduce(
+        xs.c0.mul_wide(xs.c2 + xs.c2) - xs.c1.sqr_wide() +
+        FF::template mul_unsigned<CONFIG::nonresidue>(xs.c3.sqr_wide()));
+      x = FF::reduce(x0.sqr_wide() + FF::template mul_unsigned<CONFIG::nonresidue>(x2.sqr_wide()));
     } else {
-      // Calculate intermediate values with proper type handling
-      FF c3_doubled = c3 + c3;
-      FF c1_c3_doubled = c1 * c3_doubled;
-      FF c2_squared = c2.sqr();
-      FF term1 = c1_c3_doubled - c2_squared;
-
-      x0 = (c0.sqr() - FF::template mul_unsigned<CONFIG::nonresidue>(term1)).reduce();
-      x2 = (c0 * (c2 + c2) - c1.sqr() - FF::template mul_unsigned<CONFIG::nonresidue>(c3.sqr())).reduce();
-      x = (x0.sqr() - FF::template mul_unsigned<CONFIG::nonresidue>(x2.sqr())).reduce();
+      x0 = FF::reduce(
+        xs.c0.sqr_wide() -
+        FF::template mul_unsigned<CONFIG::nonresidue>(xs.c1.mul_wide(xs.c3 + xs.c3) - xs.c2.sqr_wide()));
+      x2 = FF::reduce(
+        xs.c0.mul_wide(xs.c2 + xs.c2) - xs.c1.sqr_wide() -
+        FF::template mul_unsigned<CONFIG::nonresidue>(xs.c3.sqr_wide()));
+      x = FF::reduce(x0.sqr_wide() - FF::template mul_unsigned<CONFIG::nonresidue>(x2.sqr_wide()));
     }
-
-    // Calculate inverse and final components
     FF x_inv = x.inverse();
     x0 = x0 * x_inv;
     x2 = x2 * x_inv;
-
-    FF c0_result, c1_result, c2_result, c3_result;
-
-    if (CONFIG::nonresidue_is_negative) {
-      c0_result = (c0 * x0 + FF::template mul_unsigned<CONFIG::nonresidue>(c2 * x2)).reduce();
-      c1_result = (FF::template mul_unsigned<CONFIG::nonresidue>(c3 * x2).neg() - c1 * x0).reduce();
-    } else {
-      c0_result = (c0 * x0 - FF::template mul_unsigned<CONFIG::nonresidue>(c2 * x2)).reduce();
-      c1_result = (FF::template mul_unsigned<CONFIG::nonresidue>(c3 * x2) - c1 * x0).reduce();
-    }
-
-    c2_result = c2 * x0 - c0 * x2;
-    c3_result = c1 * x2 - c3 * x0;
-
-    return QuarticExtensionField{c0_result, c1_result, c2_result, c3_result};
+    return {
+      FF::reduce(
+        (CONFIG::nonresidue_is_negative
+           ? (xs.c0.mul_wide(x0) + FF::template mul_unsigned<CONFIG::nonresidue>(xs.c2.mul_wide(x2)))
+           : (xs.c0.mul_wide(x0) - FF::template mul_unsigned<CONFIG::nonresidue>(xs.c2.mul_wide(x2))))),
+      FF::reduce(
+        (CONFIG::nonresidue_is_negative
+           ? (FF::template mul_unsigned<CONFIG::nonresidue>(xs.c3.mul_wide(x2))).neg()
+           : FF::template mul_unsigned<CONFIG::nonresidue>(xs.c3.mul_wide(x2))) -
+        xs.c1.mul_wide(x0)),
+      FF::reduce(xs.c2.mul_wide(x0) - xs.c0.mul_wide(x2)),
+      FF::reduce(xs.c1.mul_wide(x2) - xs.c3.mul_wide(x0)),
+    };
   }
 
   constexpr HOST_DEVICE QuarticExtensionField pow(int exp) const
