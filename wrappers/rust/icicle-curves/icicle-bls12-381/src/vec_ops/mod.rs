@@ -5,8 +5,6 @@ use icicle_core::{
 };
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
-use icicle_core::program::Program;
-
 impl_vec_ops_field!("bls12_381", bls12_381, ScalarField);
 #[cfg(test)]
 pub(crate) mod tests {

@@ -1,4 +1,4 @@
-use crate::{field::PrimeField, program::Program};
+use crate::traits::FieldImpl;
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
@@ -137,16 +137,6 @@ pub trait VecOps: PrimeField {
         cfg: &VecOpsConfig,
         output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
     ) -> Result<(), eIcicleError>;
-
-    fn execute_program<Prog, Data>(
-        data: &mut Vec<&Data>,
-        program: &Prog,
-        cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>
-    where
-        Self: Sized,
-        Data: HostOrDeviceSlice<Self> + ?Sized,
-        Prog: Program<Self>;
 }
 
 #[doc(hidden)]
@@ -492,7 +482,7 @@ where
     F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args_slice(input, offset, stride, size_in, size_out, output, cfg);
-    F::slice(input, offset, stride, size_in, size_out, &cfg, output)
+    <<F as FieldImpl>::Config as VecOps<F>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
 #[macro_export]
@@ -503,9 +493,8 @@ macro_rules! impl_vec_ops_field {
         $field:ident
     ) => {
         mod $field_prefix_ident {
-            use super::*;
-            use crate::vec_ops::{HostOrDeviceSlice, VecOpsConfig};
-            use icicle_core::program::ProgramHandle;
+            use crate::vec_ops::{$field, HostOrDeviceSlice};
+            use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
 
             extern "C" {
@@ -894,32 +883,6 @@ macro_rules! impl_vec_ops_field {
                         size_out,
                         cfg as *const VecOpsConfig,
                         output.as_mut_ptr(),
-                    )
-                    .wrap()
-                }
-            }
-
-            fn execute_program<Prog, Data>(
-                data: &mut Vec<&Data>,
-                program: &Prog,
-                cfg: &VecOpsConfig,
-            ) -> Result<(), eIcicleError>
-            where
-                Self: VecOps,
-                Data: HostOrDeviceSlice<Self> + ?Sized,
-                Prog: Program<Self>,
-            {
-                unsafe {
-                    let data_vec: Vec<*const Self> = data
-                        .iter()
-                        .map(|s| s.as_ptr())
-                        .collect();
-                    $field_prefix_ident::execute_program_ffi(
-                        data_vec.as_ptr(),
-                        data.len() as u64,
-                        program.handle(),
-                        data[0].len() as u64,
-                        cfg as *const VecOpsConfig,
                     )
                     .wrap()
                 }

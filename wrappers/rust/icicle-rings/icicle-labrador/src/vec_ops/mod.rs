@@ -5,10 +5,8 @@ use icicle_core::vec_ops::{VecOps, VecOpsConfig};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-use icicle_core::traits::PrimeField;
-
-impl_vec_ops_field!("labrador", labrador, ScalarRing);
-impl_vec_ops_field!("labrador_rns", labrador_rns, ScalarRingRns);
+impl_vec_ops_field!("labrador", labrador, ScalarRing, ScalarCfg);
+impl_vec_ops_field!("labrador_rns", labrador_rns, ScalarRingRns, ScalarCfgRns);
 
 #[cfg(test)]
 pub(crate) mod tests {

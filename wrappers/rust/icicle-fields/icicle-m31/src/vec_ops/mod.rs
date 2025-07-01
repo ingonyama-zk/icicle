@@ -5,8 +5,6 @@ use icicle_core::{impl_vec_ops_field, impl_vec_ops_mixed_field};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-use icicle_core::program::Program;
-
 impl_vec_ops_field!("m31", m31, ScalarField);
 impl_vec_ops_field!("m31_extension", m31_extension, ExtensionField);
 impl_vec_ops_mixed_field!("m31_extension", m31_mixed, ExtensionField, ScalarField);

@@ -5,8 +5,6 @@ use icicle_core::{impl_vec_ops_field, impl_vec_ops_mixed_field};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-use icicle_core::program::Program;
-
 impl_vec_ops_field!("koalabear", koalabear, ScalarField);
 impl_vec_ops_field!("koalabear_extension", koalabear_extension, ExtensionField);
 impl_vec_ops_mixed_field!("koalabear_extension", koalabear_mixed, ExtensionField, ScalarField);

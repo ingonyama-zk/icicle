@@ -54,7 +54,7 @@ macro_rules! impl_program_field {
             use icicle_core::program::{Instruction, PreDefinedProgram, Program, ProgramHandle, ReturningValueProgram};
             use icicle_core::symbol::{Symbol, SymbolHandle};
             use icicle_core::traits::{FieldImpl, Handle};
-            use icicle_core::vec_ops::{execute_program_ffi, VecOpsConfig};
+            use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
             use icicle_runtime::memory::HostOrDeviceSlice;
             use std::ffi::c_void;
