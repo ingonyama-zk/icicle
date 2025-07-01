@@ -560,7 +560,8 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
     LabradorBaseProver base_prover(lab_inst_i, S_i, oracle);
     auto [base_proof, part_trs] = base_prover.base_case_prover();
     // TODO: figure out param using Lattirust code
-    uint32_t base0 = 1 << 3;
+    // make it 2^32-1 - so that z always decomposes to 2 limbs
+    uint32_t base0 = -1;
     // size_t m =
     //   base_prover.lab_inst.param.t_len() + base_prover.lab_inst.param.g_len() + base_prover.lab_inst.param.h_len();
     // auto [mu, nu] = get_rec_param(base_prover.lab_inst.param.n, m);
