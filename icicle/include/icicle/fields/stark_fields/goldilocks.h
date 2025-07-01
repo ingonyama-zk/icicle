@@ -396,14 +396,12 @@ namespace goldilocks {
       return GoldilocksComplexExtensionField{FF::from(val), FF::zero()};
     }
 
-    HOST_DEVICE_INLINE GoldilocksComplexExtensionField
-    to_montgomery() const
+    HOST_DEVICE_INLINE GoldilocksComplexExtensionField to_montgomery() const
     {
       return GoldilocksComplexExtensionField{c0.to_montgomery(), c1.to_montgomery()};
     }
 
-    HOST_DEVICE_INLINE GoldilocksComplexExtensionField
-    from_montgomery() const
+    HOST_DEVICE_INLINE GoldilocksComplexExtensionField from_montgomery() const
     {
       return GoldilocksComplexExtensionField{c0.from_montgomery(), c1.from_montgomery()};
     }
@@ -538,8 +536,7 @@ namespace goldilocks {
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
-    HOST_DEVICE_INLINE Wide
-    mul_wide(const GoldilocksComplexExtensionField& ys) const
+    HOST_DEVICE_INLINE Wide mul_wide(const GoldilocksComplexExtensionField& ys) const
     {
       FWide real_prod = c0.mul_wide(ys.c0);
       FWide imaginary_prod = c1.mul_wide(ys.c1);
@@ -549,11 +546,7 @@ namespace goldilocks {
     }
 
     // Non-templated version for FF type
-    HOST_DEVICE_INLINE Wide
-    mul_wide(const FF& ys) const
-    {
-      return Wide{c0.mul_wide(ys), c1.mul_wide(ys)};
-    }
+    HOST_DEVICE_INLINE Wide mul_wide(const FF& ys) const { return Wide{c0.mul_wide(ys), c1.mul_wide(ys)}; }
 
     template <unsigned MODULUS_MULTIPLE = 1>
     static constexpr HOST_DEVICE_INLINE Wide mul_wide(const GoldilocksComplexExtensionField& xs, const FF& ys)

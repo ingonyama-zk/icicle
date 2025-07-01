@@ -63,10 +63,7 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, generator)(projective_t* result
   *result = projective_t::generator();
 }
 
-extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, is_on_curve)(projective_t* point)
-{
-  return point->is_on_curve();
-}
+extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, is_on_curve)(projective_t* point) { return point->is_on_curve(); }
 
 /********************************** G2 **********************************/
 #ifdef G2_ENABLED

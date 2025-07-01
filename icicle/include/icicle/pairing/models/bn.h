@@ -111,8 +111,7 @@ namespace icicle_bn_pairing {
     std::vector<typename Config::Fp6> coeffs;
     typename Config::Fp6 r = {q.x, q.y, Config::Fp2::one()};
 
-    typename Config::G2Affine neg_q =
-      Config::G2Projective::from_affine(q).neg().to_affine();
+    typename Config::G2Affine neg_q = Config::G2Projective::from_affine(q).neg().to_affine();
 
     constexpr size_t ate_loop_bits = sizeof(Config::ATE_LOOP_BITS) / sizeof(int);
     for (int i = ate_loop_bits - 2; i >= 0; i--) {
