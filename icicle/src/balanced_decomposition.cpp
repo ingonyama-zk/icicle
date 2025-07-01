@@ -70,6 +70,8 @@ namespace icicle {
   }
 
   /*********************************** BALANCED DECOMPOSITION/RECOMPOSITION PolyRing ************************/
+  ICICLE_DISPATCHER_INST(
+    BalancedDecomposePolyRingDispatcher, decompose_balanced_digits_poly_ring, balancedDecompositionPolyRingImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_decompose_balanced_digits)(
     const PolyRing* input,
@@ -79,20 +81,7 @@ namespace icicle {
     PolyRing* output,
     size_t output_size)
   {
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, decompose_balanced_digits)(
-      (const field_t*)input, input_size * PolyRing::d, base, config, (field_t*)output, output_size * PolyRing::d);
-  }
-
-  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_recompose_from_balanced_digits)(
-    const PolyRing* input,
-    size_t input_size,
-    uint32_t base,
-    const VecOpsConfig* config,
-    PolyRing* output,
-    size_t output_size)
-  {
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, recompose_from_balanced_digits)(
-      (const field_t*)input, input_size * PolyRing::d, base, config, (field_t*)output, output_size * PolyRing::d);
+    return BalancedDecomposePolyRingDispatcher::execute(input, input_size, base, *config, output, output_size);
   }
 
   namespace balanced_decomposition {
@@ -108,7 +97,23 @@ namespace icicle {
       return CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_decompose_balanced_digits)(
         input, input_size, base, &config, output, output_size);
     }
+  } // namespace balanced_decomposition
 
+  ICICLE_DISPATCHER_INST(
+    BalancedRecomposePolyRingDispatcher, recompose_from_balanced_digits_poly_ring, balancedDecompositionPolyRingImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_recompose_from_balanced_digits)(
+    const PolyRing* input,
+    size_t input_size,
+    uint32_t base,
+    const VecOpsConfig* config,
+    PolyRing* output,
+    size_t output_size)
+  {
+    return BalancedRecomposePolyRingDispatcher::execute(input, input_size, base, *config, output, output_size);
+  }
+
+  namespace balanced_decomposition {
     template <>
     eIcicleError recompose(
       const PolyRing* input,
@@ -122,5 +127,4 @@ namespace icicle {
         input, input_size, base, &config, output, output_size);
     }
   } // namespace balanced_decomposition
-
 } // namespace icicle

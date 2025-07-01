@@ -25,13 +25,6 @@ namespace icicle {
 
     F values[d]; ///< Polynomial data (coeffs or NTT values)
 
-    friend bool operator==(const PolynomialRing& lhs, const PolynomialRing& rhs)
-    {
-      return std::memcmp(lhs.values, rhs.values, sizeof(F) * d) == 0;
-    }
-
-    friend bool operator!=(const PolynomialRing& lhs, const PolynomialRing& rhs) { return !(lhs == rhs); }
-
     static void rand_host_many(PolynomialRing* out, int size)
     {
       F::rand_host_many(reinterpret_cast<F*>(out), size * d);

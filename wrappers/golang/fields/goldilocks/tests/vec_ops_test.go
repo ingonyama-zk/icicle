@@ -124,10 +124,10 @@ type GoldilocksVecOpsTestSuite struct {
 }
 
 func (s *GoldilocksVecOpsTestSuite) TestGoldilocksVecOps() {
-	s.Run("TestGoldilocksVecOps", test_helpers.TestWrapper(&s.Suite, testGoldilocksVecOps))
-	s.Run("TestGoldilocksTranspose", test_helpers.TestWrapper(&s.Suite, testGoldilocksTranspose))
-	s.Run("TestGoldilocksSum", test_helpers.TestWrapper(&s.Suite, testGoldilocksSum))
-	s.Run("TestGoldilocksProduct", test_helpers.TestWrapper(&s.Suite, testGoldilocksProduct))
+	s.Run("TestGoldilocksVecOps", testWrapper(&s.Suite, testGoldilocksVecOps))
+	s.Run("TestGoldilocksTranspose", testWrapper(&s.Suite, testGoldilocksTranspose))
+	s.Run("TestGoldilocksSum", testWrapper(&s.Suite, testGoldilocksSum))
+	s.Run("TestGoldilocksProduct", testWrapper(&s.Suite, testGoldilocksProduct))
 }
 
 func TestSuiteGoldilocksVecOps(t *testing.T) {

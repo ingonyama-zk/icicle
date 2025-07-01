@@ -37,7 +37,7 @@ namespace host_math {
   }
 
   template <>
-  HOST_INLINE uint64_t add_cc(const uint64_t x, const uint64_t y, uint64_t& carry)
+  inline uint64_t add_cc(const uint64_t x, const uint64_t y, uint64_t& carry)
   {
     __uint128_t res_128 = static_cast<__uint128_t>(x) + y;
     carry = (uint64_t)(res_128 >> 64);
@@ -55,7 +55,7 @@ namespace host_math {
   }
 
   template <>
-  HOST_INLINE uint64_t addc_cc(const uint64_t x, const uint64_t y, uint64_t& carry)
+  inline uint64_t addc_cc(const uint64_t x, const uint64_t y, uint64_t& carry)
   {
     __uint128_t res_128 = static_cast<__uint128_t>(x) + y + carry;
     carry = (uint64_t)(res_128 >> 64);
@@ -239,7 +239,7 @@ namespace host_math {
 
   // This multiplies only the LSB limbs and ignores the MSB ones so we output NLIMBS rather than 2*NLIMBS
   template <unsigned NLIMBS /*32b limbs*/>
-  static HOST_INLINE void lsb_multiply_raw_64(const uint64_t* a, const uint64_t* b, uint64_t* r)
+  static inline void lsb_multiply_raw_64(const uint64_t* a, const uint64_t* b, uint64_t* r)
   {
 #pragma unroll
     for (unsigned j = 0; j < NLIMBS / 2; j++) {

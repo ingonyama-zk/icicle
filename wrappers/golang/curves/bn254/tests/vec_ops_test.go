@@ -124,10 +124,10 @@ type Bn254VecOpsTestSuite struct {
 }
 
 func (s *Bn254VecOpsTestSuite) TestBn254VecOps() {
-	s.Run("TestBn254VecOps", test_helpers.TestWrapper(&s.Suite, testBn254VecOps))
-	s.Run("TestBn254Transpose", test_helpers.TestWrapper(&s.Suite, testBn254Transpose))
-	s.Run("TestBn254Sum", test_helpers.TestWrapper(&s.Suite, testBn254Sum))
-	s.Run("TestBn254Product", test_helpers.TestWrapper(&s.Suite, testBn254Product))
+	s.Run("TestBn254VecOps", testWrapper(&s.Suite, testBn254VecOps))
+	s.Run("TestBn254Transpose", testWrapper(&s.Suite, testBn254Transpose))
+	s.Run("TestBn254Sum", testWrapper(&s.Suite, testBn254Sum))
+	s.Run("TestBn254Product", testWrapper(&s.Suite, testBn254Product))
 }
 
 func TestSuiteBn254VecOps(t *testing.T) {
