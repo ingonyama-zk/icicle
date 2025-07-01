@@ -208,10 +208,7 @@ namespace m31 {
       return MersenneField{{t}};
     }
 
-    constexpr HOST_DEVICE_INLINE Wide mul_wide() const
-    {
-      return Wide::from_field(*this) * Wide::from_field(*this);
-    }
+    constexpr HOST_DEVICE_INLINE Wide mul_wide() const { return Wide::from_field(*this) * Wide::from_field(*this); }
 
     template <unsigned MODULUS_MULTIPLE = 1>
     constexpr HOST_DEVICE_INLINE Wide sqr_wide() const
