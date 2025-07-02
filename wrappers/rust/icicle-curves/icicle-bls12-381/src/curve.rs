@@ -21,7 +21,6 @@ impl_montgomery_convertible!(ScalarField, bls12_381_scalar_convert_montgomery);
 impl_generate_random!(ScalarField, bls12_381_generate_scalars);
 
 impl_field!(BaseField, "bls12_381_base_field", BASE_LIMBS, false);
-
 impl_curve!(
     "bls12_381",
     bls12_381,

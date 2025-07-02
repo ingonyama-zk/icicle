@@ -19,17 +19,7 @@ impl_field_arithmetic!(ScalarField, "bls12_377", bls12_377_sf);
 impl_montgomery_convertible!(ScalarField, bls12_377_scalar_convert_montgomery);
 impl_generate_random!(ScalarField, bls12_377_generate_scalars);
 
-#[cfg(not(feature = "bw6-761"))]
-impl_field!(BaseField, "bw6_761", BASE_LIMBS, false);
-#[cfg(feature = "bw6-761")]
-impl_field!(BaseField, "bw6_761", BASE_LIMBS, true);
-#[cfg(feature = "bw6-761")]
-impl_field_arithmetic!(BaseField, "bw6_761", bw6_761_sf);
-#[cfg(feature = "bw6-761")]
-impl_montgomery_convertible!(BaseField, bw6_761_scalar_convert_montgomery);
-#[cfg(feature = "bw6-761")]
-impl_generate_random!(BaseField, bw6_761_generate_scalars);
-
+impl_field!(BaseField, "bls12_377_base_field", BASE_LIMBS, false);
 impl_curve!(
     "bls12_377",
     bls12_377,

@@ -102,29 +102,23 @@ macro_rules! impl_polynomial_ring {
             }
         }
 
-impl GenerateRandom<$polyring> for $polyring {
-    fn generate_random(size: usize) -> Vec<$polyring> {
-        use std::mem::{forget, ManuallyDrop};
-        use std::slice;
+        impl GenerateRandom for $polyring {
+            fn generate_random(size: usize) -> Vec<$polyring> {
+                use std::mem::{forget, ManuallyDrop};
+                use std::slice;
 
-        let flat_base_field_vec: Vec<$base> = <<$base as icicle_core::field::PrimeField>::Config as icicle_core::traits::GenerateRandom<$base>>::generate_random(
-            size * Self::DEGREE,
-        );
+                let flat_base_field_vec: Vec<$base> = $base::generate_random(size * Self::DEGREE);
 
-        let ptr = flat_base_field_vec.as_ptr() as *mut $polyring;
-        let len = size;
-        let cap = flat_base_field_vec.capacity() / Self::DEGREE;
+                let ptr = flat_base_field_vec.as_ptr() as *mut $polyring;
+                let len = size;
+                let cap = flat_base_field_vec.capacity() / Self::DEGREE;
 
-        // Avoid double-drop
-        forget(flat_base_field_vec);
+                // Avoid double-drop
+                forget(flat_base_field_vec);
 
-        unsafe {
-            Vec::from_raw_parts(ptr, len, cap)
+                unsafe { Vec::from_raw_parts(ptr, len, cap) }
+            }
         }
-    }
-}
-
-
     };
 }
 

@@ -11,6 +11,7 @@ use icicle_runtime::memory::HostOrDeviceSlice;
 
 impl_ntt!("labrador", labrador, ScalarRing);
 impl_ntt!("labrador_rns", labrador_rns, ScalarRingRns);
+impl_negacyclic_ntt!("labrador", PolyRing);
 
 #[cfg(test)]
 pub(crate) mod tests {

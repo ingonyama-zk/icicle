@@ -21,7 +21,7 @@ use icicle_runtime::{
 pub fn check_matmul_device_memory<P: PolynomialRing + MatrixOps<P>>()
 where
     P::Base: PrimeField,
-    P: GenerateRandom + Arithmetic,
+    P: GenerateRandom,
 {
     let cfg = VecOpsConfig::default();
 

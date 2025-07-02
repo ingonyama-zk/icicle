@@ -1,7 +1,7 @@
-use crate::ring::{ScalarCfg, ScalarRing};
+use crate::ring::ScalarRing;
 use icicle_core::impl_random_sampling;
 
-impl_random_sampling!("labrador", ScalarRing, ScalarCfg);
+impl_random_sampling!("labrador", ScalarRing, ScalarRing);
 
 #[cfg(test)]
 pub(crate) mod tests {

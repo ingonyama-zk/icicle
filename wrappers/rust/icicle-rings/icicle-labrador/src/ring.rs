@@ -1,14 +1,11 @@
-use icicle_core::field::PrimeField;
 use icicle_core::traits::{Arithmetic, GenerateRandom, MontgomeryConvertible};
-use icicle_core::vec_ops::VecOpsConfig;
-use icicle_core::{impl_field, impl_field_arithmetic, impl_generate_random, impl_montgomery_convertible};
-
+use icicle_core::{
+    field::PrimeField, impl_field, impl_field_arithmetic, impl_generate_random, impl_montgomery_convertible,
+    vec_ops::VecOpsConfig,
+};
+use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 use std::fmt::{Debug, Display};
 use std::ops::{Add, Mul, Sub};
-
-use icicle_runtime::errors::eIcicleError;
-use icicle_runtime::memory::HostOrDeviceSlice;
-use icicle_runtime::stream::IcicleStream;
 
 pub(crate) const SCALAR_LIMBS: usize = 2;
 

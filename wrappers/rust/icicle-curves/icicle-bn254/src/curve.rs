@@ -21,8 +21,6 @@ impl_generate_random!(ScalarField, bn254_generate_scalars);
 
 impl_field!(BaseField, "bn254_base_field", BASE_LIMBS, false);
 impl_curve!("bn254", bn254, CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);
-impl_field!(BaseField, "bn254_base_field", BASE_LIMBS, false);
-impl_curve!("bn254", bn254, CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);
 
 #[cfg(feature = "g2")]
 impl_field!(G2BaseField, "bn254_g2_base_field", G2_BASE_LIMBS, false);

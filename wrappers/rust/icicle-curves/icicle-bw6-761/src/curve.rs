@@ -1,23 +1,23 @@
+use icicle_core::traits::{Arithmetic, GenerateRandom, MontgomeryConvertible};
 use icicle_core::{
     curve::{Affine, Curve, Projective},
-    field::{Field, MontgomeryConvertibleField},
-    impl_curve, impl_field, impl_scalar_field,
-    traits::{FieldConfig, FieldImpl, GenerateRandom},
+    field::PrimeField,
+    impl_curve, impl_field, impl_field_arithmetic, impl_generate_random, impl_montgomery_convertible,
     vec_ops::VecOpsConfig,
 };
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
+use std::fmt::{Debug, Display};
+use std::ops::{Add, Mul, Sub};
 
 pub(crate) const SCALAR_LIMBS: usize = 12;
 pub(crate) const BASE_LIMBS: usize = 24;
 
-impl_scalar_field!("bw6_761", bw6_761_sf, SCALAR_LIMBS, ScalarField, ScalarCfg);
+impl_field!(ScalarField, "bw6_761", SCALAR_LIMBS, true);
+impl_field_arithmetic!(ScalarField, "bw6_761", bw6_761_sf);
+impl_montgomery_convertible!(ScalarField, bw6_761_scalar_convert_montgomery);
+impl_generate_random!(ScalarField, bw6_761_generate_scalars);
 
-// NOTE: Even though both G1 and G2 use the same base field, we define two different field types
-//       to avoid using incorrect FFI functions.
-impl_field!("bw6_761_base_field", BASE_LIMBS, BaseField, BaseCfg);
-#[cfg(feature = "g2")]
-impl_field!("bw6_761_g2_base_field", BASE_LIMBS, G2BaseField, G2BaseCfg);
-
+impl_field!(BaseField, "bw6_761_base_field", BASE_LIMBS, false);
 impl_curve!(
     "bw6_761",
     bw6_761,
@@ -27,6 +27,11 @@ impl_curve!(
     G1Affine,
     G1Projective
 );
+
+// NOTE: Even though both G1 and G2 use the same base field, we define two different field types
+//       to avoid using incorrect FFI functions.
+#[cfg(feature = "g2")]
+impl_field!(G2BaseField, "bw6_761_g2_base_field", BASE_LIMBS, false);
 
 #[cfg(feature = "g2")]
 impl_curve!(

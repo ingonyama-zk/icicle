@@ -14,7 +14,7 @@ use icicle_runtime::{
 pub fn test_negacyclic_ntt_roundtrip<P: PolynomialRing + NegacyclicNtt<P>>()
 where
     P::Base: PrimeField,
-    P: GenerateRandom + Arithmetic,
+    P: GenerateRandom,
 {
     let cfg = NegacyclicNttConfig::default();
 
