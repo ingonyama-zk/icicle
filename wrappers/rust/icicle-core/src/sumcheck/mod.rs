@@ -603,8 +603,7 @@ macro_rules! impl_sumcheck {
                 }
             }
         }
-    };
-}
+    }
 
 /// Macro to define tests for a specific field.
 #[macro_export]
