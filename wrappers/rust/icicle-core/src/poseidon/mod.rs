@@ -32,10 +32,10 @@ impl Poseidon {
 
     pub fn new_with_input_size<F>(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, eIcicleError>
     where
-        F: FieldImpl,
-        F::Config: PoseidonHasher<F>,
+        F: PrimeField,
+        F: PoseidonHasher,
     {
-        <<F as FieldImpl>::Config as PoseidonHasher<F>>::new_with_input_size(t, domain_tag, input_size)
+        PoseidonHasher<F>::new_with_input_size(t, domain_tag, input_size)
     }
 }
 

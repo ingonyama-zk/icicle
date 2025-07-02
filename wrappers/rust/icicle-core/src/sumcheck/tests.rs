@@ -332,7 +332,7 @@ where
     let mle_poly_size = 1 << log_mle_poly_size;
     let nof_mle_poly = 4;
     // Generate a random seed for the test.
-    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+    let seed_rng = SW::Field::generate_random(1)[0];
 
     // Create a transcript configuration.
     let config = SumcheckTranscriptConfig::new(
@@ -346,11 +346,11 @@ where
 
     let mut mle_polys = Vec::with_capacity(nof_mle_poly);
     for _ in 0..nof_mle_poly {
-        let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+        let mle_poly_random = SW::Field::generate_random(mle_poly_size);
         mle_polys.push(mle_poly_random);
     }
 
-    let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+    let mut claimed_sum = SW::Field::zero();
     for i in 0..mle_poly_size {
         let a = mle_polys[0][i];
         let b = mle_polys[1][i];
@@ -420,6 +420,7 @@ where
 pub fn check_sumcheck_challenge_vector<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
+    SW::Field: GenerateRandom,
     P: ReturningValueProgram,
 {
     // Create a simple sumcheck instance
@@ -437,7 +438,7 @@ where
     // Run a simple sumcheck proof to populate the challenge vector
     let log_mle_poly_size = 4u64;
     let mle_poly_size = 1 << log_mle_poly_size;
-    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+    let seed_rng = SW::Field::generate_random(1)[0];
 
     let config = SumcheckTranscriptConfig::new(
         hash,
@@ -449,9 +450,9 @@ where
     );
 
     // Generate three polynomials for A, B, and C
-    let mle_poly_a = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
-    let mle_poly_b = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
-    let mle_poly_c = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+    let mle_poly_a = SW::Field::generate_random(mle_poly_size);
+    let mle_poly_b = SW::Field::generate_random(mle_poly_size);
+    let mle_poly_c = SW::Field::generate_random(mle_poly_size);
 
     // Ensure the polynomials are not empty
     assert!(!mle_poly_a.is_empty(), "MLE polynomial A should not be empty");
@@ -470,7 +471,7 @@ where
         .iter()
         .zip(mle_poly_b.iter())
         .zip(mle_poly_c.iter())
-        .fold(<<SW as Sumcheck>::Field>::zero(), |acc, ((&a, &b), &c)| {
+        .fold(<SW as Sumcheck>::Field::zero(), |acc, ((&a, &b), &c)| {
             acc + (a * b - c)
         });
 
@@ -505,7 +506,7 @@ where
     // First challenge should be zero (as per sumcheck protocol)
     assert_eq!(
         challenge_vector[0],
-        <<SW as Sumcheck>::Field>::zero(),
+        <SW as Sumcheck>::Field::zero(),
         "First challenge should be zero"
     );
 
@@ -516,7 +517,7 @@ where
         .skip(1)
     {
         assert!(
-            challenge != <<SW as Sumcheck>::Field>::zero(),
+            challenge != <SW as Sumcheck>::Field::zero(),
             "Challenge at index {} should be non-zero",
             i
         );

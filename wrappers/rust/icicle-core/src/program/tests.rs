@@ -1,14 +1,14 @@
-use crate::field::FieldArithmetic;
+use crate::field::PrimeField;
 use crate::program::{PreDefinedProgram, Program};
 use crate::symbol::Symbol;
-use crate::traits::{FieldImpl, GenerateRandom};
+use crate::traits::{Arithmetic, GenerateRandom};
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::memory::HostSlice;
 
 pub fn check_program<F, Prog>()
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: crate::vec_ops::VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
+    F: PrimeField,
+    F: crate::vec_ops::VecOps + GenerateRandom + Arithmetic,
     Prog: Program<F>,
     Prog::ProgSymbol: Symbol<F>,
 {
@@ -25,10 +25,10 @@ where
     };
 
     const TEST_SIZE: usize = 1 << 10;
-    let a = F::Config::generate_random(TEST_SIZE);
-    let b = F::Config::generate_random(TEST_SIZE);
-    let c = F::Config::generate_random(TEST_SIZE);
-    let eq = F::Config::generate_random(TEST_SIZE);
+    let a = F::generate_random(TEST_SIZE);
+    let b = F::generate_random(TEST_SIZE);
+    let c = F::generate_random(TEST_SIZE);
+    let eq = F::generate_random(TEST_SIZE);
     let var4 = vec![F::zero(); TEST_SIZE];
     let var5 = vec![F::zero(); TEST_SIZE];
     let var6 = vec![F::zero(); TEST_SIZE];
@@ -59,19 +59,19 @@ where
         let var6 = parameters[6][i];
         assert_eq!(
             var3,
-            <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(
+                Arithmetic::mul(
                 F::from_u32(2),
-                <<F as FieldImpl>::Config as FieldArithmetic<F>>::add(a, b)
+                Arithmetic::add(a, b)
             )
         );
         assert_eq!(
             var4,
-            <<F as FieldImpl>::Config as FieldArithmetic<F>>::add(
+            Arithmetic::add(
                 F::from_u32(9),
-                <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(
+                Arithmetic::mul(
                     eq,
-                    <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
-                        <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
+                    Arithmetic::sub(
+                        Arithmetic::mul(a, b),
                         c
                     )
                 )
@@ -79,9 +79,9 @@ where
         );
         assert_eq!(
             var5,
-            <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
-                <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
-                <<F as FieldImpl>::Config as FieldArithmetic<F>>::inv(c)
+            Arithmetic::sub(
+                Arithmetic::mul(a, b),
+                Arithmetic::inv(c)
             )
         );
         assert_eq!(var6, var5);
@@ -90,15 +90,15 @@ where
 
 pub fn check_predefined_program<F, Prog>()
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: crate::vec_ops::VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
+    F: PrimeField,
+    F: crate::vec_ops::VecOps + GenerateRandom + Arithmetic,
     Prog: Program<F>,
 {
     const TEST_SIZE: usize = 1 << 10;
-    let a = F::Config::generate_random(TEST_SIZE);
-    let b = F::Config::generate_random(TEST_SIZE);
-    let c = F::Config::generate_random(TEST_SIZE);
-    let eq = F::Config::generate_random(TEST_SIZE);
+    let a = F::generate_random(TEST_SIZE);
+    let b = F::generate_random(TEST_SIZE);
+    let c = F::generate_random(TEST_SIZE);
+    let eq = F::generate_random(TEST_SIZE);
     let var4 = vec![F::zero(); TEST_SIZE];
     let a_slice = HostSlice::from_slice(&a);
     let b_slice = HostSlice::from_slice(&b);
@@ -122,10 +122,10 @@ where
         let var4 = parameters[4][i];
         assert_eq!(
             var4,
-            <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(
+            Arithmetic::mul(
                 eq,
-                <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
-                    <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
+                Arithmetic::sub(
+                    Arithmetic::mul(a, b),
                     c
                 )
             )

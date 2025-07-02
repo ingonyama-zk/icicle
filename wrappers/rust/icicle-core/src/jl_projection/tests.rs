@@ -1,16 +1,17 @@
 use crate::jl_projection::{
     get_jl_matrix_rows, get_jl_matrix_rows_as_polyring, jl_projection, JLProjection, JLProjectionPolyRing,
 };
+use crate::field::PrimeField;
 use crate::polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut, PolynomialRing};
-use crate::traits::{Arithmetic, FieldImpl, GenerateRandom};
+use crate::traits::GenerateRandom;
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 use rand::Rng;
 
 pub fn check_jl_projection<F>()
 where
-    F: FieldImpl + Arithmetic,
-    F::Config: JLProjection<F>,
+    F: PrimeField,
+    F: JLProjection<F>,
 {
     let input_size = 1 << 10;
     let output_size = 256;
@@ -77,7 +78,7 @@ where
 
 fn conjugate_poly<P: PolynomialRing>(poly: P) -> P
 where
-    P::Base: FieldImpl + Arithmetic,
+    P::Base: PrimeField,
 {
     // negate and flip coeffs, except for coeff0
     let d = P::DEGREE;
@@ -99,8 +100,8 @@ where
 pub fn check_jl_projection_polyring<Poly>()
 where
     Poly: PolynomialRing + JLProjectionPolyRing<Poly>,
-    Poly::Base: FieldImpl + Arithmetic,
-    <Poly::Base as FieldImpl>::Config: JLProjection<Poly::Base>,
+    Poly::Base: PrimeField,
+    Poly::Base: JLProjection<Poly::Base>,
 {
     let d = Poly::DEGREE;
     let num_rows = 10;
@@ -116,7 +117,7 @@ where
     for conjugate in [false, true] {
         // Step 1: Generate raw scalar JL matrix rows
         let mut scalar_data = vec![Poly::Base::zero(); total_scalars];
-        <Poly::Base as FieldImpl>::Config::get_jl_matrix_rows(
+        Poly::Base::get_jl_matrix_rows(
             &seed,
             row_size * d,
             0,
@@ -168,9 +169,9 @@ where
 /// Verifies consistency between host and device projection results and supports projecting into polynomials.
 pub fn check_polynomial_projection<P>()
 where
-    P: PolynomialRing + GenerateRandom<P>,
-    P::Base: FieldImpl,
-    <P::Base as FieldImpl>::Config: JLProjection<P::Base>,
+    P: PolynomialRing + GenerateRandom,
+    P::Base: PrimeField,
+    P::Base: JLProjection<P::Base>,
 {
     let num_polys = 10;
     let projection_dim = 256;

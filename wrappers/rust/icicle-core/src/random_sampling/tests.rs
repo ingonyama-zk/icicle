@@ -1,13 +1,14 @@
 use crate::random_sampling::{random_sampling, RandomSampling};
-use crate::traits::{Arithmetic, FieldImpl};
+use crate::traits::Arithmetic;
+use crate::field::PrimeField;
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{memory::HostSlice, test_utilities};
 use rand::Rng;
 
 pub fn check_random_sampling<F>()
 where
-    F: FieldImpl + Arithmetic,
-    F::Config: RandomSampling<F>,
+    F: PrimeField + Arithmetic,
+    F: RandomSampling<F>,
 {
     let output_size = 1 << 10;
     let cfg = VecOpsConfig::default();

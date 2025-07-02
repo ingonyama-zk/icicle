@@ -202,7 +202,7 @@ pub fn check_generator<C: Curve>() {
 
 pub fn check_zero_and_from_slice<P: PolynomialRing>()
 where
-    P::Base: FieldImpl,
+    P::Base: PrimeField,
 {
     let zero = P::zero();
     let expected = vec![P::Base::zero(); P::DEGREE];
@@ -216,8 +216,8 @@ where
 /// reinterpreted slice of base field elements.
 pub fn check_polyring_flatten_host_memory<P>()
 where
-    P: PolynomialRing + GenerateRandom<P>,
-    P::Base: FieldImpl,
+    P: PolynomialRing + GenerateRandom,
+    P::Base: PrimeField,
 {
     // Generate a vector of one random polynomial
     let polynomials = P::generate_random(5);
@@ -250,8 +250,8 @@ where
 /// reinterpreted device slice of base field elements without copying.
 pub fn check_polyring_flatten_device_memory<P>()
 where
-    P: PolynomialRing + GenerateRandom<P>,
-    P::Base: FieldImpl,
+    P: PolynomialRing + GenerateRandom,
+    P::Base: PrimeField,
 {
     // Generate a single random polynomial on host and copy to device
     let size = 7;

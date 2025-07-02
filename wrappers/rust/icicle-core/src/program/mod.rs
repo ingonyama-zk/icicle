@@ -3,6 +3,8 @@ use crate::symbol::Symbol;
 use crate::traits::Handle;
 use icicle_runtime::errors::eIcicleError;
 use std::ffi::c_void;
+use crate::vec_ops::VecOpsConfig;
+use icicle_runtime::memory::HostOrDeviceSlice;
 
 pub type Instruction = u32;
 pub type ProgramHandle = *const c_void;
@@ -25,7 +27,7 @@ where
 
     fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), eIcicleError>
     where
-        F: FieldImpl,
+        F: PrimeField,
         Data: HostOrDeviceSlice<F> + ?Sized;
 }
 

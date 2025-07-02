@@ -1,8 +1,9 @@
 use crate::{
     matrix_ops::{matmul, MatrixOps, VecOpsConfig},
     polynomial_ring::PolynomialRing,
-    traits::{FieldImpl, GenerateRandom},
+    traits::{Arithmetic, GenerateRandom},
 };
+use crate::field::PrimeField;
 
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
@@ -19,8 +20,8 @@ use icicle_runtime::{
 /// Correctness is already ensured by the C++ tests.
 pub fn check_matmul_device_memory<P: PolynomialRing + MatrixOps<P>>()
 where
-    P::Base: FieldImpl,
-    P: GenerateRandom<P>,
+    P::Base: PrimeField,
+    P: GenerateRandom + Arithmetic,
 {
     let cfg = VecOpsConfig::default();
 

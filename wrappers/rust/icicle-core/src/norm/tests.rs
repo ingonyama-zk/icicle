@@ -1,16 +1,17 @@
 use crate::{
     norm,
-    traits::{FieldImpl, GenerateRandom},
+    traits::{Arithmetic, GenerateRandom},
     vec_ops::VecOpsConfig,
 };
+use crate::field::PrimeField;
 
 use icicle_runtime::memory::HostSlice;
 use rand::Rng;
 
 pub fn check_norm<F>()
 where
-    F: FieldImpl,
-    F::Config: norm::Norm<F> + GenerateRandom<F>,
+    F: PrimeField,
+    F: norm::Norm<F> + GenerateRandom + Arithmetic,
 {
     let batch = 5;
     let size = 1 << 10;

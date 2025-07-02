@@ -3,6 +3,7 @@ use crate::traits::{GenerateRandom, MontgomeryConvertible};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Sub};
+use crate::vec_ops::VecOpsConfig;
 
 pub trait Curve: Debug + PartialEq + Copy + Clone {
     type BaseField: PrimeField;

@@ -1,4 +1,4 @@
-use crate::{traits::FieldImpl, vec_ops::VecOpsConfig};
+use crate::{field::PrimeField, vec_ops::VecOpsConfig};
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
@@ -14,7 +14,7 @@ pub enum NormType {
 ///
 /// This trait provides functionality to check if the norm of a vector is within a specified bound
 /// or to compare norms of two vectors with a scaling factor.
-pub trait Norm<T: FieldImpl> {
+pub trait Norm<T: PrimeField> {
     /// Checks whether the norm of a vector is within a specified bound.
     ///
     /// This function assumes that:
@@ -43,7 +43,7 @@ pub trait Norm<T: FieldImpl> {
 }
 
 // Public floating functions around the trait
-pub fn check_norm_bound<T: FieldImpl>(
+pub fn check_norm_bound<T: PrimeField>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     norm_type: NormType,
     norm_bound: u64,
@@ -51,12 +51,12 @@ pub fn check_norm_bound<T: FieldImpl>(
     output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    T::Config: Norm<T>,
+    T: Norm<T>,
 {
-    T::Config::check_norm_bound(input, norm_type, norm_bound, cfg, output)
+    T::check_norm_bound(input, norm_type, norm_bound, cfg, output)
 }
 
-pub fn check_norm_relative<T: FieldImpl>(
+pub fn check_norm_relative<T: PrimeField>(
     input_a: &(impl HostOrDeviceSlice<T> + ?Sized),
     input_b: &(impl HostOrDeviceSlice<T> + ?Sized),
     norm_type: NormType,
@@ -65,9 +65,9 @@ pub fn check_norm_relative<T: FieldImpl>(
     output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    T::Config: Norm<T>,
+    T: Norm<T>,
 {
-    T::Config::check_norm_relative(input_a, input_b, norm_type, scale, cfg, output)
+    T::check_norm_relative(input_a, input_b, norm_type, scale, cfg, output)
 }
 
 /// Internal macro to implement the `Norm` trait for a specific field backend.

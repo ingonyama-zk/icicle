@@ -5,28 +5,29 @@ use crate::{
         fri_transcript_config::FriTranscriptConfig, FriConfig, FriProof,
     },
     hash::Hasher,
-    traits::{FieldImpl, GenerateRandom},
+    traits::{Arithmetic, GenerateRandom},
 };
+use crate::field::PrimeField;
 use icicle_runtime::{memory::DeviceVec, stream::IcicleStream};
 use icicle_runtime::{memory::HostSlice, test_utilities};
 
-pub fn check_fri<F: FieldImpl>(
+pub fn check_fri<F: PrimeField>(
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
     transcript_hash: &Hasher,
 ) where
-    <F as FieldImpl>::Config: FriMerkleTree<F> + GenerateRandom<F>,
+    F: FriMerkleTree<F> + GenerateRandom + Arithmetic,
 {
     let check = || {
         const SIZE: u64 = 1 << 9;
         let fri_config = FriConfig::default();
-        let scalars = F::Config::generate_random(SIZE as usize);
+        let scalars = F::generate_random(SIZE as usize);
 
         let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, F::one());
 
         let merkle_tree_min_layer_to_store = 0;
 
-        let fri_proof = <F as FieldImpl>::Config::fri_merkle_tree_prove(
+        let fri_proof = F::fri_merkle_tree_prove(
             &fri_config,
             &transcript_config,
             HostSlice::from_slice(&scalars),
@@ -47,7 +48,7 @@ pub fn check_fri<F: FieldImpl>(
             .unwrap();
         let fri_proof_copy = FriProof::<F>::create_with_arguments(query_proofs, final_poly, pow_nonce).unwrap();
 
-        let valid = <F as FieldImpl>::Config::fri_merkle_tree_verify(
+        let valid = F::fri_merkle_tree_verify(
             &fri_config,
             &transcript_config,
             &fri_proof_copy,
@@ -63,12 +64,12 @@ pub fn check_fri<F: FieldImpl>(
     check();
 }
 
-pub fn check_fri_on_device<F: FieldImpl>(
+pub fn check_fri_on_device<F: PrimeField>(
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
     transcript_hash: &Hasher,
 ) where
-    <F as FieldImpl>::Config: FriMerkleTree<F> + GenerateRandom<F>,
+    F: FriMerkleTree<F> + GenerateRandom + Arithmetic,
 {
     let check = || {
         const SIZE: u64 = 1 << 10;
@@ -76,7 +77,7 @@ pub fn check_fri_on_device<F: FieldImpl>(
         let mut fri_config = FriConfig::default();
         fri_config.is_async = true;
         fri_config.stream_handle = *stream;
-        let scalars = F::Config::generate_random(SIZE as usize);
+        let scalars = F::generate_random(SIZE as usize);
 
         let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, F::one());
 
@@ -123,20 +124,20 @@ pub fn check_fri_on_device<F: FieldImpl>(
     check();
 }
 
-pub fn check_fri_proof_serialization<F: FieldImpl, S, D, T>(
+pub fn check_fri_proof_serialization<F: PrimeField, S, D, T>(
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
     transcript_hash: &Hasher,
     serialize: S,
     deserialize: D,
 ) where
-    <F as FieldImpl>::Config: FriMerkleTree<F> + GenerateRandom<F>,
+    F: FriMerkleTree<F> + GenerateRandom + Arithmetic,
     S: Fn(&FriProof<F>) -> T,
     D: Fn(&T) -> FriProof<F>,
 {
     const SIZE: u64 = 1 << 10;
     let fri_config = FriConfig::default();
-    let scalars = F::Config::generate_random(SIZE as usize);
+    let scalars = F::generate_random(SIZE as usize);
 
     let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, F::one());
 

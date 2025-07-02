@@ -3,8 +3,9 @@ use crate::field::PrimeField;
 use crate::program::{Instruction, PreDefinedProgram, Program, ReturningValueProgram};
 use crate::symbol::Symbol;
 use crate::traits::{
-    Arithmetic, {Arithmetic, GenerateRandom},
+    Arithmetic, GenerateRandom,
 };
+use crate::polynomial_ring::PolynomialRing;
 use crate::vec_ops::poly_vecops::{polyvec_add, polyvec_mul, polyvec_mul_by_scalar, polyvec_sub, polyvec_sum_reduce};
 use crate::vec_ops::{
     accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, execute_program, inv_scalars,
@@ -610,9 +611,8 @@ where
 /// Tests `polyvec_add`, `polyvec_sub`, and `polyvec_mul` against manual computation
 pub fn check_poly_vecops_add_sub_mul<P>()
 where
-    P: PolynomialRing + GenerateRandom<P> + PartialEq + core::fmt::Debug,
-    P::Base: FieldImpl + Arithmetic,
-    <P::Base as FieldImpl>::Config: VecOps<P::Base>,
+    P: PolynomialRing + GenerateRandom + PartialEq + core::fmt::Debug,
+    P::Base: PrimeField + Arithmetic + VecOps + GenerateRandom,
 {
     let size = 1 << 10;
     let a_vec = P::generate_random(size);
@@ -689,13 +689,12 @@ where
 /// Tests polyvec_mul_by_scalar against reference implementation
 pub fn check_polyvec_mul_by_scalar<P>()
 where
-    P: PolynomialRing + GenerateRandom<P>,
-    P::Base: FieldImpl + Arithmetic,
-    <P::Base as FieldImpl>::Config: VecOps<P::Base> + GenerateRandom<P::Base>,
+    P: PolynomialRing + GenerateRandom,
+    P::Base: PrimeField + Arithmetic + VecOps + GenerateRandom,
 {
     let size = 1 << 10;
     let polyvec = P::generate_random(size);
-    let scalarvec = <P::Base as FieldImpl>::Config::generate_random(size);
+    let scalarvec = P::generate_random(size);
 
     let cfg = VecOpsConfig::default();
 
@@ -729,9 +728,8 @@ where
 /// Tests polyvec_sum_reduce by summing all polynomials manually and comparing
 pub fn check_polyvec_sum_reduce<P>()
 where
-    P: PolynomialRing + GenerateRandom<P>,
-    P::Base: FieldImpl + Arithmetic,
-    <P::Base as FieldImpl>::Config: VecOps<P::Base>,
+    P: PolynomialRing + GenerateRandom,
+    P::Base: PrimeField + Arithmetic + VecOps + GenerateRandom
 {
     let size = 1 << 10;
     let polyvec = P::generate_random(size);

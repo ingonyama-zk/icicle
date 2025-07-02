@@ -1,4 +1,4 @@
-use crate::traits::FieldImpl;
+use crate::field::PrimeField;
 use icicle_runtime::memory::reinterpret::{reinterpret_slice, reinterpret_slice_mut};
 use icicle_runtime::memory::HostOrDeviceSlice;
 
@@ -39,7 +39,7 @@ pub fn flatten_polyring_slice<'a, P>(
 ) -> impl HostOrDeviceSlice<P::Base> + 'a
 where
     P: PolynomialRing,
-    P::Base: FieldImpl + 'a,
+    P::Base: PrimeField + 'a,
 {
     // Note that this can never fail here for a valid P
     unsafe { reinterpret_slice::<P, P::Base>(input).expect("Internal error") }
@@ -56,7 +56,7 @@ pub fn flatten_polyring_slice_mut<'a, P>(
 ) -> impl HostOrDeviceSlice<P::Base> + 'a
 where
     P: PolynomialRing,
-    P::Base: FieldImpl + 'a,
+    P::Base: PrimeField + 'a,
 {
     // Note that this can never fail here for a valid P
     unsafe { reinterpret_slice_mut::<P, P::Base>(input).expect("Internal error") }
@@ -107,7 +107,7 @@ impl GenerateRandom<$polyring> for $polyring {
         use std::mem::{forget, ManuallyDrop};
         use std::slice;
 
-        let flat_base_field_vec: Vec<$base> = <<$base as icicle_core::traits::FieldImpl>::Config as icicle_core::traits::GenerateRandom<$base>>::generate_random(
+        let flat_base_field_vec: Vec<$base> = <<$base as icicle_core::field::PrimeField>::Config as icicle_core::traits::GenerateRandom<$base>>::generate_random(
             size * Self::DEGREE,
         );
 
