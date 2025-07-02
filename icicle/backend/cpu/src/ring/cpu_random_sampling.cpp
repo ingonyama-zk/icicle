@@ -18,13 +18,14 @@ void fast_mode_random_sampling(
     size_t(std::max((element_size + keccak512.output_size() - 1) / keccak512.output_size(), uint64_t(1)));
   const size_t size_per_task =
     (size + RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS - 1) / RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS;
-
+  const size_t total_tasks = (size + size_per_task - 1) / size_per_task;
+  
   tf::Taskflow taskflow;
   tf::Executor executor(get_nof_workers(cfg));
   for (uint32_t b = 0; b < cfg.batch_size; ++b) {
     field_t* batch_output = output + b * size;
     HashConfig hash_cfg{};
-    for (uint64_t t = 0; t < RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS; ++t) {
+    for (uint64_t t = 0; t < std::min(total_tasks, RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS); ++t) {
       taskflow.emplace([=]() {
         std::vector<std::byte> hash_input(seed_len + sizeof(b) + sizeof(uint64_t));
         std::memcpy(hash_input.data(), seed, seed_len);
