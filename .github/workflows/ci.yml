@@ -107,7 +107,7 @@ jobs:
     needs: calculate-conditions
     if: needs.calculate-conditions.outputs.should-run == 'true'
     with:
-      pr-number: fromJSON(${{ needs.calculate-conditions.outputs.pr-number }})
+      pr-number: ${{ fromJSON(needs.calculate-conditions.outputs.pr-number) }}
       backend-type: cuda
 
   # extract-metal-backend-branch:
