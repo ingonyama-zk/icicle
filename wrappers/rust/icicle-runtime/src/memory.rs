@@ -364,7 +364,7 @@ impl<T> DeviceSlice<T> {
 }
 
 impl<T> DeviceVec<T> {
-    fn device_malloc(count: usize) -> Result<Self, eIcicleError> {
+    pub fn device_malloc(count: usize) -> Result<Self, eIcicleError> {
         let size = count
             .checked_mul(size_of::<T>())
             .unwrap_or(0);
