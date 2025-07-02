@@ -1,10 +1,6 @@
 use icicle_runtime::eIcicleError;
 
-use crate::{
-    field::PrimeField,
-    merkle::MerkleProofData,
-    traits::Handle,
-};
+use crate::{field::PrimeField, merkle::MerkleProofData, traits::Handle};
 use serde::{de::DeserializeOwned, Serialize};
 
 pub trait FriProofOps<F: PrimeField>: Sized + Handle + Serialize + DeserializeOwned

@@ -1,4 +1,5 @@
 use crate::field::{ExtensionField, ScalarField};
+
 use icicle_core::impl_sumcheck;
 
 impl_sumcheck!("babybear", babybear, ScalarField);

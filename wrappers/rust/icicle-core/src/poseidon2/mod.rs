@@ -7,8 +7,14 @@ use icicle_runtime::errors::eIcicleError;
 /// Trait to define the behavior of a Poseidon2 hasher for different field types.
 /// This allows the implementation of Poseidon2 hashing for various field types that implement `PrimeField`.
 pub trait Poseidon2Hasher: PrimeField {
-    /// Method to create a new Poseidon2 hasher for a given t (branching factor).
-    fn new(t: u32, domain_tag: Option<&Self>) -> Result<Hasher, eIcicleError>;
+    /// Creates a Poseidon2 hasher with an explicit `input_size` (rate).
+    fn new_with_input_size(t: u32, domain_tag: Option<&Self>, input_size: u32) -> Result<Hasher, eIcicleError>;
+
+    /// Convenience constructor that forwards to `new_with_input_size` with
+    /// `input_size = 0` (backend default).
+    fn new(t: u32, domain_tag: Option<&Self>) -> Result<Hasher, eIcicleError> {
+        Self::new_with_input_size(t, domain_tag, 0)
+    }
 }
 
 /// Function to create a Poseidon2 hasher for a specific field type and t (branching factor).
@@ -36,7 +42,7 @@ impl Poseidon2 {
         F: PrimeField,
         F: Poseidon2Hasher, // The Config associated with F must implement Poseidon2Hasher<F>
     {
-        Poseidon2Hasher<F>::new_with_input_size(t, domain_tag, input_size)
+        <F as Poseidon2Hasher>::new_with_input_size(t, domain_tag, input_size)
     }
 }
 

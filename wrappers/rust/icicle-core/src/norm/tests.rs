@@ -1,9 +1,9 @@
+use crate::field::PrimeField;
 use crate::{
     norm,
     traits::{Arithmetic, GenerateRandom},
     vec_ops::VecOpsConfig,
 };
-use crate::field::PrimeField;
 
 use icicle_runtime::memory::HostSlice;
 use rand::Rng;

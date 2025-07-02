@@ -1,6 +1,6 @@
+use crate::field::PrimeField;
 use crate::random_sampling::{random_sampling, RandomSampling};
 use crate::traits::Arithmetic;
-use crate::field::PrimeField;
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{memory::HostSlice, test_utilities};
 use rand::Rng;

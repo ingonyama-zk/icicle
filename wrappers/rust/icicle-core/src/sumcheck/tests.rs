@@ -323,6 +323,7 @@ where
 pub fn check_sumcheck_proof_serialization<SW, P, S, D, T>(hash: &Hasher, serialize: S, deserialize: D)
 where
     SW: Sumcheck,
+    SW::Field: GenerateRandom,
     P: ReturningValueProgram,
     SW::Proof: Serialize + DeserializeOwned,
     S: Fn(&SW::Proof) -> T,
@@ -471,9 +472,7 @@ where
         .iter()
         .zip(mle_poly_b.iter())
         .zip(mle_poly_c.iter())
-        .fold(<SW as Sumcheck>::Field::zero(), |acc, ((&a, &b), &c)| {
-            acc + (a * b - c)
-        });
+        .fold(<SW as Sumcheck>::Field::zero(), |acc, ((&a, &b), &c)| acc + (a * b - c));
 
     let combine_func = P::new_predefined(PreDefinedProgram::ABminusC).unwrap();
     let sumcheck_config = SumcheckConfig::default();

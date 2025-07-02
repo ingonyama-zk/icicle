@@ -19,7 +19,7 @@
 //! This is enforced by the [`PolynomialRing`] trait and the `reinterpret_slice` utility.
 
 use super::{add_scalars, mul_scalars, scalar_mul, sub_scalars, sum_scalars, VecOps, VecOpsConfig};
-use crate::{polynomial_ring::PolynomialRing, field::PrimeField};
+use crate::{field::PrimeField, polynomial_ring::PolynomialRing};
 use icicle_runtime::{
     errors::eIcicleError,
     memory::{

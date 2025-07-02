@@ -7,8 +7,15 @@ use icicle_runtime::errors::eIcicleError;
 /// Trait to define the behavior of a Poseidon hasher for different field types.
 /// This allows the implementation of Poseidon hashing for various field types that implement `PrimeField`.
 pub trait PoseidonHasher: PrimeField {
-    /// Method to create a new Poseidon hasher for a given t (branching factor).
-    fn new(t: u32, domain_tag: Option<&Self>) -> Result<Hasher, eIcicleError>;
+    /// Creates a Poseidon hasher with an explicit `input_size` (rate). This is the
+    /// low-level constructor that all implementations must provide.
+    fn new_with_input_size(t: u32, domain_tag: Option<&Self>, input_size: u32) -> Result<Hasher, eIcicleError>;
+
+    /// Convenience constructor that forwards to `new_with_input_size` with
+    /// `input_size = 0`, signalling the backend to use a default value.
+    fn new(t: u32, domain_tag: Option<&Self>) -> Result<Hasher, eIcicleError> {
+        Self::new_with_input_size(t, domain_tag, 0)
+    }
 }
 
 /// Function to create a Poseidon hasher for a specific field type and t (branching factor).
@@ -35,7 +42,7 @@ impl Poseidon {
         F: PrimeField,
         F: PoseidonHasher,
     {
-        PoseidonHasher<F>::new_with_input_size(t, domain_tag, input_size)
+        <F as PoseidonHasher>::new_with_input_size(t, domain_tag, input_size)
     }
 }
 
@@ -63,7 +70,11 @@ macro_rules! impl_poseidon {
 
             // Implement the `PoseidonHasher` trait for the given field configuration.
             impl PoseidonHasher for $field {
-                fn new(t: u32, domain_tag: Option<&$field>) -> Result<Hasher, eIcicleError> {
+                fn new_with_input_size(
+                    t: u32,
+                    domain_tag: Option<&$field>,
+                    input_size: u32,
+                ) -> Result<Hasher, eIcicleError> {
                     let handle: HasherHandle = unsafe {
                         create_poseidon_hasher(
                             t,

@@ -268,35 +268,6 @@ fn check_vec_ops_args_slice<F>(
     setup_config(input, input, output, cfg, batch_size)
 }
 
-fn check_execute_program<F, Data>(data: &Vec<&Data>, cfg: &VecOpsConfig) -> VecOpsConfig
-where
-    F: PrimeField + VecOps,
-    Data: HostOrDeviceSlice<F> + ?Sized,
-{
-    // All parameters' config should match so each one is compared to the first one
-    let nof_iterations = data[0].len();
-    let is_on_device = data[0].is_on_device();
-
-    for i in 1..data.len() {
-        if data[i].len() != nof_iterations {
-            panic!(
-                "First parameter length ({}) and parameter[{}] length do not match",
-                nof_iterations,
-                data[i].len()
-            );
-        }
-        if data[i].is_on_device() != is_on_device {
-            panic!(
-                "First parameter length ({}) and parameter[{}] length ({}) do not match",
-                nof_iterations,
-                i,
-                data[i].len()
-            );
-        }
-    }
-    setup_config(data[0], data[0], data[0], cfg, 1)
-}
-
 /// Modify VecopsConfig according to the given vectors
 fn setup_config<F, T>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -522,20 +493,6 @@ where
 {
     let cfg = check_vec_ops_args_slice(input, offset, stride, size_in, size_out, output, cfg);
     F::slice(input, offset, stride, size_in, size_out, &cfg, output)
-}
-
-pub fn execute_program<F, Prog, Data>(
-    data: &mut Vec<&Data>,
-    program: &Prog,
-    cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
-where
-    F: PrimeField + VecOps,
-    Data: HostOrDeviceSlice<F> + ?Sized,
-    Prog: Program<F>,
-{
-    let cfg = check_execute_program(&data, cfg);
-    F::execute_program(data, program, &cfg)
 }
 
 #[macro_export]

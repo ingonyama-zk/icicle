@@ -1,7 +1,7 @@
+use crate::field::PrimeField;
 use crate::jl_projection::{
     get_jl_matrix_rows, get_jl_matrix_rows_as_polyring, jl_projection, JLProjection, JLProjectionPolyRing,
 };
-use crate::field::PrimeField;
 use crate::polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut, PolynomialRing};
 use crate::traits::GenerateRandom;
 use crate::vec_ops::VecOpsConfig;
@@ -10,8 +10,7 @@ use rand::Rng;
 
 pub fn check_jl_projection<F>()
 where
-    F: PrimeField,
-    F: JLProjection<F>,
+    F: PrimeField + JLProjection<F> + std::ops::Add<Output = F> + std::ops::Sub<Output = F>,
 {
     let input_size = 1 << 10;
     let output_size = 256;
@@ -78,7 +77,7 @@ where
 
 fn conjugate_poly<P: PolynomialRing>(poly: P) -> P
 where
-    P::Base: PrimeField,
+    P::Base: PrimeField + std::ops::Sub<Output = P::Base> + std::ops::Mul<Output = P::Base> + Copy,
 {
     // negate and flip coeffs, except for coeff0
     let d = P::DEGREE;
@@ -100,7 +99,7 @@ where
 pub fn check_jl_projection_polyring<Poly>()
 where
     Poly: PolynomialRing + JLProjectionPolyRing<Poly>,
-    Poly::Base: PrimeField,
+    Poly::Base: PrimeField + std::ops::Sub<Output = Poly::Base> + std::ops::Mul<Output = Poly::Base> + Copy,
     Poly::Base: JLProjection<Poly::Base>,
 {
     let d = Poly::DEGREE;

@@ -1,4 +1,5 @@
 use super::FriMerkleTree;
+use crate::field::PrimeField;
 use crate::{
     fri::{
         fri_merkle_tree_prove, fri_merkle_tree_verify, fri_proof::FriProofOps,
@@ -7,7 +8,6 @@ use crate::{
     hash::Hasher,
     traits::{Arithmetic, GenerateRandom},
 };
-use crate::field::PrimeField;
 use icicle_runtime::{memory::DeviceVec, stream::IcicleStream};
 use icicle_runtime::{memory::HostSlice, test_utilities};
 

@@ -1,6 +1,6 @@
+use crate::field::PrimeField;
 use crate::hash::Hasher;
 use crate::hash::HasherHandle;
-use crate::field::PrimeField;
 
 const DEFAULT_DOMAIN_SEPARATOR_LABEL: &str = "domain_separator_label";
 const DEFAULT_ROUND_CHALLENGE_LABEL: &str = "round_challenge_label";

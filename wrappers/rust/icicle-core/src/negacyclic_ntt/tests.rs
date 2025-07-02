@@ -1,10 +1,10 @@
+use crate::field::PrimeField;
 use crate::negacyclic_ntt::{ntt, ntt_inplace, NegacyclicNtt, NegacyclicNttConfig};
 use crate::ntt::NTTDir;
 use crate::{
     polynomial_ring::PolynomialRing,
     traits::{Arithmetic, GenerateRandom},
 };
-use crate::field::PrimeField;
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
     test_utilities,

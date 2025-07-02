@@ -1,16 +1,14 @@
 #![allow(unused_imports)]
 use crate::field::PrimeField;
+use crate::polynomial_ring::PolynomialRing;
 use crate::program::{Instruction, PreDefinedProgram, Program, ReturningValueProgram};
 use crate::symbol::Symbol;
-use crate::traits::{
-    Arithmetic, GenerateRandom,
-};
-use crate::polynomial_ring::PolynomialRing;
+use crate::traits::{Arithmetic, GenerateRandom};
 use crate::vec_ops::poly_vecops::{polyvec_add, polyvec_mul, polyvec_mul_by_scalar, polyvec_sub, polyvec_sum_reduce};
 use crate::vec_ops::{
-    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, execute_program, inv_scalars,
-    mixed_mul_scalars, mul_scalars, product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars,
-    sum_scalars, transpose_matrix, MixedVecOps, VecOps, VecOpsConfig,
+    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, inv_scalars, mixed_mul_scalars,
+    mul_scalars, product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars,
+    transpose_matrix, MixedVecOps, VecOps, VecOpsConfig,
 };
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostOrDeviceSlice, HostSlice};
@@ -531,7 +529,9 @@ where
     let program = Prog::new(example_lambda, 7).unwrap();
 
     let cfg = VecOpsConfig::default();
-    execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
+    program
+        .execute_program(&mut parameters, &cfg)
+        .expect("Program Failed");
 
     for i in 0..TEST_SIZE {
         let a = a[i];
@@ -570,7 +570,9 @@ where
     let program = Prog::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
 
     let cfg = VecOpsConfig::default();
-    execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
+    program
+        .execute_program(&mut parameters, &cfg)
+        .expect("Program Failed");
 
     for i in 0..TEST_SIZE {
         let a = parameters[0][i];
@@ -694,7 +696,7 @@ where
 {
     let size = 1 << 10;
     let polyvec = P::generate_random(size);
-    let scalarvec = P::generate_random(size);
+    let scalarvec = P::Base::generate_random(size);
 
     let cfg = VecOpsConfig::default();
 
@@ -712,11 +714,11 @@ where
 
     // Reference result (manual loop)
     for i in 0..size {
-        let scalar = &scalarvec[i];
+        let scalar = scalarvec[i];
         let poly = polyvec[i].values();
         let product = poly
             .iter()
-            .map(|c| *c * *scalar)
+            .map(|c| *c * scalar)
             .collect::<Vec<_>>();
         expected_result[i] = P::from_slice(&product);
     }
@@ -729,7 +731,7 @@ where
 pub fn check_polyvec_sum_reduce<P>()
 where
     P: PolynomialRing + GenerateRandom,
-    P::Base: PrimeField + Arithmetic + VecOps + GenerateRandom
+    P::Base: PrimeField + Arithmetic + VecOps + GenerateRandom,
 {
     let size = 1 << 10;
     let polyvec = P::generate_random(size);

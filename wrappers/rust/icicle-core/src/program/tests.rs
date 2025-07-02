@@ -57,33 +57,11 @@ where
         let var4 = parameters[4][i];
         let var5 = parameters[5][i];
         let var6 = parameters[6][i];
-        assert_eq!(
-            var3,
-                Arithmetic::mul(
-                F::from_u32(2),
-                Arithmetic::add(a, b)
-            )
-        );
-        assert_eq!(
-            var4,
-            Arithmetic::add(
-                F::from_u32(9),
-                Arithmetic::mul(
-                    eq,
-                    Arithmetic::sub(
-                        Arithmetic::mul(a, b),
-                        c
-                    )
-                )
-            )
-        );
-        assert_eq!(
-            var5,
-            Arithmetic::sub(
-                Arithmetic::mul(a, b),
-                Arithmetic::inv(c)
-            )
-        );
+        let expected_var3 = F::from_u32(2) * (a + b);
+        assert_eq!(var3, expected_var3);
+        assert_eq!(var4, F::from_u32(9) + eq * (a * b - c));
+        let expected_var5 = a * b - c.inv();
+        assert_eq!(var5, expected_var5);
         assert_eq!(var6, var5);
     }
 }
@@ -120,15 +98,6 @@ where
         let c = parameters[2][i];
         let eq = parameters[3][i];
         let var4 = parameters[4][i];
-        assert_eq!(
-            var4,
-            Arithmetic::mul(
-                eq,
-                Arithmetic::sub(
-                    Arithmetic::mul(a, b),
-                    c
-                )
-            )
-        );
+        assert_eq!(var4, eq * (a * b - c));
     }
 }
