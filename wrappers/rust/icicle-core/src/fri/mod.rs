@@ -113,21 +113,20 @@ macro_rules! impl_fri {
     (
         $field_prefix:literal,
         $field_prefix_ident:ident,
-        $field:ident,
-        $field_config:ident
+        $field:ident
     ) => {
         mod $field_prefix_ident {
-            use super::{$field, $field_config};
+            use super::$field;
             use icicle_core::fri::fri_transcript_config::FriTranscriptConfig;
             use icicle_core::{
+                field::PrimeField,
                 fri::{fri_transcript_config::FFIFriTranscriptConfig, FriConfig, FriMerkleTree},
                 hash::{Hasher, HasherHandle},
                 impl_fri_proof,
-                field::PrimeField,
             };
             use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
-            impl_fri_proof!($field_prefix, $field, $field_config);
+            impl_fri_proof!($field_prefix, $field);
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_fri_merkle_tree_prove")]
@@ -151,8 +150,8 @@ macro_rules! impl_fri {
                     valid: *mut bool,
                 ) -> eIcicleError;
             }
-            impl FriMerkleTree<$field> for $field_config {
-                type FieldConfig = $field_config;
+            impl FriMerkleTree<$field> for $field {
+                type FieldConfig = $field;
                 type FriProof = FriProof;
 
                 fn fri_merkle_tree_prove(

@@ -46,7 +46,8 @@ macro_rules! impl_symbol_field {
   ) => {
     pub mod $field_prefix_ident {
       use crate::symbol::$field;
-      use icicle_core::traits::{Handle};
+      use icicle_core::field::PrimeField;
+      use icicle_core::traits::{Arithmetic, Handle};
       use icicle_core::symbol::{Symbol, SymbolHandle};
       use icicle_runtime::errors::eIcicleError;
       use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
@@ -331,6 +332,33 @@ macro_rules! impl_symbol_field {
             }
             Self { m_handle: handle }
           }
+        }
+      }
+
+      // Implement Arithmetic trait for FieldSymbol
+      impl Arithmetic for FieldSymbol {
+        fn sqr(&self) -> Self {
+          self * self
+        }
+
+        fn inv(&self) -> Self {
+          self.inverse()
+        }
+
+        fn pow(&self, exp: usize) -> Self {
+          let mut result = Self::from_constant($field::one()).expect("Failed to create constant one");
+          let mut base = *self;
+          let mut exp_val = exp;
+
+          while exp_val > 0 {
+            if exp_val & 1 == 1 {
+              result = result * base;
+            }
+            base = base * base;
+            exp_val >>= 1;
+          }
+
+          result
         }
       }
     }

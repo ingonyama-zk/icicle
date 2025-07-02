@@ -31,8 +31,7 @@ where
 macro_rules! impl_fri_proof {
     (
         $field_prefix:literal,
-        $field:ident,
-        $field_config:ident
+        $field:ident
     ) => {
         use icicle_core::{
             fri::fri_proof::FriProofOps,

@@ -1,14 +1,12 @@
 #![allow(unused_imports)]
 use crate::field::PrimeField;
 use crate::polynomial_ring::PolynomialRing;
-use crate::program::{Instruction, PreDefinedProgram, Program, ReturningValueProgram};
-use crate::symbol::Symbol;
 use crate::traits::{Arithmetic, GenerateRandom};
 use crate::vec_ops::poly_vecops::{polyvec_add, polyvec_mul, polyvec_mul_by_scalar, polyvec_sub, polyvec_sum_reduce};
 use crate::vec_ops::{
     accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, inv_scalars, mixed_mul_scalars,
     mul_scalars, product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars,
-    transpose_matrix, FieldImpl, MixedVecOps, VecOps, VecOpsConfig,
+    transpose_matrix, MixedVecOps, VecOps, VecOpsConfig,
 };
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostOrDeviceSlice, HostSlice};

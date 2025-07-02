@@ -253,9 +253,10 @@ where
 macro_rules! impl_sumcheck {
     ($field_prefix:literal, $field_prefix_ident:ident, $field:ident) => {
         mod $field_prefix_ident {
-            use super::{$field};
+            use super::$field;
             use crate::symbol::$field_prefix_ident::FieldSymbol;
-            use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgram, execute_program_ffi};
+            use icicle_core::field::PrimeField;
+            use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgram};
             use icicle_core::sumcheck::{
                 FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
             };
@@ -544,7 +545,6 @@ macro_rules! impl_sumcheck {
 
             /***************** SumcheckProof *************************/
             type SumcheckProofHandle = *const c_void;
-            #[derive(serde::Serialize, serde::Deserialize)]
             pub struct SumcheckProof {
                 pub(crate) handle: SumcheckProofHandle,
             }

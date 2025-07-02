@@ -1,4 +1,4 @@
-use crate::traits::FieldImpl;
+use crate::field::PrimeField;
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
@@ -482,7 +482,7 @@ where
     F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args_slice(input, offset, stride, size_in, size_out, output, cfg);
-    <<F as FieldImpl>::Config as VecOps<F>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
+    F::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
 #[macro_export]

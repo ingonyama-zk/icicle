@@ -1,3 +1,4 @@
+use crate::field::PrimeField;
 use crate::symbol::Symbol;
 use crate::traits::Handle;
 use crate::vec_ops::VecOpsConfig;
@@ -15,7 +16,7 @@ pub enum PreDefinedProgram {
 
 pub trait Program<F>: Sized + Handle
 where
-    F: FieldImpl,
+    F: PrimeField,
 {
     type ProgSymbol: Symbol<F>;
 
@@ -25,12 +26,12 @@ where
 
     fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), eIcicleError>
     where
-        F: FieldImpl,
+        F: PrimeField,
         Data: HostOrDeviceSlice<F> + ?Sized;
 }
 
 pub trait ReturningValueProgram: Sized + Handle {
-    type Field: FieldImpl;
+    type Field: PrimeField;
     type ProgSymbol: Symbol<Self::Field>;
 
     fn new(
@@ -46,14 +47,15 @@ macro_rules! impl_program_field {
     (
     $field_prefix:literal,
     $field_prefix_ident:ident,
-    $field:ident,
+    $field:ident
   ) => {
         pub mod $field_prefix_ident {
             use crate::program::$field;
             use crate::symbol::$field_prefix_ident::FieldSymbol;
+            use icicle_core::field::PrimeField;
             use icicle_core::program::{Instruction, PreDefinedProgram, Program, ProgramHandle, ReturningValueProgram};
             use icicle_core::symbol::{Symbol, SymbolHandle};
-            use icicle_core::traits::{FieldImpl, Handle};
+            use icicle_core::traits::Handle;
             use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
             use icicle_runtime::memory::HostOrDeviceSlice;
@@ -161,7 +163,7 @@ macro_rules! impl_program_field {
 
                 fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), eIcicleError>
                 where
-                    $field: FieldImpl,
+                    $field: PrimeField,
                     Data: HostOrDeviceSlice<$field> + ?Sized,
                 {
                     unsafe {

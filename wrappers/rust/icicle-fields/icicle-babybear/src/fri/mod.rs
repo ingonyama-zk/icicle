@@ -2,11 +2,7 @@ use crate::field::{ExtensionField, ScalarField};
 use icicle_core::impl_fri;
 
 impl_fri!("babybear", babybear_fri, ScalarField);
-impl_fri!(
-    "babybear_extension",
-    babybear_extension_fri,
-    ExtensionField
-);
+impl_fri!("babybear_extension", babybear_extension_fri, ExtensionField);
 
 #[cfg(test)]
 mod tests {
