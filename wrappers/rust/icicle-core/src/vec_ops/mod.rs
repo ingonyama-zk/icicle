@@ -192,31 +192,7 @@ fn check_vec_ops_args_reduction_ops<F>(
     setup_config(input, input, result, cfg, batch_size)
 }
 
-fn check_vec_ops_args_transpose<F>(
-    input: &(impl HostOrDeviceSlice<F> + ?Sized),
-    nof_rows: u32,
-    nof_cols: u32,
-    output: &(impl HostOrDeviceSlice<F> + ?Sized),
-    cfg: &VecOpsConfig,
-) -> VecOpsConfig {
-    if input.len() != output.len() {
-        panic!(
-            "Input size, and output size do not match {} != {}",
-            input.len(),
-            output.len()
-        );
-    }
-    if input.len() as u32 % (nof_rows * nof_cols) != 0 {
-        panic!(
-            "Input size is not a whole multiple of matrix size (#rows * #cols), {} % ({} * {}) != 0",
-            input.len(),
-            nof_rows,
-            nof_cols,
-        );
-    }
-    let batch_size = input.len() / (nof_rows * nof_cols) as usize;
-    setup_config(input, input, output, cfg, batch_size)
-}
+
 
 fn check_vec_ops_args_slice<F>(
     input: &(impl HostOrDeviceSlice<F> + ?Sized),

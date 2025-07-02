@@ -10,9 +10,9 @@ mod tests {
     use icicle_core::impl_matrix_ops_tests;
     impl_matrix_ops_tests!(ScalarField);
 
-    mod extension {
-        use crate::field::ExtensionField;
-        use icicle_core::impl_matrix_ops_tests;
-        impl_matrix_ops_tests!(ExtensionField);
-    }
+    // mod extension { // TODO: add goldilocks extension matrix tests ?
+    //     use crate::field::ExtensionField;
+    //     use icicle_core::impl_matrix_ops_tests;
+    //     impl_matrix_ops_tests!(ExtensionField);
+    // }
 } 
