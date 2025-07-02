@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
   const size_t n = 1 << 4;
   const size_t r = 1 << 2;
   constexpr size_t d = Rq::d;
-  const std::vector<Rq> S = rand_poly_vec(r * n, 1); // S = 2^14 Zq elements
+  const std::vector<Rq> S = rand_poly_vec(r * n, 2); // S = 2^12 Zq elements
   EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
   assert(witness_legit_eq(eq_inst, S));
   ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(n, r, S);

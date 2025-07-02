@@ -36,9 +36,13 @@ std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value)
 {
   std::vector<PolyRing> vec(size);
   for (auto& x : vec) {
-    for (size_t i = 0; i < PolyRing::d; ++i) {          // randomize each coefficient
-      uint64_t val = rand_uint_32b() % (max_value + 1); // uniform in [0, max_value]
+    for (size_t i = 0; i < PolyRing::d; ++i) { // randomize each coefficient
+
+      // Uniform in [0, max_value]
+      uint64_t val = rand_uint_32b() % (max_value + 1);
       x.values[i] = Zq::from(val);
+      // negate with 1/2 probability
+      if (rand_uint_32b() % 2 == 0) { x.values[i] = Zq::neg(x.values[i]); }
     }
   }
   return vec;

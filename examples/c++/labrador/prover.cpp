@@ -21,7 +21,12 @@ std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std:
     // check norm
     bool JL_check = false;
     double beta = lab_inst.param.beta;
-    ICICLE_CHECK(check_norm_bound(p.data(), JL_out, eNormType::L2, uint64_t(sqrt(JL_out / 2) * beta), {}, &JL_check));
+
+    try {
+      ICICLE_CHECK(check_norm_bound(p.data(), JL_out, eNormType::L2, uint64_t(sqrt(JL_out / 2) * beta), {}, &JL_check));
+    } catch (const std::exception& e) {
+      // simply pass here
+    }
 
     if (JL_check) {
       break;
@@ -181,6 +186,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
 }
 
 // This destroys the lab_inst in LabradorBaseProver
+// TODO: Prover only needs to send BaseProverMessages
 std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_case_prover()
 {
   // Step 1: Pack the Witnesses into a Matrix S
@@ -522,6 +528,15 @@ std::vector<Rq> LabradorProver::prepare_recursion_witness(
   std::vector<Rq> z_tilde(2 * n);
   ICICLE_CHECK(decompose(z.data(), n, base0, {}, z_tilde.data(), z_tilde.size()));
 
+  if (TESTING) {
+    std::vector<Rq> temp(n);
+    ICICLE_CHECK(recompose(z_tilde.data(), z_tilde.size(), base0, {}, temp.data(), temp.size()));
+    if (!poly_vec_eq(z.data(), temp.data(), n)) {
+      throw std::runtime_error("Error: z could not be recomposed from z_tilde in prepare_recursion_witness");
+    } else {
+      std::cout << "\tprepare_recursion_witness: z recomposition passes.\n";
+    }
+  }
   // Step 3:
   // z0 = z_tilde[:n]
   // z1 = z_tilde[n:2*n]

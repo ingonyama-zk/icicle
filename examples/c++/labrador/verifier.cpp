@@ -86,7 +86,7 @@ bool LabradorBaseVerifier::_verify_base_proof(const LabradorBaseCaseProof& base_
   size_t base3 = lab_inst.param.base3;
 
   // 1. LInfinity checks: check t_tilde, g_tilde, h_tilde are small- correctly decomposed
-
+  // TODO: These vectors get too large
   ICICLE_CHECK(check_norm_bound(
     reinterpret_cast<const Zq*>(t_tilde.data()), t_tilde.size() * d, eNormType::LInfinity, (base1 + 1) / 2, {},
     &t_tilde_small));
