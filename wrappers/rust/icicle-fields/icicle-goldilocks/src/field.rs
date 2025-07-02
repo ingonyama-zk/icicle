@@ -24,7 +24,7 @@ impl_generate_random!(ExtensionField, goldilocks_extension_generate_scalars);
 
 #[cfg(test)]
 mod tests {
-    use super::{ExtensionField, ScalarField}; // No extension field
+    use super::{ExtensionField, ScalarField};
     use icicle_core::impl_field_tests;
     use icicle_core::tests::*;
 
