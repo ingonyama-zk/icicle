@@ -66,6 +66,52 @@ FF result = FF::from(5)
 
 ## Migration Guide for Rust
 
+### Arithmetic API
+
+ICICLE v4 implements field arithmetic operations through the `Arithmetic` trait and standard Rust operators. This makes the code more idiomatic and easier to read.
+
+#### Field Arithmetic Operations
+
+| v3 (Static Methods) | v3, v4 (Instance Methods) | v4 (Operators) |
+|---------------------|----------------------|----------------|
+| `Fr::add(a, b)` | `a.add(b)` | `a + b` |
+| `Fr::sub(a, b)` | `a.sub(b)` | `a - b` |
+| `Fr::mul(a, b)` | `a.mul(b)` | `a * b` |
+| `Fr::sqr(a)` | `a.sqr()` | N/A |
+| `Fr::neg(a)` | `a.neg()` | `-a` |
+| `Fr::inv(a)` | `a.inv()` | N/A |
+| `Fr::pow(a, exp)` | `a.pow(exp)` | N/A |
+
+#### The Arithmetic Trait
+
+The `Arithmetic` trait in ICICLE v4 is defined as follows:
+
+```rust
+pub trait Arithmetic: Sized + Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> {
+    fn sqr(&self) -> Self;
+    fn inv(&self) -> Self;
+    fn pow(&self, exp: usize) -> Self;
+}
+```
+
+This trait extends the standard Rust operators (`Add`, `Sub`, `Mul`) and adds specialized field operations like square, inverse, and exponentiation.
+
+#### Montgomery Conversion
+
+| v3 (Static Methods) | v4 (Instance Methods) |
+|---------------------|----------------------|
+| `Fr::to_montgomery(a)` | `MontgomeryConvertible::to_mont(values, stream)` |
+| `Fr::from_montgomery(a)` | `MontgomeryConvertible::from_mont(values, stream)` |
+
+The `MontgomeryConvertible` trait provides methods for converting field elements to and from Montgomery form:
+
+```rust
+pub trait MontgomeryConvertible: Sized {
+    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError;
+    fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError;
+}
+```
+
 ### Refactor Program from Vecops to Program module
 
 In v4, the Program API has been moved from VecOps to a dedicated Program module for better organization and type safety.
@@ -80,7 +126,7 @@ In v4, the Program API has been moved from VecOps to a dedicated Program module 
 
 ### Example Migration
 
-**v3 (Trait Implementation):**
+**v3 (Old API):**
 ```rust
 use icicle_fields::bn254::Fr;
 use icicle_core::traits::FieldImpl;
@@ -94,33 +140,85 @@ let e = Fr::sqr(d);
 let f = Fr::inv(e);
 ```
 
-**v4 (Instance Methods):**
+**v4 (Current API):**
 ```rust
-use icicle_fields::bn254::Fr;
-use icicle_core::traits::FieldImpl;
+use icicle_fields::bn254::ScalarField;
 use icicle_core::traits::Arithmetic;
 
-let a = Fr::from_u32(5);
-let b = Fr::from_u32(10);
+let a = ScalarField::from(5);
+let b = ScalarField::from(10);
 let c = a + b;  // or a.add(b)
-let d = c * Fr::from_u32(2);  // or c.mul(Fr::from_u32(2))
+let d = c * ScalarField::from(2);  // or c.mul(ScalarField::from(2))
 let e = d.sqr();
 let f = e.inv();
 ```
 
 **v4 (Method Chaining):**
 ```rust
-use icicle_fields::bn254::Fr;
-use icicle_core::traits::FieldImpl;
+use icicle_fields::bn254::ScalarField;
 use icicle_core::traits::Arithmetic;
 
-let result = Fr::from_u32(5)
-    .add(Fr::from_u32(10))
-    .mul(Fr::from_u32(2))
+let result = ScalarField::from(5)
+    .add(ScalarField::from(10))
+    .mul(ScalarField::from(2))
     .sqr()
     .inv();
 ```
 
+### Program API Example
+
+**v3 (VecOps API):**
+```rust
+use icicle_fields::bn254::Fr;
+use icicle_core::vec_ops::{VecOps, VecOpsConfig};
+
+// Create program
+let program = Fr::create_program(|symbols| {
+    // Program logic here
+}, nof_params)?;
+
+// Execute program
+Fr::execute_program(&program, &mut vec_data, &config)?;
+```
+
+**v4 (Program API):**
+```rust
+use icicle_fields::bn254::ScalarField;
+use icicle_core::program::{Program, ReturningValueProgram};
+use icicle_bn254::program::stark252::{FieldProgram, FieldReturningValueProgram};
+
+// Create program
+let program = FieldProgram::new(|symbols| {
+    // Program logic here
+}, nof_params)?;
+
+// Execute program
+program.execute_program(&mut vec_data, &config)?;
+
+// Create returning value program
+let returning_program = FieldReturningValueProgram::new(|symbols| -> symbol {
+    // Program logic here
+    result_symbol
+}, nof_params)?;
+```
+
+### Random Number Generation
+
+**v3:**
+```rust
+use icicle_fields::bn254::Fr;
+use icicle_core::traits::FieldCfg;
+
+let random_values = Fr::generate_random(size);
+```
+
+**v4:**
+```rust
+use icicle_fields::bn254::ScalarField;
+use icicle_core::traits::GenerateRandom;
+
+let random_values = ScalarField::generate_random(size);
+```
 
 ## Other Considerations
 
