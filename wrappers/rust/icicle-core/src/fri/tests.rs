@@ -182,6 +182,20 @@ pub fn check_fri_proof_serialization<F: FieldImpl, S, D, T>(
             assert_eq!(leaf, leaf_deserialized);
         }
     }
-    assert_eq!(fri_proof.get_final_poly(), fri_proof_deserialized.get_final_poly());
-    assert_eq!(fri_proof.get_pow_nonce(), fri_proof_deserialized.get_pow_nonce());
+    assert_eq!(
+        fri_proof
+            .get_final_poly()
+            .unwrap(),
+        fri_proof_deserialized
+            .get_final_poly()
+            .unwrap()
+    );
+    assert_eq!(
+        fri_proof
+            .get_pow_nonce()
+            .unwrap(),
+        fri_proof_deserialized
+            .get_pow_nonce()
+            .unwrap()
+    );
 }

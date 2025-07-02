@@ -1,7 +1,6 @@
 use crate::polynomial_ring::PolyRing;
 use icicle_core::{impl_balanced_decomposition, vec_ops::VecOpsConfig};
-use icicle_runtime::errors::eIcicleError;
-use icicle_runtime::memory::HostOrDeviceSlice;
+use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, IcicleError};
 
 impl_balanced_decomposition!("labrador_poly_ring", PolyRing);
 

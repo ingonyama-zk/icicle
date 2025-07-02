@@ -98,8 +98,8 @@ where
         .copy_from_host(HostSlice::from_slice(&scalars))
         .unwrap();
 
-    F::to_mont(&mut d_scalars, &stream);
-    F::from_mont(&mut d_scalars, &stream);
+    F::to_mont(&mut d_scalars, &stream).unwrap();
+    F::from_mont(&mut d_scalars, &stream).unwrap();
 
     let mut scalars_copy = vec![F::zero(); size];
     d_scalars
@@ -131,12 +131,8 @@ where
         .unwrap();
 
     // Test affine montgomery conversion with Device Memory
-    Affine::<C>::to_mont(&mut d_affine, &IcicleStream::default())
-        .wrap()
-        .unwrap();
-    Affine::<C>::from_mont(&mut d_affine, &IcicleStream::default())
-        .wrap()
-        .unwrap();
+    Affine::<C>::to_mont(&mut d_affine, &IcicleStream::default()).unwrap();
+    Affine::<C>::from_mont(&mut d_affine, &IcicleStream::default()).unwrap();
 
     let mut affine_copy = vec![Affine::<C>::zero(); size];
     d_affine
@@ -146,12 +142,8 @@ where
     assert_eq!(affine_points, affine_copy);
 
     // Test affine montgomery conversion with Host Memory
-    Affine::<C>::to_mont(h_affine, &IcicleStream::default())
-        .wrap()
-        .unwrap();
-    Affine::<C>::from_mont(h_affine, &IcicleStream::default())
-        .wrap()
-        .unwrap();
+    Affine::<C>::to_mont(h_affine, &IcicleStream::default()).unwrap();
+    Affine::<C>::from_mont(h_affine, &IcicleStream::default()).unwrap();
 
     assert_eq!(affine_points, affine_points_copy);
 
@@ -164,12 +156,8 @@ where
         .unwrap();
 
     // Test projective montgomery conversion with Device Memory
-    Projective::<C>::to_mont(&mut d_proj, &IcicleStream::default())
-        .wrap()
-        .unwrap();
-    Projective::<C>::from_mont(&mut d_proj, &IcicleStream::default())
-        .wrap()
-        .unwrap();
+    Projective::<C>::to_mont(&mut d_proj, &IcicleStream::default()).unwrap();
+    Projective::<C>::from_mont(&mut d_proj, &IcicleStream::default()).unwrap();
 
     let mut projective_copy = vec![Projective::<C>::zero(); size];
     d_proj
@@ -179,12 +167,8 @@ where
     assert_eq!(proj_points, projective_copy);
 
     // Test projective montgomery conversion with Host Memory
-    Projective::<C>::to_mont(h_proj, &IcicleStream::default())
-        .wrap()
-        .unwrap();
-    Projective::<C>::from_mont(h_proj, &IcicleStream::default())
-        .wrap()
-        .unwrap();
+    Projective::<C>::to_mont(h_proj, &IcicleStream::default()).unwrap();
+    Projective::<C>::from_mont(h_proj, &IcicleStream::default()).unwrap();
 
     assert_eq!(proj_points, proj_points_copy);
 }

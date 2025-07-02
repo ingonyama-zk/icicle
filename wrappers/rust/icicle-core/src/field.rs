@@ -1,8 +1,8 @@
 use crate::traits::{Arithmetic, FieldConfig, FieldImpl, MontgomeryConvertible};
 use hex::FromHex;
-use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
+use icicle_runtime::IcicleError;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 use std::ops::{Add, Mul, Sub};
@@ -103,8 +103,8 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
 
 #[doc(hidden)]
 pub trait MontgomeryConvertibleField<F: FieldImpl> {
-    fn to_mont(values: &mut (impl HostOrDeviceSlice<F> + ?Sized), stream: &IcicleStream) -> eIcicleError;
-    fn from_mont(values: &mut (impl HostOrDeviceSlice<F> + ?Sized), stream: &IcicleStream) -> eIcicleError;
+    fn to_mont(values: &mut (impl HostOrDeviceSlice<F> + ?Sized), stream: &IcicleStream) -> Result<(), IcicleError>;
+    fn from_mont(values: &mut (impl HostOrDeviceSlice<F> + ?Sized), stream: &IcicleStream) -> Result<(), IcicleError>;
 }
 
 #[doc(hidden)]
@@ -171,11 +171,14 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible for Field<NUM
 where
     F: MontgomeryConvertibleField<Self>,
 {
-    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
+    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> Result<(), IcicleError> {
         F::to_mont(values, stream)
     }
 
-    fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
+    fn from_mont(
+        values: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        stream: &IcicleStream,
+    ) -> Result<(), IcicleError> {
         F::from_mont(values, stream)
     }
 }
@@ -229,7 +232,7 @@ macro_rules! impl_scalar_field {
         mod $field_prefix_ident {
             use super::{$field_name, HostOrDeviceSlice};
             use icicle_core::{traits::FieldImpl, vec_ops::VecOpsConfig};
-            use icicle_runtime::errors::eIcicleError;
+            use icicle_runtime::errors::{eIcicleError, IcicleError};
             use icicle_runtime::stream::{IcicleStream, IcicleStreamHandle};
 
             extern "C" {
@@ -358,11 +361,14 @@ macro_rules! impl_scalar_field {
             fn to_mont(
                 values: &mut (impl HostOrDeviceSlice<$field_name> + ?Sized),
                 stream: &IcicleStream,
-            ) -> eIcicleError {
+            ) -> Result<(), IcicleError> {
                 use icicle_core::vec_ops::VecOpsConfig;
                 // check device slice is on active device
                 if values.is_on_device() && !values.is_on_active_device() {
-                    panic!("input not allocated on the active device");
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "input not allocated on the active device",
+                    ));
                 }
                 let mut config = VecOpsConfig::default();
                 config.is_a_on_device = values.is_on_device();
@@ -374,16 +380,20 @@ macro_rules! impl_scalar_field {
                     true,
                     &config,
                 )
+                .wrap()
             }
 
             fn from_mont(
                 values: &mut (impl HostOrDeviceSlice<$field_name> + ?Sized),
                 stream: &IcicleStream,
-            ) -> eIcicleError {
+            ) -> Result<(), IcicleError> {
                 use icicle_core::vec_ops::VecOpsConfig;
                 // check device slice is on active device
                 if values.is_on_device() && !values.is_on_active_device() {
-                    panic!("input not allocated on the active device");
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "input not allocated on the active device",
+                    ));
                 }
                 let mut config = VecOpsConfig::default();
                 config.is_a_on_device = values.is_on_device();
@@ -395,6 +405,7 @@ macro_rules! impl_scalar_field {
                     false,
                     &config,
                 )
+                .wrap()
             }
         }
     };

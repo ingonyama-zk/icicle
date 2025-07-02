@@ -6,8 +6,8 @@ use icicle_core::{
     msm::{MSMConfig, MSM},
 };
 use icicle_runtime::{
-    errors::eIcicleError,
     memory::{DeviceSlice, HostOrDeviceSlice},
+    IcicleError,
 };
 
 impl_msm!("grumpkin", grumpkin, CurveCfg);

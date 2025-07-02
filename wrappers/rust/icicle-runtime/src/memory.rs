@@ -1,4 +1,4 @@
-use crate::errors::eIcicleError;
+use crate::errors::{eIcicleError, IcicleError};
 use crate::runtime;
 use crate::stream::IcicleStream;
 use std::mem::{size_of, ManuallyDrop};
@@ -21,7 +21,7 @@ pub trait HostOrDeviceSlice<T> {
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
 
-    fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
+    fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), IcicleError> {
         assert!(
             self.len() >= src.len(),
             "In copy, destination has shorter length than source"
@@ -35,7 +35,7 @@ pub trait HostOrDeviceSlice<T> {
         &mut self,
         src: &(impl HostOrDeviceSlice<T> + ?Sized),
         stream: &IcicleStream,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         assert!(
             self.len() >= src.len(),
             "In copy, destination has shorter length than source"
@@ -53,8 +53,8 @@ pub trait HostOrDeviceSlice<T> {
         }
     }
 
-    fn memset(&mut self, value: u8, size: usize) -> Result<(), eIcicleError>;
-    fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), eIcicleError>;
+    fn memset(&mut self, value: u8, size: usize) -> Result<(), IcicleError>;
+    fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), IcicleError>;
 }
 
 impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
@@ -85,32 +85,24 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
         self.len() == 0
     }
 
-    fn memset(&mut self, value: u8, size: usize) -> Result<(), eIcicleError> {
+    fn memset(&mut self, value: u8, size: usize) -> Result<(), IcicleError> {
         if size == 0 || self.is_empty() {
             return Ok(());
         }
         if size > self.len() {
-            eprintln!("size exceeds slice length");
-            return Err(eIcicleError::CopyFailed);
+            return Err(IcicleError::new(eIcicleError::CopyFailed, "size exceeds slice length"));
         }
-        unsafe {
-            runtime::memset(self.as_mut_ptr() as *mut c_void, value as i32, size).wrap()?;
-        }
-        Ok(())
+        unsafe { runtime::memset(self.as_mut_ptr() as *mut c_void, value as i32, size) }
     }
 
-    fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), eIcicleError> {
+    fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), IcicleError> {
         if size == 0 || self.is_empty() {
             return Ok(());
         }
         if size > self.len() {
-            eprintln!("size exceeds slice length");
-            return Err(eIcicleError::CopyFailed);
+            return Err(IcicleError::new(eIcicleError::CopyFailed, "size exceeds slice length"));
         }
-        unsafe {
-            runtime::memset_async(self.as_mut_ptr() as *mut c_void, value as i32, size, stream.handle).wrap()?;
-        }
-        Ok(())
+        unsafe { runtime::memset_async(self.as_mut_ptr() as *mut c_void, value as i32, size, stream.handle) }
     }
 }
 
@@ -145,40 +137,40 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
         self.len() == 0
     }
 
-    fn memset(&mut self, value: u8, size: usize) -> Result<(), eIcicleError> {
+    fn memset(&mut self, value: u8, size: usize) -> Result<(), IcicleError> {
         if size == 0 || self.is_empty() {
             return Ok(());
         }
         if size > self.len() {
-            eprintln!("size exceeds slice length");
-            return Err(eIcicleError::CopyFailed);
+            return Err(IcicleError::new(eIcicleError::CopyFailed, "size exceeds slice length"));
         }
         if !self.is_on_active_device() {
-            eprintln!("not allocated on an active device");
-            return Err(eIcicleError::CopyFailed);
+            return Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "not allocated on an active device",
+            ));
         }
 
         let byte_size = size_of::<T>() * size;
-        unsafe { runtime::memset(self.as_mut_ptr() as *mut c_void, value as i32, byte_size).wrap() }
+        unsafe { runtime::memset(self.as_mut_ptr() as *mut c_void, value as i32, byte_size) }
     }
 
-    fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), eIcicleError> {
+    fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), IcicleError> {
         if size == 0 || self.is_empty() {
             return Ok(());
         }
         if size > self.len() {
-            eprintln!("size exceeds slice length");
-            return Err(eIcicleError::CopyFailed);
+            return Err(IcicleError::new(eIcicleError::CopyFailed, "size exceeds slice length"));
         }
         if !self.is_on_active_device() {
-            eprintln!("not allocated on an active device");
-            return Err(eIcicleError::CopyFailed);
+            return Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "not allocated on an active device",
+            ));
         }
 
         let byte_size = size_of::<T>() * size;
-        unsafe {
-            runtime::memset_async(self.as_mut_ptr() as *mut c_void, value as i32, byte_size, stream.handle).wrap()
-        }
+        unsafe { runtime::memset_async(self.as_mut_ptr() as *mut c_void, value as i32, byte_size, stream.handle) }
     }
 }
 
@@ -215,12 +207,12 @@ impl<T> HostOrDeviceSlice<T> for DeviceVec<T> {
         (&**self).is_empty()
     }
 
-    fn memset(&mut self, value: u8, size: usize) -> Result<(), eIcicleError> {
+    fn memset(&mut self, value: u8, size: usize) -> Result<(), IcicleError> {
         self.as_mut_slice()
             .memset(value, size)
     }
 
-    fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), eIcicleError> {
+    fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), IcicleError> {
         self.as_mut_slice()
             .memset_async(value, size, stream)
     }
@@ -275,7 +267,7 @@ impl<T> DeviceSlice<T> {
         &mut *(slice as *mut [T] as *mut Self)
     }
 
-    pub fn copy_from_host(&mut self, val: &HostSlice<T>) -> Result<(), eIcicleError> {
+    pub fn copy_from_host(&mut self, val: &HostSlice<T>) -> Result<(), IcicleError> {
         assert!(
             self.len() == val.len(),
             "In copy from host, destination and source slices have different lengths"
@@ -286,7 +278,10 @@ impl<T> DeviceSlice<T> {
         }
         if !self.is_on_active_device() {
             eprintln!("not allocated on an active device");
-            return Err(eIcicleError::CopyFailed);
+            return Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "not allocated on an active device",
+            ));
         }
 
         let size = size_of::<T>() * self.len();
@@ -295,7 +290,7 @@ impl<T> DeviceSlice<T> {
         }
     }
 
-    pub fn copy_to_host(&self, val: &mut HostSlice<T>) -> Result<(), eIcicleError> {
+    pub fn copy_to_host(&self, val: &mut HostSlice<T>) -> Result<(), IcicleError> {
         assert!(
             self.len() == val.len(),
             "In copy to host, destination and source slices have different lengths"
@@ -306,7 +301,10 @@ impl<T> DeviceSlice<T> {
         }
         if !self.is_on_active_device() {
             eprintln!("not allocated on an active device");
-            return Err(eIcicleError::CopyFailed);
+            return Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "not allocated on an active device",
+            ));
         }
 
         let size = size_of::<T>() * self.len();
@@ -315,7 +313,7 @@ impl<T> DeviceSlice<T> {
         }
     }
 
-    pub fn copy_from_host_async(&mut self, val: &HostSlice<T>, stream: &IcicleStream) -> Result<(), eIcicleError> {
+    pub fn copy_from_host_async(&mut self, val: &HostSlice<T>, stream: &IcicleStream) -> Result<(), IcicleError> {
         assert!(
             self.len() == val.len(),
             "In copy from host, destination and source slices have different lengths"
@@ -325,7 +323,10 @@ impl<T> DeviceSlice<T> {
         }
         if !self.is_on_active_device() {
             eprintln!("not allocated on an active device");
-            return Err(eIcicleError::CopyFailed);
+            return Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "not allocated on an active device",
+            ));
         }
 
         let size = size_of::<T>() * self.len();
@@ -340,7 +341,7 @@ impl<T> DeviceSlice<T> {
         }
     }
 
-    pub fn copy_to_host_async(&self, val: &mut HostSlice<T>, stream: &IcicleStream) -> Result<(), eIcicleError> {
+    pub fn copy_to_host_async(&self, val: &mut HostSlice<T>, stream: &IcicleStream) -> Result<(), IcicleError> {
         assert!(
             self.len() == val.len(),
             "In copy to host, destination and source slices have different lengths"
@@ -350,7 +351,10 @@ impl<T> DeviceSlice<T> {
         }
         if !self.is_on_active_device() {
             eprintln!("not allocated on an active device");
-            return Err(eIcicleError::CopyFailed);
+            return Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "not allocated on an active device",
+            ));
         }
 
         let size = size_of::<T>() * self.len();
@@ -381,18 +385,18 @@ impl<T> DeviceSlice<T> {
 }
 
 impl<T> DeviceVec<T> {
-    pub fn device_malloc(count: usize) -> Result<Self, eIcicleError> {
+    pub fn device_malloc(count: usize) -> Result<Self, IcicleError> {
         let size = count
             .checked_mul(size_of::<T>())
             .unwrap_or(0);
         if size == 0 {
-            return Err(eIcicleError::AllocationFailed);
+            return Err(IcicleError::new(eIcicleError::AllocationFailed, "invalid size"));
         }
 
         let mut device_ptr: *mut c_void = std::ptr::null_mut();
         let error = unsafe { runtime::icicle_malloc(&mut device_ptr, size) };
         if error != eIcicleError::Success {
-            return Err(error);
+            return Err(IcicleError::new(error, "device malloc failed"));
         }
 
         unsafe {
@@ -403,12 +407,12 @@ impl<T> DeviceVec<T> {
         }
     }
 
-    pub fn device_malloc_async(count: usize, stream: &IcicleStream) -> Result<Self, eIcicleError> {
+    pub fn device_malloc_async(count: usize, stream: &IcicleStream) -> Result<Self, IcicleError> {
         let size = count
             .checked_mul(size_of::<T>())
             .unwrap_or(0);
         if size == 0 {
-            return Err(eIcicleError::AllocationFailed);
+            return Err(IcicleError::new(eIcicleError::AllocationFailed, "invalid size"));
         }
 
         let mut device_ptr: *mut c_void = std::ptr::null_mut();
@@ -590,20 +594,20 @@ pub mod reinterpret {
     }
 
     /// SAFETY: Caller must ensure layout compatibility between `From` and `To`.
-    fn compute_output_len<From, To>(len: usize) -> Result<usize, eIcicleError> {
+    fn compute_output_len<From, To>(len: usize) -> Result<usize, IcicleError> {
         let from_size = size_of::<From>();
         let to_size = size_of::<To>();
 
         if from_size == 0 || to_size == 0 {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(eIcicleError::InvalidArgument, "invalid size"));
         }
 
         let total_bytes = from_size
             .checked_mul(len)
-            .ok_or(eIcicleError::InvalidArgument)?;
+            .ok_or(IcicleError::new(eIcicleError::InvalidArgument, "size overflow"))?;
 
         if total_bytes % to_size != 0 {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(eIcicleError::InvalidArgument, "size not aligned"));
         }
 
         Ok(total_bytes / to_size)
@@ -612,7 +616,7 @@ pub mod reinterpret {
     /// SAFETY: Caller must ensure layout of P as [P::Base; DEGREE]
     pub unsafe fn reinterpret_slice<From, To>(
         input: &(impl HostOrDeviceSlice<From> + ?Sized),
-    ) -> Result<UnifiedSlice<'_, To>, eIcicleError>
+    ) -> Result<UnifiedSlice<'_, To>, IcicleError>
     where
         From: Sized,
         To: Sized,
@@ -630,7 +634,7 @@ pub mod reinterpret {
 
     pub unsafe fn reinterpret_slice_mut<From, To>(
         input: &mut (impl HostOrDeviceSlice<From> + ?Sized),
-    ) -> Result<UnifiedSliceMut<'_, To>, eIcicleError>
+    ) -> Result<UnifiedSliceMut<'_, To>, IcicleError>
     where
         From: Sized,
         To: Sized,
@@ -686,14 +690,20 @@ pub mod reinterpret {
             }
         }
 
-        fn memset(&mut self, _: u8, _: usize) -> Result<(), eIcicleError> {
+        fn memset(&mut self, _: u8, _: usize) -> Result<(), IcicleError> {
             eprintln!("Cannot memset immutable UnifiedSlice");
-            Err(eIcicleError::CopyFailed)
+            Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "Cannot memset immutable UnifiedSlice",
+            ))
         }
 
-        fn memset_async(&mut self, _: u8, _: usize, _: &IcicleStream) -> Result<(), eIcicleError> {
+        fn memset_async(&mut self, _: u8, _: usize, _: &IcicleStream) -> Result<(), IcicleError> {
             eprintln!("Cannot memset_async immutable UnifiedSlice");
-            Err(eIcicleError::CopyFailed)
+            Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "Cannot memset_async immutable UnifiedSlice",
+            ))
         }
     }
 
@@ -740,14 +750,14 @@ pub mod reinterpret {
             }
         }
 
-        fn memset(&mut self, value: u8, size: usize) -> Result<(), eIcicleError> {
+        fn memset(&mut self, value: u8, size: usize) -> Result<(), IcicleError> {
             match self {
                 UnifiedSliceMut::Device(d) => d.memset(value, size),
                 UnifiedSliceMut::Host(h) => h.memset(value, size),
             }
         }
 
-        fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), eIcicleError> {
+        fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), IcicleError> {
             match self {
                 UnifiedSliceMut::Device(d) => d.memset_async(value, size, stream),
                 UnifiedSliceMut::Host(h) => h.memset_async(value, size, stream),

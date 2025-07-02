@@ -6,7 +6,7 @@ use icicle_core::impl_field;
 use icicle_core::impl_pairing;
 use icicle_core::pairing::Pairing;
 use icicle_core::traits::{FieldConfig, FieldImpl};
-use icicle_runtime::eIcicleError;
+use icicle_runtime::IcicleError;
 
 pub(crate) const PAIRING_TARGET_FIELD_LIMBS: usize = 288;
 

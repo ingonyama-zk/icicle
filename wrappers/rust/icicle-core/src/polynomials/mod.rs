@@ -476,7 +476,7 @@ macro_rules! impl_polynomial_tests {
             config
                 .ext
                 .set_bool(CUDA_NTT_FAST_TWIDDLES_MODE, fast_twiddles_mode);
-            let rou = get_root_of_unity::<F>(max_size);
+            let rou = get_root_of_unity::<F>(max_size).unwrap();
             initialize_domain(rou, &config).unwrap();
         }
 

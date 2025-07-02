@@ -3,7 +3,10 @@ use crate::{
     traits::Handle,
 };
 use icicle_runtime::{
-    config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
+    config::ConfigExtension,
+    errors::{eIcicleError, IcicleError},
+    memory::HostOrDeviceSlice,
+    stream::IcicleStreamHandle,
 };
 use serde::{
     de::{self, Visitor},
@@ -121,11 +124,14 @@ extern "C" {
 
 impl MerkleProof {
     /// Create a new MerkleProof object.
-    pub fn new() -> Result<Self, eIcicleError> {
+    pub fn new() -> Result<Self, IcicleError> {
         unsafe {
             let handle = icicle_merkle_proof_create();
             if handle.is_null() {
-                Err(eIcicleError::AllocationFailed)
+                Err(IcicleError::new(
+                    eIcicleError::AllocationFailed,
+                    "Failed to create MerkleProof.",
+                ))
             } else {
                 Ok(MerkleProof { handle })
             }
@@ -139,7 +145,7 @@ impl MerkleProof {
         leaf: Vec<T>,
         root: Vec<T>,
         path: Vec<T>,
-    ) -> Result<Self, eIcicleError> {
+    ) -> Result<Self, IcicleError> {
         let leaf_bytes = unsafe { slice::from_raw_parts(leaf.as_ptr() as *const u8, leaf.len() * mem::size_of::<T>()) };
         let root_bytes = unsafe { slice::from_raw_parts(root.as_ptr() as *const u8, root.len() * mem::size_of::<T>()) };
         let path_bytes = unsafe { slice::from_raw_parts(path.as_ptr() as *const u8, path.len() * mem::size_of::<T>()) };
@@ -156,7 +162,10 @@ impl MerkleProof {
                 path_bytes.len(),
             );
             if handle.is_null() {
-                Err(eIcicleError::UnknownError)
+                Err(IcicleError::new(
+                    eIcicleError::UnknownError,
+                    "Failed to create MerkleProof.",
+                ))
             } else {
                 Ok(MerkleProof { handle })
             }
@@ -289,7 +298,7 @@ impl Handle for MerkleProof {
 }
 
 impl<T: Clone> TryFrom<MerkleProofData<T>> for MerkleProof {
-    type Error = eIcicleError;
+    type Error = IcicleError;
     fn try_from(data: MerkleProofData<T>) -> Result<Self, Self::Error> {
         Self::create_with_data(
             data.is_pruned,
@@ -366,7 +375,7 @@ impl MerkleTree {
         layer_hashes: &[&Hasher],
         leaf_element_size: u64,
         output_store_min_layer: u64,
-    ) -> Result<Self, eIcicleError> {
+    ) -> Result<Self, IcicleError> {
         unsafe {
             // Collect the Hasher handles from the Hasher structs
             let hash_handles: Vec<HasherHandle> = layer_hashes
@@ -382,7 +391,10 @@ impl MerkleTree {
             );
 
             if handle.is_null() {
-                Err(eIcicleError::UnknownError)
+                Err(IcicleError::new(
+                    eIcicleError::UnknownError,
+                    "Failed to create MerkleTree.",
+                ))
             } else {
                 Ok(MerkleTree { handle })
             }
@@ -394,11 +406,13 @@ impl MerkleTree {
         &self,
         leaves: &(impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &MerkleTreeConfig,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         // check device slices are on active device
         if leaves.is_on_device() && !leaves.is_on_active_device() {
-            eprintln!("leaves not allocated on the active device");
-            return Err(eIcicleError::InvalidPointer);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidPointer,
+                "leaves not allocated on the active device",
+            ));
         }
 
         let mut local_cfg = cfg.clone();
@@ -409,12 +423,12 @@ impl MerkleTree {
     }
 
     // Templated function to get the Merkle root as a slice of type T
-    pub fn get_root<T>(&self) -> Result<&[T], eIcicleError> {
+    pub fn get_root<T>(&self) -> Result<&[T], IcicleError> {
         let mut size: u64 = 0;
         let root_ptr = unsafe { icicle_merkle_tree_get_root(self.handle, &mut size) };
 
         if root_ptr.is_null() {
-            Err(eIcicleError::UnknownError)
+            Err(IcicleError::new(eIcicleError::UnknownError, "root pointer is null"))
         } else {
             let element_size = std::mem::size_of::<T>() as usize;
             let num_elements = size as usize / element_size;
@@ -429,11 +443,13 @@ impl MerkleTree {
         leaf_idx: u64,
         pruned_path: bool,
         config: &MerkleTreeConfig,
-    ) -> Result<MerkleProof, eIcicleError> {
+    ) -> Result<MerkleProof, IcicleError> {
         // check device slices are on active device
         if leaves.is_on_device() && !leaves.is_on_active_device() {
-            eprintln!("leaves not allocated on the active device");
-            return Err(eIcicleError::InvalidPointer);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidPointer,
+                "leaves not allocated on the active device",
+            ));
         }
 
         let mut local_cfg = config.clone();
@@ -441,7 +457,7 @@ impl MerkleTree {
 
         let proof = MerkleProof::new().unwrap();
         let byte_size = (leaves.len() * std::mem::size_of::<T>()) as u64;
-        let result = unsafe {
+        unsafe {
             icicle_merkle_tree_get_proof(
                 self.handle,
                 leaves.as_ptr() as *const u8,
@@ -451,22 +467,14 @@ impl MerkleTree {
                 &local_cfg,
                 proof.handle,
             )
-        };
-
-        if result == eIcicleError::Success {
-            Ok(proof)
-        } else {
-            Err(result)
+            .wrap_value(proof)
         }
     }
 
-    pub fn verify(&self, proof: &MerkleProof) -> Result<bool, eIcicleError> {
+    pub fn verify(&self, proof: &MerkleProof) -> Result<bool, IcicleError> {
         let mut verification_valid: bool = false;
-        let result = unsafe { icicle_merkle_tree_verify(self.handle, proof.handle, &mut verification_valid) };
-        if result == eIcicleError::Success {
-            Ok(verification_valid)
-        } else {
-            Err(result)
+        unsafe {
+            icicle_merkle_tree_verify(self.handle, proof.handle, &mut verification_valid).wrap_value(verification_valid)
         }
     }
 }

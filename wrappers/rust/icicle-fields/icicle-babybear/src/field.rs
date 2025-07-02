@@ -1,7 +1,7 @@
 use icicle_core::field::{Field, MontgomeryConvertibleField};
 use icicle_core::traits::{FieldConfig, FieldImpl, GenerateRandom};
 use icicle_core::{impl_field, impl_scalar_field};
-use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::errors::{eIcicleError, IcicleError};
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 

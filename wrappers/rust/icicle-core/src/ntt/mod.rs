@@ -1,6 +1,9 @@
 use crate::traits::FieldImpl;
 use icicle_runtime::{
-    config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
+    config::ConfigExtension,
+    errors::{eIcicleError, IcicleError},
+    memory::HostOrDeviceSlice,
+    stream::IcicleStreamHandle,
 };
 
 pub mod tests;
@@ -126,9 +129,9 @@ impl NTTInitDomainConfig {
 
 #[doc(hidden)]
 pub trait NTTDomain<F: FieldImpl> {
-    fn get_root_of_unity(max_size: u64) -> F;
-    fn initialize_domain(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), eIcicleError>;
-    fn release_domain() -> Result<(), eIcicleError>;
+    fn get_root_of_unity(max_size: u64) -> Result<F, IcicleError>;
+    fn initialize_domain(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), IcicleError>;
+    fn release_domain() -> Result<(), IcicleError>;
 }
 
 #[doc(hidden)]
@@ -138,12 +141,12 @@ pub trait NTT<T, F: FieldImpl>: NTTDomain<F> {
         dir: NTTDir,
         cfg: &NTTConfig<F>,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
     fn ntt_inplace_unchecked(
         inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<F>,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 /// Computes the NTT, or a batch of several NTTs.
@@ -162,25 +165,34 @@ pub fn ntt<T, F>(
     dir: NTTDir,
     cfg: &NTTConfig<F>,
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: NTT<T, F>,
 {
     if input.len() != output.len() {
-        panic!(
-            "input and output lengths {}; {} do not match",
-            input.len(),
-            output.len()
-        );
+        return Err(IcicleError::new(
+            eIcicleError::InvalidArgument,
+            format!(
+                "input and output lengths {}; {} do not match",
+                input.len(),
+                output.len()
+            ),
+        ));
     }
 
     // check device slices are on active device
     if input.is_on_device() && !input.is_on_active_device() {
-        panic!("input not allocated on an inactive device");
+        return Err(IcicleError::new(
+            eIcicleError::InvalidPointer,
+            "input not allocated on an inactive device",
+        ));
     }
     if output.is_on_device() && !output.is_on_active_device() {
-        panic!("output not allocated on an inactive device");
+        return Err(IcicleError::new(
+            eIcicleError::InvalidPointer,
+            "output not allocated on an inactive device",
+        ));
     }
 
     let mut local_cfg = cfg.clone();
@@ -203,7 +215,7 @@ pub fn ntt_inplace<T, F>(
     inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     dir: NTTDir,
     cfg: &NTTConfig<F>,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: NTT<T, F>,
@@ -221,9 +233,9 @@ where
 ///
 /// * `primitive_root` - primitive root to generate twiddles from. Should be of large enough order to cover all
 /// NTTs that you need. For example, if NTTs of sizes 2^17 and 2^18 are computed, use the primitive root of order 2^18.
-/// This function will panic if the order of `primitive_root` is not a power of two.
+/// This function will return an error if the order of `primitive_root` is not a power of two.
 ///
-pub fn initialize_domain<F>(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), eIcicleError>
+pub fn initialize_domain<F>(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), IcicleError>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: NTTDomain<F>,
@@ -231,7 +243,7 @@ where
     <<F as FieldImpl>::Config as NTTDomain<F>>::initialize_domain(primitive_root, config)
 }
 
-pub fn release_domain<F>() -> Result<(), eIcicleError>
+pub fn release_domain<F>() -> Result<(), IcicleError>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: NTTDomain<F>,
@@ -239,7 +251,7 @@ where
     <<F as FieldImpl>::Config as NTTDomain<F>>::release_domain()
 }
 
-pub fn get_root_of_unity<F>(max_size: u64) -> F
+pub fn get_root_of_unity<F>(max_size: u64) -> Result<F, IcicleError>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: NTTDomain<F>,
@@ -274,7 +286,7 @@ macro_rules! impl_ntt_without_domain {
                 dir: NTTDir,
                 cfg: &NTTConfig<$domain_field>,
                 output: &mut (impl HostOrDeviceSlice<$inout> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 unsafe {
                     ntt_ffi(
                         input.as_ptr(),
@@ -291,7 +303,7 @@ macro_rules! impl_ntt_without_domain {
                 inout: &mut (impl HostOrDeviceSlice<$inout> + ?Sized),
                 dir: NTTDir,
                 cfg: &NTTConfig<$domain_field>,
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 unsafe {
                     ntt_ffi(
                         inout.as_mut_ptr(),
@@ -330,21 +342,19 @@ macro_rules! impl_ntt {
             }
 
             impl NTTDomain<$field> for $field_config {
-                fn initialize_domain(primitive_root: $field, config: &NTTInitDomainConfig) -> Result<(), eIcicleError> {
+                fn initialize_domain(primitive_root: $field, config: &NTTInitDomainConfig) -> Result<(), IcicleError> {
                     unsafe { initialize_ntt_domain(&primitive_root, config).wrap() }
                 }
 
-                fn release_domain() -> Result<(), eIcicleError> {
+                fn release_domain() -> Result<(), IcicleError> {
                     unsafe { release_ntt_domain().wrap() }
                 }
 
-                fn get_root_of_unity(max_size: u64) -> $field {
+                fn get_root_of_unity(max_size: u64) -> Result<$field, IcicleError> {
                     let mut rou = std::mem::MaybeUninit::<$field>::uninit(); // Prepare uninitialized memory for rou
                     unsafe {
-                        get_root_of_unity(max_size, rou.as_mut_ptr())
-                            .wrap()
-                            .unwrap();
-                        return rou.assume_init();
+                        get_root_of_unity(max_size, rou.as_mut_ptr()).wrap()?;
+                        Ok(rou.assume_init())
                     }
                 }
             }

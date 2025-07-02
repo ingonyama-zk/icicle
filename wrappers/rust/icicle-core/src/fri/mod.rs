@@ -5,14 +5,14 @@ use crate::traits::{FieldConfig, FieldImpl, GenerateRandom};
 use crate::{field::FieldArithmetic, hash::Hasher};
 use fri_proof::FriProofOps;
 use fri_transcript_config::FriTranscriptConfig;
-use icicle_runtime::{config::ConfigExtension, eIcicleError, memory::HostOrDeviceSlice, IcicleStreamHandle};
+use icicle_runtime::{config::ConfigExtension, memory::HostOrDeviceSlice, IcicleError, IcicleStreamHandle};
 
 pub type FriProof<F> = <<F as FieldImpl>::Config as FriMerkleTree<F>>::FriProof;
 
 /// Computes the FRI proof using the given configuration and input data.
 /// # Returns
 /// - `Ok(())` if the FRI proof was successfully computed.
-/// - `Err(eIcicleError)` if an error occurred during proof generation.
+/// - `Err(IcicleError)` if an error occurred during proof generation.
 pub fn fri_merkle_tree_prove<F: FieldImpl>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,
@@ -20,7 +20,7 @@ pub fn fri_merkle_tree_prove<F: FieldImpl>(
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
     merkle_tree_min_layer_to_store: u64,
-) -> Result<FriProof<F>, eIcicleError>
+) -> Result<FriProof<F>, IcicleError>
 where
     <F as FieldImpl>::Config: FriMerkleTree<F>,
 {
@@ -38,14 +38,14 @@ where
 /// # Returns
 /// - `Ok(true)` if the proof is valid.
 /// - `Ok(false)` if the proof is invalid.
-/// - `Err(eIcicleError)` if verification failed due to an error.
+/// - `Err(IcicleError)` if verification failed due to an error.
 pub fn fri_merkle_tree_verify<F: FieldImpl>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,
     fri_proof: &FriProof<F>,
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
-) -> Result<bool, eIcicleError>
+) -> Result<bool, IcicleError>
 where
     <F as FieldImpl>::Config: FriMerkleTree<F>,
 {
@@ -97,7 +97,7 @@ pub trait FriMerkleTree<F: FieldImpl> {
         merkle_tree_leaves_hash: &Hasher,
         merkle_tree_compress_hash: &Hasher,
         merkle_tree_min_layer_to_store: u64,
-    ) -> Result<Self::FriProof, eIcicleError>;
+    ) -> Result<Self::FriProof, IcicleError>;
 
     fn fri_merkle_tree_verify(
         config: &FriConfig,
@@ -105,7 +105,7 @@ pub trait FriMerkleTree<F: FieldImpl> {
         fri_proof: &Self::FriProof,
         merkle_tree_leaves_hash: &Hasher,
         merkle_tree_compress_hash: &Hasher,
-    ) -> Result<bool, eIcicleError>;
+    ) -> Result<bool, IcicleError>;
 }
 
 #[macro_export]
@@ -125,7 +125,7 @@ macro_rules! impl_fri {
                 impl_fri_proof,
                 traits::FieldImpl,
             };
-            use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
+            use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, IcicleError};
 
             impl_fri_proof!($field_prefix, $field, $field_config);
 
@@ -162,9 +162,12 @@ macro_rules! impl_fri {
                     merkle_tree_leaves_hash: &Hasher,
                     merkle_tree_compress_hash: &Hasher,
                     merkle_tree_min_layer_to_store: u64,
-                ) -> Result<FriProof, eIcicleError> {
+                ) -> Result<FriProof, IcicleError> {
                     if input_data.is_on_device() && !input_data.is_on_active_device() {
-                        return Err(eIcicleError::InvalidDevice);
+                        return Err(IcicleError::new(
+                            eIcicleError::InvalidDevice,
+                            "Input is allocated on an inactive device.",
+                        ));
                     }
                     let mut local_cfg = config.clone();
                     if input_data.is_on_device() {
@@ -193,7 +196,7 @@ macro_rules! impl_fri {
                     fri_proof: &FriProof,
                     merkle_tree_leaves_hash: &Hasher,
                     merkle_tree_compress_hash: &Hasher,
-                ) -> Result<bool, eIcicleError> {
+                ) -> Result<bool, IcicleError> {
                     let ffi_transcript_config = FFIFriTranscriptConfig::<$field>::from(fri_transcript_config);
                     let mut valid: bool = false;
                     unsafe {

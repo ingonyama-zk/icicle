@@ -1,4 +1,4 @@
-use icicle_runtime::eIcicleError;
+use icicle_runtime::IcicleError;
 
 use crate::{
     merkle::MerkleProofData,
@@ -11,23 +11,23 @@ where
     F: FieldImpl,
 {
     /// Constructs a new instance of the `FriProof`.
-    fn new() -> Result<Self, eIcicleError>;
+    fn new() -> Result<Self, IcicleError>;
 
     /// Returns the matrix of merkle proofs, where each row corresponds to a query and each column corresponds to a round.
-    fn get_query_proofs(&self) -> Result<Vec<Vec<MerkleProofData<u8>>>, eIcicleError>;
+    fn get_query_proofs(&self) -> Result<Vec<Vec<MerkleProofData<u8>>>, IcicleError>;
 
     /// Returns the final polynomial values.
-    fn get_final_poly(&self) -> Result<Vec<F>, eIcicleError>;
+    fn get_final_poly(&self) -> Result<Vec<F>, IcicleError>;
 
     /// Returns the proof-of-work nonce.
-    fn get_pow_nonce(&self) -> Result<u64, eIcicleError>;
+    fn get_pow_nonce(&self) -> Result<u64, IcicleError>;
 
     /// Creates a new instance of `FriProof` with the given proof data and wraps it in `ManuallyDrop`.
     fn create_with_arguments(
         query_proofs_data: Vec<Vec<MerkleProofData<u8>>>,
         final_poly: Vec<F>,
         pow_nonce: u64,
-    ) -> Result<Self, eIcicleError>;
+    ) -> Result<Self, IcicleError>;
 }
 
 #[macro_export]
@@ -101,10 +101,13 @@ macro_rules! impl_fri_proof {
         }
 
         impl FriProofOps<$field> for FriProof {
-            fn new() -> Result<Self, eIcicleError> {
+            fn new() -> Result<Self, IcicleError> {
                 let handle: FriProofHandle = unsafe { icicle_initialize_fri_proof() };
                 if handle.is_null() {
-                    return Err(eIcicleError::UnknownError);
+                    return Err(IcicleError::new(
+                        eIcicleError::UnknownError,
+                        "Failed to initialize FriProof.",
+                    ));
                 }
                 Ok(Self { handle })
             }
@@ -113,16 +116,16 @@ macro_rules! impl_fri_proof {
                 query_proofs_data: Vec<Vec<MerkleProofData<u8>>>,
                 final_poly: Vec<$field>,
                 pow_nonce: u64,
-            ) -> Result<Self, eIcicleError> {
+            ) -> Result<Self, IcicleError> {
                 let query_proofs = query_proofs_data
                     .into_iter()
                     .map(|query_vec| {
                         query_vec
                             .into_iter()
                             .map(|proof_data| Ok(ManuallyDrop::new(MerkleProof::try_from(proof_data)?)))
-                            .collect::<Result<Vec<ManuallyDrop<MerkleProof>>, eIcicleError>>()
+                            .collect::<Result<Vec<ManuallyDrop<MerkleProof>>, IcicleError>>()
                     })
-                    .collect::<Result<Vec<Vec<ManuallyDrop<MerkleProof>>>, eIcicleError>>()?;
+                    .collect::<Result<Vec<Vec<ManuallyDrop<MerkleProof>>>, IcicleError>>()?;
                 let handle_vectors: Vec<Vec<MerkleProofHandle>> = query_proofs
                     .iter()
                     .map(|x| {
@@ -147,12 +150,15 @@ macro_rules! impl_fri_proof {
                     )
                 };
                 if handle.is_null() {
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Failed to create FriProof.",
+                    ));
                 }
                 Ok(Self { handle })
             }
 
-            fn get_query_proofs(&self) -> Result<Vec<Vec<MerkleProofData<u8>>>, eIcicleError> {
+            fn get_query_proofs(&self) -> Result<Vec<Vec<MerkleProofData<u8>>>, IcicleError> {
                 let mut nof_queries: usize = 0;
                 let mut nof_rounds: usize = 0;
                 unsafe {
@@ -178,7 +184,7 @@ macro_rules! impl_fri_proof {
                 }
             }
 
-            fn get_final_poly(&self) -> Result<Vec<$field>, eIcicleError> {
+            fn get_final_poly(&self) -> Result<Vec<$field>, IcicleError> {
                 let mut nof: usize = 0;
                 unsafe {
                     fri_proof_get_final_poly_size(self.handle, &mut nof).wrap()?;
@@ -188,7 +194,7 @@ macro_rules! impl_fri_proof {
                 }
             }
 
-            fn get_pow_nonce(&self) -> Result<u64, eIcicleError> {
+            fn get_pow_nonce(&self) -> Result<u64, IcicleError> {
                 let mut nonce: u64 = 0;
                 unsafe { fri_proof_get_pow_nonce(self.handle, &mut nonce).wrap_value(nonce) }
             }

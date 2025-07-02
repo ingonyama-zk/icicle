@@ -24,7 +24,7 @@ where
     config
         .ext
         .set_bool(CUDA_NTT_FAST_TWIDDLES_MODE, fast_twiddles_mode);
-    let rou = get_root_of_unity::<F>(max_size);
+    let rou = get_root_of_unity::<F>(max_size).unwrap();
     initialize_domain(rou, &config).unwrap();
 }
 
@@ -105,7 +105,7 @@ where
     for test_size in test_sizes {
         test_utilities::test_set_main_device();
         let small_size: usize = test_size >> 1;
-        let test_size_rou = get_root_of_unity::<F>(test_size as u64);
+        let test_size_rou = get_root_of_unity::<F>(test_size as u64).unwrap();
         let mut scalars: Vec<F> = F::Config::generate_random(small_size);
 
         for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
@@ -173,7 +173,7 @@ where
 {
     let test_sizes = [1 << 9, 1 << 10, 1 << 11, 1 << 13, 1 << 14, 1 << 16];
     for test_size in test_sizes {
-        let test_size_rou = get_root_of_unity::<F>((test_size << 1) as u64);
+        let test_size_rou = get_root_of_unity::<F>((test_size << 1) as u64).unwrap();
         let coset_generators = [test_size_rou, F::Config::generate_random(1)[0]];
         let scalars: Vec<F> = F::Config::generate_random(test_size);
 
@@ -237,7 +237,7 @@ where
     for test_size in test_sizes {
         let coset_generators = [
             F::Config::generate_random(1)[0],
-            get_root_of_unity::<F>(test_size as u64),
+            get_root_of_unity::<F>(test_size as u64).unwrap(),
             F::one(),
         ];
         for coset_gen in coset_generators {

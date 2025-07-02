@@ -1,5 +1,8 @@
 use icicle_runtime::{
-    config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
+    config::ConfigExtension,
+    errors::{eIcicleError, IcicleError},
+    memory::HostOrDeviceSlice,
+    stream::IcicleStreamHandle,
 };
 use std::ffi::c_void;
 
@@ -63,16 +66,20 @@ impl Hasher {
         input: &(impl HostOrDeviceSlice<TInput> + ?Sized),
         cfg: &HashConfig,
         output: &mut (impl HostOrDeviceSlice<TOutput> + ?Sized),
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         // Check if input is on active device
         if input.is_on_device() && !input.is_on_active_device() {
-            eprintln!("input not allocated on the active device");
-            return Err(eIcicleError::InvalidPointer);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidPointer,
+                "input not allocated on the active device",
+            ));
         }
         // Check if output is on active device
         if output.is_on_device() && !output.is_on_active_device() {
-            eprintln!("output not allocated on the active device");
-            return Err(eIcicleError::InvalidPointer);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidPointer,
+                "output not allocated on the active device",
+            ));
         }
 
         let mut local_cfg = cfg.clone();
@@ -85,22 +92,26 @@ impl Hasher {
 
         // Ensure output size is divisible by single hash output size
         if output_byte_len % self.output_size() != 0 {
-            eprintln!(
-                "output size (={}Bytes) must divide single hash output size (={}Bytes)",
-                output_byte_len,
-                self.output_size()
-            );
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "output size (={}Bytes) must divide single hash output size (={}Bytes)",
+                    output_byte_len,
+                    self.output_size()
+                ),
+            ));
         }
         local_cfg.batch = output_byte_len / self.output_size();
 
         // Ensure input size is divisible by batch size inferred from output
         if input_byte_len % local_cfg.batch != 0 {
-            eprintln!(
-                "input size (={}Bytes) must divide batch-size={} (inferred from output size)",
-                input_byte_len, local_cfg.batch,
-            );
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "input size (={}Bytes) must divide batch-size={} (inferred from output size)",
+                    input_byte_len, local_cfg.batch
+                ),
+            ));
         }
 
         // Unsafe block for pointer conversion and calling the hashing function

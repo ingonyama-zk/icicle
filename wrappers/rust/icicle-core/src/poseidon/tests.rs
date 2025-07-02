@@ -67,7 +67,11 @@ where
             &HashConfig::default(),
             HostSlice::from_mut_slice(&mut outputs_main),
         );
-        assert_eq!(err, Err(eIcicleError::InvalidArgument));
+        assert_eq!(
+            err.unwrap_err()
+                .code,
+            eIcicleError::InvalidArgument
+        );
 
         test_utilities::test_set_ref_device();
         let poseidon_hasher_ref = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
@@ -77,7 +81,11 @@ where
             &HashConfig::default(),
             HostSlice::from_mut_slice(&mut outputs_ref),
         );
-        assert_eq!(err, Err(eIcicleError::InvalidArgument));
+        assert_eq!(
+            err.unwrap_err()
+                .code,
+            eIcicleError::InvalidArgument
+        );
     }
 }
 
