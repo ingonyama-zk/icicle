@@ -131,7 +131,7 @@ jobs:
       skip-cpp-all-curves: ${{ matrix.skip-cpp-all-curves }}
       skip-golang-all-curves: ${{ matrix.skip-golang-all-curves }}
       initial-support: ${{ matrix.initial-support }}
-      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing }} == 'true'
+      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing == 'true' }}
       # Changed files flags
       changed_curve: ${{ needs.check-changed-files.outputs.curve }}
       changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
@@ -190,7 +190,7 @@ jobs:
       skip-cpp-all-fields: ${{ matrix.skip-cpp-all-fields }}
       skip-golang-all-fields: ${{ matrix.skip-golang-all-fields }}
       initial-support: ${{ matrix.initial-support }}
-      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing }} == 'true'
+      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing == 'true' }}
       # Changed files flags
       changed_field: ${{ needs.check-changed-files.outputs.field }}
       changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
@@ -246,7 +246,7 @@ jobs:
       skip-cpp: ${{ matrix.skip-cpp }}
       skip-golang: ${{ matrix.skip-golang }}
       initial-support: ${{ matrix.initial-support }}
-      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing }} == 'true'
+      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing == 'true' }}
       # Changed files flags
       changed_hash: ${{ needs.check-changed-files.outputs.hash }}
       changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
@@ -292,7 +292,7 @@ jobs:
       runner: ${{ matrix.runner }}
       backend_branch: ${{ matrix.backend_branch }}
       initial-support: ${{ matrix.initial-support }}
-      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing }} == 'true'
+      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing == 'true' }}
       # Changed files flags
       changed_ring: ${{ needs.check-changed-files.outputs.ring }}
       changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
@@ -332,7 +332,7 @@ jobs:
       runner: ${{ matrix.runner }}
       backend_branch: ${{ matrix.backend_branch }}
       initial-support: ${{ matrix.initial-support }}
-      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing }} == 'true'
+      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing == 'true' }}
       # Changed files flags
       changed_runtime: ${{ needs.check-changed-files.outputs.runtime }}
       changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
@@ -367,7 +367,7 @@ jobs:
     with:
       ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
       runner: '["self-hosted", "Linux", "X64", "icicle"]'
-      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing }} == 'true'
+      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing == 'true' }}
       # Changed files flags
       changed_pqc: ${{ needs.check-changed-files.outputs.pqc }}
       changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
