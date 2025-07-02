@@ -19,7 +19,7 @@ impl_montgomery_convertible!(ScalarField, goldilocks_scalar_convert_montgomery);
 impl_generate_random!(ScalarField, goldilocks_generate_scalars);
 impl_field!(ExtensionField, "goldilocks_extension", EXTENSION_LIMBS, true);
 impl_field_arithmetic!(ExtensionField, "goldilocks_extension", goldilocks_extension);
-impl_montgomery_convertible!(ExtensionField, goldilocks_extension_convert_montgomery);
+impl_montgomery_convertible!(ExtensionField, goldilocks_extension_scalar_convert_montgomery);
 impl_generate_random!(ExtensionField, goldilocks_extension_generate_scalars);
 
 #[cfg(test)]
