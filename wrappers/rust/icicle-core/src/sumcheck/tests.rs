@@ -3,7 +3,7 @@ use crate::hash::Hasher;
 use crate::program::{PreDefinedProgram, ReturningValueProgram};
 use crate::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
 use crate::traits::GenerateRandom;
-use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
+use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice, IntoIcicleSlice};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -91,7 +91,7 @@ where
     /****** Begin CPU Proof ******/
     let mle_poly_hosts = mle_polys
         .iter()
-        .map(|poly| HostSlice::from_slice(poly))
+        .map(|poly| poly.into_slice())
         .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
 
     let sumcheck = SW::new().unwrap();
@@ -162,12 +162,12 @@ where
 
     let mle_poly_hosts = mle_polys
         .iter()
-        .map(|poly| HostSlice::from_slice(poly))
+        .map(|poly| poly.into_slice())
         .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
 
     let mut device_mle_polys = Vec::with_capacity(nof_mle_poly);
     for i in 0..nof_mle_poly {
-        let mut device_slice = DeviceVec::device_malloc(mle_poly_size).unwrap();
+        let mut device_slice = DeviceVec::malloc(mle_poly_size);
         device_slice
             .copy_from_host(mle_poly_hosts[i])
             .unwrap();
@@ -176,7 +176,7 @@ where
 
     let mle_polys_device: Vec<&DeviceSlice<<SW as Sumcheck>::Field>> = device_mle_polys
         .iter()
-        .map(|s| &s[..])
+        .map(|s| s.into_slice())
         .collect();
     let device_mle_polys_slice = mle_polys_device.as_slice();
 
@@ -257,7 +257,7 @@ where
     /****** Begin CPU Proof ******/
     let mle_poly_hosts = mle_polys
         .iter()
-        .map(|poly| HostSlice::from_slice(poly))
+        .map(|poly| poly.into_slice())
         .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
 
     let sumcheck = SW::new().unwrap();
@@ -340,7 +340,7 @@ where
     /****** Begin CPU Proof ******/
     let mle_poly_hosts = mle_polys
         .iter()
-        .map(|poly| HostSlice::from_slice(poly))
+        .map(|poly| poly.into_slice())
         .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
 
     let sumcheck = SW::new().unwrap();

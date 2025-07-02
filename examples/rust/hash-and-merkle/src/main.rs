@@ -7,7 +7,7 @@ use icicle_core::{
     traits::GenerateRandom,
 };
 use icicle_hash::{blake2s::Blake2s, keccak::Keccak256};
-use icicle_runtime::memory::HostSlice;
+use icicle_runtime::memory::{HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
 use std::time::Instant;
 
 /// Command-line argument parser
@@ -43,9 +43,9 @@ fn keccak_hash_example() {
 
     keccak_hasher
         .hash(
-            HostSlice::from_slice(input_str.as_bytes()),
+            input_str.as_bytes().into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut output),
+            output.into_slice_mut(),
         )
         .unwrap();
 
@@ -60,9 +60,9 @@ fn keccak_hash_example() {
 
     keccak_hasher
         .hash(
-            HostSlice::from_slice(&input_field_elements),
+            input_field_elements.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut output),
+            output.into_slice_mut(),
         )
         .unwrap();
 
@@ -82,9 +82,9 @@ fn keccak_hash_example() {
     let start = Instant::now(); // Start timer for performance measurement
     keccak_hasher
         .hash(
-            HostSlice::from_slice(&input_field_elements_batch),
+            input_field_elements_batch.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut output),
+            output.into_slice_mut(),
         )
         .unwrap();
 
@@ -141,7 +141,7 @@ fn merkle_tree_example() {
     // Build the tree with the input data.
     let input = input_string.as_bytes();
     merkle_tree
-        .build(HostSlice::from_slice(&input), &config)
+        .build(input.into_slice(), &config)
         .unwrap();
 
     // Retrieve the root commitment (Merkle root).
@@ -154,7 +154,7 @@ fn merkle_tree_example() {
     // A Merkle proof contains sibling hashes that help verify a specific leaf's inclusion in the tree.
     let merkle_proof = merkle_tree
         .get_proof(
-            HostSlice::from_slice(&input),
+            input.into_slice(),
             3,    /* leaf index */
             true, /* pruned */
             &config,

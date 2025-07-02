@@ -6,7 +6,7 @@ use icicle_core::{
     poseidon2::Poseidon2,
 };
 use icicle_m31::field::ScalarField as M31Field;
-use icicle_runtime::memory::HostSlice;
+use icicle_runtime::memory::{HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
 use rand::{random, Rng};
 use std::convert::TryInto;
 
@@ -34,10 +34,10 @@ fn try_load_and_set_backend_device(args: &Args) {
 }
 
 pub fn hash_test<F: PrimeField>(test_vec: Vec<F>, config: HashConfig, hash: Hasher) {
-    let input_slice = HostSlice::from_slice(&test_vec);
+    let input_slice = test_vec.into_slice();
     let out_init: F = F::zero();
     let mut binding = [out_init];
-    let out_init_slice = HostSlice::from_mut_slice(&mut binding);
+    let out_init_slice = binding.into_slice_mut();
     hash.hash(input_slice, &config, out_init_slice)
         .unwrap();
     println!(
@@ -64,7 +64,7 @@ pub fn compute_binary_tree<F: PrimeField>(
         .chain(std::iter::repeat(&compress).take(tree_height - 1))
         .collect();
     //binary tree
-    let vec_slice: &mut HostSlice<F> = HostSlice::from_mut_slice(&mut test_vec[..]);
+    let vec_slice = test_vec.into_slice_mut();
     let merkle_tree: MerkleTree = MerkleTree::new(&layer_hashes, leaf_size, 0).unwrap();
 
     let start = Instant::now();
@@ -209,7 +209,7 @@ pub fn main() {
     println!("Generated random vector of size {:?}", nof_elements);
     //to use later for merkle proof
     let mut binding = test_vec.clone();
-    let test_vec_slice = HostSlice::from_mut_slice(&mut binding);
+    let test_vec_slice = binding.into_slice_mut();
     //define hash and compression functions (both t-->1 arity)
     let hasher: Hasher = Poseidon2::new::<M31Field>(
         poseidon_state_size // t-->1
