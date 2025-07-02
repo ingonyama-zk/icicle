@@ -712,7 +712,7 @@ jobs:
       if: needs.check-changed-files.outputs.ring == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true')
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
-        ctest --output-on-failure -R "Ring"
+        ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}"
     - name: Run Rust ring tests
       working-directory: ./wrappers/rust/icicle-rings
       if: needs.check-changed-files.outputs.ring == 'true' && needs.check-changed-files.outputs.rust == 'true'
