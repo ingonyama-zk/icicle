@@ -2,7 +2,7 @@ use crate::field::PrimeField;
 use crate::{
     matrix_ops::{matmul, MatrixOps, VecOpsConfig},
     polynomial_ring::PolynomialRing,
-    traits::{Arithmetic, GenerateRandom},
+    traits::GenerateRandom,
 };
 
 use icicle_runtime::{
