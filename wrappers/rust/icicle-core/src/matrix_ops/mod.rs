@@ -11,13 +11,14 @@
 //!
 //! All functions are backend-agnostic and dispatched using [`VecOpsConfig`].
 
+use crate::traits::FieldImpl;
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
 /// Trait defining matrix operations over row-major matrices stored in host or device memory.
-pub trait MatrixOps<T> {
+pub trait MatrixOps<F> {
     /// Performs matrix multiplication: `result = a × b`
     ///
     /// - `a`: shape `(a_rows × a_cols)` (row-major)
@@ -29,14 +30,14 @@ pub trait MatrixOps<T> {
     /// - All buffers may reside in host or device memory
     ///
     fn matmul(
-        a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        a: &(impl HostOrDeviceSlice<F> + ?Sized),
         a_rows: u32,
         a_cols: u32,
-        b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        b: &(impl HostOrDeviceSlice<F> + ?Sized),
         b_rows: u32,
         b_cols: u32,
         cfg: &VecOpsConfig,
-        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     ) -> Result<(), eIcicleError>;
 
     /// Computes the transpose of a matrix in row-major order.
@@ -46,31 +47,32 @@ pub trait MatrixOps<T> {
     ///
     /// Both input and output can reside on host or device memory.
     fn matrix_transpose(
-        input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        input: &(impl HostOrDeviceSlice<F> + ?Sized),
         nof_rows: u32,
         nof_cols: u32,
         cfg: &VecOpsConfig,
-        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     ) -> Result<(), eIcicleError>;
 }
 
 /// Dispatches [`MatrixOps::matmul`] using the type `T`.
 ///
 /// All matrices are expected to be in row-major order.
-pub fn matmul<T>(
-    a: &(impl HostOrDeviceSlice<T> + ?Sized),
+pub fn matmul<F>(
+    a: &(impl HostOrDeviceSlice<F> + ?Sized),
     a_rows: u32,
     a_cols: u32,
-    b: &(impl HostOrDeviceSlice<T> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
     b_rows: u32,
     b_cols: u32,
     cfg: &VecOpsConfig,
-    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    T: MatrixOps<T>,
+    F: FieldImpl,
+    <F as FieldImpl>::Config: MatrixOps<F>,
 {
-    T::matmul(a, a_rows, a_cols, b, b_rows, b_cols, cfg, result)
+    <<F as FieldImpl>::Config as MatrixOps<F>>::matmul(a, a_rows, a_cols, b, b_rows, b_cols, cfg, result)
 }
 
 /// Dispatches [`MatrixOps::matrix_transpose`] using the type `T`.
@@ -84,17 +86,18 @@ pub fn matrix_transpose<T>(
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    T: MatrixOps<T>,
+    T: FieldImpl,
+    <T as FieldImpl>::Config: MatrixOps<T>,
 {
-    T::matrix_transpose(input, nof_rows, nof_cols, cfg, output)
+    <<T as FieldImpl>::Config as MatrixOps<T>>::matrix_transpose(input, nof_rows, nof_cols, cfg, output)
 }
 
-/// Implements matrix Ops any type via FFI
+/// Implements matrix Ops for a field type via FFI
 #[macro_export]
 macro_rules! impl_matrix_ops {
-    ($prefix: literal, $element_type: ty) => {
-        mod labrador {
-            use crate::matrix_ops::labrador;
+    ($prefix: literal, $prefix_ident: ident, $field: ident, $field_config: ident) => {
+        mod $prefix_ident {
+            use crate::matrix_ops::*;
             use icicle_core::{matrix_ops::MatrixOps, vec_ops::VecOpsConfig};
             use icicle_runtime::errors::eIcicleError;
             use icicle_runtime::memory::HostOrDeviceSlice;
@@ -102,37 +105,37 @@ macro_rules! impl_matrix_ops {
             extern "C" {
                 #[link_name = concat!($prefix, "_matmul")]
                 pub(crate) fn matmul_ffi(
-                    a: *const $element_type,
+                    a: *const $field,
                     a_rows: u32,
                     a_cols: u32,
-                    b: *const $element_type,
+                    b: *const $field,
                     b_rows: u32,
                     b_cols: u32,
                     cfg: *const VecOpsConfig,
-                    result: *mut $element_type,
+                    result: *mut $field,
                 ) -> eIcicleError;
 
                 #[link_name = concat!($prefix, "_matrix_transpose")]
                 pub(crate) fn matrix_transpose_ffi(
-                    input: *const $element_type,
+                    input: *const $field,
                     nof_ows: u32,
                     nof_cols: u32,
                     cfg: *const VecOpsConfig,
-                    output: *mut $element_type,
+                    output: *mut $field,
                 ) -> eIcicleError;
 
             }
 
-            impl MatrixOps<$element_type> for $element_type {
+            impl MatrixOps<$field> for $field_config {
                 fn matmul(
-                    a: &(impl HostOrDeviceSlice<$element_type> + ?Sized),
+                    a: &(impl HostOrDeviceSlice<$field> + ?Sized),
                     nof_rows_a: u32,
                     nof_cols_a: u32,
-                    b: &(impl HostOrDeviceSlice<$element_type> + ?Sized),
+                    b: &(impl HostOrDeviceSlice<$field> + ?Sized),
                     nof_rows_b: u32,
                     nof_cols_b: u32,
                     cfg: &VecOpsConfig,
-                    result: &mut (impl HostOrDeviceSlice<$element_type> + ?Sized),
+                    result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 ) -> Result<(), eIcicleError> {
                     if a.len() as u32 != nof_rows_a * nof_cols_a {
                         eprintln!(
@@ -188,7 +191,7 @@ macro_rules! impl_matrix_ops {
                     cfg_clone.is_result_on_device = result.is_on_device();
 
                     unsafe {
-                        labrador::matmul_ffi(
+                        matmul_ffi(
                             a.as_ptr(),
                             nof_rows_a,
                             nof_cols_a,
@@ -203,11 +206,11 @@ macro_rules! impl_matrix_ops {
                 }
 
                 fn matrix_transpose(
-                    input: &(impl HostOrDeviceSlice<$element_type> + ?Sized),
+                    input: &(impl HostOrDeviceSlice<$field> + ?Sized),
                     nof_rows: u32,
                     nof_cols: u32,
                     cfg: &VecOpsConfig,
-                    output: &mut (impl HostOrDeviceSlice<$element_type> + ?Sized),
+                    output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 ) -> Result<(), eIcicleError> {
                     if input.len() as u32 != nof_rows * nof_cols {
                         eprintln!(
@@ -241,7 +244,7 @@ macro_rules! impl_matrix_ops {
                     cfg_clone.is_result_on_device = output.is_on_device();
 
                     unsafe {
-                        labrador::matrix_transpose_ffi(
+                        matrix_transpose_ffi(
                             input.as_ptr(),
                             nof_rows,
                             nof_cols,
@@ -258,7 +261,7 @@ macro_rules! impl_matrix_ops {
 
 #[macro_export]
 macro_rules! impl_matrix_ops_tests {
-    ($test_mod_name:ident, $element_type:ty) => {
+    ($element_type:ident) => {
         use icicle_core::matrix_ops::tests::*;
         use icicle_runtime::test_utilities;
 

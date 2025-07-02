@@ -1,6 +1,5 @@
 use crate::{
     matrix_ops::{matmul, matrix_transpose, MatrixOps, VecOpsConfig},
-    polynomial_ring::PolynomialRing,
     traits::{FieldImpl, GenerateRandom},
 };
 
@@ -17,10 +16,11 @@ use icicle_runtime::{
 ///     (4) a, b, result on host
 ///     (5) a on device; b, result on host
 /// Correctness is already ensured by the C++ tests.
-pub fn check_matmul_device_memory<P: PolynomialRing + MatrixOps<P>>()
+pub fn check_matmul_device_memory<P>()
 where
-    P::Base: FieldImpl,
-    P: GenerateRandom<P>,
+    P: FieldImpl,
+    <P as FieldImpl>::Config: GenerateRandom<P>,
+    <P as FieldImpl>::Config: MatrixOps<P>,
 {
     let cfg = VecOpsConfig::default();
 
@@ -28,8 +28,8 @@ where
     let m = 1 << 6;
     let k = 1 << 4;
     let out_size = n * k;
-    let input_a = P::generate_random(n * m);
-    let input_b = P::generate_random(m * k);
+    let input_a = <P as FieldImpl>::Config::generate_random(n * m);
+    let input_b = <P as FieldImpl>::Config::generate_random(m * k);
 
     let test_single_device = |main_device: bool| {
         if main_device {
@@ -161,17 +161,18 @@ where
 /// and checking that a second transpose restores the original data.
 ///
 /// The test is repeated for both main and reference devices.
-pub fn check_matrix_transpose_device_memory<P: PolynomialRing + MatrixOps<P>>()
+pub fn check_matrix_transpose_device_memory<P>()
 where
-    P::Base: FieldImpl,
-    P: GenerateRandom<P>,
+    P: FieldImpl,
+    <P as FieldImpl>::Config: GenerateRandom<P>,
+    <P as FieldImpl>::Config: MatrixOps<P>,
 {
     let cfg = VecOpsConfig::default();
     let nof_rows = 1 << 5;
     let nof_cols = 1 << 6;
     let matrix_size = nof_rows * nof_cols;
 
-    let input_matrix = P::generate_random(matrix_size);
+    let input_matrix = <P as FieldImpl>::Config::generate_random(matrix_size);
 
     let test_single_device = |main_device: bool| {
         if main_device {
@@ -255,4 +256,47 @@ where
 
     // Final check: both devices should yield identical transpose results
     assert_eq!(device_out, ref_out);
+}
+
+/// Validates that matrix transpose behaves consistently across main and reference devices.
+///
+/// This is a simpler version of check_matrix_transpose_device_memory that focuses on
+/// cross-device consistency rather than memory location combinations.
+pub fn check_matrix_transpose<F>()
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: GenerateRandom<F>,
+    <F as FieldImpl>::Config: MatrixOps<F>,
+{
+    let cfg = VecOpsConfig::default();
+    let batch_size = 3;
+
+    let (r, c): (u32, u32) = (1u32 << 10, 1u32 << 4);
+    let test_size = (r * c * batch_size) as usize;
+
+    let input_matrix = <F as FieldImpl>::Config::generate_random(test_size);
+    let mut result_main = vec![F::zero(); test_size];
+    let mut result_ref = vec![F::zero(); test_size];
+
+    test_utilities::test_set_main_device();
+    matrix_transpose(
+        HostSlice::from_slice(&input_matrix),
+        r,
+        c,
+        &cfg,
+        HostSlice::from_mut_slice(&mut result_main),
+    )
+    .unwrap();
+
+    test_utilities::test_set_ref_device();
+    matrix_transpose(
+        HostSlice::from_slice(&input_matrix),
+        r,
+        c,
+        &cfg,
+        HostSlice::from_mut_slice(&mut result_ref),
+    )
+    .unwrap();
+
+    assert_eq!(result_main, result_ref);
 }

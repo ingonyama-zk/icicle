@@ -1,5 +1,6 @@
+use crate::matrix_ops::{matrix_transpose, MatrixOps};
 use crate::ntt::{NttAlgorithm, Ordering, CUDA_NTT_ALGORITHM, CUDA_NTT_FAST_TWIDDLES_MODE};
-use crate::vec_ops::{transpose_matrix, VecOps, VecOpsConfig};
+use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
     runtime,
@@ -275,10 +276,11 @@ where
 
 // self test, comparing batch ntt to multiple single ntts
 // also testing column batch with transpose against row batch
-pub fn check_ntt_batch<F: FieldImpl>()
+pub fn check_ntt_batch<F>()
 where
+    F: FieldImpl,
     <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
-    <F as FieldImpl>::Config: VecOps<F>,
+    <F as FieldImpl>::Config: MatrixOps<F>,
 {
     test_utilities::test_set_main_device();
     let test_sizes = [1 << 4, 1 << 12];
@@ -338,12 +340,12 @@ where
                         config.batch_size = batch_size as i32;
                         config.columns_batch = true;
                         let mut transposed_input = vec![F::zero(); batch_size * test_size];
-                        transpose_matrix(
+                        matrix_transpose(
                             scalars,
                             nof_rows,
                             nof_cols,
-                            HostSlice::from_mut_slice(&mut transposed_input),
                             &VecOpsConfig::default(),
+                            HostSlice::from_mut_slice(&mut transposed_input),
                         )
                         .unwrap();
                         let mut col_batch_ntt_result = vec![F::zero(); batch_size * test_size];
@@ -354,12 +356,12 @@ where
                             HostSlice::from_mut_slice(&mut col_batch_ntt_result),
                         )
                         .unwrap();
-                        transpose_matrix(
+                        matrix_transpose(
                             HostSlice::from_slice(&col_batch_ntt_result),
                             nof_cols, // inverted since it was transposed above
                             nof_rows,
-                            HostSlice::from_mut_slice(&mut transposed_input),
                             &VecOpsConfig::default(),
+                            HostSlice::from_mut_slice(&mut transposed_input),
                         )
                         .unwrap();
                         assert_eq!(batch_ntt_result[..], *transposed_input.as_slice());

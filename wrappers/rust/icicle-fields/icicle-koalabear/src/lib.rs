@@ -1,4 +1,5 @@
 pub mod field;
+pub mod matrix_ops;
 #[cfg(feature = "fri")]
 pub mod fri;
 #[cfg(feature = "ntt")]

@@ -109,14 +109,6 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
-    fn transpose(
-        input: &(impl HostOrDeviceSlice<F> + ?Sized),
-        nof_rows: u32,
-        nof_cols: u32,
-        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-        cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
-
     fn bit_reverse(
         input: &(impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &VecOpsConfig,
@@ -447,21 +439,6 @@ where
 {
     let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::scalar_mul(a, b, result, &cfg)
-}
-
-pub fn transpose_matrix<F>(
-    input: &(impl HostOrDeviceSlice<F> + ?Sized),
-    nof_rows: u32,
-    nof_cols: u32,
-    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-    cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
-where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
-{
-    let cfg = check_vec_ops_args_transpose(input, nof_rows, nof_cols, output, cfg);
-    <<F as FieldImpl>::Config as VecOps<F>>::transpose(input, nof_rows, nof_cols, output, &cfg)
 }
 
 pub fn bit_reverse<F>(
@@ -837,25 +814,6 @@ macro_rules! impl_vec_ops_field {
                 }
             }
 
-            fn transpose(
-                input: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                nof_rows: u32,
-                nof_cols: u32,
-                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
-                cfg: &VecOpsConfig,
-            ) -> Result<(), eIcicleError> {
-                unsafe {
-                    $field_prefix_ident::matrix_transpose_ffi(
-                        input.as_ptr(),
-                        nof_rows,
-                        nof_cols,
-                        cfg as *const VecOpsConfig,
-                        output.as_mut_ptr(),
-                    )
-                    .wrap()
-                }
-            }
-
             fn bit_reverse(
                 input: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 cfg: &VecOpsConfig,
@@ -1056,11 +1014,7 @@ macro_rules! impl_vec_ops_tests {
                 check_vec_ops_scalars_inv::<$field>(test_size);
             }
 
-            #[test]
-            pub fn test_matrix_transpose() {
-                initialize();
-                check_matrix_transpose::<$field>()
-            }
+
 
             #[test]
             pub fn test_bit_reverse() {
