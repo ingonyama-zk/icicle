@@ -2,6 +2,12 @@ name: Check Changed Files
 
 on:
   workflow_call:
+    inputs:
+      ref:
+        description: "Git reference to checkout"
+        required: false
+        type: string
+        default: ""
     outputs:
       cpp:
         description: "Flag for if C++ code files changed"
@@ -95,6 +101,8 @@ jobs:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        ref: ${{ inputs.ref || github.ref }}
     - name: Get all changed files
       id: changed-files-yaml
       uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c
