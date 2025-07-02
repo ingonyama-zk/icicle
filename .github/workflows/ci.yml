@@ -4,18 +4,77 @@ on:
   pull_request:
     branches:
       - main
+  issue_comment:
+    types:
+      - created
+      - edited
 
 concurrency:
   group:  ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  calculate-conditions:
+    name: Calculate Workflow Conditions
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.conditions.outputs.should-run }}
+      checkout-ref: ${{ steps.conditions.outputs.checkout-ref }}
+      pr-number: ${{ steps.conditions.outputs.pr-number }}
+      conditional-testing: ${{ steps.conditions.outputs.conditional-testing }}
+    steps:
+      - name: Calculate conditions
+        id: conditions
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          
+          # Check if workflow should run
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "should-run=true" >> $GITHUB_OUTPUT
+            echo "checkout-ref=${{ github.ref }}" >> $GITHUB_OUTPUT
+            echo "pr-number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+            echo "conditional-testing=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "issue_comment" ]] && [[ "${{ github.event.issue.pull_request }}" != "" ]]; then
+            echo "Issue PR: ${{ github.event.issue.pull_request }}"
+            echo "Processing issue_comment event on PR"
+            # Convert comment body to lowercase using bash parameter expansion
+            COMMENT_BODY="${{ github.event.comment.body }}"
+            COMMENT_BODY_LOWER="${COMMENT_BODY,,}"
+            echo "Comment body (lowercase): $COMMENT_BODY_LOWER"
+            if [[ "$COMMENT_BODY_LOWER" == *"run full ci"* ]]; then
+              echo "should-run=true" >> $GITHUB_OUTPUT
+              echo "checkout-ref=refs/pull/${{ github.event.issue.number }}/head" >> $GITHUB_OUTPUT
+              echo "pr-number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+              echo "conditional-testing=false" >> $GITHUB_OUTPUT
+            else
+              echo "should-run=false" >> $GITHUB_OUTPUT
+              echo "checkout-ref=${{ github.ref }}" >> $GITHUB_OUTPUT
+              echo "pr-number=" >> $GITHUB_OUTPUT
+              echo "conditional-testing=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "should-run=false" >> $GITHUB_OUTPUT
+            echo "checkout-ref=${{ github.ref }}" >> $GITHUB_OUTPUT
+            echo "pr-number=" >> $GITHUB_OUTPUT
+            echo "conditional-testing=true" >> $GITHUB_OUTPUT
+          fi
+          
+          # Debug: Show what was set
+          echo "Final outputs:"
+          echo "should-run=$(cat $GITHUB_OUTPUT | grep '^should-run=' | cut -d'=' -f2)"
+          echo "checkout-ref=$(cat $GITHUB_OUTPUT | grep '^checkout-ref=' | cut -d'=' -f2)"
+          echo "pr-number=$(cat $GITHUB_OUTPUT | grep '^pr-number=' | cut -d'=' -f2)"
+          echo "conditional-testing=$(cat $GITHUB_OUTPUT | grep '^conditional-testing=' | cut -d'=' -f2)"
 
   spelling-checker:
     name: Check Spelling
     runs-on: ubuntu-latest
+    needs: calculate-conditions
+    if: needs.calculate-conditions.outputs.should-run == 'true'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
       - uses: codespell-project/actions-codespell@fad9339798e1ee3fe979ae0a022c931786a408b8
         with:
           # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-skip
@@ -25,14 +84,21 @@ jobs:
 
   check-changed-files:
     uses: ./.github/workflows/check-changed-files.yml
+    needs: calculate-conditions
+    if: needs.calculate-conditions.outputs.should-run == 'true'
+    with:
+      ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
 
   check-format:
     name: Check Code Format
     runs-on: [self-hosted, Linux, X64, formatter]
-    needs: check-changed-files
+    needs: [calculate-conditions, check-changed-files]
+    if: needs.calculate-conditions.outputs.should-run == 'true'
     steps:
     - name: Checkout
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
     - name: Setup go
       if: needs.check-changed-files.outputs.go == 'true'
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
@@ -56,21 +122,26 @@ jobs:
 
   extract-cuda-backend-branch:
     uses: ./.github/workflows/extract-backend.yml
+    needs: calculate-conditions
+    if: needs.calculate-conditions.outputs.should-run == 'true'
     with:
-      pr-number: ${{ github.event.pull_request.number }}
+      pr-number: ${{ fromJSON(needs.calculate-conditions.outputs.pr-number) }}
       backend-type: cuda
 
   # extract-metal-backend-branch:
   #   uses: ./.github/workflows/extract-backend.yml
+  #   needs: calculate-conditions
+  #   if: needs.calculate-conditions.outputs.should-run == 'true'
   #   with:
-  #     pr-number: ${{ github.event.pull_request.number }}
+  #     pr-number: ${{ needs.calculate-conditions.outputs.pr-number }}
   #     backend-type: metal
   
   test-curve:
     name: Test ${{ matrix.curve.name }} on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
-    # needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
+    if: needs.calculate-conditions.outputs.should-run == 'true'
+    # needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
@@ -138,6 +209,8 @@ jobs:
         fi
     - name: Checkout repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
     - name: Checkout ${{ matrix.backend_upper }} backend
       if: needs.check-changed-files.outputs.curve == 'true'
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -148,9 +221,9 @@ jobs:
         ref: ${{ env.BACKEND_BRANCH }}
     - name: Set feature and build flags
       id: feature_flags
-      if: needs.check-changed-files.outputs.curve == 'true'
+      if: needs.check-changed-files.outputs.curve == 'true' && needs.calculate-conditions.outputs.conditional-testing == 'true'
       run: |
-        FEATURE_FLAGS=""
+        FEATURE_FLAGS="-DDISABLE_ALL_FEATURES=ON"
         CPP_TEST_REGEX="CurveSanity|CurveApi|ModArith|MatrixTest|Symbol|Program"
         RUST_TEST_FEATURES=""
         GO_TEST_BUILD_TAGS="icicle_exclude_all"
@@ -269,7 +342,7 @@ jobs:
       if: needs.check-changed-files.outputs.curve == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -DCURVE=${{ matrix.curve.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
         cmake --build build
 
     - name: Run C++ curve tests
@@ -335,8 +408,9 @@ jobs:
   test-field:
     name: Test ${{ matrix.field.name }} on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
-    # needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
+    if: needs.calculate-conditions.outputs.should-run == 'true'
+    # needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
@@ -407,6 +481,8 @@ jobs:
         fi
     - name: Checkout repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
     - name: Checkout ${{ matrix.backend_upper }} backend
       if: needs.check-changed-files.outputs.field == 'true'
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -418,9 +494,9 @@ jobs:
     
     - name: Set feature and build flags
       id: feature_flags
-      if: needs.check-changed-files.outputs.field == 'true'
+      if: needs.check-changed-files.outputs.field == 'true'  && needs.calculate-conditions.outputs.conditional-testing == 'true'
       run: |
-        FEATURE_FLAGS=""
+        FEATURE_FLAGS="-DDISABLE_ALL_FEATURES=ON"
         CPP_TEST_REGEX="FieldTest|ModArith|MatrixTest|Symbol|Program"
         RUST_TEST_FEATURES=""
         GO_TEST_BUILD_TAGS="icicle_exclude_all"
@@ -507,7 +583,7 @@ jobs:
       if: needs.check-changed-files.outputs.field == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -DFIELD=${{ matrix.field.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
         cmake --build build
 
     - name: Run C++ field tests
@@ -568,7 +644,8 @@ jobs:
   test-ring:
     name: Test ${{ matrix.ring.name }} on ${{ matrix.backend }}
     runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
+    if: needs.calculate-conditions.outputs.should-run == 'true'
     strategy:
       matrix:
         # not supported in Metal yet
@@ -580,6 +657,8 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
     - name: Checkout CUDA backend
       if: needs.check-changed-files.outputs.ring == 'true'
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -590,9 +669,9 @@ jobs:
         ref: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
     - name: Set feature and build flags
       id: feature_flags
-      if: needs.check-changed-files.outputs.ring == 'true'
+      if: needs.check-changed-files.outputs.ring == 'true' && needs.calculate-conditions.outputs.conditional-testing == 'true'
       run: |
-        FEATURE_FLAGS="-DHASH=ON"
+        FEATURE_FLAGS="-DDISABLE_ALL_FEATURES=ON -DHASH=ON"
         CPP_TEST_REGEX="RingTest|ModArith|MatrixTest|Symbol|Program"
         RUST_TEST_FEATURES=""
         GO_TEST_BUILD_TAGS="icicle_exclude_all"
@@ -626,14 +705,14 @@ jobs:
       if: needs.check-changed-files.outputs.ring == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -DRING=${{ matrix.ring.name }} -DCUDA_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DRING=${{ matrix.ring.name }} -DCUDA_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
         cmake --build build
     - name: Run C++ ring tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.ring == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true')
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
-        ctest --output-on-failure -R "Ring"
+        ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}"
     - name: Run Rust ring tests
       working-directory: ./wrappers/rust/icicle-rings
       if: needs.check-changed-files.outputs.ring == 'true' && needs.check-changed-files.outputs.rust == 'true'
@@ -658,8 +737,9 @@ jobs:
   test-hash:
     name: Test hash on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
-    # needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
+    if: needs.calculate-conditions.outputs.should-run == 'true'
+    # needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
@@ -676,11 +756,11 @@ jobs:
           # - backend: metal
           #   backend_upper: METAL
           #   secret_key: METAL_PULL_KEY
-        #     runner: [self-hosted, macOS, ARM64, icicle, metal]
-        #     skip-cpp: .*MerkleTree.*|HashApiTest.KeccakLarge|pow
-        #     skip-rust: "--skip poseidon --skip pow --skip merkle"
-        #     skip-golang: ""
-        #     initial-support: true
+          #     runner: [self-hosted, macOS, ARM64, icicle, metal]
+          #     skip-cpp: .*MerkleTree.*|HashApiTest.KeccakLarge|pow
+          #     skip-rust: "--skip poseidon --skip pow --skip merkle"
+          #     skip-golang: ""
+          #     initial-support: true
     steps:
     - name: Set backend branch name
       run: |
@@ -693,6 +773,8 @@ jobs:
         fi
     - name: Checkout repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
     - name: Checkout ${{ matrix.backend_upper }} backend
       if: needs.check-changed-files.outputs.hash == 'true'
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -743,8 +825,9 @@ jobs:
   test-runtime:
     name: Test runtime on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
-    # needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
+    if: needs.calculate-conditions.outputs.should-run == 'true'
+    # needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
@@ -773,8 +856,10 @@ jobs:
           fi
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
       - name: Checkout ${{ matrix.backend_upper }} backend
-        if: needs.check-changed-files.outputs.field == 'true'
+        if: needs.check-changed-files.outputs.runtime == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
@@ -820,10 +905,13 @@ jobs:
   test-pqc-ml-kem:
     name: Test PQC ML-KEM
     runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, check-format]
+    needs: [calculate-conditions, check-changed-files, check-format]
+    if: needs.calculate-conditions.outputs.should-run == 'true'
     steps:
     - name: Checkout Repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
 
     - name: Build PQC library & tests
       working-directory: ./icicle
