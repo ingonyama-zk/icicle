@@ -189,7 +189,7 @@ where
     assert_eq!(zero.values(), expected.as_slice());
 
     let input = vec![P::Base::one(); P::DEGREE];
-    let poly = P::from_slice(&input);
+    let poly = P::from_slice(&input).unwrap();
     assert_eq!(poly.values(), input.as_slice());
 }
 /// Verifies that flattening a slice of polynomials yields a correctly sized,

@@ -1,6 +1,7 @@
 use crate::traits::FieldImpl;
 use icicle_runtime::memory::reinterpret::{reinterpret_slice, reinterpret_slice_mut};
 use icicle_runtime::memory::HostOrDeviceSlice;
+use icicle_runtime::IcicleError;
 
 /// Trait representing a polynomial ring: R = Base[X] / (X^DEGREE - MODULUS_COEFF)
 pub trait PolynomialRing: Sized + Clone + PartialEq + core::fmt::Debug {
@@ -22,8 +23,8 @@ pub trait PolynomialRing: Sized + Clone + PartialEq + core::fmt::Debug {
     /// Construct a zero polynomial (all values = 0)
     fn zero() -> Self;
 
-    /// Construct from a slice (should panic or assert if length ≠ DEGREE)
-    fn from_slice(values: &[Self::Base]) -> Self;
+    /// Construct from a slice (returns error if length ≠ DEGREE)
+    fn from_slice(values: &[Self::Base]) -> Result<Self, IcicleError>;
 }
 
 /// Reinterprets a slice of polynomials as a flat slice of their base field elements (read-only).
@@ -73,6 +74,7 @@ macro_rules! impl_polynomial_ring {
 
         use icicle_core::polynomial_ring::PolynomialRing;
         use icicle_core::traits::GenerateRandom;
+        use icicle_runtime::{eIcicleError, IcicleError};
 
         impl PolynomialRing for $polyring {
             type Base = $base;
@@ -94,11 +96,16 @@ macro_rules! impl_polynomial_ring {
                 }
             }
 
-            fn from_slice(input: &[Self::Base]) -> Self {
-                assert_eq!(input.len(), Self::DEGREE);
+            fn from_slice(input: &[Self::Base]) -> Result<Self, IcicleError> {
+                if input.len() != Self::DEGREE {
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Input slice has incorrect length",
+                    ));
+                }
                 let mut values = [<$base>::zero(); $degree];
                 values.copy_from_slice(input);
-                Self { values }
+                Ok(Self { values })
             }
         }
 

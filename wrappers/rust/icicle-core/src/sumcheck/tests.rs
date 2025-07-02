@@ -112,14 +112,16 @@ where
     let combine_func = P::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
     let sumcheck_config = SumcheckConfig::default();
     // Generate a proof using the `prove` method.
-    let proof = sumcheck.prove(
-        mle_poly_hosts.as_slice(),
-        mle_poly_size as u64,
-        claimed_sum,
-        combine_func,
-        &config,
-        &sumcheck_config,
-    );
+    let proof = sumcheck
+        .prove(
+            mle_poly_hosts.as_slice(),
+            mle_poly_size as u64,
+            claimed_sum,
+            combine_func,
+            &config,
+            &sumcheck_config,
+        )
+        .unwrap();
     /****** End CPU Proof ******/
 
     /****** Obtain Proof Round Polys ******/
@@ -205,14 +207,16 @@ where
     let combine_func = P::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
     let sumcheck_config = SumcheckConfig::default();
     // Generate a proof using the `prove` method.
-    let proof = sumcheck.prove(
-        device_mle_polys_slice,
-        mle_poly_size as u64,
-        claimed_sum,
-        combine_func,
-        &config,
-        &sumcheck_config,
-    );
+    let proof = sumcheck
+        .prove(
+            device_mle_polys_slice,
+            mle_poly_size as u64,
+            claimed_sum,
+            combine_func,
+            &config,
+            &sumcheck_config,
+        )
+        .unwrap();
     /****** End Device Proof ******/
 
     /****** Obtain Proof Round Polys ******/
@@ -292,14 +296,16 @@ where
     let combine_func = P::new(user_combine, /* nof_parameters = */ 4).unwrap();
     let sumcheck_config = SumcheckConfig::default();
     // Generate a proof using the `prove` method.
-    let proof = sumcheck.prove(
-        mle_poly_hosts.as_slice(),
-        mle_poly_size as u64,
-        claimed_sum,
-        combine_func,
-        &config,
-        &sumcheck_config,
-    );
+    let proof = sumcheck
+        .prove(
+            mle_poly_hosts.as_slice(),
+            mle_poly_size as u64,
+            claimed_sum,
+            combine_func,
+            &config,
+            &sumcheck_config,
+        )
+        .unwrap();
     /****** End CPU Proof ******/
 
     /****** Obtain Proof Round Polys ******/
@@ -381,14 +387,16 @@ where
     let combine_func = P::new(user_combine, /* nof_parameters = */ 4).unwrap();
     let sumcheck_config = SumcheckConfig::default();
     // Generate a proof using the `prove` method.
-    let proof = sumcheck.prove(
-        mle_poly_hosts.as_slice(),
-        mle_poly_size as u64,
-        claimed_sum,
-        combine_func,
-        &config,
-        &sumcheck_config,
-    );
+    let proof = sumcheck
+        .prove(
+            mle_poly_hosts.as_slice(),
+            mle_poly_size as u64,
+            claimed_sum,
+            combine_func,
+            &config,
+            &sumcheck_config,
+        )
+        .unwrap();
     /****** End CPU Proof ******/
 
     let proof_round_polys =

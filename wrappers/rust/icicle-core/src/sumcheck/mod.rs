@@ -197,7 +197,7 @@ pub trait Sumcheck {
         combine_function: impl ReturningValueProgram,
         transcript_config: &SumcheckTranscriptConfig<Self::Field>,
         sumcheck_config: &SumcheckConfig,
-    ) -> Self::Proof;
+    ) -> Result<Self::Proof, IcicleError>;
 
     /// Verifies a Sumcheck proof against a claimed sum.
     ///
@@ -388,13 +388,18 @@ macro_rules! impl_sumcheck {
                     combine_function: impl ReturningValueProgram,
                     transcript_config: &SumcheckTranscriptConfig<$field>,
                     sumcheck_config: &SumcheckConfig,
-                ) -> Self::Proof {
+                ) -> Result<Self::Proof, IcicleError> {
                     let ffi_transcript_config = FFISumcheckTranscriptConfig::from(transcript_config);
 
                     let mut cfg = sumcheck_config.clone();
                     if mle_polys[0].is_on_device() {
                         for mle_poly in mle_polys {
-                            assert!(mle_poly.is_on_active_device());
+                            if !mle_poly.is_on_active_device() {
+                                return Err(IcicleError::new(
+                                    eIcicleError::InvalidArgument,
+                                    "MLE polynomial is not on an active device",
+                                ));
+                            }
                         }
                         cfg.are_inputs_on_device = true;
                     }
@@ -415,8 +420,13 @@ macro_rules! impl_sumcheck {
                             &ffi_transcript_config,
                             &cfg,
                         );
-
-                        Self::Proof { handle: proof_handle }
+                        if proof_handle.is_null() {
+                            return Err(IcicleError::new(
+                                eIcicleError::UnknownError,
+                                "Failed to create Sumcheck proof",
+                            ));
+                        }
+                        Ok(Self::Proof { handle: proof_handle })
                     }
                 }
 

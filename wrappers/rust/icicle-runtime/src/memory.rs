@@ -22,10 +22,12 @@ pub trait HostOrDeviceSlice<T> {
     fn is_empty(&self) -> bool;
 
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), IcicleError> {
-        assert!(
-            self.len() >= src.len(),
-            "In copy, destination has shorter length than source"
-        );
+        if self.len() < src.len() {
+            return Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "In copy, destination has shorter length than source",
+            ));
+        }
 
         let size = size_of::<T>() * src.len();
         unsafe { runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap() }
@@ -36,10 +38,12 @@ pub trait HostOrDeviceSlice<T> {
         src: &(impl HostOrDeviceSlice<T> + ?Sized),
         stream: &IcicleStream,
     ) -> Result<(), IcicleError> {
-        assert!(
-            self.len() >= src.len(),
-            "In copy, destination has shorter length than source"
-        );
+        if self.len() < src.len() {
+            return Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "In copy, destination has shorter length than source",
+            ));
+        }
 
         let size = size_of::<T>() * src.len();
         unsafe {
@@ -268,16 +272,17 @@ impl<T> DeviceSlice<T> {
     }
 
     pub fn copy_from_host(&mut self, val: &HostSlice<T>) -> Result<(), IcicleError> {
-        assert!(
-            self.len() == val.len(),
-            "In copy from host, destination and source slices have different lengths"
-        );
+        if self.len() != val.len() {
+            return Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "In copy from host, destination and source slices have different lengths",
+            ));
+        }
 
         if self.is_empty() {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            eprintln!("not allocated on an active device");
             return Err(IcicleError::new(
                 eIcicleError::CopyFailed,
                 "not allocated on an active device",
@@ -291,16 +296,17 @@ impl<T> DeviceSlice<T> {
     }
 
     pub fn copy_to_host(&self, val: &mut HostSlice<T>) -> Result<(), IcicleError> {
-        assert!(
-            self.len() == val.len(),
-            "In copy to host, destination and source slices have different lengths"
-        );
+        if self.len() != val.len() {
+            return Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "In copy to host, destination and source slices have different lengths",
+            ));
+        }
 
         if self.is_empty() {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            eprintln!("not allocated on an active device");
             return Err(IcicleError::new(
                 eIcicleError::CopyFailed,
                 "not allocated on an active device",
@@ -314,15 +320,16 @@ impl<T> DeviceSlice<T> {
     }
 
     pub fn copy_from_host_async(&mut self, val: &HostSlice<T>, stream: &IcicleStream) -> Result<(), IcicleError> {
-        assert!(
-            self.len() == val.len(),
-            "In copy from host, destination and source slices have different lengths"
-        );
+        if self.len() != val.len() {
+            return Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "In copy from host, destination and source slices have different lengths",
+            ));
+        }
         if self.is_empty() {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            eprintln!("not allocated on an active device");
             return Err(IcicleError::new(
                 eIcicleError::CopyFailed,
                 "not allocated on an active device",
@@ -342,15 +349,16 @@ impl<T> DeviceSlice<T> {
     }
 
     pub fn copy_to_host_async(&self, val: &mut HostSlice<T>, stream: &IcicleStream) -> Result<(), IcicleError> {
-        assert!(
-            self.len() == val.len(),
-            "In copy to host, destination and source slices have different lengths"
-        );
+        if self.len() != val.len() {
+            return Err(IcicleError::new(
+                eIcicleError::CopyFailed,
+                "In copy to host, destination and source slices have different lengths",
+            ));
+        }
         if self.is_empty() {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            eprintln!("not allocated on an active device");
             return Err(IcicleError::new(
                 eIcicleError::CopyFailed,
                 "not allocated on an active device",
@@ -691,7 +699,6 @@ pub mod reinterpret {
         }
 
         fn memset(&mut self, _: u8, _: usize) -> Result<(), IcicleError> {
-            eprintln!("Cannot memset immutable UnifiedSlice");
             Err(IcicleError::new(
                 eIcicleError::CopyFailed,
                 "Cannot memset immutable UnifiedSlice",
@@ -699,7 +706,6 @@ pub mod reinterpret {
         }
 
         fn memset_async(&mut self, _: u8, _: usize, _: &IcicleStream) -> Result<(), IcicleError> {
-            eprintln!("Cannot memset_async immutable UnifiedSlice");
             Err(IcicleError::new(
                 eIcicleError::CopyFailed,
                 "Cannot memset_async immutable UnifiedSlice",
