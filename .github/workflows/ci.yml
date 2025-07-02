@@ -27,36 +27,32 @@ jobs:
         id: conditions
         run: |
           echo "Event name: ${{ github.event_name }}"
-          echo "Issue PR: ${{ github.event.issue.pull_request }}"
           
           # Check if workflow should run
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "Setting should-run=true for pull_request event"
             echo "should-run=true" >> $GITHUB_OUTPUT
             echo "checkout-ref=${{ github.ref }}" >> $GITHUB_OUTPUT
             echo "pr-number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
             echo "conditional-testing=true" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event_name }}" == "issue_comment" ]] && [[ "${{ github.event.issue.pull_request }}" != "" ]]; then
+            echo "Issue PR: ${{ github.event.issue.pull_request }}"
             echo "Processing issue_comment event on PR"
             # Convert comment body to lowercase using bash parameter expansion
             COMMENT_BODY="${{ github.event.comment.body }}"
             COMMENT_BODY_LOWER="${COMMENT_BODY,,}"
             echo "Comment body (lowercase): $COMMENT_BODY_LOWER"
             if [[ "$COMMENT_BODY_LOWER" == *"run full ci"* ]]; then
-              echo "Setting should-run=true for 'run full ci' comment"
               echo "should-run=true" >> $GITHUB_OUTPUT
               echo "checkout-ref=refs/pull/${{ github.event.issue.number }}/head" >> $GITHUB_OUTPUT
               echo "pr-number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
               echo "conditional-testing=false" >> $GITHUB_OUTPUT
             else
-              echo "Setting should-run=false for non-matching comment"
               echo "should-run=false" >> $GITHUB_OUTPUT
               echo "checkout-ref=${{ github.ref }}" >> $GITHUB_OUTPUT
               echo "pr-number=" >> $GITHUB_OUTPUT
               echo "conditional-testing=true" >> $GITHUB_OUTPUT
             fi
           else
-            echo "Setting should-run=false for other events"
             echo "should-run=false" >> $GITHUB_OUTPUT
             echo "checkout-ref=${{ github.ref }}" >> $GITHUB_OUTPUT
             echo "pr-number=" >> $GITHUB_OUTPUT
@@ -69,20 +65,6 @@ jobs:
           echo "checkout-ref=$(cat $GITHUB_OUTPUT | grep '^checkout-ref=' | cut -d'=' -f2)"
           echo "pr-number=$(cat $GITHUB_OUTPUT | grep '^pr-number=' | cut -d'=' -f2)"
           echo "conditional-testing=$(cat $GITHUB_OUTPUT | grep '^conditional-testing=' | cut -d'=' -f2)"
-
-  debug-conditions:
-    name: Debug Conditions
-    runs-on: ubuntu-latest
-    needs: calculate-conditions
-    steps:
-      - name: Show condition values
-        run: |
-          echo "should-run: '${{ needs.calculate-conditions.outputs.should-run }}'"
-          echo "checkout-ref: '${{ needs.calculate-conditions.outputs.checkout-ref }}'"
-          echo "pr-number: '${{ needs.calculate-conditions.outputs.pr-number }}'"
-          echo "conditional-testing: '${{ needs.calculate-conditions.outputs.conditional-testing }}'"
-          echo "should-run == 'true': ${{ needs.calculate-conditions.outputs.should-run == 'true' }}"
-          echo "Event name: ${{ github.event_name }}"
 
   spelling-checker:
     name: Check Spelling
@@ -143,7 +125,7 @@ jobs:
     needs: calculate-conditions
     if: needs.calculate-conditions.outputs.should-run == 'true'
     with:
-      pr-number: ${{ needs.calculate-conditions.outputs.pr-number }}
+      pr-number: ${{ fromJSON(needs.calculate-conditions.outputs.pr-number) }}
       backend-type: cuda
 
   # extract-metal-backend-branch:
