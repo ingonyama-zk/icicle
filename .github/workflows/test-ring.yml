@@ -174,9 +174,9 @@ jobs:
         echo "SKIP_TESTS: $SKIP_TESTS"
 
         if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
-          ctest --output-on-failure -R "Ring" -E "$SKIP_TESTS"
+          ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}" -E "$SKIP_TESTS"
         else
-          ctest --output-on-failure -R "Ring" -E "$SKIP_TESTS"
+          ctest --output-on-failure -E "$SKIP_TESTS"
         fi
 
     - name: Run Rust ring tests
