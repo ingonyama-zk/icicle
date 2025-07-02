@@ -23,6 +23,8 @@ jobs:
     outputs:
       backend-branch: ${{ steps.extract.outputs.backend-branch }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Extract Private Branch from PR Description
         id: extract
         env:
