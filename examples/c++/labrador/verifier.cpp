@@ -455,7 +455,8 @@ bool LabradorVerifier::verify()
 
     // TODO: figure out param using Lattirust code
     // make it 2^32-1 - so that z always decomposes to 2 limbs
-    uint32_t base0 = -1;
+    uint32_t base0 = calc_base0(lab_inst_i.param.r, OP_NORM_BOUND, lab_inst_i.param.beta);
+
     size_t m = base_verifier.lab_inst.param.t_len() + base_verifier.lab_inst.param.g_len() +
                base_verifier.lab_inst.param.h_len();
     auto [mu, nu] = get_rec_param(base_verifier.lab_inst.param.n, m);

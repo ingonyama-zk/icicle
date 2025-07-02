@@ -22,6 +22,7 @@ std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std:
     bool JL_check = false;
     double beta = lab_inst.param.beta;
 
+    // ignore ICICLE errors when elements of p are greater than sqrt(q)
     try {
       ICICLE_CHECK(check_norm_bound(p.data(), JL_out, eNormType::L2, uint64_t(sqrt(JL_out / 2) * beta), {}, &JL_check));
     } catch (const std::exception& e) {
@@ -268,6 +269,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // Step 8: decompose g to g_tilde
   size_t base2 = lab_inst.param.base2;
+  // TODO: Take advantage of g being small and truncate upper limbs
   size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base2);
   std::vector<Rq> g_tilde(l2 * g.size());
   ICICLE_CHECK(decompose(g.data(), g.size(), base2, {}, g_tilde.data(), g_tilde.size()));
@@ -577,7 +579,7 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
 
     // TODO: figure out param using Lattirust code
     // make it 2^32-1 - so that z always decomposes to 2 limbs
-    uint32_t base0 = -1;
+    uint32_t base0 = calc_base0(lab_inst_i.param.r, OP_NORM_BOUND, lab_inst_i.param.beta);
     size_t m =
       base_prover.lab_inst.param.t_len() + base_prover.lab_inst.param.g_len() + base_prover.lab_inst.param.h_len();
     auto [mu, nu] = get_rec_param(base_prover.lab_inst.param.n, m);

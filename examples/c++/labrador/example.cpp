@@ -27,7 +27,9 @@ int main(int argc, char* argv[])
   const size_t n = 1 << 4;
   const size_t r = 1 << 2;
   constexpr size_t d = Rq::d;
-  const std::vector<Rq> S = rand_poly_vec(r * n, 2); // S = 2^12 Zq elements
+  const size_t max_value = 2;
+
+  const std::vector<Rq> S = rand_poly_vec(r * n, max_value); // S = 2^12 Zq elements
   EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
   assert(witness_legit_eq(eq_inst, S));
   ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(n, r, S);
@@ -40,18 +42,21 @@ int main(int argc, char* argv[])
   auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
   std::string ajtai_seed_str = std::to_string(millis);
   std::cout << "Ajtai seed = " << ajtai_seed_str << std::endl;
+
+  double beta = sqrt(max_value * n * r * d);
+  uint32_t base0 = calc_base0(r, OP_NORM_BOUND, beta);
   LabradorParam param{
     r,
     n,
     {reinterpret_cast<const std::byte*>(ajtai_seed_str.data()),
      reinterpret_cast<const std::byte*>(ajtai_seed_str.data()) + ajtai_seed_str.size()},
-    1 << 4,    // kappa
-    1 << 4,    // kappa1
-    1 << 4,    // kappa2,
-    1 << 16,   // base1
-    1 << 16,   // base2
-    1 << 16,   // base3
-    n * r * d, // beta
+    1 << 8, // kappa
+    1 << 8, // kappa1
+    1 << 8, // kappa2,
+    base0,  // base1
+    base0,  // base2
+    base0,  // base3
+    beta,   // beta
   };
   LabradorInstance lab_inst{param};
   lab_inst.add_equality_constraint(eq_inst);

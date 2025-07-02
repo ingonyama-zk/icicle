@@ -55,7 +55,7 @@ std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, const std::byte* 
   //     ICICLE_CHECK(sample_challenge_polynomials(ch_seed.data(), ch_seed.size(), {1, 2}, {31, 10}, challenge[i]));
 
   //     bool norm_bound = false;
-  //     ICICLE_CHECK(check_norm_bound(challenge[i].values, d, eNormType::Lop, 15, {}, &norm_bound));
+  //     ICICLE_CHECK(check_norm_bound(challenge[i].values, d, eNormType::Lop, OP_NORM_BOUND, {}, &norm_bound));
 
   //     if (norm_bound) {
   //       break;
@@ -157,6 +157,9 @@ LabradorInstance prepare_recursion_instance(
   const size_t n = final_const.n;
   constexpr size_t d = Rq::d;
 
+  assert(prev_param.r == r);
+  assert(prev_param.n == n);
+
   std::vector<Tq> u1 = trs.prover_msg.u1;
   std::vector<Tq> u2 = trs.prover_msg.u2;
   std::vector<Tq> challenges_hat = trs.challenges_hat;
@@ -175,19 +178,21 @@ LabradorInstance prepare_recursion_instance(
 
   std::vector<std::byte> new_ajtai_seed(prev_param.ajtai_seed);
   new_ajtai_seed.push_back(std::byte('1'));
+
   // TODO: figure out param using Lattirust code
   // TODO: beta needs to be set correctly for protocol to run
+  double beta = r * n * d * prev_param.beta;
   LabradorParam recursion_param{
     r_prime,
     n_prime,
     new_ajtai_seed,
-    prev_param.kappa,            // kappa
-    prev_param.kappa1,           // kappa1
-    prev_param.kappa2,           // kappa2,
-    prev_param.base1,            // base1
-    prev_param.base2,            // base2
-    prev_param.base3,            // base3
-    r * n * d * prev_param.beta, // beta
+    prev_param.kappa,  // kappa
+    prev_param.kappa1, // kappa1
+    prev_param.kappa2, // kappa2,
+    base0,             // base1
+    base0,             // base2
+    base0,             // base3
+    beta,              // beta
   };
   LabradorInstance recursion_instance{recursion_param};
 
@@ -484,14 +489,4 @@ LabradorInstance prepare_recursion_instance(
   // Step 14: already done
 
   return recursion_instance;
-}
-
-// returns a choice of mu, nu given n, m
-std::pair<size_t, size_t> get_rec_param(size_t n, size_t m)
-{
-  // size_t nu = size_t(pow((double)n, 0.66));
-  // size_t mu = m * nu / n;
-  // TODO set these right:
-  size_t nu = 1 << 3, mu = 1 << 3;
-  return std::make_pair(mu, nu);
 }
