@@ -26,32 +26,21 @@ jobs:
       - name: Calculate conditions and refs
         id: conditions
         run: |
-          # Determine if workflow should run
-          if [[ "${{ github.event_name }}" == "pull_request" ]] || [[ "${{ github.event_name }}" == "issue_comment" && "${{ github.event.issue.pull_request }}" != "" && "${{ contains(lower(github.event.comment.body), 'rerun full ci') }}" == "true" ]]; then
+          # Check if workflow should run
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "should-run=true" >> $GITHUB_OUTPUT
-          else
-            echo "should-run=false" >> $GITHUB_OUTPUT
-          fi
-          
-          # Determine checkout ref
-          if [[ "${{ github.event_name }}" == "issue_comment" && "${{ github.event.issue.pull_request }}" != "" ]]; then
-            echo "checkout-ref=refs/pull/${{ github.event.issue.number }}/head" >> $GITHUB_OUTPUT
-          else
             echo "checkout-ref=${{ github.ref }}" >> $GITHUB_OUTPUT
-          fi
-          
-          # Determine PR number
-          if [[ "${{ github.event_name }}" == "issue_comment" ]]; then
-            echo "pr-number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
-          else
             echo "pr-number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-          fi
-          
-          # Determine if conditional testing should be enabled
-          # Disable for comment triggers (run full suite), enable for regular PR events
-          if [[ "${{ github.event_name }}" == "issue_comment" ]]; then
+            echo "conditional-testing=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "issue_comment" ]] && [[ "${{ github.event.issue.pull_request }}" != "" ]] && [[ "${{ contains(lower(github.event.comment.body), 'run full ci') }}" == "true" ]]; then
+            echo "should-run=true" >> $GITHUB_OUTPUT
+            echo "checkout-ref=refs/pull/${{ github.event.issue.number }}/head" >> $GITHUB_OUTPUT
+            echo "pr-number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
             echo "conditional-testing=false" >> $GITHUB_OUTPUT
           else
+            echo "should-run=false" >> $GITHUB_OUTPUT
+            echo "checkout-ref=${{ github.ref }}" >> $GITHUB_OUTPUT
+            echo "pr-number=" >> $GITHUB_OUTPUT
             echo "conditional-testing=true" >> $GITHUB_OUTPUT
           fi
 
