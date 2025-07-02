@@ -197,12 +197,14 @@ void merge_shuffle(
     ++i;
   }
   for (; i < n; i++) {
-    uint32_t m = 0;
-    for (int b = 0; b < index_bits; b++) {
-      m |= random_bit_iterator.next_bit();
-      if (b < index_bits - 1) { m <<= 1; }
-    }
-    m = m % i;
+    uint32_t m;
+    do {
+      m = 0;
+      for (int b = 0; b < index_bits; b++) {
+        m |= random_bit_iterator.next_bit();
+        if (b < index_bits - 1) { m <<= 1; }
+      }
+    } while (m > i);
     std::swap(array[i], array[m]);
   }
 }
