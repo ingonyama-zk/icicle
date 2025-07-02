@@ -221,6 +221,8 @@ namespace opnorm {
       float abs_val = x.abs();
       if (abs_val > max_norm) max_norm = abs_val;
     }
+    // Since we are interested in low norm polynomials, we need to address for floating point imprecision
+    max_norm += 0.000001f;
     return static_cast<int64_t>(ceilf(max_norm));
   }
 
