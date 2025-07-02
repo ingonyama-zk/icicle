@@ -14,6 +14,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  calculate-conditions:
+    name: Calculate Conditions
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.conditions.outputs.should-run }}
+      checkout-ref: ${{ steps.conditions.outputs.checkout-ref }}
+      pr-number: ${{ steps.conditions.outputs.pr-number }}
+      conditional-testing: ${{ steps.conditions.outputs.conditional-testing }}
+    steps:
+      - name: Calculate conditions and refs
+        id: conditions
+        run: |
+          # Check if workflow should run
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "should-run=true" >> $GITHUB_OUTPUT
+            echo "checkout-ref=${{ github.ref }}" >> $GITHUB_OUTPUT
+            echo "pr-number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+            echo "conditional-testing=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "issue_comment" ]] && [[ "${{ github.event.issue.pull_request }}" != "" ]]; then
+            COMMENT_BODY=${{ github.event.comment.body }}
+            COMMENT_BODY_LOWER=$(echo "$COMMENT_BODY" | tr '[:upper:]' '[:lower:]')
+            if [[ "$COMMENT_BODY_LOWER" == *"run full ci"* ]]; then
+              echo "should-run=true" >> $GITHUB_OUTPUT
+              echo "checkout-ref=refs/pull/${{ github.event.issue.number }}/head" >> $GITHUB_OUTPUT
+              echo "pr-number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+              echo "conditional-testing=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "should-run=false" >> $GITHUB_OUTPUT
+            echo "checkout-ref=${{ github.ref }}" >> $GITHUB_OUTPUT
+            echo "pr-number=" >> $GITHUB_OUTPUT
+            echo "conditional-testing=true" >> $GITHUB_OUTPUT
+          fi
+
   spelling-checker:
     name: Check Spelling
     runs-on: ubuntu-latest
@@ -86,9 +120,11 @@ jobs:
   
   test-curve:
     name: Curves
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
+    if: needs.calculate-conditions.outputs.should-run == 'true'
     uses: ./.github/workflows/test-curve.yml
     with:
+      ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
       backend: ${{ matrix.backend }}
       backend_upper: ${{ matrix.backend_upper }}
       runner: ${{ matrix.runner }}
@@ -97,7 +133,7 @@ jobs:
       skip-cpp-all-curves: ${{ matrix.skip-cpp-all-curves }}
       skip-golang-all-curves: ${{ matrix.skip-golang-all-curves }}
       initial-support: ${{ matrix.initial-support }}
-      enable_conditional_testing: true
+      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing == 'true' }}
       # Changed files flags
       changed_curve: ${{ needs.check-changed-files.outputs.curve }}
       changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
@@ -143,9 +179,11 @@ jobs:
 
   test-field:
     name: Fields
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
+    if: needs.calculate-conditions.outputs.should-run == 'true'
     uses: ./.github/workflows/test-field.yml
     with:
+      ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
       backend: ${{ matrix.backend }}
       backend_upper: ${{ matrix.backend_upper }}
       runner: ${{ matrix.runner }}
@@ -154,7 +192,7 @@ jobs:
       skip-cpp-all-fields: ${{ matrix.skip-cpp-all-fields }}
       skip-golang-all-fields: ${{ matrix.skip-golang-all-fields }}
       initial-support: ${{ matrix.initial-support }}
-      enable_conditional_testing: true
+      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing == 'true' }}
       # Changed files flags
       changed_field: ${{ needs.check-changed-files.outputs.field }}
       changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
@@ -197,9 +235,11 @@ jobs:
 
   test-hash:
     name: Hashes
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
+    if: needs.calculate-conditions.outputs.should-run == 'true'
     uses: ./.github/workflows/test-hash.yml
     with:
+      ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
       backend: ${{ matrix.backend }}
       backend_upper: ${{ matrix.backend_upper }}
       runner: ${{ matrix.runner }}
@@ -208,7 +248,7 @@ jobs:
       skip-cpp: ${{ matrix.skip-cpp }}
       skip-golang: ${{ matrix.skip-golang }}
       initial-support: ${{ matrix.initial-support }}
-      enable_conditional_testing: true
+      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing == 'true' }}
       # Changed files flags
       changed_hash: ${{ needs.check-changed-files.outputs.hash }}
       changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
@@ -244,14 +284,17 @@ jobs:
 
   test-ring:
     name: Rings
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
+    if: needs.calculate-conditions.outputs.should-run == 'true'
     uses: ./.github/workflows/test-ring.yml
     with:
+      ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
       backend: ${{ matrix.backend }}
       backend_upper: ${{ matrix.backend_upper }}
       runner: ${{ matrix.runner }}
       backend_branch: ${{ matrix.backend_branch }}
-      enable_conditional_testing: true
+      initial-support: ${{ matrix.initial-support }}
+      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing == 'true' }}
       # Changed files flags
       changed_ring: ${{ needs.check-changed-files.outputs.ring }}
       changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
@@ -281,15 +324,17 @@ jobs:
 
   test-runtime:
     name: Runtime
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
+    if: needs.calculate-conditions.outputs.should-run == 'true'
     uses: ./.github/workflows/test-runtime.yml
     with:
+      ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
       backend: ${{ matrix.backend }}
       backend_upper: ${{ matrix.backend_upper }}
       runner: ${{ matrix.runner }}
       backend_branch: ${{ matrix.backend_branch }}
       initial-support: ${{ matrix.initial-support }}
-      enable_conditional_testing: true
+      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing == 'true' }}
       # Changed files flags
       changed_runtime: ${{ needs.check-changed-files.outputs.runtime }}
       changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}
@@ -318,11 +363,13 @@ jobs:
 
   test-pqc:
     name: PQC ML-KEM
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
+    if: needs.calculate-conditions.outputs.should-run == 'true'
     uses: ./.github/workflows/test-pqc.yml
     with:
+      ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
       runner: '["self-hosted", "Linux", "X64", "icicle"]'
-      enable_conditional_testing: true
+      enable_conditional_testing: ${{ needs.calculate-conditions.outputs.conditional-testing == 'true' }}
       # Changed files flags
       changed_pqc: ${{ needs.check-changed-files.outputs.pqc }}
       changed_cpp: ${{ needs.check-changed-files.outputs.cpp }}

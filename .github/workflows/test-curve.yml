@@ -3,6 +3,11 @@ name: Test Curve
 on:
   workflow_call:
     inputs:
+      ref:
+        description: 'Git ref to checkout'
+        required: false
+        type: string
+        default: ''
       backend:
         description: 'Backend to test (cuda, metal)'
         required: true
@@ -154,6 +159,8 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        ref: ${{ inputs.ref || github.ref }}
 
     - name: Checkout ${{ inputs.backend_upper }} backend
       if: ${{ inputs.changed_curve == 'true' }}
