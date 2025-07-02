@@ -53,7 +53,7 @@ where
                     .unwrap();
 
                 // convert to mont for testing MSM in this case
-                C::ScalarField::to_mont(&mut scalars_d, &stream);
+                C::ScalarField::to_mont(&mut scalars_d, &stream).unwrap();
 
                 let mut cfg = MSMConfig::default();
                 cfg.stream_handle = *stream;
