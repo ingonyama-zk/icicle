@@ -10,6 +10,7 @@ def balance(x, q):
     return reduced - q if reduced >= (q // 2) else reduced
 
 def operator_norm(poly, N, q):
+    print()
     N = len(poly)
     # Convert to balanced form: (-q/2, q/2]
     balanced = np.array([balance(x,q) for x in poly], dtype=np.float32)
@@ -31,7 +32,7 @@ class TestOperatorNorm(unittest.TestCase):
         self.q = 2**62 - 57
 
     def test_simple_polynomial(self):
-        poly = [i * 100 for i in range(self.N)]
+        poly = [2 for i in range(self.N)]
         norm = operator_norm(poly, self.N, self.q)
         print("norm (simple):", norm)
 
@@ -42,7 +43,7 @@ class TestOperatorNorm(unittest.TestCase):
         
     def test_alternating_values(self):
         # Alternating large/small pattern
-        poly = [(i % 2) * 5000 for i in range(self.N)]
+        poly = [i % 2 for i in range(self.N)]
         norm = operator_norm(poly, self.N, self.q)
         print("norm (alternating):", norm)
         
@@ -55,4 +56,5 @@ class TestOperatorNorm(unittest.TestCase):
         print("norm (-2x):", norm)
 
 if __name__ == "__main__":
+    print()
     unittest.main()

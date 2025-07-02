@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <cmath>
 #include <algorithm>
+#include <cassert>
 
 namespace opnorm {
   // We have to use FixedPoint to get reproducible results on other devices
@@ -30,9 +31,11 @@ namespace opnorm {
         return result;
     }
 
+    // This only works for f in [-2147, 2147]
     HOST_DEVICE static FixedPoint from_int32_t(int32_t f) {
         return FixedPoint{f * static_cast<int32_t>(scale)};
     }
+    // This only works for f in [-2147.0f, 2147.0f]
     HOST_DEVICE static FixedPoint from_float(float f) { return FixedPoint{static_cast<int32_t>(f * scale)}; }
     HOST_DEVICE float to_float() const { return value / scale; }
 
@@ -207,18 +210,17 @@ namespace opnorm {
   inline int64_t operator_norm(const Poly& a)
   {
     CPoly complex_a;
-    for (size_t i = 0; i < N; ++i)
+    for (size_t i = 0; i < N; ++i) {
       complex_a[i] = ComplexFixed{FixedPoint::from_int32_t(a[i]), FixedPoint{0}} * twist[i];
+    }
 
     fft(complex_a, twist, host_wlen_table);
 
     float max_norm = 0.0f;
     for (const auto& x : complex_a) {
-      printf("(%f, %f)\n", x.re.to_float(), x.im.to_float());
       float abs_val = x.abs();
       if (abs_val > max_norm) max_norm = abs_val;
     }
-    printf("max_norm: %f\n", max_norm);
     return static_cast<int64_t>(ceilf(max_norm));
   }
 
