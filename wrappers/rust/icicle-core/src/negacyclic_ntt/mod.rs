@@ -1,4 +1,4 @@
-use crate::ntt::NTTDir;
+pub use crate::ntt::NTTDir;
 use crate::polynomial_ring::PolynomialRing;
 use icicle_runtime::config::ConfigExtension;
 use icicle_runtime::errors::eIcicleError;
