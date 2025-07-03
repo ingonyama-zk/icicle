@@ -121,7 +121,7 @@ pub trait VecOps: PrimeField {
         input: &(impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
         output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     fn bit_reverse_inplace(
         input: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
@@ -136,7 +136,7 @@ pub trait VecOps: PrimeField {
         size_out: u64,
         cfg: &VecOpsConfig,
         output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 #[doc(hidden)]
@@ -317,8 +317,8 @@ pub fn add_scalars<F: VecOps>(
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError> {
-    let cfg = check_vec_ops_args(a, b, result, cfg);
+) -> Result<(), IcicleError> {
+    let cfg = check_vec_ops_args(a, b, result, cfg)?;
     F::add(a, b, result, &cfg)
 }
 
@@ -326,8 +326,8 @@ pub fn accumulate_scalars<F: VecOps>(
     a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError> {
-    let cfg = check_vec_ops_args(a, b, a, cfg);
+) -> Result<(), IcicleError> {
+    let cfg = check_vec_ops_args(a, b, a, cfg)?;
     F::accumulate(a, b, &cfg)
 }
 
@@ -340,7 +340,7 @@ pub fn sub_scalars<F>(
 where
     F: PrimeField + VecOps,
 {
-    let cfg = check_vec_ops_args(a, b, result, cfg);
+    let cfg = check_vec_ops_args(a, b, result, cfg)?;
     F::sub(a, b, result, &cfg)
 }
 
@@ -353,7 +353,7 @@ pub fn mul_scalars<F>(
 where
     F: PrimeField + VecOps,
 {
-    let cfg = check_vec_ops_args(a, b, result, cfg);
+    let cfg = check_vec_ops_args(a, b, result, cfg)?;
     F::mul(a, b, result, &cfg)
 }
 
@@ -367,7 +367,7 @@ where
     F: PrimeField + MixedVecOps<T>,
     T: PrimeField,
 {
-    let cfg = check_vec_ops_args(a, b, result, cfg);
+    let cfg = check_vec_ops_args(a, b, result, cfg)?;
     F::mul(a, b, result, &cfg)
 }
 
@@ -380,7 +380,7 @@ pub fn div_scalars<F>(
 where
     F: PrimeField + VecOps,
 {
-    let cfg = check_vec_ops_args(a, b, result, cfg);
+    let cfg = check_vec_ops_args(a, b, result, cfg)?;
     F::div(a, b, result, &cfg)
 }
 
@@ -392,7 +392,7 @@ pub fn inv_scalars<F>(
 where
     F: PrimeField + VecOps,
 {
-    let cfg = check_vec_ops_args(input, input, output, cfg);
+    let cfg = check_vec_ops_args(input, input, output, cfg)?;
     F::inv(input, output, &cfg)
 }
 
@@ -404,7 +404,7 @@ pub fn sum_scalars<F>(
 where
     F: PrimeField + VecOps,
 {
-    let cfg = check_vec_ops_args_reduction_ops(a, result, cfg);
+    let cfg = check_vec_ops_args_reduction_ops(a, result, cfg)?;
     F::sum(a, result, &cfg)
 }
 
@@ -416,7 +416,7 @@ pub fn product_scalars<F>(
 where
     F: PrimeField + VecOps,
 {
-    let cfg = check_vec_ops_args_reduction_ops(a, result, cfg);
+    let cfg = check_vec_ops_args_reduction_ops(a, result, cfg)?;
     F::product(a, result, &cfg)
 }
 
@@ -429,7 +429,7 @@ pub fn scalar_add<F>(
 where
     F: PrimeField + VecOps,
 {
-    let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
+    let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg)?;
     F::scalar_add(a, b, result, &cfg)
 }
 
@@ -442,7 +442,7 @@ pub fn scalar_sub<F>(
 where
     F: PrimeField + VecOps,
 {
-    let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
+    let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg)?;
     F::scalar_sub(a, b, result, &cfg)
 }
 
@@ -455,7 +455,7 @@ pub fn scalar_mul<F>(
 where
     F: PrimeField + VecOps,
 {
-    let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
+    let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg)?;
     F::scalar_mul(a, b, result, &cfg)
 }
 
@@ -469,7 +469,7 @@ pub fn transpose_matrix<F>(
 where
     F: PrimeField + VecOps,
 {
-    let cfg = check_vec_ops_args_transpose(input, nof_rows, nof_cols, output, cfg);
+    let cfg = check_vec_ops_args_transpose(input, nof_rows, nof_cols, output, cfg)?;
     F::transpose(input, nof_rows, nof_cols, output, &cfg)
 }
 
@@ -481,7 +481,7 @@ pub fn bit_reverse<F>(
 where
     F: PrimeField + VecOps,
 {
-    let cfg = check_vec_ops_args(input, input /*dummy*/, output, cfg);
+    let cfg = check_vec_ops_args(input, input /*dummy*/, output, cfg)?;
     F::bit_reverse(input, &cfg, output)
 }
 
@@ -492,7 +492,7 @@ pub fn bit_reverse_inplace<F>(
 where
     F: PrimeField + VecOps,
 {
-    let cfg = check_vec_ops_args(input, input /*dummy*/, input, cfg);
+    let cfg = check_vec_ops_args(input, input /*dummy*/, input, cfg)?;
     F::bit_reverse_inplace(input, &cfg)
 }
 
@@ -508,7 +508,7 @@ pub fn slice<F>(
 where
     F: PrimeField + VecOps,
 {
-    let cfg = check_vec_ops_args_slice(input, offset, stride, size_in, size_out, output, cfg);
+    let cfg = check_vec_ops_args_slice(input, offset, stride, size_in, size_out, output, cfg)?;
     F::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
@@ -865,7 +865,7 @@ macro_rules! impl_vec_ops_field {
                 input: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 cfg: &VecOpsConfig,
                 output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 unsafe {
                     $field_prefix_ident::bit_reverse_ffi(
                         input.as_ptr(),
@@ -900,7 +900,7 @@ macro_rules! impl_vec_ops_field {
                 size_out: u64,
                 cfg: &VecOpsConfig,
                 output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 unsafe {
                     $field_prefix_ident::slice_ffi(
                         input.as_ptr(),

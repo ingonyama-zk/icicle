@@ -1,6 +1,6 @@
 use icicle_runtime::{
     config::ConfigExtension,
-    errors::{eIcicleError, IcicleError},
+    errors::IcicleError,
     memory::HostOrDeviceSlice,
     stream::IcicleStreamHandle,
 };
@@ -130,9 +130,9 @@ impl NTTInitDomainConfig {
 
 #[doc(hidden)]
 pub trait NTTDomain: PrimeField {
-    fn get_root_of_unity(max_size: u64) -> Self;
-    fn initialize_domain(primitive_root: Self, config: &NTTInitDomainConfig) -> Result<(), eIcicleError>;
-    fn release_domain() -> Result<(), eIcicleError>;
+    fn get_root_of_unity(max_size: u64) -> Result<Self, IcicleError>;
+    fn initialize_domain(primitive_root: Self, config: &NTTInitDomainConfig) -> Result<(), IcicleError>;
+    fn release_domain() -> Result<(), IcicleError>;
 }
 
 #[doc(hidden)]
@@ -142,20 +142,20 @@ pub trait NTT<T>: NTTDomain {
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     fn ntt_inplace_unchecked(
         inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     fn ntt(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         if input.len() != output.len() {
             panic!(
                 "input and output lengths {}; {} do not match",
@@ -183,7 +183,7 @@ pub trait NTT<T>: NTTDomain {
         inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         let mut local_cfg = cfg.clone();
         local_cfg.are_inputs_on_device = inout.is_on_device();
         local_cfg.are_outputs_on_device = inout.is_on_device();
@@ -345,7 +345,7 @@ macro_rules! impl_ntt {
             }
 
             impl NTTDomain for $field {
-                fn initialize_domain(primitive_root: $field, config: &NTTInitDomainConfig) -> Result<(), eIcicleError> {
+                fn initialize_domain(primitive_root: $field, config: &NTTInitDomainConfig) -> Result<(), IcicleError> {
                     unsafe { initialize_ntt_domain(&primitive_root, config).wrap() }
                 }
 

@@ -1,6 +1,6 @@
 use crate::field::PrimeField;
 use crate::traits::Handle;
-use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::errors::IcicleError;
 use std::ffi::c_void;
 use std::marker::Copy;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};

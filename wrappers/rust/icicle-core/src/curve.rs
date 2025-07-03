@@ -1,7 +1,7 @@
 use crate::field::PrimeField;
 use crate::traits::{GenerateRandom, MontgomeryConvertible};
 use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
+use icicle_runtime::{eIcicleError, IcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Sub};
 

@@ -3,7 +3,7 @@ use icicle_core::{
     field::PrimeField, impl_field, impl_field_arithmetic, impl_generate_random, impl_montgomery_convertible,
     vec_ops::VecOpsConfig,
 };
-use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
+use icicle_runtime::{eIcicleError, IcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 use std::fmt::{Debug, Display};
 use std::ops::{Add, Mul, Sub};
 

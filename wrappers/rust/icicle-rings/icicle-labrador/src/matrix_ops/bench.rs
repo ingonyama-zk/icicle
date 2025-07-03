@@ -6,7 +6,7 @@ use std::hint::black_box;
 use icicle_core::{
     matrix_ops::*,
     polynomial_ring::PolynomialRing,
-    traits::{FieldImpl, GenerateRandom},
+    traits::GenerateRandom,
 };
 
 use icicle_runtime::{
@@ -17,7 +17,7 @@ use icicle_runtime::{
 static devices: [&str; 2] = ["ref", "main"];
 // static devices: [&str; 1] = ["ref"];
 
-fn xR_N_R_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom<P>>(c: &mut Criterion) {
+fn xR_N_R_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Criterion) {
     macro_rules! testid {
         () => {
             "256_n_r_battery_N={}_R={}_device={}"
@@ -64,7 +64,7 @@ fn xR_N_R_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom<P>>(c: &mut 
     }
 }
 
-fn x256_n_r_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom<P>>(c: &mut Criterion) {
+fn x256_n_r_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Criterion) {
     macro_rules! testid {
         () => {
             "256_n_r_battery_N={}_R={}_device={}"
@@ -111,7 +111,7 @@ fn x256_n_r_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom<P>>(c: &mu
     }
 }
 
-fn x256_n_1_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom<P>>(c: &mut Criterion) {
+fn x256_n_1_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Criterion) {
     macro_rules! testid {
         () => {
             "256_n_1_battery_N={}_device={}"
@@ -156,7 +156,7 @@ fn x256_n_1_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom<P>>(c: &mu
     }
 }
 
-fn square_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom<P>>(c: &mut Criterion) {
+fn square_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Criterion) {
     macro_rules! testid {
         () => {
             "square_battery_N={}_device={}"

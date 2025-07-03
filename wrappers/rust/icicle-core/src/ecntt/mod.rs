@@ -23,14 +23,14 @@ pub trait ECNTT<T>: PrimeField {
         inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     fn ntt(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         Self::ntt_unchecked(input, dir, cfg, output)
     }
 
@@ -38,7 +38,7 @@ pub trait ECNTT<T>: PrimeField {
         inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         Self::ntt_inplace_unchecked(inout, dir, cfg)
     }
 }
@@ -101,7 +101,7 @@ macro_rules! impl_ecntt {
             use icicle_core::ecntt::ECNTT;
             use icicle_core::impl_ntt_without_domain;
             use icicle_core::ntt::{NTTConfig, NTTDir, NTTInitDomainConfig, NTT};
-            use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+            use icicle_runtime::{eIcicleError, IcicleError, memory::HostOrDeviceSlice};
 
             type ProjectiveType = Projective<$curve>;
             impl_ntt_without_domain!($field_prefix, $field, ECNTT, "_ecntt", ProjectiveType);

@@ -2,18 +2,18 @@
 pub mod tests;
 
 use crate::{field::PrimeField, hash::Hasher};
-use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::errors::IcicleError;
 
 /// Trait to define the behavior of a Poseidon hasher for different field types.
 /// This allows the implementation of Poseidon hashing for various field types that implement `PrimeField`.
 pub trait PoseidonHasher: PrimeField {
     /// Creates a Poseidon hasher with an explicit `input_size` (rate). This is the
     /// low-level constructor that all implementations must provide.
-    fn new_with_input_size(t: u32, domain_tag: Option<&Self>, input_size: u32) -> Result<Hasher, eIcicleError>;
+    fn new_with_input_size(t: u32, domain_tag: Option<&Self>, input_size: u32) -> Result<Hasher, IcicleError>;
 
     /// Convenience constructor that forwards to `new_with_input_size` with
     /// `input_size = 0`, signalling the backend to use a default value.
-    fn new(t: u32, domain_tag: Option<&Self>) -> Result<Hasher, eIcicleError> {
+    fn new(t: u32, domain_tag: Option<&Self>) -> Result<Hasher, IcicleError> {
         Self::new_with_input_size(t, domain_tag, 0)
     }
 }

@@ -262,7 +262,7 @@ macro_rules! impl_sumcheck {
                 FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
             };
             use icicle_core::traits::Handle;
-            use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
+            use icicle_runtime::{eIcicleError, IcicleError, memory::HostOrDeviceSlice};
             use serde::de::{self, Visitor};
             use serde::{Deserialize, Deserializer, Serialize, Serializer};
             use std::ffi::c_void;

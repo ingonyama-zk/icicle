@@ -2,7 +2,7 @@ use crate::field::PrimeField;
 use crate::symbol::Symbol;
 use crate::traits::Handle;
 use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{errors::IcicleError, memory::HostOrDeviceSlice};
 use std::ffi::c_void;
 
 pub type Instruction = u32;

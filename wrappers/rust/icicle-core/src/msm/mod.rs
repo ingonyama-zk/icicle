@@ -1,7 +1,6 @@
 use crate::curve::{Affine, Curve, Projective};
 use icicle_runtime::{
     config::ConfigExtension,
-    eIcicleError,
     errors::IcicleError,
     memory::{DeviceSlice, HostOrDeviceSlice},
     stream::IcicleStreamHandle,
@@ -86,14 +85,14 @@ pub trait MSM<C: Curve> {
         bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
         cfg: &MSMConfig,
         output_bases: &mut DeviceSlice<Affine<C>>,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     fn msm(
         scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
         bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
         cfg: &MSMConfig,
         results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         if bases.len() % (cfg.precompute_factor as usize) != 0 {
             panic!(
                 "Precompute factor {} does not divide the number of bases {}",
@@ -142,7 +141,7 @@ pub trait MSM<C: Curve> {
         points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
         config: &MSMConfig,
         output_bases: &mut DeviceSlice<Affine<C>>,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         assert_eq!(
             output_bases.len(),
             points.len() * (config.precompute_factor as usize),
@@ -176,7 +175,7 @@ pub fn msm<C: Curve + MSM<C>>(
     bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
     cfg: &MSMConfig,
     results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
-) -> Result<(), eIcicleError> {
+) -> Result<(), IcicleError> {
     C::msm(scalars, bases, cfg, results)
 }
 
@@ -203,7 +202,7 @@ pub fn precompute_bases<C: Curve + MSM<C>>(
     points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
     config: &MSMConfig,
     output_bases: &mut DeviceSlice<Affine<C>>,
-) -> Result<(), eIcicleError> {
+) -> Result<(), IcicleError> {
     C::precompute_bases(points, config, output_bases)
 }
 

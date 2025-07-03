@@ -8,7 +8,7 @@ use icicle_runtime::errors::IcicleError;
 pub mod tests;
 
 pub trait Pairing<C1: Curve, C2: Curve, F: PrimeField> {
-    fn pairing(p: &Affine<C1>, q: &Affine<C2>) -> Result<F, eIcicleError>;
+    fn pairing(p: &Affine<C1>, q: &Affine<C2>) -> Result<F, IcicleError>;
 }
 
 pub fn pairing<C1, C2, F>(p: &Affine<C1>, q: &Affine<C2>) -> Result<F, IcicleError>
