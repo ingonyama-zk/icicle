@@ -214,11 +214,6 @@ public:
     }
   }
 
-  static constexpr HOST_DEVICE_INLINE uint64_t get_modulus_u64()
-  {
-    return CONFIG::modulus_u64;
-  }
-
   // return m
   static constexpr HOST_DEVICE_INLINE ff_storage get_m() { return CONFIG::m; }
 

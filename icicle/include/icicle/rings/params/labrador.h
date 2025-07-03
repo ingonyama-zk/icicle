@@ -25,7 +25,6 @@ namespace labrador {
    */
   struct zq_config {
     static constexpr storage<2> modulus = {0xf7000001, 0x3b880000}; ///< q = Pbb * Pkb
-    static constexpr uint64_t modulus_u64 = 0x3b880000f7000001;
     PARAMS(modulus); ///< Defines type aliases and parameters like `limbs_count`
 
     static constexpr storage<2> rou = {0x8be440ed, 0x0309b111}; ///< Root of unity
