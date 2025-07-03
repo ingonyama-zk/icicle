@@ -65,26 +65,12 @@ where
     let norm = 15;
 
     test_utilities::test_set_main_device();
-    challenge_space_polynomials_sampling(
-        &seed,
-        &cfg,
-        ones,
-        twos,
-        norm,
-        HostSlice::from_mut_slice(&mut output_a),
-    )
-    .expect("challenge space polynomials sampling failed");
+    challenge_space_polynomials_sampling(&seed, &cfg, ones, twos, norm, HostSlice::from_mut_slice(&mut output_a))
+        .expect("challenge space polynomials sampling failed");
 
     test_utilities::test_set_ref_device();
-    challenge_space_polynomials_sampling(
-        &seed,
-        &cfg,
-        ones,
-        twos,
-        norm,
-        HostSlice::from_mut_slice(&mut output_b),
-    )
-    .expect("challenge space polynomials sampling failed");
+    challenge_space_polynomials_sampling(&seed, &cfg, ones, twos, norm, HostSlice::from_mut_slice(&mut output_b))
+        .expect("challenge space polynomials sampling failed");
 
     for i in 0..output_size {
         assert_eq!(

@@ -12,14 +12,14 @@ void fast_mode_random_sampling(
   // Use keccak to get deterministic uniform distribution
   auto keccak512 = Keccak512::create();
   const size_t element_size = sizeof(field_t::limbs_storage);
-  const size_t elements_per_hash =  size_t(std::max(keccak512.output_size() / element_size, uint64_t(1)));
+  const size_t elements_per_hash = size_t(std::max(keccak512.output_size() / element_size, uint64_t(1)));
   // To support elements that are larger than 32 bytes
   const size_t hashes_per_element =
     size_t(std::max((element_size + keccak512.output_size() - 1) / keccak512.output_size(), uint64_t(1)));
   const size_t size_per_task =
     (size + RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS - 1) / RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS;
   const size_t total_tasks = (size + size_per_task - 1) / size_per_task;
-  
+
   tf::Taskflow taskflow;
   tf::Executor executor(get_nof_workers(cfg));
   for (uint32_t b = 0; b < cfg.batch_size; ++b) {
@@ -248,11 +248,7 @@ eIcicleError cpu_challenge_space_polynomials_sampling(
   tf::Executor executor(nof_workers);
 
   static const std::unordered_map<field_t, int64_t> balanced_table = {
-    {field_t::one(), 1},
-    {neg_one, -1},
-    {two, 2},
-    {neg_two, -2},
-    {field_t::zero(), 0},
+    {field_t::one(), 1}, {neg_one, -1}, {two, 2}, {neg_two, -2}, {field_t::zero(), 0},
   };
 
   for (size_t poly_idx = 0; poly_idx < size; poly_idx++) {
@@ -286,8 +282,7 @@ eIcicleError cpu_challenge_space_polynomials_sampling(
         }
 
         // Do merge shuffle of 1s and 2s
-        merge_shuffle(
-          output_polynomial->values, ones, twos, std::ceil(std::log2(ones + twos)), random_bit_iterator);
+        merge_shuffle(output_polynomial->values, ones, twos, std::ceil(std::log2(ones + twos)), random_bit_iterator);
         // Do merge shuffle of shuffled 1s and 2s and zeroes
         merge_shuffle(
           output_polynomial->values, ones + twos, Rq::d - ones - twos, std::ceil(std::log2(Rq::d)),

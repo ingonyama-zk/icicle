@@ -22,19 +22,18 @@ namespace opnorm {
     int32_t value;
     static constexpr float scale = 1000000.0f; // 6 decimal places
 
-    HOST_DEVICE static int32_t reduce(int64_t num, int64_t denom) {
-        int32_t result;
-        if (num >= 0)
-            result = static_cast<int32_t>((num + (denom / 2)) / denom);
-        else
-            result = static_cast<int32_t>((num - (denom / 2)) / denom);
-        return result;
+    HOST_DEVICE static int32_t reduce(int64_t num, int64_t denom)
+    {
+      int32_t result;
+      if (num >= 0)
+        result = static_cast<int32_t>((num + (denom / 2)) / denom);
+      else
+        result = static_cast<int32_t>((num - (denom / 2)) / denom);
+      return result;
     }
 
     // This only works for f in [-2147, 2147]
-    HOST_DEVICE static FixedPoint from_int32_t(int32_t f) {
-        return FixedPoint{f * static_cast<int32_t>(scale)};
-    }
+    HOST_DEVICE static FixedPoint from_int32_t(int32_t f) { return FixedPoint{f * static_cast<int32_t>(scale)}; }
     // This only works for f in [-2147.0f, 2147.0f]
     HOST_DEVICE static FixedPoint from_float(float f) { return FixedPoint{static_cast<int32_t>(f * scale)}; }
     HOST_DEVICE float to_float() const { return value / scale; }
@@ -42,13 +41,15 @@ namespace opnorm {
     HOST_DEVICE FixedPoint operator+(const FixedPoint& other) const { return FixedPoint{value + other.value}; }
     HOST_DEVICE FixedPoint operator-(const FixedPoint& other) const { return FixedPoint{value - other.value}; }
     HOST_DEVICE FixedPoint operator-() const { return FixedPoint{-value}; }
-    HOST_DEVICE FixedPoint operator*(const FixedPoint& other) const {
-        int64_t prod = static_cast<int64_t>(value) * other.value;
-        return FixedPoint{reduce(prod, static_cast<int64_t>(scale))};
+    HOST_DEVICE FixedPoint operator*(const FixedPoint& other) const
+    {
+      int64_t prod = static_cast<int64_t>(value) * other.value;
+      return FixedPoint{reduce(prod, static_cast<int64_t>(scale))};
     }
-    HOST_DEVICE FixedPoint operator/(const FixedPoint& other) const {
-        int64_t num = static_cast<int64_t>(value) * static_cast<int64_t>(scale);
-        return FixedPoint{reduce(num, static_cast<int64_t>(other.value))};
+    HOST_DEVICE FixedPoint operator/(const FixedPoint& other) const
+    {
+      int64_t num = static_cast<int64_t>(value) * static_cast<int64_t>(scale);
+      return FixedPoint{reduce(num, static_cast<int64_t>(other.value))};
     }
 
     HOST_DEVICE bool operator>(const FixedPoint& other) const { return value > other.value; }
@@ -61,18 +62,21 @@ namespace opnorm {
 
     HOST_DEVICE ComplexFixed operator+(const ComplexFixed& b) const { return ComplexFixed{(re + b.re), (im + b.im)}; }
     HOST_DEVICE ComplexFixed operator-(const ComplexFixed& b) const { return ComplexFixed{(re - b.re), (im - b.im)}; }
-    HOST_DEVICE ComplexFixed operator*(const ComplexFixed& b) const {
+    HOST_DEVICE ComplexFixed operator*(const ComplexFixed& b) const
+    {
       FixedPoint real = re * b.re - im * b.im;
       FixedPoint imag = re * b.im + im * b.re;
       return ComplexFixed{real, imag};
     }
-    HOST_DEVICE ComplexFixed& operator*=(const ComplexFixed& b) {
+    HOST_DEVICE ComplexFixed& operator*=(const ComplexFixed& b)
+    {
       FixedPoint real = re * b.re - im * b.im;
       im = re * b.im + im * b.re;
       re = real;
       return *this;
     }
-    HOST_DEVICE float abs() const {
+    HOST_DEVICE float abs() const
+    {
       float sum = re.to_float() * re.to_float() + im.to_float() * im.to_float();
       return sqrtf(sum);
     }
@@ -82,79 +86,25 @@ namespace opnorm {
   constexpr double PI = 3.14159265358979323846;
 
   constexpr static const ComplexFixed twist[64] = {
-    {1000000, 0},
-    {998795, 49067},
-    {995184, 98017},
-    {989176, 146730},
-    {980785, 195090},
-    {970031, 242980},
-    {956940, 290284},
-    {941544, 336889},
-    {923879, 382683},
-    {903989, 427555},
-    {881921, 471396},
-    {857728, 514102},
-    {831469, 555570},
-    {803207, 595699},
-    {773010, 634393},
-    {740951, 671558},
-    {707106, 707106},
-    {671558, 740951},
-    {634393, 773010},
-    {595699, 803207},
-    {555570, 831469},
-    {514102, 857728},
-    {471396, 881921},
-    {427555, 903989},
-    {382683, 923879},
-    {336889, 941544},
-    {290284, 956940},
-    {242980, 970031},
-    {195090, 980785},
-    {146730, 989176},
-    {98017, 995184},
-    {49067, 998795},
-    {0, 1000000},
-    {-49067, 998795},
-    {-98017, 995184},
-    {-146730, 989176},
-    {-195090, 980785},
-    {-242980, 970031},
-    {-290284, 956940},
-    {-336889, 941544},
-    {-382683, 923879},
-    {-427555, 903989},
-    {-471396, 881921},
-    {-514102, 857728},
-    {-555570, 831469},
-    {-595699, 803207},
-    {-634393, 773010},
-    {-671558, 740951},
-    {-707106, 707106},
-    {-740951, 671558},
-    {-773010, 634393},
-    {-803207, 595699},
-    {-831469, 555570},
-    {-857728, 514102},
-    {-881921, 471396},
-    {-903989, 427555},
-    {-923879, 382683},
-    {-941544, 336889},
-    {-956940, 290284},
-    {-970031, 242980},
-    {-980785, 195090},
-    {-989176, 146730},
-    {-995184, 98017},
-    {-998795, 49067}
-  };
+    {1000000, 0},      {998795, 49067},   {995184, 98017},   {989176, 146730},  {980785, 195090},  {970031, 242980},
+    {956940, 290284},  {941544, 336889},  {923879, 382683},  {903989, 427555},  {881921, 471396},  {857728, 514102},
+    {831469, 555570},  {803207, 595699},  {773010, 634393},  {740951, 671558},  {707106, 707106},  {671558, 740951},
+    {634393, 773010},  {595699, 803207},  {555570, 831469},  {514102, 857728},  {471396, 881921},  {427555, 903989},
+    {382683, 923879},  {336889, 941544},  {290284, 956940},  {242980, 970031},  {195090, 980785},  {146730, 989176},
+    {98017, 995184},   {49067, 998795},   {0, 1000000},      {-49067, 998795},  {-98017, 995184},  {-146730, 989176},
+    {-195090, 980785}, {-242980, 970031}, {-290284, 956940}, {-336889, 941544}, {-382683, 923879}, {-427555, 903989},
+    {-471396, 881921}, {-514102, 857728}, {-555570, 831469}, {-595699, 803207}, {-634393, 773010}, {-671558, 740951},
+    {-707106, 707106}, {-740951, 671558}, {-773010, 634393}, {-803207, 595699}, {-831469, 555570}, {-857728, 514102},
+    {-881921, 471396}, {-903989, 427555}, {-923879, 382683}, {-941544, 336889}, {-956940, 290284}, {-970031, 242980},
+    {-980785, 195090}, {-989176, 146730}, {-995184, 98017},  {-998795, 49067}};
 
   constexpr static const ComplexFixed host_wlen_table[6] = {
-    { -1000000, 0 }, // len = 2
-    { 0, 1000000 }, // len = 4
-    { 707106, 707106 }, // len = 8
-    { 923879, 382683 }, // len = 16
-    { 980785, 195090 }, // len = 32
-    { 995184, 98017 }, // len = 64
+    {-1000000, 0},    // len = 2
+    {0, 1000000},     // len = 4
+    {707106, 707106}, // len = 8
+    {923879, 382683}, // len = 16
+    {980785, 195090}, // len = 32
+    {995184, 98017},  // len = 64
   };
 
   using Poly = std::array<int64_t, N>;
@@ -226,4 +176,4 @@ namespace opnorm {
     return static_cast<int64_t>(ceilf(max_norm));
   }
 
-} // namespace opnorm_cpu
+} // namespace opnorm

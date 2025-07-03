@@ -6,24 +6,14 @@ namespace icicle {
 
   ICICLE_DISPATCHER_INST(RandomSamplingRingDispatcher, ring_zq_random_sampling, ringZqRandomSamplingImpl);
   extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, random_sampling)(
-    size_t size,
-    bool fast_mode,
-    const std::byte* seed,
-    size_t seed_len,
-    const VecOpsConfig* config,
-    field_t* output)
+    size_t size, bool fast_mode, const std::byte* seed, size_t seed_len, const VecOpsConfig* config, field_t* output)
   {
     return RandomSamplingRingDispatcher::execute(size, fast_mode, seed, seed_len, *config, output);
   }
 
   template <>
   eIcicleError random_sampling(
-    size_t size,
-    bool fast_mode,
-    const std::byte* seed,
-    size_t seed_len,
-    const VecOpsConfig& config,
-    field_t* output)
+    size_t size, bool fast_mode, const std::byte* seed, size_t seed_len, const VecOpsConfig& config, field_t* output)
   {
     return RandomSamplingRingDispatcher::execute(size, fast_mode, seed, seed_len, config, output);
   }
@@ -42,7 +32,8 @@ namespace icicle {
     const VecOpsConfig* config,
     Rq* output)
   {
-    return ChallengeSpacePolynomialsSamplingDispatcher::execute(seed, seed_len, size, ones, twos, norm, *config, output);
+    return ChallengeSpacePolynomialsSamplingDispatcher::execute(
+      seed, seed_len, size, ones, twos, norm, *config, output);
   }
 
   template <>
