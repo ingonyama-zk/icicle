@@ -11,6 +11,7 @@ use icicle_bn254::curve::{CurveCfg, G1Projective, G2CurveCfg, G2Projective, Scal
 
 use clap::Parser;
 use icicle_core::{curve::Curve, msm, traits::GenerateRandom};
+use tokio::task;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -37,7 +38,8 @@ fn try_load_and_set_backend_device(args: &Args) {
     icicle_runtime::set_device(&device).unwrap();
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = Args::parse();
     println!("{:?}", args);
 
@@ -83,8 +85,7 @@ fn main() {
         let scalars_bls12377 = HostSlice::from_slice(&upper_scalars_bls12377[..size]);
 
         println!("Configuring bn254 MSM...");
-        let mut msm_results0 = DeviceVec::<G1Projective>::device_malloc(1).unwrap();
-        let mut msm_results1 = DeviceVec::<G1Projective>::device_malloc(1).unwrap();
+        
         let mut g2_msm_results = DeviceVec::<G2Projective>::device_malloc(1).unwrap();
         let mut stream0 = IcicleStream::create().unwrap();
         let mut stream1 = IcicleStream::create().unwrap();
@@ -106,31 +107,68 @@ fn main() {
         cfg_bls12377.stream_handle = *stream_bls12377;
         cfg_bls12377.is_async = true;
 
-        println!("Executing bn254 MSM on device...");
-        println!("G1 0");
-        let start_time0 = std::time::Instant::now();
-        msm::msm(scalars0, points0, &cfg0, &mut msm_results0[..]).unwrap();
-        println!("G1 0 time: {:?}", start_time0.elapsed());
-        println!("G1 1");
-        let start_time1 = std::time::Instant::now();
-        msm::msm(scalars1, points1, &cfg1, &mut msm_results1[..]).unwrap();
-        println!("G1 1 time: {:?}", start_time1.elapsed());
-        println!("G2");
-        let start_time2 = std::time::Instant::now();
-        msm::msm(scalars, g2_points, &g2_cfg, &mut g2_msm_results[..]).unwrap();
-        println!("G2 time: {:?}", start_time2.elapsed());
-        println!("Executing bls12377 MSM on device...");
-        msm::msm(
-            scalars_bls12377,
-            points_bls12377,
-            &cfg_bls12377,
-            &mut msm_results_bls12377[..],
-        )
-        .unwrap();
 
-        println!("Moving results to host...");
+        // Clone the data for the async tasks to own
+        let points0_owned = upper_points0[..size].to_vec();
+        let scalars0_owned = upper_scalars0[..size].to_vec();
+        let points1_owned = upper_points1[..size].to_vec();
+        let scalars1_owned = upper_scalars1[..size].to_vec();
+
+        // spawn two non-blocking tasks
+        println!("Executing 2 bn254 MSM on device...");
+        let start_time_both = std::time::Instant::now();
+
         let mut msm_host_result0 = vec![G1Projective::zero(); 1];
         let mut msm_host_result1 = vec![G1Projective::zero(); 1];
+
+        let mut msm_host_result0 = vec![G1Projective::zero(); 1];
+        let start_time0 = std::time::Instant::now();
+        let task1 = tokio::task::spawn_blocking(move || {
+            println!("G1 0 - launched!");
+            let task1_start_time = std::time::Instant::now();
+            let points0_slice = HostSlice::from_slice(&points0_owned);
+            let scalars0_slice = HostSlice::from_slice(&scalars0_owned);
+            let mut msm_results0 = DeviceVec::<G1Projective>::device_malloc(1).unwrap();
+            msm::msm(scalars0_slice, points0_slice, &cfg0, &mut msm_results0[..]).unwrap();
+            msm_results0
+            .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result0[..]))
+            .unwrap();
+            println!("bn254 result: {:#?}", msm_host_result0);
+            println!("G1 0 compute time: {:?}", task1_start_time.elapsed());
+        });
+        println!("G1 0 launch time: {:?}", start_time0.elapsed());
+        let mut msm_host_result1 = vec![G1Projective::zero(); 1];
+        let start_time1 = std::time::Instant::now();
+        let task2 = tokio::task::spawn_blocking(move || {
+            println!("G1 1 - launched!");
+            let task2_start_time = std::time::Instant::now();
+            let points1_slice = HostSlice::from_slice(&points1_owned);
+            let scalars1_slice = HostSlice::from_slice(&scalars1_owned);
+
+            let mut msm_results1 = DeviceVec::<G1Projective>::device_malloc(1).unwrap();
+            msm::msm(scalars1_slice, points1_slice, &cfg1, &mut msm_results1[..]).unwrap();
+            msm_results1
+            .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result1[..]))
+            .unwrap();
+            println!("bn254 result: {:#?}", msm_host_result1);
+            println!("G1 1 compute time: {:?}", task2_start_time.elapsed());
+        });
+        println!("G1 1 launch time: {:?}", start_time1.elapsed());
+        println!("G2");
+        let start_time2 = std::time::Instant::now();
+
+
+        println!("Awaiting....!");
+        // await both
+        let (result1, result2) = tokio::join!(task1, task2);
+
+        // unwrap their results (handle panics)
+        let result1 = result1.unwrap();
+        let result2 = result2.unwrap();
+
+        println!("Moving results to host... after {:?}", start_time_both.elapsed());
+
+
         let mut g2_msm_host_result = vec![G2Projective::zero(); 1];
         let mut msm_host_result_bls12377 = vec![BLS12377G1Projective::zero(); 1];
 
@@ -140,14 +178,10 @@ fn main() {
         stream1
             .synchronize()
             .unwrap();
-        msm_results0
-            .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result0[..]))
-            .unwrap();
-        msm_results1
-            .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result1[..]))
-            .unwrap();
-        println!("bn254 result: {:#?}", msm_host_result0);
-        println!("bn254 result: {:#?}", msm_host_result1);
+
+
+        // 
+        // 
 
         g2_stream
             .synchronize()

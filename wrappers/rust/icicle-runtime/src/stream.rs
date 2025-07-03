@@ -11,6 +11,7 @@ pub struct IcicleStream {
     pub handle: IcicleStreamHandle,
 }
 
+unsafe impl Send for IcicleStream {}
 unsafe impl Sync for IcicleStream {}
 
 impl IcicleStream {

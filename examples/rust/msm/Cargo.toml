@@ -9,6 +9,7 @@ icicle-core = { path = "../../../wrappers/rust/icicle-core" }
 icicle-bn254 = { path = "../../../wrappers/rust/icicle-curves/icicle-bn254" }
 icicle-bls12-377 = { path = "../../../wrappers/rust/icicle-curves/icicle-bls12-377" }
 clap = { version = "<=4.4.12", features = ["derive"] }
+tokio = {version = "1.46.0", features = ["full"]}
 
 [features]
 cuda = [

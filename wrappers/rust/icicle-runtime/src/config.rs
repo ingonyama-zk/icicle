@@ -17,6 +17,9 @@ extern "C" {
     fn clone_config_extension(ext: *const c_void) -> *mut c_void;
 }
 
+unsafe impl Send for ConfigExtension {}
+unsafe impl Sync for ConfigExtension {}
+
 impl ConfigExtension {
     pub fn new() -> Self {
         unsafe {

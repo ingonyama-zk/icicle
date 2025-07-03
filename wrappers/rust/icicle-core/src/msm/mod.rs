@@ -48,6 +48,9 @@ pub struct MSMConfig {
     pub ext: ConfigExtension,
 }
 
+unsafe impl Send for MSMConfig {}
+unsafe impl Sync for MSMConfig {}
+
 // backend specific options
 pub const CUDA_MSM_LARGE_BUCKET_FACTOR: &str = "large_bucket_factor";
 pub const CUDA_MSM_IS_BIG_TRIANGLE: &str = "is_big_triangle";
