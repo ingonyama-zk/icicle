@@ -20,7 +20,7 @@ pub mod tests;
 ///
 /// This layout is consistent for both scalar fields (e.g. `Zq`) and polynomial rings (e.g. `Rq`),
 /// where the digit decomposition is applied element-wise to the entire input slice.
-pub trait BalancedDecomposition: PolynomialRing {
+pub trait BalancedDecomposition<T> {
     /// Computes the number of balanced base-b digits required to represent a field element.
     fn count_digits(base: u32) -> u32;
 
@@ -28,8 +28,8 @@ pub trait BalancedDecomposition: PolynomialRing {
     ///
     /// The output buffer must have length `input.len() * count_digits(base)`.
     fn decompose(
-        input: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         base: u32,
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
@@ -38,33 +38,39 @@ pub trait BalancedDecomposition: PolynomialRing {
     ///
     /// The input buffer must have length `output.len() * count_digits(base)`.
     fn recompose(
-        input: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         base: u32,
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 }
 
 // Public floating functions around the trait
-pub fn count_digits<T: PolynomialRing + BalancedDecomposition>(base: u32) -> u32 {
+pub fn count_digits<T: PolynomialRing + BalancedDecomposition<T>>(base: u32) -> u32 {
     T::count_digits(base)
 }
 
-pub fn decompose<T: BalancedDecomposition>(
+pub fn decompose<T: BalancedDecomposition<T>>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     base: u32,
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError> {
+) -> Result<(), eIcicleError>
+where
+    T: BalancedDecomposition<T>,
+{
     T::decompose(input, output, base, cfg)
 }
 
-pub fn recompose<T: BalancedDecomposition>(
+pub fn recompose<T: BalancedDecomposition<T>>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     base: u32,
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError> {
+) -> Result<(), eIcicleError>
+where
+    T: BalancedDecomposition<T>,
+{
     T::recompose(input, output, base, cfg)
 }
 
@@ -120,7 +126,7 @@ macro_rules! impl_balanced_decomposition {
             Ok(())
         }
 
-        impl BalancedDecomposition for $ring_type {
+        impl BalancedDecomposition<$ring_type> for $ring_type {
             fn count_digits(base: u32) -> u32 {
                 unsafe { balanced_decomposition_nof_digits(base) }
             }
