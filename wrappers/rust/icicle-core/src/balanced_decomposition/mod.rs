@@ -1,14 +1,26 @@
-use crate::{field::PrimeField, vec_ops::VecOpsConfig};
+use crate::{polynomial_ring::PolynomialRing, vec_ops::VecOpsConfig};
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
 /// Balanced base decomposition API for ring elements.
 ///
-/// This trait allows elements in a finite field/ring to be decomposed into a sequence of
-/// digits in a balanced base-b representation (digits in the range [-b/2, b/2)),
-/// and later recomposed back into the original field element.
-pub trait BalancedDecomposition: PrimeField {
+/// This trait allows elements in a ring (e.g. finite fields, polynomial rings) to be
+/// decomposed into a sequence of digits in a balanced base-b representation
+/// (digits in the range [-b/2, b/2)), and later recomposed back into the original value.
+///
+/// ### Output layout:
+/// For an input slice of `n` elements and digit count `d = count_digits(base)`:
+///
+/// - The output vector has length `n * d`.
+/// - Digits are grouped **by digit index**, not by element:
+///     - The first `n` entries are the **first digit** of all elements.
+///     - The next `n` entries are the **second digit** of all elements.
+///     - And so on, until all `d` digits are emitted.
+///
+/// This layout is consistent for both scalar fields (e.g. `Zq`) and polynomial rings (e.g. `Rq`),
+/// where the digit decomposition is applied element-wise to the entire input slice.
+pub trait BalancedDecomposition: PolynomialRing {
     /// Computes the number of balanced base-b digits required to represent a field element.
     fn count_digits(base: u32) -> u32;
 
@@ -34,11 +46,11 @@ pub trait BalancedDecomposition: PrimeField {
 }
 
 // Public floating functions around the trait
-pub fn count_digits<T: PrimeField + BalancedDecomposition>(base: u32) -> u32 {
+pub fn count_digits<T: PolynomialRing + BalancedDecomposition>(base: u32) -> u32 {
     T::count_digits(base)
 }
 
-pub fn decompose<T: PrimeField + BalancedDecomposition>(
+pub fn decompose<T: BalancedDecomposition>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     base: u32,
@@ -47,7 +59,7 @@ pub fn decompose<T: PrimeField + BalancedDecomposition>(
     T::decompose(input, output, base, cfg)
 }
 
-pub fn recompose<T: PrimeField + BalancedDecomposition>(
+pub fn recompose<T: BalancedDecomposition>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     base: u32,
@@ -108,7 +120,7 @@ macro_rules! impl_balanced_decomposition {
             Ok(())
         }
 
-        impl BalancedDecomposition for $field_type {
+        impl BalancedDecomposition for $ring_type {
             fn count_digits(base: u32) -> u32 {
                 unsafe { balanced_decomposition_nof_digits(base) }
             }
