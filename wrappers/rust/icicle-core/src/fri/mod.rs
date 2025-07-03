@@ -12,7 +12,7 @@ pub type FriProof<F> = <F as FriMerkleTree<F>>::FriProof;
 /// Computes the FRI proof using the given configuration and input data.
 /// # Returns
 /// - `Ok(())` if the FRI proof was successfully computed.
-/// - `Err(eIcicleError)` if an error occurred during proof generation.
+/// - `Err(IcicleError)` if an error occurred during proof generation.
 pub fn fri_merkle_tree_prove<F: PrimeField>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,
@@ -38,7 +38,7 @@ where
 /// # Returns
 /// - `Ok(true)` if the proof is valid.
 /// - `Ok(false)` if the proof is invalid.
-/// - `Err(eIcicleError)` if verification failed due to an error.
+/// - `Err(IcicleError)` if verification failed due to an error.
 pub fn fri_merkle_tree_verify<F: PrimeField>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,

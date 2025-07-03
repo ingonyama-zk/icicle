@@ -23,14 +23,14 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
         len: usize,
         is_into: bool,
         config: &VecOpsConfig,
-    ) -> eIcicleError;
+    ) -> Result<(), IcicleError>;
     #[doc(hidden)]
     fn convert_projective_montgomery(
         points: *mut Projective<Self>,
         len: usize,
         is_into: bool,
         config: &VecOpsConfig,
-    ) -> eIcicleError;
+    ) -> Result<(), IcicleError>;
     #[doc(hidden)]
     fn add(point1: Projective<Self>, point2: Projective<Self>) -> Projective<Self>;
     #[doc(hidden)]
@@ -157,7 +157,7 @@ impl<C: Curve> MontgomeryConvertible for Affine<C> {
         config.is_a_on_device = values.is_on_device();
         config.is_async = !stream.is_null();
         config.stream_handle = stream.into();
-        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &config).wrap()
+        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &config)
     }
 
     fn from_mont(
@@ -174,7 +174,7 @@ impl<C: Curve> MontgomeryConvertible for Affine<C> {
         config.is_a_on_device = values.is_on_device();
         config.is_async = !stream.is_null();
         config.stream_handle = stream.into();
-        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, &config).wrap()
+        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, &config)
     }
 }
 
@@ -190,7 +190,7 @@ impl<C: Curve> MontgomeryConvertible for Projective<C> {
         config.is_a_on_device = values.is_on_device();
         config.is_async = !stream.is_null();
         config.stream_handle = stream.into();
-        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &config).wrap()
+        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &config)
     }
 
     fn from_mont(
@@ -207,7 +207,7 @@ impl<C: Curve> MontgomeryConvertible for Projective<C> {
         config.is_a_on_device = values.is_on_device();
         config.is_async = !stream.is_null();
         config.stream_handle = stream.into();
-        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, &config).wrap()
+        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, &config)
     }
 }
 
@@ -253,7 +253,7 @@ macro_rules! impl_curve {
         pub type $projective_type = Projective<$curve>;
 
         mod $curve_prefix_ident {
-            use super::{eIcicleError, $affine_type, $projective_type, $scalar_field, IcicleStream, VecOpsConfig};
+            use super::{eIcicleError, IcicleError, $affine_type, $projective_type, $scalar_field, IcicleStream, VecOpsConfig};
 
             extern "C" {
                 #[link_name = concat!($curve_prefix, "_projective_eq")]
@@ -293,7 +293,7 @@ macro_rules! impl_curve {
                     is_into: bool,
                     config: &VecOpsConfig,
                     output: *mut $affine_type,
-                ) -> eIcicleError;
+                ) -> Result<(), IcicleError>;
                 #[link_name = concat!($curve_prefix, "_projective_convert_montgomery")]
                 pub(crate) fn _convert_projective_montgomery(
                     input: *const $projective_type,
@@ -301,7 +301,7 @@ macro_rules! impl_curve {
                     is_into: bool,
                     config: &VecOpsConfig,
                     output: *mut $projective_type,
-                ) -> eIcicleError;
+                ) -> Result<(), IcicleError>;
             }
         }
 
@@ -383,7 +383,7 @@ macro_rules! impl_curve {
                 len: usize,
                 is_into: bool,
                 config: &VecOpsConfig,
-            ) -> eIcicleError {
+            ) -> Result<(), IcicleError> {
                 unsafe { $curve_prefix_ident::_convert_affine_montgomery(points, len, is_into, &config, points) }
             }
 
@@ -392,7 +392,7 @@ macro_rules! impl_curve {
                 len: usize,
                 is_into: bool,
                 config: &VecOpsConfig,
-            ) -> eIcicleError {
+            ) -> Result<(), IcicleError> {
                 unsafe { $curve_prefix_ident::_convert_projective_montgomery(points, len, is_into, &config, points) }
             }
 

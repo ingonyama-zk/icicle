@@ -70,7 +70,7 @@ pub trait JLProjectionPolyRing<P: PolynomialRing> {
 ///
 /// # Returns
 /// - `Ok(())` if the projection succeeded.
-/// - `Err(eIcicleError)` if an error occurred (e.g., invalid dimensions or device mismatch).
+/// - `Err(IcicleError)` if an error occurred (e.g., invalid dimensions or device mismatch).
 pub fn jl_projection<T>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     seed: &[u8],
@@ -104,7 +104,7 @@ where
 ///
 /// # Returns
 /// - `Ok(())` if the rows were generated successfully.
-/// - `Err(eIcicleError)` if an error occurred (e.g., dimension mismatch or backend failure).
+/// - `Err(IcicleError)` if an error occurred (e.g., dimension mismatch or backend failure).
 pub fn get_jl_matrix_rows<T>(
     seed: &[u8],
     row_size: usize,
@@ -144,7 +144,7 @@ where
 ///
 /// # Returns
 /// - `Ok(())` if successful.
-/// - `Err(eIcicleError)` if an error occurs during generation (e.g., backend/device issues).
+/// - `Err(IcicleError)` if an error occurs during generation (e.g., backend/device issues).
 pub fn get_jl_matrix_rows_as_polyring<P>(
     seed: &[u8],
     row_size: usize,

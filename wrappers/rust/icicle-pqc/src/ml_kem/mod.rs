@@ -20,7 +20,7 @@ mod tests;
 ///
 /// # Returns
 /// - `Ok(())` on success.
-/// - `Err(eIcicleError)` if the operation fails.
+/// - `Err(IcicleError)` if the operation fails.
 pub fn keygen<P: KyberParams>(
     entropy: &(impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × 64 bytes
     config: &MlKemConfig,
@@ -44,7 +44,7 @@ pub fn keygen<P: KyberParams>(
 ///
 /// # Returns
 /// - `Ok(())` on success.
-/// - `Err(eIcicleError)` if the operation fails.
+/// - `Err(IcicleError)` if the operation fails.
 pub fn encapsulate<P: KyberParams>(
     message: &(impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × 32 bytes
     public_keys: &(impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × PUBLIC_KEY_BYTES

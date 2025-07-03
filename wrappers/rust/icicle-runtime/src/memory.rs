@@ -402,10 +402,7 @@ impl<T> DeviceVec<T> {
         }
 
         let mut device_ptr: *mut c_void = std::ptr::null_mut();
-        let error = unsafe { runtime::icicle_malloc(&mut device_ptr, size) };
-        if error != eIcicleError::Success {
-            return Err(IcicleError::new(error, "device malloc failed"));
-        }
+        unsafe { runtime::icicle_malloc(&mut device_ptr, size).wrap_err_msg("device malloc failed")? };
 
         unsafe {
             Ok(Self(ManuallyDrop::new(Box::from_raw(from_raw_parts_mut(
