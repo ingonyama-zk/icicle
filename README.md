@@ -44,10 +44,10 @@ We believe that ICICLE will be a cornerstone in the acceleration of ZKPs:
 This guide will help you get started with ICICLE in C++, Rust, and Go.
 
 > [!NOTE]
-> **Developers**: We highly recommend reading our [documentation](https://dev.ingonyama.com/) for a comprehensive explanation of ICICLE’s capabilities.
+> **Developers**: We highly recommend reading our [documentation](https://dev.ingonyama.com/) for a comprehensive explanation of ICICLE's capabilities.
 
 > [!TIP]
-> Try out ICICLE by running some [examples] available in C++, Rust, and Go bindings. Check out our install-and-use examples in [C++](https://github.com/ingonyama-zk/icicle/tree/main/examples/c%2B%2B/install-and-use-icicle), [Rust](https://github.com/ingonyama-zk/icicle/tree/main/examples/rust/install-and-use-icicle) and [Go](TODO)
+> Try out ICICLE by running some [examples] available in C++, Rust, and Go bindings. Check out our install-and-use examples in [C++](https://github.com/ingonyama-zk/icicle/tree/main/examples/c%2B%2B/install-and-use-icicle), [Rust](https://github.com/ingonyama-zk/icicle/tree/main/examples/rust/install-and-use-icicle) and [Go](https://github.com/ingonyama-zk/icicle/tree/main/examples/golang/install-and-use-icicle)
 
 ### Prerequisites
 
