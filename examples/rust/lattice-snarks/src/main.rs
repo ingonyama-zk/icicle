@@ -1,5 +1,5 @@
 use clap::Parser;
-use rand::Rng;
+use rand::{Rng, RngCore};
 use std::time::Instant;
 
 use icicle_core::{
@@ -7,13 +7,14 @@ use icicle_core::{
     ntt::NTTDir,
     polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut, PolynomialRing},
     random_sampling,
+    random_sampling::{challenge_space_polynomials_sampling, ChallengeSpacePolynomialsSampling},
     traits::{Arithmetic, FieldImpl, GenerateRandom},
     vec_ops,
     vec_ops::{poly_vecops, VecOpsConfig},
 };
 use icicle_labrador::{
-    polynomial_ring::PolyRing,
-    ring::{ScalarCfg as ZqCfg, ScalarRing as Zq},
+    polynomial_ring::PolyRing,                    // polynomial ring type Zq[X]/X^64+1
+    ring::{ScalarCfg as ZqCfg, ScalarRing as Zq}, // the scalar integer ring Zq (q~64b)
 };
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 
@@ -146,7 +147,6 @@ where
         rows, cols, cols, rows
     );
 
-    let cfg = VecOpsConfig::default();
     let len = (rows * cols) as usize;
 
     // Generate random input matrix (row-major)
@@ -163,8 +163,8 @@ where
 
     // Transpose
     let start = std::time::Instant::now();
-    // TODO uncomment
-    // matrix_ops::transpose::<P>(&device_input, rows, cols, &cfg, &mut device_output).expect("Transpose failed");
+    matrix_ops::matrix_transpose::<P>(&device_input, rows, cols, &VecOpsConfig::default(), &mut device_output)
+        .expect("Transpose failed");
     let elapsed = start.elapsed();
 
     println!("[Transpose] Completed in {:.2?}", elapsed);
@@ -478,9 +478,6 @@ where
     P::Base: FieldImpl,
     <P::Base as FieldImpl>::Config: random_sampling::RandomSampling<P::Base>,
 {
-    use rand::RngCore;
-    use std::time::Instant;
-
     println!("----------------------------------------------------------------------");
     println!(
         "[Random Sampling] Generating {} pseudorandom elements in Zq and Rq using device sampling...",
@@ -515,6 +512,44 @@ where
         "[Random Sampling] Rq sampling (as Zq coefficients) completed in {:?}",
         duration
     );
+}
+
+/// Demonstrates challenge space sampling for Rq polynomials.
+/// Uses the Labrador protocol parameters: τ₁ (±1s), τ₂ (±2s), and an operator norm bound.
+fn challenge_space_sampling_example<P>(size: usize)
+where
+    P: PolynomialRing + ChallengeSpacePolynomialsSampling<P>,
+    P::Base: FieldImpl,
+{
+    println!("----------------------------------------------------------------------");
+    println!("[Challenge Space Sampling] Generating {} challenge polynomials", size);
+
+    // Labrador protocol parameters
+    let tau1 = 31; // Number of ±1 coefficients
+    let tau2 = 10; // Number of ±2 coefficients
+    let opnorm_bound = 15; // Operator norm bound
+
+    // Generate a non-zero 60-byte random seed
+    let mut seed = [0u8; 60];
+    rand::thread_rng().fill_bytes(&mut seed);
+
+    // Allocate memory for the output polynomials
+    let mut polys_from_challenge_space = DeviceVec::<P>::device_malloc(size).expect("Device allocation failed");
+
+    // Perform the sampling
+    let start = Instant::now();
+    challenge_space_polynomials_sampling(
+        &seed,
+        &VecOpsConfig::default(),
+        tau1,
+        tau2,
+        opnorm_bound, // Set to 0 to skip norm filtering
+        &mut polys_from_challenge_space,
+    )
+    .expect("Challenge space sampling failed");
+    let elapsed = start.elapsed();
+
+    println!("[Challenge Space Sampling] Completed in {:.2?}", elapsed);
 }
 
 /// Demonstrates vectorized polynomial ring operations over device memory.
@@ -687,5 +722,5 @@ fn main() {
     //      - Sample polynomials with bound OpNorm (for Labrdaor and similar usecases)
     // ----------------------------------------------------------------------
 
-    // TODO
+    challenge_space_sampling_example::<PolyRing>(size);
 }
