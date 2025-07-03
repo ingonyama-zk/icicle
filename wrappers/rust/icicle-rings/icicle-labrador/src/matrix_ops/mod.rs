@@ -16,13 +16,12 @@ mod tests {
         use super::*;
         impl_matrix_ops_tests!(crate::ring::ScalarRing);
     }
-    // mod rns { // TODO: add rns matrix tests ?
-    //     use super::*;
+    // mod rns { // TODO: add rns matrix tests? ffi bindings missing
+    //     use icicle_core::impl_matrix_ops_tests;
     //     impl_matrix_ops_tests!(crate::ring::ScalarRingRns);
     // }
     mod poly_ring {
-        // TODO: add poly ring matrix tests ?
-        use super::*;
+        use icicle_core::impl_matrix_ops_tests;
         impl_matrix_ops_tests!(crate::polynomial_ring::PolyRing);
     }
 }
