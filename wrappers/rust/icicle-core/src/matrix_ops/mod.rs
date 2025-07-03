@@ -86,7 +86,7 @@ pub fn matrix_transpose<T>(
 where
     T: MatrixOps<T>,
 {
-    T::matrix_transpose(input, nof_rows, nof_cols, &cfg, output)
+    T::matrix_transpose(input, nof_rows, nof_cols, cfg, output)
 }
 
 /// Implements matrix Ops any type via FFI
