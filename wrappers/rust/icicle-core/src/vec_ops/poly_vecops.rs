@@ -18,7 +18,8 @@
 //! All vector operations rely on a guaranteed memory layout where a polynomial is backed by `[P::Base; DEGREE]`.
 //! This is enforced by the [`PolynomialRing`] trait and the `reinterpret_slice` utility.
 
-use super::{add_scalars, mul_scalars, scalar_mul, sub_scalars, sum_scalars, VecOps, VecOpsConfig};
+pub use super::VecOpsConfig;
+use super::{add_scalars, mul_scalars, scalar_mul, sub_scalars, sum_scalars, VecOps};
 use crate::{polynomial_ring::PolynomialRing, traits::FieldImpl};
 use icicle_runtime::{
     errors::eIcicleError,
