@@ -1,7 +1,7 @@
 use crate::{
-    matrix_ops::{matmul, matrix_transpose, MatrixOps, VecOpsConfig},
-    polynomial_ring::PolynomialRing,
-    traits::{FieldImpl, GenerateRandom},
+    matrix_ops::{matmul, matrix_transpose, MatrixOps},
+    traits::GenerateRandom,
+    vec_ops::VecOpsConfig,
 };
 
 use icicle_runtime::{
@@ -17,10 +17,9 @@ use icicle_runtime::{
 ///     (4) a, b, result on host
 ///     (5) a on device; b, result on host
 /// Correctness is already ensured by the C++ tests.
-pub fn check_matmul_device_memory<P: PolynomialRing + MatrixOps<P>>()
+pub fn check_matmul_device_memory<P>()
 where
-    P::Base: FieldImpl,
-    P: GenerateRandom<P>,
+    P: GenerateRandom + MatrixOps<P> + Default + Clone + std::fmt::Debug + PartialEq,
 {
     let cfg = VecOpsConfig::default();
 
@@ -38,7 +37,7 @@ where
             test_utilities::test_set_ref_device();
         }
         // case (1) matmul host memory inputs -> host_memory outputs
-        let mut output_host_case_1 = vec![P::zero(); out_size];
+        let mut output_host_case_1 = vec![P::default(); out_size];
         matmul(
             HostSlice::from_slice(&input_a),
             n as u32,
@@ -66,7 +65,7 @@ where
         .unwrap();
 
         // compare (1) and (2)
-        let mut output_host_case_2 = vec![P::zero(); out_size];
+        let mut output_host_case_2 = vec![P::default(); out_size];
         device_mem_output
             .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_2))
             .unwrap();
@@ -83,7 +82,7 @@ where
             .copy_from_host(HostSlice::from_slice(&input_b))
             .unwrap();
 
-        let mut output_host_case_3 = vec![P::zero(); out_size];
+        let mut output_host_case_3 = vec![P::default(); out_size];
         matmul(
             &device_mem_a,
             n as u32,
@@ -114,7 +113,7 @@ where
         .unwrap();
 
         /* Zero out host_buffer, copy result of (4) to host_buffer */
-        let mut output_host_case_4 = vec![P::zero(); out_size];
+        let mut output_host_case_4 = vec![P::default(); out_size];
         device_mem_output
             .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_4))
             .unwrap();
@@ -122,7 +121,7 @@ where
         assert_eq!(output_host_case_1, output_host_case_4);
 
         // case (5) mamtmul mixed memory model for inputs, host memory output
-        let mut output_host_case_5 = vec![P::zero(); out_size];
+        let mut output_host_case_5 = vec![P::default(); out_size];
         matmul(
             &device_mem_a,
             n as u32,
@@ -161,10 +160,9 @@ where
 /// and checking that a second transpose restores the original data.
 ///
 /// The test is repeated for both main and reference devices.
-pub fn check_matrix_transpose_device_memory<P: PolynomialRing + MatrixOps<P>>()
+pub fn check_matrix_transpose_device_memory<P: MatrixOps<P>>()
 where
-    P::Base: FieldImpl,
-    P: GenerateRandom<P>,
+    P: Default + GenerateRandom + Clone + std::fmt::Debug + PartialEq,
 {
     let cfg = VecOpsConfig::default();
     let nof_rows = 1 << 5;
@@ -181,7 +179,7 @@ where
         }
 
         // --- Case 1: Host → Host ---
-        let mut output_host_case_1 = vec![P::zero(); matrix_size];
+        let mut output_host_case_1 = vec![P::default(); matrix_size];
         matrix_transpose(
             HostSlice::from_slice(&input_matrix),
             nof_rows as u32,
@@ -204,7 +202,7 @@ where
         .unwrap();
 
         // Compare (1) and (2)
-        let mut output_host_case_2 = vec![P::zero(); matrix_size];
+        let mut output_host_case_2 = vec![P::default(); matrix_size];
         device_mem_output
             .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_2))
             .unwrap();
@@ -216,7 +214,7 @@ where
             .copy_from_host(HostSlice::from_slice(&input_matrix))
             .unwrap();
 
-        let mut output_host_case_3 = vec![P::zero(); matrix_size];
+        let mut output_host_case_3 = vec![P::default(); matrix_size];
         matrix_transpose(
             &device_mem_input,
             nof_rows as u32,
@@ -238,7 +236,7 @@ where
         )
         .unwrap();
 
-        let mut output_host_case_4_restored = vec![P::zero(); matrix_size];
+        let mut output_host_case_4_restored = vec![P::default(); matrix_size];
         device_mem_restored
             .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_4_restored))
             .unwrap();

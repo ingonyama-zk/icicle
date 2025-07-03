@@ -1,19 +1,19 @@
 pub mod fri_proof;
 pub mod fri_transcript_config;
 pub mod tests;
-use crate::traits::{FieldConfig, FieldImpl, GenerateRandom};
-use crate::{field::FieldArithmetic, hash::Hasher};
+use crate::traits::{Arithmetic, GenerateRandom};
+use crate::{field::PrimeField, hash::Hasher};
 use fri_proof::FriProofOps;
 use fri_transcript_config::FriTranscriptConfig;
 use icicle_runtime::{config::ConfigExtension, eIcicleError, memory::HostOrDeviceSlice, IcicleStreamHandle};
 
-pub type FriProof<F> = <<F as FieldImpl>::Config as FriMerkleTree<F>>::FriProof;
+pub type FriProof<F> = <F as FriMerkleTree<F>>::FriProof;
 
 /// Computes the FRI proof using the given configuration and input data.
 /// # Returns
 /// - `Ok(())` if the FRI proof was successfully computed.
 /// - `Err(eIcicleError)` if an error occurred during proof generation.
-pub fn fri_merkle_tree_prove<F: FieldImpl>(
+pub fn fri_merkle_tree_prove<F: PrimeField>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,
     input_data: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -22,9 +22,9 @@ pub fn fri_merkle_tree_prove<F: FieldImpl>(
     merkle_tree_min_layer_to_store: u64,
 ) -> Result<FriProof<F>, eIcicleError>
 where
-    <F as FieldImpl>::Config: FriMerkleTree<F>,
+    F: FriMerkleTree<F>,
 {
-    <F::Config as FriMerkleTree<F>>::fri_merkle_tree_prove(
+    F::fri_merkle_tree_prove(
         config,
         fri_transcript_config,
         input_data,
@@ -39,7 +39,7 @@ where
 /// - `Ok(true)` if the proof is valid.
 /// - `Ok(false)` if the proof is invalid.
 /// - `Err(eIcicleError)` if verification failed due to an error.
-pub fn fri_merkle_tree_verify<F: FieldImpl>(
+pub fn fri_merkle_tree_verify<F: PrimeField>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,
     fri_proof: &FriProof<F>,
@@ -47,9 +47,9 @@ pub fn fri_merkle_tree_verify<F: FieldImpl>(
     merkle_tree_compress_hash: &Hasher,
 ) -> Result<bool, eIcicleError>
 where
-    <F as FieldImpl>::Config: FriMerkleTree<F>,
+    F: FriMerkleTree<F>,
 {
-    <F::Config as FriMerkleTree<F>>::fri_merkle_tree_verify(
+    F::fri_merkle_tree_verify(
         config,
         fri_transcript_config,
         fri_proof,
@@ -87,8 +87,8 @@ impl Default for FriConfig {
     }
 }
 
-pub trait FriMerkleTree<F: FieldImpl> {
-    type FieldConfig: FieldConfig + GenerateRandom<F> + FieldArithmetic<F>;
+pub trait FriMerkleTree<F: PrimeField> {
+    type FieldConfig: PrimeField + GenerateRandom + Arithmetic;
     type FriProof: FriProofOps<F>;
     fn fri_merkle_tree_prove(
         config: &FriConfig,
@@ -113,21 +113,20 @@ macro_rules! impl_fri {
     (
         $field_prefix:literal,
         $field_prefix_ident:ident,
-        $field:ident,
-        $field_config:ident
+        $field:ident
     ) => {
         mod $field_prefix_ident {
-            use super::{$field, $field_config};
+            use super::$field;
             use icicle_core::fri::fri_transcript_config::FriTranscriptConfig;
             use icicle_core::{
+                field::PrimeField,
                 fri::{fri_transcript_config::FFIFriTranscriptConfig, FriConfig, FriMerkleTree},
                 hash::{Hasher, HasherHandle},
                 impl_fri_proof,
-                traits::FieldImpl,
             };
             use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
-            impl_fri_proof!($field_prefix, $field, $field_config);
+            impl_fri_proof!($field_prefix, $field);
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_fri_merkle_tree_prove")]
@@ -151,8 +150,8 @@ macro_rules! impl_fri {
                     valid: *mut bool,
                 ) -> eIcicleError;
             }
-            impl FriMerkleTree<$field> for $field_config {
-                type FieldConfig = $field_config;
+            impl FriMerkleTree<$field> for $field {
+                type FieldConfig = $field;
                 type FriProof = FriProof;
 
                 fn fri_merkle_tree_prove(
@@ -303,7 +302,6 @@ macro_rules! impl_fri_test_with_poseidon {
         #[test]
         pub fn phase4_test_fri_poseidon2() {
             use icicle_core::poseidon2::Poseidon2;
-            use icicle_core::traits::FieldImpl;
             initialize();
             let merkle_tree_leaves_hash = Poseidon2::new_with_input_size::<$field>(3, None, 1).unwrap();
             let merkle_tree_compress_hash = Poseidon2::new::<$field>(2, None).unwrap();
@@ -318,7 +316,6 @@ macro_rules! impl_fri_test_with_poseidon {
         #[test]
         pub fn phase4_test_fri_poseidon() {
             use icicle_core::poseidon::Poseidon;
-            use icicle_core::traits::FieldImpl;
             initialize();
             let merkle_tree_leaves_hash = Poseidon::new_with_input_size::<$field>(3, None, 1).unwrap();
             let merkle_tree_compress_hash = Poseidon::new_with_input_size::<$field>(5, None, 2).unwrap();

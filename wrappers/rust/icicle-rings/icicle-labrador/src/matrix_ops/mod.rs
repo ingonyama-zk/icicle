@@ -1,10 +1,27 @@
 use icicle_core::impl_matrix_ops;
 
-impl_matrix_ops!("labrador_poly_ring", crate::polynomial_ring::PolyRing);
+impl_matrix_ops!("labrador", labrador, crate::ring::ScalarRing);
+impl_matrix_ops!("labrador_rns", labrador_rns, crate::ring::ScalarRingRns);
+impl_matrix_ops!(
+    "labrador_poly_ring",
+    labrador_poly_ring,
+    crate::polynomial_ring::PolyRing
+);
 
 #[cfg(test)]
-mod test_polyring_matrix_ops {
+mod tests {
     use icicle_core::impl_matrix_ops_tests;
 
-    impl_matrix_ops_tests!(test_polyring_matrix_ops, crate::polynomial_ring::PolyRing);
+    mod ring {
+        use super::*;
+        impl_matrix_ops_tests!(crate::ring::ScalarRing);
+    }
+    // mod rns { // TODO: add rns matrix tests? ffi bindings missing
+    //     use icicle_core::impl_matrix_ops_tests;
+    //     impl_matrix_ops_tests!(crate::ring::ScalarRingRns);
+    // }
+    mod poly_ring {
+        use icicle_core::impl_matrix_ops_tests;
+        impl_matrix_ops_tests!(crate::polynomial_ring::PolyRing);
+    }
 }

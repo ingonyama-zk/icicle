@@ -11,7 +11,7 @@ public:
   static constexpr HOST_DEVICE bool has_inverse(const IntegerRing& xs)
   {
     // Note: inverse returns zero when no inverse
-    auto xs_inv = IntegerRing::inverse(xs);
+    auto xs_inv = xs.inverse();
     return xs_inv != IntegerRing::zero();
   }
 };

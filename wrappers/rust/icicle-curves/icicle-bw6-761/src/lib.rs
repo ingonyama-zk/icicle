@@ -1,4 +1,5 @@
 pub mod curve;
+pub mod matrix_ops;
 pub mod program;
 pub mod symbol;
 pub mod vec_ops;

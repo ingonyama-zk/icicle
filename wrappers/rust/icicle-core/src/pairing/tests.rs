@@ -1,6 +1,6 @@
 use crate::{
     curve::{Affine, Curve},
-    traits::FieldImpl,
+    field::PrimeField,
 };
 
 use super::{pairing, Pairing};
@@ -9,7 +9,7 @@ pub fn check_pairing_bilinearity<C1, C2, F>()
 where
     C1: Curve,
     C2: Curve,
-    F: FieldImpl,
+    F: PrimeField,
     C1: Pairing<C1, C2, F>,
 {
     let p = C1::generate_random_affine_points(1)[0];

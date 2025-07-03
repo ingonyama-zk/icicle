@@ -1,14 +1,13 @@
-use crate::{
-    traits::{FieldImpl, MontgomeryConvertible},
-    vec_ops::VecOpsConfig,
-};
+use crate::field::PrimeField;
+use crate::traits::{GenerateRandom, MontgomeryConvertible};
+use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Sub};
 
 pub trait Curve: Debug + PartialEq + Copy + Clone {
-    type BaseField: FieldImpl;
-    type ScalarField: FieldImpl;
+    type BaseField: PrimeField;
+    type ScalarField: PrimeField + MontgomeryConvertible + GenerateRandom;
 
     #[doc(hidden)]
     fn eq_proj(point1: *const Projective<Self>, point2: *const Projective<Self>) -> bool;
@@ -71,7 +70,7 @@ impl<C: Curve> Affine<C> {
         }
     }
 
-    pub fn from_limbs(x: <C::BaseField as FieldImpl>::Repr, y: <C::BaseField as FieldImpl>::Repr) -> Self {
+    pub fn from_limbs(x: <C::BaseField as PrimeField>::Limbs, y: <C::BaseField as PrimeField>::Limbs) -> Self {
         Affine {
             x: C::BaseField::from(x),
             y: C::BaseField::from(y),
@@ -114,15 +113,21 @@ impl<C: Curve> Projective<C> {
     }
 
     pub fn from_limbs(
-        x: <C::BaseField as FieldImpl>::Repr,
-        y: <C::BaseField as FieldImpl>::Repr,
-        z: <C::BaseField as FieldImpl>::Repr,
+        x: <C::BaseField as PrimeField>::Limbs,
+        y: <C::BaseField as PrimeField>::Limbs,
+        z: <C::BaseField as PrimeField>::Limbs,
     ) -> Self {
         Projective {
             x: C::BaseField::from(x),
             y: C::BaseField::from(y),
             z: C::BaseField::from(z),
         }
+    }
+
+    pub fn to_affine(&self) -> Affine<C> {
+        let mut aff = Affine::<C>::zero();
+        C::to_affine(self as *const Self, &mut aff as *mut Affine<C>);
+        aff
     }
 }
 
@@ -233,7 +238,7 @@ macro_rules! impl_curve {
             use super::{eIcicleError, $affine_type, $projective_type, $scalar_field, IcicleStream, VecOpsConfig};
 
             extern "C" {
-                #[link_name = concat!($curve_prefix, "_eq")]
+                #[link_name = concat!($curve_prefix, "_projective_eq")]
                 pub(crate) fn eq(point1: *const $projective_type, point2: *const $projective_type) -> bool;
                 #[link_name = concat!($curve_prefix, "_to_affine")]
                 pub(crate) fn proj_to_affine(point: *const $projective_type, point_out: *mut $affine_type);
@@ -410,7 +415,7 @@ macro_rules! impl_curve_tests {
             #[test]
             fn test_point_equality() {
                 initialize();
-                check_point_equality::<$base_limbs, <<$curve as Curve>::BaseField as FieldImpl>::Config, $curve>()
+                check_point_equality::<<$curve as Curve>::BaseField, $curve>()
             }
 
             #[test]

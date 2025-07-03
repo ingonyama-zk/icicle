@@ -1,7 +1,8 @@
-use crate::field::{ScalarCfg, ScalarField};
 use icicle_core::impl_univariate_polynomial_api;
 
-impl_univariate_polynomial_api!("koalabear", koalabear, ScalarField, ScalarCfg);
+use crate::field::ScalarField;
+
+impl_univariate_polynomial_api!("koalabear", koalabear, ScalarField);
 
 #[cfg(test)]
 mod tests {

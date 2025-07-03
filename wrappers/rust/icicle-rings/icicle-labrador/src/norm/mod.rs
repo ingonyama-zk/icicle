@@ -1,10 +1,10 @@
-use crate::ring::{ScalarCfg, ScalarRing};
+use crate::ring::ScalarRing;
 use icicle_core::norm::NormType;
 use icicle_core::{impl_norm, vec_ops::VecOpsConfig};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-impl_norm!("labrador", ScalarRing, ScalarCfg);
+impl_norm!("labrador", ScalarRing, ScalarRing);
 
 #[cfg(test)]
 pub(crate) mod tests {

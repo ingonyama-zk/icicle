@@ -161,10 +161,10 @@ static eIcicleError cpu_get_jl_matrix_rows(
 
       // Static table: 0b00 → 0, 0b01 → +1, 0b10 → -1, 0b11 → 0
       static const field_t JL_LUT[4] = {
-        field_t::zero(),              // 0b00
-        field_t::one(),               // 0b01
-        field_t::neg(field_t::one()), // 0b10
-        field_t::zero()               // 0b11
+        field_t::zero(),      // 0b00
+        field_t::one(),       // 0b01
+        field_t::one().neg(), // 0b10
+        field_t::zero()       // 0b11
       };
 
       for (size_t hash_idx = 0; hash_idx < hashes_per_row; ++hash_idx) {

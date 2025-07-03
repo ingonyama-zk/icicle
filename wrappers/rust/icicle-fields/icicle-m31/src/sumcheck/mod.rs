@@ -1,8 +1,8 @@
-use crate::field::{ExtensionCfg, ExtensionField, ScalarCfg, ScalarField};
+use crate::field::{ExtensionField, ScalarField};
 use icicle_core::impl_sumcheck;
 
-impl_sumcheck!("m31", m31, ScalarField, ScalarCfg);
-impl_sumcheck!("m31_extension", m31_extension, ExtensionField, ExtensionCfg);
+impl_sumcheck!("m31", m31, ScalarField);
+impl_sumcheck!("m31_extension", m31_extension, ExtensionField);
 
 // Re-export types from the m31 module
 pub use m31::{SumcheckProof as ScalarSumcheckProof, SumcheckWrapper as ScalarSumcheckWrapper};

@@ -1,10 +1,10 @@
-use crate::field::{ScalarCfg, ScalarField};
+use crate::field::ScalarField;
 use icicle_core::ntt::{NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NTT};
 use icicle_core::{impl_ntt, impl_ntt_without_domain};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-impl_ntt!("goldilocks", goldilocks, ScalarField, ScalarCfg);
+impl_ntt!("goldilocks", goldilocks, ScalarField);
 
 #[cfg(test)]
 pub(crate) mod tests {

@@ -45,7 +45,7 @@ void fast_mode_random_sampling(
         field_t prev_element = field_t::reduce_from_bytes(reinterpret_cast<std::byte*>(hash_output.data()));
         batch_output[t * size_per_task] = prev_element;
         for (int i = 1; i < size_per_task && (t * size_per_task + i) < size; i++) {
-          field_t next_element = field_t::sqr(prev_element);
+          field_t next_element = prev_element.sqr();
           prev_element = next_element;
           batch_output[t * size_per_task + i] = next_element;
         }
@@ -238,8 +238,8 @@ eIcicleError cpu_challenge_space_polynomials_sampling(
   auto keccak512 = Keccak512::create();
 
   static const field_t two = field_t::one() + field_t::one();
-  static const field_t neg_two = field_t::neg(two);
-  static const field_t neg_one = field_t::neg(field_t::one());
+  static const field_t neg_two = two.neg();
+  static const field_t neg_one = field_t::one().neg();
 
   const size_t nof_workers = std::min((size_t)get_nof_workers(cfg), size);
   const size_t size_per_worker = (size + nof_workers - 1) / nof_workers;

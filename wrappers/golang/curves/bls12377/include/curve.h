@@ -11,7 +11,7 @@ typedef struct projective_t projective_t;
 typedef struct affine_t affine_t;
 typedef struct VecOpsConfig VecOpsConfig;
 
-bool bls12_377_eq(projective_t* point1, projective_t* point2);
+bool bls12_377_projective_eq(projective_t* point1, projective_t* point2);
 void bls12_377_ecadd(projective_t* point, projective_t* point2, projective_t* res); 
 void bls12_377_ecsub(projective_t* point, projective_t* point2, projective_t* res); 
 void bls12_377_to_affine(projective_t* point, affine_t* point_out);

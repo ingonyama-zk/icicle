@@ -187,7 +187,7 @@ namespace icicle {
             denumerator = denumerator * (i_field - j_field);
           }
         }
-        result = result + (numerator * F::inverse(denumerator));
+        result = result + (numerator * denumerator.inverse());
       }
       return result;
     }

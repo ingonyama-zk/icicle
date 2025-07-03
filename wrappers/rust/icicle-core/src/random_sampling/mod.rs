@@ -1,11 +1,12 @@
+use crate::field::PrimeField;
+use crate::polynomial_ring::PolynomialRing;
 use crate::vec_ops::VecOpsConfig;
-use crate::{polynomial_ring::PolynomialRing, traits::FieldImpl};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
 /// Trait for random sampling operations on group elements.
-pub trait RandomSampling<T: FieldImpl> {
+pub trait RandomSampling<T: PrimeField> {
     fn random_sampling(
         size: usize,
         fast_mode: bool,
@@ -23,10 +24,10 @@ pub fn random_sampling<T>(
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    T: FieldImpl,
-    T::Config: RandomSampling<T>,
+    T: PrimeField,
+    T: RandomSampling<T>,
 {
-    T::Config::random_sampling(size, fast_mode, seed, cfg, output)
+    T::random_sampling(size, fast_mode, seed, cfg, output)
 }
 
 /// Implements RandomSampling for a scalar ring type using FFI.
@@ -146,7 +147,7 @@ pub fn challenge_space_polynomials_sampling<T>(
 ) -> Result<(), eIcicleError>
 where
     T: PolynomialRing,
-    T::Base: FieldImpl,
+    T::Base: PrimeField,
     T: ChallengeSpacePolynomialsSampling<T>,
 {
     T::challenge_space_polynomials_sampling(seed, cfg, ones, twos, norm, output)

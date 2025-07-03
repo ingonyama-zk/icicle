@@ -1,8 +1,8 @@
 use crate::polynomial_ring::{flatten_polyring_slice, PolynomialRing};
 use crate::{
     curve::{Affine, Curve, Projective},
-    field::Field,
-    traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible},
+    field::PrimeField,
+    traits::{Arithmetic, GenerateRandom, MontgomeryConvertible},
 };
 use icicle_runtime::{
     memory::{DeviceVec, HostOrDeviceSlice, HostSlice},
@@ -11,12 +11,11 @@ use icicle_runtime::{
 
 pub fn check_field_arithmetic<F>()
 where
-    F: FieldImpl + Arithmetic,
-    F::Config: GenerateRandom<F>,
+    F: PrimeField + Arithmetic + GenerateRandom,
 {
     let size = 1 << 10;
-    let scalars_a = F::Config::generate_random(size);
-    let scalars_b = F::Config::generate_random(size);
+    let scalars_a = F::generate_random(size);
+    let scalars_b = F::generate_random(size);
 
     for i in 0..size {
         let result1 = scalars_a[i] + scalars_b[i];
@@ -49,6 +48,7 @@ pub fn check_affine_projective_convert<C: Curve>() {
         assert_eq!(affine_point, projective_eqivalent.into());
     }
     for projective_point in projective_points {
+        println!("{:?}", projective_point);
         let affine_eqivalent: Affine<C> = projective_point.into();
         assert_eq!(projective_point, affine_eqivalent.into());
     }
@@ -66,32 +66,36 @@ pub fn check_point_arithmetic<C: Curve>() {
     }
 }
 
-pub fn check_point_equality<const BASE_LIMBS: usize, F: FieldConfig, C>()
+pub fn check_point_equality<F: PrimeField, C>()
 where
-    C: Curve<BaseField = Field<BASE_LIMBS, F>>,
+    C: Curve<BaseField = F>,
 {
     let left = Projective::<C>::zero();
     let right = Projective::<C>::zero();
     assert_eq!(left, right);
-    let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], [0; BASE_LIMBS]);
+
+    let x = F::zero();
+    let y = F::from_u32(2);
+    let z = F::zero();
+    let right = Projective::<C>::from_limbs(x.into(), y.into(), z.into());
     assert_eq!(left, right);
-    let mut z = [0; BASE_LIMBS];
-    z[0] = 2;
-    let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [4; BASE_LIMBS], z);
+
+    let z = F::from_u32(2);
+    let right = Projective::<C>::from_limbs(F::zero().into(), F::from_u32(4).into(), z.into());
     assert_ne!(left, right);
-    let left = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], C::BaseField::one().into());
+
+    let left = Projective::<C>::from_limbs(F::zero().into(), F::from_u32(2).into(), C::BaseField::one().into());
     assert_eq!(left, right);
 }
 
 pub fn check_field_convert_montgomery<F>()
 where
-    F: FieldImpl + MontgomeryConvertible,
-    F::Config: GenerateRandom<F>,
+    F: PrimeField + MontgomeryConvertible + GenerateRandom,
 {
     let mut stream = IcicleStream::create().unwrap();
 
     let size = 1 << 10;
-    let scalars = F::Config::generate_random(size);
+    let scalars = F::generate_random(size);
 
     let mut d_scalars = DeviceVec::device_malloc(size).unwrap();
     d_scalars
@@ -198,7 +202,7 @@ pub fn check_generator<C: Curve>() {
 
 pub fn check_zero_and_from_slice<P: PolynomialRing>()
 where
-    P::Base: FieldImpl,
+    P::Base: PrimeField,
 {
     let zero = P::zero();
     let expected = vec![P::Base::zero(); P::DEGREE];
@@ -212,8 +216,8 @@ where
 /// reinterpreted slice of base field elements.
 pub fn check_polyring_flatten_host_memory<P>()
 where
-    P: PolynomialRing + GenerateRandom<P>,
-    P::Base: FieldImpl,
+    P: PolynomialRing + GenerateRandom,
+    P::Base: PrimeField,
 {
     // Generate a vector of one random polynomial
     let polynomials = P::generate_random(5);
@@ -246,8 +250,8 @@ where
 /// reinterpreted device slice of base field elements without copying.
 pub fn check_polyring_flatten_device_memory<P>()
 where
-    P: PolynomialRing + GenerateRandom<P>,
-    P::Base: FieldImpl,
+    P: PolynomialRing + GenerateRandom,
+    P::Base: PrimeField,
 {
     // Generate a single random polynomial on host and copy to device
     let size = 7;

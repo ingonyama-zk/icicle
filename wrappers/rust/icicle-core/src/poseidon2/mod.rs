@@ -1,29 +1,30 @@
 #[doc(hidden)]
 pub mod tests;
 
-use crate::{hash::Hasher, traits::FieldImpl};
+use crate::{field::PrimeField, hash::Hasher};
 use icicle_runtime::errors::eIcicleError;
 
 /// Trait to define the behavior of a Poseidon2 hasher for different field types.
-/// This allows the implementation of Poseidon2 hashing for various field types that implement `FieldImpl`.
-pub trait Poseidon2Hasher<F: FieldImpl> {
-    /// Method to create a new Poseidon2 hasher for a given t (branching factor).
-    fn new(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError> {
+/// This allows the implementation of Poseidon2 hashing for various field types that implement `PrimeField`.
+pub trait Poseidon2Hasher: PrimeField {
+    /// Creates a Poseidon2 hasher with an explicit `input_size` (rate).
+    fn new_with_input_size(t: u32, domain_tag: Option<&Self>, input_size: u32) -> Result<Hasher, eIcicleError>;
+
+    /// Convenience constructor that forwards to `new_with_input_size` with
+    /// `input_size = 0` (backend default).
+    fn new(t: u32, domain_tag: Option<&Self>) -> Result<Hasher, eIcicleError> {
         Self::new_with_input_size(t, domain_tag, 0)
     }
-
-    /// Method to create a new Poseidon2 hasher for a given t, overriding input size.
-    fn new_with_input_size(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, eIcicleError>;
 }
 
 /// Function to create a Poseidon2 hasher for a specific field type and t (branching factor).
 /// Delegates the creation to the `new` method of the `Poseidon2Hasher` trait.
 pub fn create_poseidon2_hasher<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: Poseidon2Hasher<F>, // Requires that the `Config` associated with `F` implements `Poseidon2Hasher`.
+    F: PrimeField,
+    F: Poseidon2Hasher, // Requires that the `Config` associated with `F` implements `Poseidon2Hasher`.
 {
-    <<F as FieldImpl>::Config as Poseidon2Hasher<F>>::new(t, domain_tag)
+    <F as Poseidon2Hasher>::new(t, domain_tag)
 }
 
 pub struct Poseidon2;
@@ -31,18 +32,17 @@ pub struct Poseidon2;
 impl Poseidon2 {
     pub fn new<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>
     where
-        F: FieldImpl,                  // F must implement the FieldImpl trait
-        F::Config: Poseidon2Hasher<F>, // The Config associated with F must implement Poseidon2Hasher<F>
+        F: PrimeField + Poseidon2Hasher, // F must implement the PrimeField trait
     {
         create_poseidon2_hasher::<F>(t, domain_tag)
     }
 
     pub fn new_with_input_size<F>(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, eIcicleError>
     where
-        F: FieldImpl,                  // F must implement the FieldImpl trait
-        F::Config: Poseidon2Hasher<F>, // The Config associated with F must implement Poseidon2Hasher<F>
+        F: PrimeField,
+        F: Poseidon2Hasher, // The Config associated with F must implement Poseidon2Hasher<F>
     {
-        <<F as FieldImpl>::Config as Poseidon2Hasher<F>>::new_with_input_size(t, domain_tag, input_size)
+        <F as Poseidon2Hasher>::new_with_input_size(t, domain_tag, input_size)
     }
 }
 
@@ -51,15 +51,14 @@ macro_rules! impl_poseidon2 {
     (
         $field_prefix:literal,
         $field_prefix_ident:ident,
-        $field:ident,
-        $field_cfg:ident
+        $field:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::poseidon2::{$field, $field_cfg};
+            use crate::poseidon2::$field;
             use icicle_core::{
+                field::PrimeField,
                 hash::{Hasher, HasherHandle},
                 poseidon2::Poseidon2Hasher,
-                traits::FieldImpl,
             };
             use icicle_runtime::errors::eIcicleError;
             use std::marker::PhantomData;
@@ -70,7 +69,7 @@ macro_rules! impl_poseidon2 {
             }
 
             // Implement the `Poseidon2Hasher` trait for the given field configuration.
-            impl Poseidon2Hasher<$field> for $field_cfg {
+            impl Poseidon2Hasher for $field {
                 fn new_with_input_size(
                     t: u32,
                     domain_tag: Option<&$field>,

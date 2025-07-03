@@ -1,5 +1,5 @@
 use crate::vec_ops::VecOpsConfig;
-use crate::{polynomial_ring::PolynomialRing, traits::FieldImpl};
+use crate::{field::PrimeField, polynomial_ring::PolynomialRing};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
@@ -10,7 +10,7 @@ pub mod tests;
 /// This trait defines two core methods:
 /// - `jl_projection` projects an input vector using a pseudo-random matrix
 /// - `get_jl_matrix_rows` generates the raw matrix rows deterministically
-pub trait JLProjection<T: FieldImpl> {
+pub trait JLProjection<T: PrimeField> {
     /// Projects the input vector into a lower-dimensional space using a
     /// deterministic JL matrix with values in {-1, 0, 1}.
     fn jl_projection(
@@ -78,10 +78,10 @@ pub fn jl_projection<T>(
     output_projection: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    T: FieldImpl,
-    T::Config: JLProjection<T>,
+    T: PrimeField,
+    T: JLProjection<T>,
 {
-    T::Config::jl_projection(input, seed, cfg, output_projection)
+    T::jl_projection(input, seed, cfg, output_projection)
 }
 
 /// Generates raw rows from a JL projection matrix over the field type `T`.
@@ -114,10 +114,10 @@ pub fn get_jl_matrix_rows<T>(
     output_rows: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    T: FieldImpl,
-    T::Config: JLProjection<T>,
+    T: PrimeField,
+    T: JLProjection<T>,
 {
-    T::Config::get_jl_matrix_rows(seed, row_size, start_row, num_rows, cfg, output_rows)
+    T::get_jl_matrix_rows(seed, row_size, start_row, num_rows, cfg, output_rows)
 }
 
 /// Generates JL projection matrix rows in polynomial ring form.

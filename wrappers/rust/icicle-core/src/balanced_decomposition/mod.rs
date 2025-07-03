@@ -1,4 +1,4 @@
-use crate::vec_ops::VecOpsConfig;
+use crate::{polynomial_ring::PolynomialRing, vec_ops::VecOpsConfig};
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
@@ -46,14 +46,11 @@ pub trait BalancedDecomposition<T> {
 }
 
 // Public floating functions around the trait
-pub fn count_digits<T>(base: u32) -> u32
-where
-    T: BalancedDecomposition<T>,
-{
+pub fn count_digits<T: PolynomialRing + BalancedDecomposition<T>>(base: u32) -> u32 {
     T::count_digits(base)
 }
 
-pub fn decompose<T>(
+pub fn decompose<T: BalancedDecomposition<T>>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     base: u32,
@@ -65,7 +62,7 @@ where
     T::decompose(input, output, base, cfg)
 }
 
-pub fn recompose<T>(
+pub fn recompose<T: BalancedDecomposition<T>>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     base: u32,
@@ -83,8 +80,6 @@ macro_rules! impl_balanced_decomposition {
         $prefix: literal,
         $ring_type: ident
     ) => {
-        use icicle_core::balanced_decomposition::BalancedDecomposition;
-
         extern "C" {
             #[link_name = concat!($prefix, "_balanced_decomposition_nof_digits")]
             fn balanced_decomposition_nof_digits(base: u32) -> u32;

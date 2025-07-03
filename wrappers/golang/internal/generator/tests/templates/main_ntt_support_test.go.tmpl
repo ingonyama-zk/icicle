@@ -5,7 +5,6 @@ package tests
 import (
 	{{if .SupportsNTT -}}"fmt"{{end}}
 	"os"
-	"sync"
 	"testing"
 
 	{{if ne .GnarkImport "" -}}
@@ -18,7 +17,6 @@ import (
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}/ntt"{{end}}
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
-	"github.com/stretchr/testify/suite"
 )
 
 const (

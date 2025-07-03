@@ -1,5 +1,6 @@
+use crate::matrix_ops::{matrix_transpose, MatrixOps};
 use crate::ntt::{NttAlgorithm, Ordering, CUDA_NTT_ALGORITHM, CUDA_NTT_FAST_TWIDDLES_MODE};
-use crate::vec_ops::{transpose_matrix, VecOps, VecOpsConfig};
+use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
     runtime,
@@ -9,16 +10,17 @@ use icicle_runtime::{
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
+    field::PrimeField,
     ntt::{
         get_root_of_unity, initialize_domain, ntt, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTDomain,
         NTTInitDomainConfig, NTT,
     },
-    traits::{FieldImpl, GenerateRandom},
+    traits::GenerateRandom,
 };
 
-pub fn init_domain<F: FieldImpl>(max_size: u64, fast_twiddles_mode: bool)
+pub fn init_domain<F: PrimeField>(max_size: u64, fast_twiddles_mode: bool)
 where
-    <F as FieldImpl>::Config: NTTDomain<F>,
+    F: NTTDomain,
 {
     let config = NTTInitDomainConfig::default();
     config
@@ -28,21 +30,21 @@ where
     initialize_domain(rou, &config).unwrap();
 }
 
-pub fn rel_domain<F: FieldImpl>()
+pub fn rel_domain<F: PrimeField>()
 where
-    <F as FieldImpl>::Config: NTTDomain<F>,
+    F: NTTDomain,
 {
     release_domain::<F>().unwrap()
 }
 
 // This test is comparing main and reference devices (typically CUDA and CPU) for NTT and inplace-INTT
-pub fn check_ntt<F: FieldImpl>()
+pub fn check_ntt<F: PrimeField>()
 where
-    <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
+    F: NTT<F> + GenerateRandom,
 {
     let test_sizes = [1 << 4, 1 << 17];
     for test_size in test_sizes {
-        let scalars: Vec<F> = F::Config::generate_random(test_size);
+        let scalars: Vec<F> = F::generate_random(test_size);
         let mut ntt_result_main = vec![F::zero(); test_size];
         let mut ntt_result_ref = vec![F::zero(); test_size];
 
@@ -97,16 +99,16 @@ where
 }
 
 // This test is testing computation of 2N reversed NTT via 2 reversed NTTs of size N, one regular, the other on coset.
-pub fn check_ntt_coset_from_subgroup<F: FieldImpl>()
+pub fn check_ntt_coset_from_subgroup<F: PrimeField>()
 where
-    <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
+    F: NTT<F> + GenerateRandom,
 {
     let test_sizes = [1 << 4, 1 << 16];
     for test_size in test_sizes {
         test_utilities::test_set_main_device();
         let small_size: usize = test_size >> 1;
         let test_size_rou = get_root_of_unity::<F>(test_size as u64);
-        let mut scalars: Vec<F> = F::Config::generate_random(small_size);
+        let mut scalars: Vec<F> = F::generate_random(small_size);
 
         for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
             let mut config = NTTConfig::<F>::default();
@@ -167,15 +169,15 @@ where
 }
 
 // This test is interpolating a coset, given evaluations on rou, and compares main to ref device.
-pub fn check_ntt_coset_interpolation_nm<F: FieldImpl>()
+pub fn check_ntt_coset_interpolation_nm<F: PrimeField>()
 where
-    <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
+    F: NTT<F> + GenerateRandom,
 {
     let test_sizes = [1 << 9, 1 << 10, 1 << 11, 1 << 13, 1 << 14, 1 << 16];
     for test_size in test_sizes {
         let test_size_rou = get_root_of_unity::<F>((test_size << 1) as u64);
-        let coset_generators = [test_size_rou, F::Config::generate_random(1)[0]];
-        let scalars: Vec<F> = F::Config::generate_random(test_size);
+        let coset_generators = [test_size_rou, F::generate_random(1)[0]];
+        let scalars: Vec<F> = F::generate_random(test_size);
 
         for coset_gen in coset_generators {
             // (1) intt from evals to coeffs
@@ -229,19 +231,19 @@ where
     }
 }
 
-pub fn check_ntt_arbitrary_coset<F: FieldImpl>()
+pub fn check_ntt_arbitrary_coset<F: PrimeField>()
 where
-    <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
+    F: NTT<F> + GenerateRandom,
 {
     let test_sizes = [1 << 4, 1 << 17];
     for test_size in test_sizes {
         let coset_generators = [
-            F::Config::generate_random(1)[0],
+            F::generate_random(1)[0],
             get_root_of_unity::<F>(test_size as u64),
             F::one(),
         ];
         for coset_gen in coset_generators {
-            let mut scalars = F::Config::generate_random(test_size);
+            let mut scalars = F::generate_random(test_size);
             let mut scalars_ref = scalars.clone();
             let scalars = HostSlice::from_mut_slice(&mut scalars);
             let scalars_ref = HostSlice::from_mut_slice(&mut scalars_ref);
@@ -275,19 +277,18 @@ where
 
 // self test, comparing batch ntt to multiple single ntts
 // also testing column batch with transpose against row batch
-pub fn check_ntt_batch<F: FieldImpl>()
+pub fn check_ntt_batch<F: PrimeField>()
 where
-    <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: NTT<F> + GenerateRandom + MatrixOps<F>,
 {
     test_utilities::test_set_main_device();
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
     for test_size in test_sizes {
-        let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
+        let coset_generators = [F::one(), F::generate_random(1)[0]];
         let mut config = NTTConfig::<F>::default();
         for batch_size in batch_sizes {
-            let scalars = F::Config::generate_random(test_size * batch_size);
+            let scalars = F::generate_random(test_size * batch_size);
             let scalars = HostSlice::from_slice(&scalars);
 
             for coset_gen in coset_generators {
@@ -338,12 +339,12 @@ where
                         config.batch_size = batch_size as i32;
                         config.columns_batch = true;
                         let mut transposed_input = vec![F::zero(); batch_size * test_size];
-                        transpose_matrix(
+                        matrix_transpose(
                             scalars,
                             nof_rows,
                             nof_cols,
-                            HostSlice::from_mut_slice(&mut transposed_input),
                             &VecOpsConfig::default(),
+                            HostSlice::from_mut_slice(&mut transposed_input),
                         )
                         .unwrap();
                         let mut col_batch_ntt_result = vec![F::zero(); batch_size * test_size];
@@ -354,12 +355,12 @@ where
                             HostSlice::from_mut_slice(&mut col_batch_ntt_result),
                         )
                         .unwrap();
-                        transpose_matrix(
+                        matrix_transpose(
                             HostSlice::from_slice(&col_batch_ntt_result),
                             nof_cols, // inverted since it was transposed above
                             nof_rows,
-                            HostSlice::from_mut_slice(&mut transposed_input),
                             &VecOpsConfig::default(),
+                            HostSlice::from_mut_slice(&mut transposed_input),
                         )
                         .unwrap();
                         assert_eq!(batch_ntt_result[..], *transposed_input.as_slice());
@@ -371,9 +372,9 @@ where
     }
 }
 
-pub fn check_ntt_device_async<F: FieldImpl>()
+pub fn check_ntt_device_async<F: PrimeField>()
 where
-    <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
+    F: NTT<F> + GenerateRandom,
 {
     test_utilities::test_set_main_device();
     let device_count = runtime::get_device_count().unwrap();
@@ -391,10 +392,10 @@ where
             let test_sizes = [1 << 4, 1 << 12];
             let batch_sizes = [1, 1 << 4, 100];
             for test_size in test_sizes {
-                let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
+                let coset_generators = [F::one(), F::generate_random(1)[0]];
 
                 for batch_size in batch_sizes {
-                    let scalars: Vec<F> = F::Config::generate_random(test_size * batch_size);
+                    let scalars: Vec<F> = F::generate_random(test_size * batch_size);
                     let mut scalars_d = DeviceVec::<F>::device_malloc(test_size * batch_size).unwrap();
                     scalars_d
                         .copy_from_host(HostSlice::from_slice(&scalars))
@@ -452,9 +453,9 @@ where
         });
 }
 
-pub fn check_release_domain<F: FieldImpl>()
+pub fn check_release_domain<F: PrimeField>()
 where
-    <F as FieldImpl>::Config: NTTDomain<F>,
+    F: NTTDomain,
 {
     test_utilities::test_set_main_device();
     rel_domain::<F>();

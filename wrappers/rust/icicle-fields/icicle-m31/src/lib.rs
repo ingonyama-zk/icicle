@@ -1,4 +1,5 @@
 pub mod field;
+pub mod matrix_ops;
 #[cfg(feature = "poseidon")]
 pub mod poseidon;
 #[cfg(feature = "poseidon2")]

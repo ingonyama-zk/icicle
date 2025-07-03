@@ -92,9 +92,9 @@ where
 /// Implements matrix Ops any type via FFI
 #[macro_export]
 macro_rules! impl_matrix_ops {
-    ($prefix: literal, $element_type: ty) => {
-        mod labrador {
-            use crate::matrix_ops::labrador;
+    ($prefix: literal, $prefix_ident:ident, $element_type: ty) => {
+        mod $prefix_ident {
+            use crate::matrix_ops::$prefix_ident;
             use icicle_core::{matrix_ops::MatrixOps, vec_ops::VecOpsConfig};
             use icicle_runtime::errors::eIcicleError;
             use icicle_runtime::memory::HostOrDeviceSlice;
@@ -188,7 +188,7 @@ macro_rules! impl_matrix_ops {
                     cfg_clone.is_result_on_device = result.is_on_device();
 
                     unsafe {
-                        labrador::matmul_ffi(
+                        matmul_ffi(
                             a.as_ptr(),
                             nof_rows_a,
                             nof_cols_a,
@@ -241,7 +241,7 @@ macro_rules! impl_matrix_ops {
                     cfg_clone.is_result_on_device = output.is_on_device();
 
                     unsafe {
-                        labrador::matrix_transpose_ffi(
+                        matrix_transpose_ffi(
                             input.as_ptr(),
                             nof_rows,
                             nof_cols,
@@ -258,7 +258,7 @@ macro_rules! impl_matrix_ops {
 
 #[macro_export]
 macro_rules! impl_matrix_ops_tests {
-    ($test_mod_name:ident, $element_type:ty) => {
+    ($element_type:ty) => {
         use icicle_core::matrix_ops::tests::*;
         use icicle_runtime::test_utilities;
 
