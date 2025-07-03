@@ -11,17 +11,18 @@ ICICLE provides a modular, high-performance Rust API for lattice-based SNARK con
 
 The design is generic over ring constructions, enabling flexible use of different `Zq` and `Rq` instantiations for cryptographic protocols like **Labrador**.
 
-
 ## Key Capabilities
 
 ### Core Types
-  - **`Zq`** — Integer rings modulo \( q \)
-  - **`Rq` / `Tq`** — Polynomial rings `Zq[X]/(Xⁿ + 1)`
-    - `Rq` refers to the coefficient (standard) representation.
-    - `Tq` refers to the evaluation (NTT-transformed) representation.
-    - In ICICLE, both share a single unified trait.
+
+- **`Zq`** — Integer rings modulo \( q \)
+- **`Rq` / `Tq`** — Polynomial rings `Zq[X]/(Xⁿ + 1)`
+  - `Rq` refers to the coefficient (standard) representation.
+  - `Tq` refers to the evaluation (NTT-transformed) representation.
+  - In ICICLE, both share a single unified trait.
 
 ### Supported Operations
+
 - **Negacyclic Number-Theoretic Transforms (NTT)**  
   For fast polynomial multiplication in `Tq`
 - **Matrix Operations**  
@@ -38,7 +39,6 @@ The design is generic over ring constructions, enabling flexible use of differen
   Efficient, seedable generation of vectors over `Zq` or `Rq`
 - **Challenge Sampling**  
   Rejection sampling of polynomials satisfying operator norm bounds
-
 
 For example, the **Labrador** protocol builds on this foundation to implement a lattice-based zk-SNARK with modular components and device acceleration.
 
@@ -59,7 +59,7 @@ q = P_babybear × P_koalabear
   = 4289678649214369793
 ```
 
-#### Example 
+#### Example
 
 ```rust
 use icicle_core::traits::{FieldImpl, GenerateRandom};
@@ -162,7 +162,6 @@ where
 These helpers use the general **reinterpret_slice** utility, which reinterprets memory across types when their sizes and alignments match.
 :::
 
-
 #### Example
 
 ```rust
@@ -179,7 +178,6 @@ let scalar_slice = flatten_polyring_slice(poly_slice);
 
 // This can now be passed into scalar-only APIs like `jl_projection`, `check_norm_bound`, etc.
 ```
-
 
 ## Negacyclic NTT
 
@@ -219,6 +217,7 @@ pub fn ntt<P: PolynomialRing + NegacyclicNtt<P>>(
     P::ntt(input, dir, cfg, output)
 }
 ```
+
 ### Inplace NTT API
 
 ```rust
@@ -239,7 +238,7 @@ pub fn ntt_inplace<P: PolynomialRing + NegacyclicNtt<P>>(
 }
 ```
 
-### Example:
+### Example
 
 ```rust
 use icicle_core::negacyclic_ntt::{
@@ -289,7 +288,6 @@ use icicle_core::matrix_ops::{
     MatrixOps,              // Trait for matmul    
 };
 ```
-
 
 ### Matrix multiplication API
 
@@ -477,7 +475,6 @@ polyvec_sum_reduce(
 
 Balanced base decomposition expresses each ring element (e.g. `Zq`, `Rq`) as a sequence of digits in a given base `b`, where each digit lies in the interval `(-b/2, b/2]`.
 
-
 ### Output Layout
 
 For an input slice of `n` elements and a digit count `d = count_digits(base)`:
@@ -571,7 +568,6 @@ balanced_decomposition::decompose::<Rq>(
 .expect("Decomposition failed");
 ```
 
-
 ## Norm Bound Checking
 
 ICICLE provides an API to check whether the norm of a `Zq` vector is within a specified bound.
@@ -581,7 +577,6 @@ The API supports:
 - ℓ₂ norm checking (sum of squares)
 - ℓ∞ norm checking (maximum absolute value)
 - Batch support
-
 
 ### Main Imports
 
@@ -834,7 +829,7 @@ pub fn random_sampling<T: FieldImpl>(
 ) -> Result<(), eIcicleError>;
 ```
 
-### Example 
+### Example
 
 ```rust
 use icicle_core::{polynomial_ring::flatten_polyring_slice_mut, random_sampling, vec_ops::VecOpsConfig};
@@ -864,9 +859,85 @@ let mut rq_output = DeviceVec::<Rq>::device_malloc(size).expect("Rq alloc failed
 }
 ```
 
-## Chellenge sampling with OpNorm rejection
+## Challenge Sampling with Operator Norm Rejection
 
-TODO
+ICICLE provides a specialized API to sample challenge polynomials from a constrained subset of `Rq` that meet strict norm bounds. This is particularly relevant for lattice-based SNARK protocols like Labrador.
 
+The challenge space consists of Rq polynomials with:
 
+- A fixed number of coefficients equal to ±1 (tau1)
+- A fixed number of coefficients equal to ±2 (tau2)
+- All remaining coefficients set to 0
 
+The resulting polynomial is accepted only if it satisfies:
+
+- An L-opnorm (operator norm) bound
+
+Sampling is **deterministic** and based on a seed and output index. Polynomials exceeding the bound are rejected, and retries are performed deterministically to ensure reproducibility across devices and backends.
+
+### Main imports
+
+```rust
+use icicle_core::random_sampling::{
+    challenge_space_polynomials_sampling,  // Sampling function    
+};
+```
+
+### API
+
+```rust
+/// Samples `Rq` challenge polynomials with coefficients in {0, ±1, ±2}.
+///
+/// This function generates polynomials from a constrained challenge space:
+/// 1. Initializes each polynomial with `ones` coefficients set to ±1
+///    and `twos` coefficients set to ±2 (randomly signed).
+/// 2. Applies a random permutation to the coefficients.
+/// 3. If `norm > 0`, applies operator norm rejection: only polynomials
+///    with operator norm ≤ `norm` are accepted.
+///
+/// Sampling is deterministic based on the seed and internal indexing.
+/// The output is a flat slice of polynomials (e.g., `&mut [T]` where `T: PolynomialRing`).
+pub fn challenge_space_polynomials_sampling<T>(
+    seed: &[u8],
+    cfg: &VecOpsConfig,
+    ones: usize,
+    twos: usize,
+    norm: usize,
+    output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+) -> Result<(), eIcicleError>;
+```
+
+### Example
+
+```rust
+use icicle_core::random_sampling::challenge_space_polynomials_sampling;
+use icicle_core::vec_ops::VecOpsConfig;
+use icicle_labrador::polynomial_ring::PolyRing as Rq;
+use icicle_runtime::memory::DeviceVec;
+use rand::RngCore;
+
+// Parameters from the Labrador protocol
+let tau1 = 31;           // Number of ±1 coefficients
+let tau2 = 10;           // Number of ±2 coefficients
+let opnorm_bound = 15;   // Operator norm bound for rejection sampling
+let num_polynomials = 16;
+
+// Generate a non-zero 60-byte deterministic seed (any seed size is valid)
+let mut seed = [0u8; 60];
+rand::thread_rng().fill_bytes(&mut seed);
+
+// Allocate device memory for the output polynomials
+let mut output = DeviceVec::<Rq>::device_malloc(num_polynomials)
+    .expect("Failed to allocate device memory");
+
+// Sample challenge polynomials with norm-based rejection
+challenge_space_polynomials_sampling(
+    &seed,
+    &VecOpsConfig::default(),
+    tau1,
+    tau2,
+    opnorm_bound, // Set to 0 to skip norm filtering
+    &mut output,
+)
+.expect("Challenge space sampling failed");
+```
