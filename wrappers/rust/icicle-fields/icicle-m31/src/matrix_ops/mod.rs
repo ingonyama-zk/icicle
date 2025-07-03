@@ -8,9 +8,8 @@ mod tests {
     use icicle_core::impl_matrix_ops_tests;
     impl_matrix_ops_tests!(crate::field::ScalarField);
 
-    // mod extension {
-    //     use crate::field::ExtensionField;
+    // mod extension { // TODO: add m31 extension matrix tests ? ffi bindings missing
     //     use icicle_core::impl_matrix_ops_tests;
-    //     impl_matrix_ops_tests!(ExtensionField);
+    //     impl_matrix_ops_tests!(crate::field::ExtensionField);
     // }
 }
