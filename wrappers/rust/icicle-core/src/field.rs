@@ -88,6 +88,12 @@ macro_rules! impl_field {
             limbs: [u32; $num_limbs],
         }
 
+        impl Default for $field {
+            fn default() -> Self {
+                Self::zero()
+            }
+        }
+
         impl PartialEq for $field {
             fn eq(&self, other: &Self) -> bool {
                 if $use_ffi {
