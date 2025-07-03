@@ -87,3 +87,14 @@ struct RecursionPreparer {
   eIcicleError copy_like_g(Rq* dst, const Rq* src) const;
   eIcicleError copy_like_h(Rq* dst, const Rq* src) const;
 };
+
+// choose base0 such that at the end of a base_case_prover witness z satisfies
+// ||z||_2 <op_norm_bound * beta * sqrt(r) < base0^2
+uint32_t calc_base0(size_t r, uint64_t op_norm_bound, double beta);
+
+// returns a choice of mu, nu given n, m for recursion
+std::pair<size_t, size_t> compute_mu_nu(size_t n, size_t m);
+
+// return kappa such that for a random A: kappa X m the MSIS problem
+// Ax = 0 has at least 128 bits of security
+size_t secure_msis_rank();

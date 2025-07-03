@@ -123,33 +123,6 @@ struct LabradorParam {
   }
 };
 
-// choose base0 such that at the end of a base_case_prover witness z satisfies
-// ||z||_2 <op_norm_bound * beta * sqrt(r) < base0^2
-inline uint32_t calc_base0(size_t r, uint64_t op_norm_bound, double beta)
-{
-  uint32_t base0 = sqrt(op_norm_bound * beta * sqrt(r));
-  return base0;
-}
-
-// returns a choice of mu, nu given n, m for recursion
-inline std::pair<size_t, size_t> compute_mu_nu(size_t n, size_t m)
-{
-  // setting r_prime^2 = C * n_prime
-  float C = 1.0 / 4.0;
-  float m_plus_2n = 2 * n + m;
-  float frac = pow(C / m_plus_2n / m_plus_2n, 1.0 / 3.0);
-  if (n > m) {
-    float nu_f = frac * n + 1.0;
-    float mu_f = (m * nu_f + n - 1) / n;
-    return std::make_pair(size_t(mu_f), size_t(nu_f));
-  } else {
-    float mu_f = frac * m + 1.0;
-    float nu_f = (n * mu_f + m - 1) / m;
-    return std::make_pair(size_t(mu_f), size_t(nu_f));
-  }
-  // size_t nu = 1 << 3, mu = 1 << 3;
-}
-
 /* ======================================================================
  *  Instance to be proved
  * ====================================================================*/

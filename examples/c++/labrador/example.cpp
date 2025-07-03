@@ -50,13 +50,13 @@ int main(int argc, char* argv[])
     n,
     {reinterpret_cast<const std::byte*>(ajtai_seed_str.data()),
      reinterpret_cast<const std::byte*>(ajtai_seed_str.data()) + ajtai_seed_str.size()},
-    1 << 4, // kappa
-    1 << 4, // kappa1
-    1 << 4, // kappa2,
-    base0,  // base1
-    base0,  // base2
-    base0,  // base3
-    beta,   // beta
+    secure_msis_rank(), // kappa
+    secure_msis_rank(), // kappa1
+    secure_msis_rank(), // kappa2,
+    base0,              // base1
+    base0,              // base2
+    base0,              // base3
+    beta,               // beta
   };
   LabradorInstance lab_inst{param};
   lab_inst.add_equality_constraint(eq_inst);

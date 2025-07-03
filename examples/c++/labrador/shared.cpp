@@ -105,6 +105,39 @@ Oracle create_oracle_seed(const std::byte* seed, size_t seed_len, const Labrador
   return Oracle(buf.data(), buf.size());
 }
 
+uint32_t calc_base0(size_t r, uint64_t op_norm_bound, double beta)
+{
+  uint32_t base0 = sqrt(op_norm_bound * beta * sqrt(r));
+  return base0;
+}
+
+std::pair<size_t, size_t> compute_mu_nu(size_t n, size_t m)
+{
+  // setting r_prime^2 = C * n_prime
+  float C = 1.0 / 4.0;
+  float m_plus_2n = 2 * n + m;
+  float frac = pow(C / m_plus_2n / m_plus_2n, 1.0 / 3.0);
+  if (n > m) {
+    float nu_f = frac * n + 1.0;
+    float mu_f = ceil(m * nu_f / n);
+    return std::make_pair(size_t(mu_f), size_t(nu_f));
+  } else {
+    float mu_f = frac * m + 1.0;
+    float nu_f = ceil(n * mu_f / m);
+    return std::make_pair(size_t(mu_f), size_t(nu_f));
+  }
+  // size_t nu = 1 << 3, mu = 1 << 3;
+}
+
+size_t secure_msis_rank()
+{
+  const double log_delta = log(1.0045);
+  const double log_q = log(get_q<Zq>());
+
+  double k_f = pow(log_q - 1.0, 2) / 4 / log_delta / log_q / Rq::d;
+  return ceil(k_f);
+}
+
 size_t RecursionPreparer::z0_begin_idx() const { return 0; }
 
 size_t RecursionPreparer::z1_begin_idx() const { return nu * n_prime; }
@@ -187,13 +220,13 @@ LabradorInstance prepare_recursion_instance(
     r_prime,
     n_prime,
     new_ajtai_seed,
-    prev_param.kappa,  // kappa
-    prev_param.kappa1, // kappa1
-    prev_param.kappa2, // kappa2,
-    base_prime0,       // base1
-    base_prime0,       // base2
-    base_prime0,       // base3
-    beta,              // beta
+    secure_msis_rank(), // kappa
+    secure_msis_rank(), // kappa1
+    secure_msis_rank(), // kappa2,
+    base_prime0,        // base1
+    base_prime0,        // base2
+    base_prime0,        // base3
+    beta,               // beta
   };
   LabradorInstance recursion_instance{recursion_param};
 
