@@ -1,33 +1,21 @@
-use crate::vec_ops::{setup_config, VecOpsConfig};
+//! Matrix operations over data stored in host or device memory.
+//!
+//! This module defines a trait [`MatrixOps`] and convenience functions for
+//! performing matrix computations such as multiplication and transposition
+//! across heterogeneous memory backends (CPU or GPU).
+//!
+//! ## Supported Operations
+//!
+//! - Matrix multiplication (`matmul`)
+//! - Matrix transpose (`matrix_transpose`)
+//!
+//! All functions are backend-agnostic and dispatched using [`VecOpsConfig`].
+
+use crate::vec_ops::VecOpsConfig;
+
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
-
-fn check_matrix_ops_args_transpose<F>(
-    input: &(impl HostOrDeviceSlice<F> + ?Sized),
-    nof_rows: u32,
-    nof_cols: u32,
-    output: &(impl HostOrDeviceSlice<F> + ?Sized),
-    cfg: &VecOpsConfig,
-) -> VecOpsConfig {
-    if input.len() != output.len() {
-        panic!(
-            "Input size, and output size do not match {} != {}",
-            input.len(),
-            output.len()
-        );
-    }
-    if input.len() as u32 % (nof_rows * nof_cols) != 0 {
-        panic!(
-            "Input size is not a whole multiple of matrix size (#rows * #cols), {} % ({} * {}) != 0",
-            input.len(),
-            nof_rows,
-            nof_cols,
-        );
-    }
-    let batch_size = input.len() / (nof_rows * nof_cols) as usize;
-    setup_config(input, input, output, cfg, batch_size)
-}
 
 /// Trait defining matrix operations for types stored in host or device memory.
 ///
@@ -43,7 +31,18 @@ fn check_matrix_ops_args_transpose<F>(
 ///   - `result` must be sized to hold `(a_rows × b_cols)` elements
 ///
 ///   Memory for all inputs and the result can reside on either the host or device.
+/// Trait defining matrix operations over row-major matrices stored in host or device memory.
 pub trait MatrixOps<T> {
+    /// Performs matrix multiplication: `result = a × b`
+    ///
+    /// - `a`: shape `(a_rows × a_cols)` (row-major)
+    /// - `b`: shape `(b_rows × b_cols)` (row-major)
+    /// - `result`: shape `(a_rows × b_cols)` (row-major, must be preallocated)
+    ///
+    /// Requirements:
+    /// - `a_cols == b_rows`
+    /// - All buffers may reside in host or device memory
+    ///
     fn matmul(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
         a_rows: u32,
@@ -55,7 +54,13 @@ pub trait MatrixOps<T> {
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> Result<(), eIcicleError>;
 
-    fn transpose(
+    /// Computes the transpose of a matrix in row-major order.
+    ///
+    /// - `input`: shape `(nof_rows × nof_cols)`
+    /// - `output`: shape `(nof_cols × nof_rows)` (must be preallocated)
+    ///
+    /// Both input and output can reside on host or device memory.
+    fn matrix_transpose(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         nof_rows: u32,
         nof_cols: u32,
@@ -64,6 +69,9 @@ pub trait MatrixOps<T> {
     ) -> Result<(), eIcicleError>;
 }
 
+/// Dispatches [`MatrixOps::matmul`] using the type `T`.
+///
+/// All matrices are expected to be in row-major order.
 pub fn matmul<T>(
     a: &(impl HostOrDeviceSlice<T> + ?Sized),
     a_rows: u32,
@@ -80,6 +88,9 @@ where
     T::matmul(a, a_rows, a_cols, b, b_rows, b_cols, cfg, result)
 }
 
+/// Dispatches [`MatrixOps::matrix_transpose`] using the type `T`.
+///
+/// All matrices are assumed to be in row-major order.
 pub fn matrix_transpose<T>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     nof_rows: u32,
@@ -90,8 +101,7 @@ pub fn matrix_transpose<T>(
 where
     T: MatrixOps<T>,
 {
-    let cfg = check_matrix_ops_args_transpose(input, nof_rows, nof_cols, output, cfg);
-    T::transpose(input, nof_rows, nof_cols, &cfg, output)
+    T::matrix_transpose(input, nof_rows, nof_cols, &cfg, output)
 }
 
 /// Implements matrix multiplication over polynomial rings via FFI
@@ -120,11 +130,12 @@ macro_rules! impl_matrix_ops {
                 #[link_name = concat!($prefix, "_matrix_transpose")]
                 pub(crate) fn matrix_transpose_ffi(
                     input: *const $element_type,
-                    nof_rows: u32,
+                    nof_ows: u32,
                     nof_cols: u32,
                     cfg: *const VecOpsConfig,
                     output: *mut $element_type,
                 ) -> eIcicleError;
+
             }
 
             impl MatrixOps<$element_type> for $element_type {
@@ -206,19 +217,50 @@ macro_rules! impl_matrix_ops {
                     }
                 }
 
-                fn transpose(
+                fn matrix_transpose(
                     input: &(impl HostOrDeviceSlice<$element_type> + ?Sized),
                     nof_rows: u32,
                     nof_cols: u32,
                     cfg: &VecOpsConfig,
                     output: &mut (impl HostOrDeviceSlice<$element_type> + ?Sized),
                 ) -> Result<(), eIcicleError> {
+                    if input.len() as u32 != nof_rows * nof_cols {
+                        eprintln!(
+                            "Matrix A has invalid size: got {}, expected {} ({} × {})",
+                            input.len(),
+                            nof_rows * nof_cols,
+                            nof_rows,
+                            nof_cols
+                        );
+                        return Err(eIcicleError::InvalidArgument);
+                    }
+
+                    if output.len() != input.len() {
+                        eprintln!("Output matrix has invalid size",);
+                        return Err(eIcicleError::InvalidArgument);
+                    }
+
+                    if input.is_on_device() && !input.is_on_active_device() {
+                        eprintln!("Input a is on an inactive device");
+                        return Err(eIcicleError::InvalidArgument);
+                    }
+
+                    if output.is_on_device() && !output.is_on_active_device() {
+                        eprintln!("Result matrix is on an inactive device");
+                        return Err(eIcicleError::InvalidArgument);
+                    }
+
+                    let mut cfg_clone = cfg.clone();
+                    cfg_clone.is_a_on_device = input.is_on_device();
+                    cfg_clone.is_b_on_device = false;
+                    cfg_clone.is_result_on_device = output.is_on_device();
+
                     unsafe {
                         matrix_transpose_ffi(
                             input.as_ptr(),
                             nof_rows,
                             nof_cols,
-                            cfg as *const VecOpsConfig,
+                            &cfg_clone,
                             output.as_mut_ptr(),
                         )
                         .wrap()
@@ -232,28 +274,24 @@ macro_rules! impl_matrix_ops {
 #[macro_export]
 macro_rules! impl_matrix_ops_tests {
     ($element_type:ty) => {
-        #[cfg(test)]
-        mod test_matmul_device_memory {
+        use icicle_core::matrix_ops::tests::*;
+        use icicle_runtime::test_utilities;
 
-            use icicle_core::matrix_ops::tests::*;
-            use icicle_runtime::test_utilities;
+        pub fn initialize() {
+            test_utilities::test_load_and_init_devices();
+            test_utilities::test_set_main_device();
+        }
 
-            pub fn initialize() {
-                test_utilities::test_load_and_init_devices();
-                test_utilities::test_set_main_device();
-            }
+        #[test]
+        fn test_matmul_device_memory() {
+            initialize();
+            check_matmul_device_memory::<$element_type>();
+        }
 
-            #[test]
-            fn test_matmul_device_memory() {
-                initialize();
-                check_matmul_device_memory::<$element_type>();
-            }
-
-            #[test]
-            pub fn test_matrix_transpose() {
-                initialize();
-                check_matrix_transpose::<$element_type>()
-            }
+        #[test]
+        pub fn test_matrix_transpose() {
+            initialize();
+            check_matrix_transpose_device_memory::<$element_type>()
         }
     };
 }

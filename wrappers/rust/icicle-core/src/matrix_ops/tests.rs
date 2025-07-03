@@ -147,39 +147,110 @@ where
     assert_eq!(device_out, ref_out);
 }
 
-pub fn check_matrix_transpose<F>()
+/// Validates that matrix transpose behaves consistently across host and device memory.
+///
+/// This test checks all combinations of input/output memory locations:
+///  1. Host → Host
+///  2. Host → Device
+///  3. Device → Host
+///  4. Device → Device
+///
+/// Transpose correctness is assumed to be verified by lower-level C++ tests.
+/// Here, we validate consistent behavior across memory backends by transposing a matrix
+/// and checking that a second transpose restores the original data.
+///
+/// The test is repeated for both main and reference devices.
+pub fn check_matrix_transpose_device_memory<P: MatrixOps<P>>()
 where
-    F: MatrixOps<F> + GenerateRandom + Default + Clone + PartialEq + std::fmt::Debug,
+    P: Default + GenerateRandom + Clone + std::fmt::Debug + PartialEq,
 {
     let cfg = VecOpsConfig::default();
-    let batch_size = 3;
+    let nof_rows = 1 << 5;
+    let nof_cols = 1 << 6;
+    let matrix_size = nof_rows * nof_cols;
 
-    let (r, c): (u32, u32) = (1u32 << 10, 1u32 << 4);
-    let test_size = (r * c * batch_size) as usize;
+    let input_matrix = P::generate_random(matrix_size);
 
-    let input_matrix = F::generate_random(test_size);
-    let mut result_main = vec![F::default(); test_size];
-    let mut result_ref = vec![F::default(); test_size];
+    let test_single_device = |main_device: bool| {
+        if main_device {
+            test_utilities::test_set_main_device();
+        } else {
+            test_utilities::test_set_ref_device();
+        }
 
-    test_utilities::test_set_main_device();
-    matrix_transpose(
-        HostSlice::from_slice(&input_matrix),
-        r,
-        c,
-        &cfg,
-        HostSlice::from_mut_slice(&mut result_main),
-    )
-    .unwrap();
+        // --- Case 1: Host → Host ---
+        let mut output_host_case_1 = vec![P::default(); matrix_size];
+        matrix_transpose(
+            HostSlice::from_slice(&input_matrix),
+            nof_rows as u32,
+            nof_cols as u32,
+            &cfg,
+            HostSlice::from_mut_slice(&mut output_host_case_1),
+        )
+        .unwrap();
+        assert_ne!(input_matrix, output_host_case_1); // Transpose should modify data
 
-    test_utilities::test_set_ref_device();
-    matrix_transpose(
-        HostSlice::from_slice(&input_matrix),
-        r,
-        c,
-        &cfg,
-        HostSlice::from_mut_slice(&mut result_ref),
-    )
-    .unwrap();
+        // --- Case 2: Host → Device ---
+        let mut device_mem_output = DeviceVec::<P>::device_malloc(matrix_size).unwrap();
+        matrix_transpose(
+            HostSlice::from_slice(&input_matrix),
+            nof_rows as u32,
+            nof_cols as u32,
+            &cfg,
+            &mut device_mem_output,
+        )
+        .unwrap();
 
-    assert_eq!(result_main, result_ref);
+        // Compare (1) and (2)
+        let mut output_host_case_2 = vec![P::default(); matrix_size];
+        device_mem_output
+            .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_2))
+            .unwrap();
+        assert_eq!(output_host_case_1, output_host_case_2);
+
+        // --- Case 3: Device → Host ---
+        let mut device_mem_input = DeviceVec::<P>::device_malloc(matrix_size).unwrap();
+        device_mem_input
+            .copy_from_host(HostSlice::from_slice(&input_matrix))
+            .unwrap();
+
+        let mut output_host_case_3 = vec![P::default(); matrix_size];
+        matrix_transpose(
+            &device_mem_input,
+            nof_rows as u32,
+            nof_cols as u32,
+            &cfg,
+            HostSlice::from_mut_slice(&mut output_host_case_3),
+        )
+        .unwrap();
+        assert_eq!(output_host_case_1, output_host_case_3);
+
+        // --- Case 4: Device → Device (Transpose back to original) ---
+        let mut device_mem_restored = DeviceVec::<P>::device_malloc(matrix_size).unwrap();
+        matrix_transpose(
+            &device_mem_output,
+            nof_cols as u32, // flipped dimensions
+            nof_rows as u32,
+            &cfg,
+            &mut device_mem_restored,
+        )
+        .unwrap();
+
+        let mut output_host_case_4_restored = vec![P::default(); matrix_size];
+        device_mem_restored
+            .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_4_restored))
+            .unwrap();
+        assert_eq!(input_matrix, output_host_case_4_restored);
+
+        output_host_case_1
+    };
+
+    // Run on main device
+    let device_out = test_single_device(true);
+
+    // Run on reference device
+    let ref_out = test_single_device(false);
+
+    // Final check: both devices should yield identical transpose results
+    assert_eq!(device_out, ref_out);
 }

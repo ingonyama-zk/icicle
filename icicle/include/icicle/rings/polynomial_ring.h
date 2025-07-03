@@ -37,5 +37,4 @@ namespace icicle {
       F::rand_host_many(reinterpret_cast<F*>(out), size * d);
     }
   };
-
 } // namespace icicle
