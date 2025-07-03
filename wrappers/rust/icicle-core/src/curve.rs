@@ -156,7 +156,7 @@ impl<C: Curve> MontgomeryConvertible for Affine<C> {
         let mut config = VecOpsConfig::default();
         config.is_a_on_device = values.is_on_device();
         config.is_async = !stream.is_null();
-        config.stream_handle = (&*stream).into();
+        config.stream_handle = stream.into();
         C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &config).wrap()
     }
 
@@ -173,7 +173,7 @@ impl<C: Curve> MontgomeryConvertible for Affine<C> {
         let mut config = VecOpsConfig::default();
         config.is_a_on_device = values.is_on_device();
         config.is_async = !stream.is_null();
-        config.stream_handle = (&*stream).into();
+        config.stream_handle = stream.into();
         C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, &config).wrap()
     }
 }
@@ -189,7 +189,7 @@ impl<C: Curve> MontgomeryConvertible for Projective<C> {
         let mut config = VecOpsConfig::default();
         config.is_a_on_device = values.is_on_device();
         config.is_async = !stream.is_null();
-        config.stream_handle = (&*stream).into();
+        config.stream_handle = stream.into();
         C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &config).wrap()
     }
 
@@ -206,7 +206,7 @@ impl<C: Curve> MontgomeryConvertible for Projective<C> {
         let mut config = VecOpsConfig::default();
         config.is_a_on_device = values.is_on_device();
         config.is_async = !stream.is_null();
-        config.stream_handle = (&*stream).into();
+        config.stream_handle = stream.into();
         C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, &config).wrap()
     }
 }

@@ -321,6 +321,7 @@ macro_rules! impl_ntt_without_domain {
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_ntt {
     (
       $field_prefix:literal,

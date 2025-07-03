@@ -50,7 +50,7 @@ pub trait KyberParams {
         secret_keys: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × SECRET_KEY_BYTES
     ) -> Result<(), IcicleError> {
         let mut config = config.clone();
-        if entropy.len() != config.batch_size as usize * ENTROPY_BYTES {
+        if entropy.len() != config.batch_size * ENTROPY_BYTES {
             return Err(IcicleError::new(
                 eIcicleError::InvalidArgument,
                 format!(
@@ -60,7 +60,7 @@ pub trait KyberParams {
                 ),
             ));
         }
-        if public_keys.len() != config.batch_size as usize * Self::PUBLIC_KEY_BYTES {
+        if public_keys.len() != config.batch_size * Self::PUBLIC_KEY_BYTES {
             return Err(IcicleError::new(
                 eIcicleError::InvalidArgument,
                 format!(
@@ -70,7 +70,7 @@ pub trait KyberParams {
                 ),
             ));
         }
-        if secret_keys.len() != config.batch_size as usize * Self::SECRET_KEY_BYTES {
+        if secret_keys.len() != config.batch_size * Self::SECRET_KEY_BYTES {
             return Err(IcicleError::new(
                 eIcicleError::InvalidArgument,
                 format!(
@@ -121,7 +121,7 @@ pub trait KyberParams {
         shared_secrets: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × SHARED_SECRET_BYTES
     ) -> Result<(), IcicleError> {
         let mut config = config.clone();
-        if message.len() != config.batch_size as usize * MESSAGE_BYTES {
+        if message.len() != config.batch_size * MESSAGE_BYTES {
             return Err(IcicleError::new(
                 eIcicleError::InvalidArgument,
                 format!(
@@ -131,7 +131,7 @@ pub trait KyberParams {
                 ),
             ));
         }
-        if public_keys.len() != config.batch_size as usize * Self::PUBLIC_KEY_BYTES {
+        if public_keys.len() != config.batch_size * Self::PUBLIC_KEY_BYTES {
             return Err(IcicleError::new(
                 eIcicleError::InvalidArgument,
                 format!(
@@ -141,7 +141,7 @@ pub trait KyberParams {
                 ),
             ));
         }
-        if ciphertexts.len() != config.batch_size as usize * Self::CIPHERTEXT_BYTES {
+        if ciphertexts.len() != config.batch_size * Self::CIPHERTEXT_BYTES {
             return Err(IcicleError::new(
                 eIcicleError::InvalidArgument,
                 format!(
@@ -151,7 +151,7 @@ pub trait KyberParams {
                 ),
             ));
         }
-        if shared_secrets.len() != config.batch_size as usize * Self::SHARED_SECRET_BYTES {
+        if shared_secrets.len() != config.batch_size * Self::SHARED_SECRET_BYTES {
             return Err(IcicleError::new(
                 eIcicleError::InvalidArgument,
                 format!(
@@ -210,7 +210,7 @@ pub trait KyberParams {
         shared_secrets: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × SHARED_SECRET_BYTES
     ) -> Result<(), IcicleError> {
         let mut config = config.clone();
-        if secret_keys.len() != config.batch_size as usize * Self::SECRET_KEY_BYTES {
+        if secret_keys.len() != config.batch_size * Self::SECRET_KEY_BYTES {
             return Err(IcicleError::new(
                 eIcicleError::InvalidArgument,
                 format!(
@@ -220,7 +220,7 @@ pub trait KyberParams {
                 ),
             ));
         }
-        if ciphertexts.len() != config.batch_size as usize * Self::CIPHERTEXT_BYTES {
+        if ciphertexts.len() != config.batch_size * Self::CIPHERTEXT_BYTES {
             return Err(IcicleError::new(
                 eIcicleError::InvalidArgument,
                 format!(
@@ -230,7 +230,7 @@ pub trait KyberParams {
                 ),
             ));
         }
-        if shared_secrets.len() != config.batch_size as usize * Self::SHARED_SECRET_BYTES {
+        if shared_secrets.len() != config.batch_size * Self::SHARED_SECRET_BYTES {
             return Err(IcicleError::new(
                 eIcicleError::InvalidArgument,
                 format!(

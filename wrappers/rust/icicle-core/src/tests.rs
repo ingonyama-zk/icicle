@@ -242,7 +242,7 @@ where
     let host_polys = P::generate_random(size);
     let mut device_vec = DeviceVec::<P>::device_malloc(size).unwrap();
     device_vec
-        .copy_from_host(&HostSlice::from_slice(&host_polys))
+        .copy_from_host(HostSlice::from_slice(&host_polys))
         .unwrap();
 
     // Flatten the device polynomial slice

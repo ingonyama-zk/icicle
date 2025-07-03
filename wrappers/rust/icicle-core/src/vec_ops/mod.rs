@@ -513,6 +513,7 @@ where
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_vec_ops_field {
     (
         $field_prefix:literal,
@@ -919,6 +920,7 @@ macro_rules! impl_vec_ops_field {
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_vec_ops_mixed_field {
     (
         $field_prefix:literal,

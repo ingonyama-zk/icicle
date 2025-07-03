@@ -43,6 +43,7 @@ pub trait ReturningValueProgram: Sized + Handle {
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_program_field {
     (
     $field_prefix:literal,
@@ -291,6 +292,7 @@ macro_rules! impl_program_field {
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_program_tests {
     (
       $field_prefix_ident: ident,

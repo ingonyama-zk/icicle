@@ -38,6 +38,7 @@ pub trait Symbol<F: PrimeField>:
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_symbol_field {
   (
     $field_prefix:literal,

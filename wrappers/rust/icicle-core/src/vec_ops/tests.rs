@@ -438,7 +438,7 @@ where
     let cfg = VecOpsConfig::default();
     bit_reverse(input, &cfg, &mut intermediate[..]).unwrap();
 
-    let mut intermediate_host = vec![F::one(); TEST_SIZE];
+    let mut intermediate_host = [F::one(); TEST_SIZE];
     intermediate
         .copy_to_host(HostSlice::from_mut_slice(&mut intermediate_host[..]))
         .unwrap();
@@ -467,12 +467,12 @@ where
     let input = HostSlice::from_slice(&input_vec);
     let mut intermediate = DeviceVec::<F>::device_malloc(TEST_SIZE).unwrap();
     intermediate
-        .copy_from_host(&input)
+        .copy_from_host(input)
         .unwrap();
     let cfg = VecOpsConfig::default();
     bit_reverse_inplace(&mut intermediate[..], &cfg).unwrap();
 
-    let mut intermediate_host = vec![F::one(); TEST_SIZE];
+    let mut intermediate_host = [F::one(); TEST_SIZE];
     intermediate
         .copy_to_host(HostSlice::from_mut_slice(&mut intermediate_host[..]))
         .unwrap();

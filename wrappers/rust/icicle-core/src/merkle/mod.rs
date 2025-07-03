@@ -386,8 +386,8 @@ impl MerkleTree {
             let handle = icicle_merkle_tree_create(
                 hash_handles.as_ptr(),
                 hash_handles.len() as u64,
-                leaf_element_size as u64,
-                output_store_min_layer as u64,
+                leaf_element_size,
+                output_store_min_layer,
             );
 
             if handle.is_null() {
@@ -430,7 +430,7 @@ impl MerkleTree {
         if root_ptr.is_null() {
             Err(IcicleError::new(eIcicleError::UnknownError, "root pointer is null"))
         } else {
-            let element_size = std::mem::size_of::<T>() as usize;
+            let element_size = std::mem::size_of::<T>();
             let num_elements = size as usize / element_size;
             unsafe { Ok(slice::from_raw_parts(root_ptr as *const T, num_elements)) }
         }
@@ -462,7 +462,7 @@ impl MerkleTree {
                 self.handle,
                 leaves.as_ptr() as *const u8,
                 byte_size,
-                leaf_idx as u64,
+                leaf_idx,
                 pruned_path,
                 &local_cfg,
                 proof.handle,

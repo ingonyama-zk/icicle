@@ -61,7 +61,7 @@ pub fn pow_solver(
     nonce: &mut u64,
     mined_hash: &mut u64,
 ) -> Result<(), IcicleError> {
-    if solution_bits < 1 || solution_bits > 60 {
+    if !(1..=60).contains(&solution_bits) {
         return Err(IcicleError::new(
             eIcicleError::InvalidArgument,
             "invalid solution_bits value",
@@ -100,7 +100,7 @@ pub fn pow_verify(
     is_correct: &mut bool,
     mined_hash: &mut u64,
 ) -> Result<(), IcicleError> {
-    if solution_bits < 1 || solution_bits > 60 {
+    if !(1..=60).contains(&solution_bits) {
         return Err(IcicleError::new(
             eIcicleError::InvalidArgument,
             "invalid solution_bits value",

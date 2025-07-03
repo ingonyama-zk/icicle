@@ -47,6 +47,7 @@ impl Poseidon {
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_poseidon {
     (
         $field_prefix:literal,

@@ -16,7 +16,7 @@ where
     let domain_tag = F::generate_random(1)[0];
     for t in [3, 5, 9, 12] {
         for domain_tag in [None, Some(&domain_tag)] {
-            let inputs: Vec<F> = if domain_tag != None {
+            let inputs: Vec<F> = if domain_tag.is_some() {
                 F::generate_random(batch * (t - 1))
             } else {
                 F::generate_random(batch * t)
@@ -175,5 +175,5 @@ where
     let verification_valid = merkle_tree
         .verify(&merkle_proof)
         .unwrap();
-    assert_eq!(verification_valid, true);
+    assert!(verification_valid);
 }

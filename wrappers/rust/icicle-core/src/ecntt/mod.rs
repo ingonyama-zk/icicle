@@ -83,10 +83,11 @@ pub fn ecntt_inplace<C: Curve>(
 where
     C::ScalarField: PrimeField + ECNTT<Projective<C>>,
 {
-    <C::ScalarField as ECNTT<Projective<C>>>::ntt_inplace(inout, dir, &cfg)
+    <C::ScalarField as ECNTT<Projective<C>>>::ntt_inplace(inout, dir, cfg)
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_ecntt {
     (
         $field_prefix:literal,

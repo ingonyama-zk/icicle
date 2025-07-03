@@ -279,7 +279,7 @@ where
         let b = vars[1];
         let c = vars[2];
         let d = vars[3];
-        return a * b + d - c * P::Field::from_u32(2);
+        a * b + d - c * P::Field::from_u32(2)
     };
 
     /****** Begin CPU Proof ******/
@@ -371,7 +371,7 @@ where
         let b = vars[1];
         let c = vars[2];
         let d = vars[3];
-        return a * b + d - c * P::Field::from_u32(2);
+        a * b + d - c * P::Field::from_u32(2)
     };
 
     /****** Begin CPU Proof ******/

@@ -422,7 +422,7 @@ where
                                     .ext
                                     .set_int(CUDA_NTT_ALGORITHM, alg as i32);
                                 let mut ntt_result_h = vec![F::zero(); test_size * batch_size];
-                                let mut ntt_result_slice = HostSlice::from_mut_slice(&mut ntt_result_h);
+                                let ntt_result_slice = HostSlice::from_mut_slice(&mut ntt_result_h);
                                 ntt_inplace(&mut *scalars_d, NTTDir::kForward, &config).unwrap();
 
                                 scalars_d
@@ -435,7 +435,7 @@ where
 
                                 ntt_inplace(&mut *scalars_d, NTTDir::kInverse, &config).unwrap();
                                 scalars_d
-                                    .copy_to_host_async(&mut ntt_result_slice, &stream)
+                                    .copy_to_host_async(ntt_result_slice, &stream)
                                     .unwrap();
                                 stream
                                     .synchronize()

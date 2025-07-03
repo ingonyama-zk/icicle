@@ -182,7 +182,7 @@ where
     // === Copy to device memory ===
     let mut device_vec = DeviceVec::<P>::device_malloc(num_polys).unwrap();
     device_vec
-        .copy_from_host(&HostSlice::from_slice(&host_polys))
+        .copy_from_host(HostSlice::from_slice(&host_polys))
         .unwrap();
 
     // === JL projection parameters ===

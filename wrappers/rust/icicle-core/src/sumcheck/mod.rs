@@ -251,6 +251,7 @@ where
 
 /// Macro to implement Sumcheck functionality for a specific field.
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_sumcheck {
     ($field_prefix:literal, $field_prefix_ident:ident, $field:ident) => {
         mod $field_prefix_ident {
@@ -671,6 +672,7 @@ macro_rules! impl_sumcheck {
 
 /// Macro to define tests for a specific field.
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_sumcheck_tests {
     (
         $field_prefix_ident: ident,

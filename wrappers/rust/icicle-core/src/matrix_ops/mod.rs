@@ -48,6 +48,7 @@ where
 
 /// Implements matrix multiplication over polynomial rings via FFI
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_matmul {
     ($prefix: literal, $poly_type: ty) => {
         mod labrador {
