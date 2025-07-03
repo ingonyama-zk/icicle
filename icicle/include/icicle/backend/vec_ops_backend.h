@@ -522,16 +522,17 @@ namespace icicle {
 #endif // EXT_FIELD
 
 #ifdef RING
+  // for Zq type
+
   // This should be the same for all the devices to get a deterministic result
   const uint64_t RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS = 256;
 
-  // for Zq type
   using ringZqRandomSamplingImpl = std::function<eIcicleError(
     const Device& device,
-    uint64_t size,
+    size_t size,
     bool fast_mode,
     const std::byte* seed,
-    uint64_t seed_len,
+    size_t seed_len,
     const VecOpsConfig& cfg,
     field_t* output)>;
   void register_ring_zq_random_sampling(const std::string& deviceType, ringZqRandomSamplingImpl);
@@ -540,6 +541,29 @@ namespace icicle {
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_ring_zq_random_sampling) = []() -> bool {                                                \
         register_ring_zq_random_sampling(DEVICE_TYPE, FUNC);                                                           \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  // for Rq type
+
+  using challengeSpacePolynomialsSamplingImpl = std::function<eIcicleError(
+    const Device& device,
+    const std::byte* seed,
+    size_t seed_len,
+    size_t size,
+    uint32_t ones,
+    uint32_t twos,
+    uint64_t norm,
+    const VecOpsConfig& cfg,
+    Rq* output)>;
+  void
+  register_challenge_space_polynomials_sampling(const std::string& deviceType, challengeSpacePolynomialsSamplingImpl);
+
+  #define REGISTER_CHALLENGE_SPACE_POLYNOMIALS_SAMPLING_BACKEND(DEVICE_TYPE, FUNC)                                     \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_challenge_space_polynomials_sampling) = []() -> bool {                                   \
+        register_challenge_space_polynomials_sampling(DEVICE_TYPE, FUNC);                                              \
         return true;                                                                                                   \
       }();                                                                                                             \
     }
@@ -834,29 +858,6 @@ namespace icicle {
       static bool UNIQUE(_reg_balanced_recomposition) = []() -> bool {                                                 \
         register_decompose_balanced_digits(DEVICE_TYPE, DECOMPOSE);                                                    \
         register_recompose_from_balanced_digits(DEVICE_TYPE, RECOMPOSE);                                               \
-        return true;                                                                                                   \
-      }();                                                                                                             \
-    }
-
-  using balancedDecompositionPolyRingImpl = std::function<eIcicleError(
-    const Device& device,
-    const PolyRing* input,
-    size_t input_size,
-    uint32_t base,
-    const VecOpsConfig& config,
-    PolyRing* output,
-    size_t output_size)>;
-
-  void
-  register_decompose_balanced_digits_poly_ring(const std::string& deviceType, balancedDecompositionPolyRingImpl impl);
-  void register_recompose_from_balanced_digits_poly_ring(
-    const std::string& deviceType, balancedDecompositionPolyRingImpl impl);
-
-  #define REGISTER_BALANCED_DECOMPOSITION_POLYRING_BACKEND(DEVICE_TYPE, DECOMPOSE, RECOMPOSE)                          \
-    namespace {                                                                                                        \
-      static bool UNIQUE(_reg_balanced_recomposition_poly_ring) = []() -> bool {                                       \
-        register_decompose_balanced_digits_poly_ring(DEVICE_TYPE, DECOMPOSE);                                          \
-        register_recompose_from_balanced_digits_poly_ring(DEVICE_TYPE, RECOMPOSE);                                     \
         return true;                                                                                                   \
       }();                                                                                                             \
     }

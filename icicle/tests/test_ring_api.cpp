@@ -7,6 +7,9 @@
 #include "icicle/negacyclic_ntt.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
+#include "icicle/operator_norm.h"
+#include <chrono>
+#include <map>
 
 using namespace field_config;
 using namespace icicle;
@@ -155,6 +158,7 @@ TEST_F(RingTestBase, BalancedDecompositionZQ)
   const size_t size = 1 << 20;
   auto input = std::vector<field_t>(size);
   field_t::rand_host_many(input.data(), size);
+  auto recomposed_ref = std::vector<field_t>(size);
   auto recomposed = std::vector<field_t>(size);
 
   const auto q_sqrt = static_cast<uint32_t>(std::sqrt(q));
@@ -174,8 +178,8 @@ TEST_F(RingTestBase, BalancedDecompositionZQ)
 
     for (const auto base : bases) {
       // Number of digits needed to represent an element mod q in balanced base-b representation
-      const size_t digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
-      const size_t decomposed_size = size * digits_per_element;
+      const size_t num_digits = balanced_decomposition::compute_nof_digits<field_t>(base);
+      const size_t decomposed_size = size * num_digits;
       auto decomposed = std::vector<field_t>(decomposed_size);
 
       std::stringstream timer_label_decompose, timer_label_recompose;
@@ -202,6 +206,21 @@ TEST_F(RingTestBase, BalancedDecompositionZQ)
         ASSERT_TRUE(is_balanced) << "Digit " << digit << " is out of expected balanced range for base=" << base;
       }
 
+      // Recompose manually to check to layout is digit-major, as it should be
+      // Generate the powers b^i for i in [0..num_digits]
+      Zq power = Zq::from(1);
+      std::vector<Zq> powers(num_digits);
+      for (size_t digit_idx = 0; digit_idx < num_digits; ++digit_idx) {
+        powers[digit_idx] = power;
+        power = power * Zq::from(base);
+      }
+      // Consider the decomposition as a [num_digits][size] matrix where rows are a single digit for the entire input
+      // vector. Then a linear combination with scalars [1, b, b^2, ...] is exactly the recomposition
+      ICICLE_CHECK(
+        matmul(powers.data(), 1, num_digits, decomposed.data(), num_digits, size, {}, recomposed_ref.data()));
+      ASSERT_EQ(0, memcmp(input.data(), recomposed_ref.data(), sizeof(field_t) * size))
+        << "Recomposition failed for base=" << base;
+
       // Recompose and compare to original input
       START_TIMER(recomposition);
       ICICLE_CHECK(balanced_decomposition::recompose(d_decomposed, decomposed_size, base, cfg, d_recomposed, size));
@@ -217,6 +236,67 @@ TEST_F(RingTestBase, BalancedDecompositionZQ)
     icicle_free(d_input);
     icicle_free(d_recomposed);
   } // device loop
+}
+
+TEST_F(RingTestBase, BalancedDecompositionSmallValues)
+{
+  static_assert(field_t::TLC == 2, "Balanced decomposition assumes q ~64-bit");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *reinterpret_cast<const int64_t*>(&q_storage);
+  ICICLE_ASSERT(q > 0) << "Expecting q to fit in int64_t";
+
+  const size_t size = 1 << 10;
+  std::vector<field_t> input(size);
+
+  // Fill input with small values requiring at most 2 bits
+  constexpr int max_val = 4;
+  const size_t num_digits_used = static_cast<size_t>(std::log2(max_val));
+  for (auto& e : input) {
+    e = field_t::from(rand() % max_val);
+  }
+
+  std::vector<field_t> recomposed(size);
+  std::vector<field_t> recomposed_ref(size);
+
+  const uint32_t q_sqrt = static_cast<uint32_t>(std::sqrt(q));
+  const std::vector<uint32_t> bases = {2, q_sqrt};
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    for (uint32_t base : bases) {
+      // Compute the number of digits required to fully represent any element mod q
+      const size_t num_digits_required = balanced_decomposition::compute_nof_digits<field_t>(base);
+      ASSERT_GT(num_digits_required, num_digits_used)
+        << "Test requires decomposition to use less digits than are needed for worst case";
+
+      const size_t decomposed_size = size * num_digits_used;
+      std::vector<field_t> decomposed(decomposed_size);
+
+      // Perform decomposition
+      ICICLE_CHECK(balanced_decomposition::decompose(input.data(), size, base, {}, decomposed.data(), decomposed_size));
+
+      // Validate layout by manually recomposing using digit-major interpretation
+      std::vector<Zq> powers(num_digits_used);
+      Zq power = Zq::from(1);
+      for (size_t i = 0; i < num_digits_used; ++i) {
+        powers[i] = power;
+        power = power * Zq::from(base);
+      }
+
+      // Treat decomposition output as a [num_digits_used][size] matrix and compute dot product
+      ICICLE_CHECK(
+        matmul(powers.data(), 1, num_digits_used, decomposed.data(), num_digits_used, size, {}, recomposed_ref.data()));
+      ASSERT_EQ(0, memcmp(input.data(), recomposed_ref.data(), sizeof(field_t) * size))
+        << "Manual recomposition failed for base=" << base;
+
+      // Perform recompose() and verify equality with original input
+      ICICLE_CHECK(
+        balanced_decomposition::recompose(decomposed.data(), decomposed_size, base, {}, recomposed.data(), size));
+      ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), sizeof(field_t) * size))
+        << "API recomposition failed for base=" << base;
+    }
+  }
 }
 
 TEST_F(RingTestBase, BalancedDecompositionZqErrorCases)
@@ -1285,4 +1365,97 @@ TEST_F(RingTestBase, RandomSampling)
   };
   test_random_sampling(true);
   test_random_sampling(false);
+}
+
+TEST_F(RingTestBase, ChallengePolynomialsSampling)
+{
+  size_t size = 1 << 20;
+  size_t seed_len = 32;
+  std::vector<std::byte> seed(seed_len);
+  for (size_t i = 0; i < seed_len; ++i) {
+    seed[i] = static_cast<std::byte>(i);
+  }
+
+  std::vector<std::vector<Rq>> outputs(s_registered_devices.size());
+  for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+    outputs[device_index] = std::vector<Rq>(size);
+  }
+
+  size_t ones = 31;
+  size_t twos = 10;
+  int64_t norm = 15;
+
+  for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+    ICICLE_CHECK(icicle_set_device(s_registered_devices[device_index]));
+    ICICLE_CHECK(sample_challenge_space_polynomials(
+      seed.data(), seed_len, size, ones, twos, norm, VecOpsConfig{}, outputs[device_index].data()));
+  }
+
+  field_t two = field_t::one() + field_t::one();
+  field_t neg_two = field_t::neg(two);
+  field_t neg_one = field_t::neg(field_t::one());
+
+  for (size_t i = 0; i < size; ++i) {
+    const auto& poly = outputs[0][i];
+    std::unordered_map<field_t, size_t> coeff_counts;
+    for (int j = 0; j < Rq::d; ++j) {
+      coeff_counts[poly.values[j]]++;
+    }
+    // Check that the polynomial has the correct number of ones, twos, and zeros
+    ASSERT_EQ(coeff_counts[field_t::one()] + coeff_counts[neg_one], ones);
+    ASSERT_EQ(coeff_counts[two] + coeff_counts[neg_two], twos);
+    ASSERT_EQ(coeff_counts[field_t::zero()], Rq::d - ones - twos);
+
+    // Check that the polynomial has the correct norm
+    static const std::unordered_map<field_t, int64_t> balanced_table = {
+      {field_t::one(), 1}, {neg_one, -1}, {two, 2}, {neg_two, -2}, {field_t::zero(), 0},
+    };
+    opnorm::Poly poly_opnorm;
+    for (size_t j = 0; j < Rq::d; ++j) {
+      poly_opnorm[j] = balanced_table.at(poly.values[j]);
+    }
+    uint64_t opnorm = opnorm::operator_norm(poly_opnorm);
+    ASSERT_LT(opnorm, norm + 1);
+  }
+
+  // Check consistency across devices
+  for (size_t device_index = 1; device_index < s_registered_devices.size(); ++device_index) {
+    for (size_t i = 0; i < size; ++i) {
+      ASSERT_EQ(outputs[device_index][i], outputs[0][i]);
+    }
+  }
+}
+
+TEST_F(RingTestBase, ComplexFFT_Simple)
+{
+  using namespace opnorm;
+  Poly poly{};
+  for (size_t i = 0; i < N; ++i)
+    poly[i] = 2;
+
+  uint64_t opnorm = operator_norm(poly);
+  ASSERT_EQ(opnorm, 82); // Python computed 81.49551266892583 but losing precision with fixed point
+}
+
+TEST_F(RingTestBase, ComplexFFT_Alternating)
+{
+  using namespace opnorm;
+  Poly poly{};
+  for (size_t i = 0; i < N; ++i)
+    poly[i] = i % 2;
+
+  uint64_t opnorm = operator_norm(poly); // returns u64
+  ASSERT_EQ(opnorm, 21);                 // Python computed '20.38001624709613' but losing precision with fixed point
+}
+
+TEST_F(RingTestBase, ComplexFFT_QMinus2X)
+{
+  using namespace opnorm;
+  constexpr uint64_t q = (1ULL << 62) - 57;
+
+  Poly poly{};
+  poly[1] = balance<q>(q - 2); // Balanced as -2 in operator_norm()
+
+  uint64_t opnorm = operator_norm(poly);
+  ASSERT_EQ(opnorm, 2); // FFT of -2*X has magnitude 2 everywhere
 }
