@@ -226,7 +226,7 @@ fn check_vec_ops_args_slice<F>(
 }
 
 /// Modify VecopsConfig according to the given vectors
-pub(crate) fn setup_config<F, T>(
+fn setup_config<F, T>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &(impl HostOrDeviceSlice<F> + ?Sized),
