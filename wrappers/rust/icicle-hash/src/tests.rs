@@ -13,7 +13,6 @@ mod tests {
         merkle::{MerkleProof, MerkleTree, MerkleTreeConfig, PaddingPolicy},
     };
     use icicle_runtime::{
-        eIcicleError,
         memory::{DeviceVec, HostSlice},
         test_utilities,
     };
@@ -311,7 +310,7 @@ mod tests {
 
         let hasher = Blake3::new(0).unwrap();
 
-        let err = pow_solver(
+        pow_solver(
             &hasher,
             input_host,
             BITS,
@@ -319,8 +318,8 @@ mod tests {
             &mut gpu_found,
             &mut gpu_nonce,
             &mut gpu_mined_hash,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert!(gpu_found);
         assert_eq!(gpu_nonce, golden_nonce);
         assert_eq!(gpu_mined_hash, golden_hash);
@@ -328,7 +327,7 @@ mod tests {
         let mut gpu_is_correct = false;
         let mut gpu_mined_hash_check = 0;
 
-        let err = pow_verify(
+        pow_verify(
             &hasher,
             input_host,
             BITS,
@@ -336,8 +335,8 @@ mod tests {
             gpu_nonce,
             &mut gpu_is_correct,
             &mut gpu_mined_hash_check,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert_eq!(gpu_mined_hash_check, golden_hash);
         assert!(gpu_is_correct);
 
@@ -346,7 +345,7 @@ mod tests {
         let mut cpu_nonce = 0;
         let mut cpu_mined_hash = 0;
         let hasher = Blake3::new(0).unwrap();
-        let err = pow_solver(
+        pow_solver(
             &hasher,
             input_host,
             BITS,
@@ -354,8 +353,8 @@ mod tests {
             &mut cpu_found,
             &mut cpu_nonce,
             &mut cpu_mined_hash,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert!(cpu_found);
         assert_eq!(cpu_nonce, golden_nonce);
         assert_eq!(cpu_mined_hash, golden_hash);
@@ -363,7 +362,7 @@ mod tests {
         let mut cpu_is_correct = false;
         let mut cpu_mined_hash_check = 0;
 
-        let err = pow_verify(
+        pow_verify(
             &hasher,
             input_host,
             BITS,
@@ -371,8 +370,8 @@ mod tests {
             cpu_nonce,
             &mut cpu_is_correct,
             &mut cpu_mined_hash_check,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert_eq!(cpu_mined_hash, golden_hash);
         assert!(cpu_is_correct);
     }
@@ -393,7 +392,7 @@ mod tests {
 
         let hasher = Keccak256::new(0).unwrap();
 
-        let err = pow_solver(
+        pow_solver(
             &hasher,
             input_host,
             BITS,
@@ -401,14 +400,14 @@ mod tests {
             &mut gpu_found,
             &mut gpu_nonce,
             &mut gpu_mined_hash,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert!(gpu_found);
 
         let mut gpu_is_correct = false;
         let mut gpu_mined_hash_check = 0;
 
-        let err = pow_verify(
+        pow_verify(
             &hasher,
             input_host,
             BITS,
@@ -416,8 +415,8 @@ mod tests {
             gpu_nonce,
             &mut gpu_is_correct,
             &mut gpu_mined_hash_check,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert_eq!(gpu_mined_hash_check, gpu_mined_hash);
         assert!(gpu_is_correct);
 
@@ -426,7 +425,7 @@ mod tests {
         let mut cpu_nonce = 0;
         let mut cpu_mined_hash = 0;
         let hasher = Keccak256::new(0).unwrap();
-        let err = pow_solver(
+        pow_solver(
             &hasher,
             input_host,
             BITS,
@@ -434,8 +433,8 @@ mod tests {
             &mut cpu_found,
             &mut cpu_nonce,
             &mut cpu_mined_hash,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert!(cpu_found);
         assert_eq!(cpu_nonce, gpu_nonce);
         assert_eq!(cpu_mined_hash, gpu_mined_hash);
@@ -443,7 +442,7 @@ mod tests {
         let mut cpu_is_correct = false;
         let mut cpu_mined_hash_check = 0;
 
-        let err = pow_verify(
+        pow_verify(
             &hasher,
             input_host,
             BITS,
@@ -451,8 +450,8 @@ mod tests {
             cpu_nonce,
             &mut cpu_is_correct,
             &mut cpu_mined_hash_check,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert_eq!(cpu_mined_hash, cpu_mined_hash_check);
         assert!(cpu_is_correct);
     }

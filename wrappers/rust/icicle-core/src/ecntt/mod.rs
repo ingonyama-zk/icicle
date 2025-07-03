@@ -1,4 +1,4 @@
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
 pub use crate::curve::Projective;
 use crate::{
@@ -17,20 +17,20 @@ pub trait ECNTT<T>: PrimeField {
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     fn ntt_inplace_unchecked(
         inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     fn ntt(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         Self::ntt_unchecked(input, dir, cfg, output)
     }
 
@@ -38,7 +38,7 @@ pub trait ECNTT<T>: PrimeField {
         inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         Self::ntt_inplace_unchecked(inout, dir, cfg)
     }
 }
@@ -59,7 +59,7 @@ pub fn ecntt<C: Curve>(
     dir: NTTDir,
     cfg: &NTTConfig<C::ScalarField>,
     output: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     C::ScalarField: PrimeField + ECNTT<Projective<C>>,
 {
@@ -79,14 +79,15 @@ pub fn ecntt_inplace<C: Curve>(
     inout: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
     dir: NTTDir,
     cfg: &NTTConfig<C::ScalarField>,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     C::ScalarField: PrimeField + ECNTT<Projective<C>>,
 {
-    <C::ScalarField as ECNTT<Projective<C>>>::ntt_inplace(inout, dir, &cfg)
+    <C::ScalarField as ECNTT<Projective<C>>>::ntt_inplace(inout, dir, cfg)
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_ecntt {
     (
         $field_prefix:literal,
@@ -101,7 +102,7 @@ macro_rules! impl_ecntt {
             use icicle_core::ecntt::ECNTT;
             use icicle_core::impl_ntt_without_domain;
             use icicle_core::ntt::{NTTConfig, NTTDir, NTTInitDomainConfig, NTT};
-            use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+            use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, IcicleError};
 
             type ProjectiveType = Projective<$curve>;
             impl_ntt_without_domain!($field_prefix, $field, ECNTT, "_ecntt", ProjectiveType);

@@ -2,16 +2,16 @@ use crate::{
     curve::{Affine, Curve},
     field::PrimeField,
 };
-use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::errors::IcicleError;
 
 #[doc(hidden)]
 pub mod tests;
 
 pub trait Pairing<C1: Curve, C2: Curve, F: PrimeField> {
-    fn pairing(p: &Affine<C1>, q: &Affine<C2>) -> Result<F, eIcicleError>;
+    fn pairing(p: &Affine<C1>, q: &Affine<C2>) -> Result<F, IcicleError>;
 }
 
-pub fn pairing<C1, C2, F>(p: &Affine<C1>, q: &Affine<C2>) -> Result<F, eIcicleError>
+pub fn pairing<C1, C2, F>(p: &Affine<C1>, q: &Affine<C2>) -> Result<F, IcicleError>
 where
     C1: Curve,
     C2: Curve,
@@ -32,7 +32,7 @@ macro_rules! impl_pairing {
     ) => {
         mod $curve_prefix_ident {
             use super::{$curve, $curve_g2, $target_field, Affine};
-            use icicle_runtime::errors::eIcicleError;
+            use icicle_runtime::errors::{eIcicleError, IcicleError};
 
             extern "C" {
                 #[link_name = concat!($curve_prefix, "_pairing")]
@@ -45,7 +45,7 @@ macro_rules! impl_pairing {
         }
 
         impl Pairing<$curve, $curve_g2, $target_field> for $curve {
-            fn pairing(p: &Affine<$curve>, q: &Affine<$curve_g2>) -> Result<$target_field, eIcicleError> {
+            fn pairing(p: &Affine<$curve>, q: &Affine<$curve_g2>) -> Result<$target_field, IcicleError> {
                 let mut result = $target_field::zero();
                 unsafe {
                     $curve_prefix_ident::pairing_ffi(

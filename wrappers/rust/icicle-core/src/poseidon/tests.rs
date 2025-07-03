@@ -16,7 +16,7 @@ where
     let domain_tag = F::generate_random(1)[0];
     for t in [3, 5, 9, 12] {
         for domain_tag in [None, Some(&domain_tag)] {
-            let inputs: Vec<F> = if domain_tag != None {
+            let inputs: Vec<F> = if domain_tag.is_some() {
                 F::generate_random(batch * (t - 1))
             } else {
                 F::generate_random(batch * t)
@@ -68,7 +68,11 @@ where
             &HashConfig::default(),
             HostSlice::from_mut_slice(&mut outputs_main),
         );
-        assert_eq!(err, Err(eIcicleError::InvalidArgument));
+        assert_eq!(
+            err.unwrap_err()
+                .code,
+            eIcicleError::InvalidArgument
+        );
 
         test_utilities::test_set_ref_device();
         let poseidon_hasher_ref = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
@@ -78,7 +82,11 @@ where
             &HashConfig::default(),
             HostSlice::from_mut_slice(&mut outputs_ref),
         );
-        assert_eq!(err, Err(eIcicleError::InvalidArgument));
+        assert_eq!(
+            err.unwrap_err()
+                .code,
+            eIcicleError::InvalidArgument
+        );
     }
 }
 
@@ -167,5 +175,5 @@ where
     let verification_valid = merkle_tree
         .verify(&merkle_proof)
         .unwrap();
-    assert_eq!(verification_valid, true);
+    assert!(verification_valid);
 }

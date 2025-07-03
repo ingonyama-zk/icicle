@@ -1,5 +1,7 @@
 use icicle_core::hash::{Hasher, HasherHandle};
-use icicle_runtime::{config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, IcicleStreamHandle};
+use icicle_runtime::{
+    config::ConfigExtension, eIcicleError, memory::HostOrDeviceSlice, IcicleError, IcicleStreamHandle,
+};
 
 #[repr(C)]
 #[derive(Debug, Clone)]
@@ -58,17 +60,23 @@ pub fn pow_solver(
     found: &mut bool,
     nonce: &mut u64,
     mined_hash: &mut u64,
-) -> eIcicleError {
-    if solution_bits < 1 || solution_bits > 60 {
-        panic!("invalid solution_bits value");
+) -> Result<(), IcicleError> {
+    if !(1..=60).contains(&solution_bits) {
+        return Err(IcicleError::new(
+            eIcicleError::InvalidArgument,
+            "invalid solution_bits value",
+        ));
     }
     if challenge.is_on_device() && !challenge.is_on_active_device() {
-        panic!("challenge is allocated on an inactive device");
+        return Err(IcicleError::new(
+            eIcicleError::InvalidArgument,
+            "challenge is allocated on an inactive device",
+        ));
     }
     let mut cfg = config.clone();
     cfg.is_challenge_on_device = challenge.is_on_device();
 
-    let result = unsafe {
+    unsafe {
         pow_ffi(
             hasher.handle,
             challenge.as_ptr(),
@@ -79,8 +87,8 @@ pub fn pow_solver(
             nonce as *mut u64,
             mined_hash as *mut u64,
         )
-    };
-    result
+        .wrap()
+    }
 }
 
 pub fn pow_verify(
@@ -91,17 +99,23 @@ pub fn pow_verify(
     nonce: u64,
     is_correct: &mut bool,
     mined_hash: &mut u64,
-) -> eIcicleError {
-    if solution_bits < 1 || solution_bits > 60 {
-        panic!("invalid solution_bits value");
+) -> Result<(), IcicleError> {
+    if !(1..=60).contains(&solution_bits) {
+        return Err(IcicleError::new(
+            eIcicleError::InvalidArgument,
+            "invalid solution_bits value",
+        ));
     }
     if challenge.is_on_device() && !challenge.is_on_active_device() {
-        panic!("challenge is allocated on an inactive device");
+        return Err(IcicleError::new(
+            eIcicleError::InvalidArgument,
+            "challenge is allocated on an inactive device",
+        ));
     }
     let mut cfg = config.clone();
     cfg.is_challenge_on_device = challenge.is_on_device();
 
-    let result = unsafe {
+    unsafe {
         pow_verify_ffi(
             hasher.handle,
             challenge.as_ptr(),
@@ -112,6 +126,6 @@ pub fn pow_verify(
             is_correct as *mut bool,
             mined_hash as *mut u64,
         )
-    };
-    result
+        .wrap()
+    }
 }

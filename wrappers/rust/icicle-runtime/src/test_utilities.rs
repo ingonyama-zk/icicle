@@ -23,7 +23,7 @@ pub fn test_load_and_init_devices() {
         } else {
             &registered_devices[0]
         };
-        *main_device = Device::new(&main_device_name, 0);
+        *main_device = Device::new(main_device_name, 0);
         println!(
             "[INFO] Rust testing: registered_devices={:?}, Main-device={}, Reference-device=CPU",
             registered_devices, main_device_name

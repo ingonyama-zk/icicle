@@ -4,7 +4,7 @@ use icicle_core::curve::Affine;
 use icicle_core::impl_field;
 use icicle_core::impl_pairing;
 use icicle_core::pairing::Pairing;
-use icicle_runtime::eIcicleError;
+use icicle_runtime::IcicleError;
 
 use icicle_core::field::PrimeField;
 use std::fmt::{Debug, Display};

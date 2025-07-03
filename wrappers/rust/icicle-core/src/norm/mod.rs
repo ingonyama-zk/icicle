@@ -1,5 +1,5 @@
 use crate::{field::PrimeField, vec_ops::VecOpsConfig};
-use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
 pub mod tests;
 
@@ -26,7 +26,7 @@ pub trait Norm<T: PrimeField> {
         norm_bound: u64,
         cfg: &VecOpsConfig,
         output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     /// Checks whether norm(a) < scalar * norm(b)
     ///
@@ -39,7 +39,7 @@ pub trait Norm<T: PrimeField> {
         scale: u64,
         cfg: &VecOpsConfig,
         output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 // Public floating functions around the trait
@@ -49,7 +49,7 @@ pub fn check_norm_bound<T: PrimeField>(
     norm_bound: u64,
     cfg: &VecOpsConfig,
     output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     T: Norm<T>,
 {
@@ -63,7 +63,7 @@ pub fn check_norm_relative<T: PrimeField>(
     scale: u64,
     cfg: &VecOpsConfig,
     output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     T: Norm<T>,
 {
@@ -106,19 +106,23 @@ macro_rules! impl_norm {
         fn norm_check_args(
             input: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
             cfg: &mut VecOpsConfig,
-        ) -> Result<(), eIcicleError> {
+        ) -> Result<(), IcicleError> {
             if input.len() % (cfg.batch_size as usize) != 0 {
-                eprintln!(
-                    "Batch size {} must divide input size {}",
-                    cfg.batch_size,
-                    input.len()
-                );
-                return Err(eIcicleError::InvalidArgument);
+                return Err(IcicleError::new(
+                    eIcicleError::InvalidArgument,
+                    format!(
+                        "Batch size {} must divide input size {}",
+                        cfg.batch_size,
+                        input.len()
+                    ),
+                ));
             }
 
             if input.is_on_device() && !input.is_on_active_device() {
-                eprintln!("Input is on an inactive device");
-                return Err(eIcicleError::InvalidArgument);
+                return Err(IcicleError::new(
+                    eIcicleError::InvalidPointer,
+                    "Input is on an inactive device",
+                ));
             }
 
             cfg.is_a_on_device = input.is_on_device();
@@ -134,7 +138,7 @@ macro_rules! impl_norm {
                 norm_bound: u64,
                 cfg: &VecOpsConfig,
                 output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 let mut cfg = cfg.clone();
                 norm_check_args(input, &mut cfg)?;
 
@@ -159,13 +163,20 @@ macro_rules! impl_norm {
                 scale: u64,
                 cfg: &VecOpsConfig,
                 output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 let mut cfg = cfg.clone();
                 norm_check_args(input_a, &mut cfg)?;
                 norm_check_args(input_b, &mut cfg)?;
 
                 if input_a.len() != input_b.len() {
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        format!(
+                            "Input sizes must be equal: {} != {}",
+                            input_a.len(),
+                            input_b.len()
+                        ),
+                    ));
                 }
 
                 unsafe {

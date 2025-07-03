@@ -1,7 +1,7 @@
 use crate::curve::{Affine, Curve, Projective};
 use icicle_runtime::{
     config::ConfigExtension,
-    errors::eIcicleError,
+    errors::{eIcicleError, IcicleError},
     memory::{DeviceSlice, HostOrDeviceSlice},
     stream::IcicleStreamHandle,
 };
@@ -79,52 +79,70 @@ pub trait MSM<C: Curve> {
         bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
         cfg: &MSMConfig,
         results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     fn precompute_bases_unchecked(
         bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
         cfg: &MSMConfig,
         output_bases: &mut DeviceSlice<Affine<C>>,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     fn msm(
         scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
         bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
         cfg: &MSMConfig,
         results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         if bases.len() % (cfg.precompute_factor as usize) != 0 {
-            panic!(
-                "Precompute factor {} does not divide the number of bases {}",
-                cfg.precompute_factor,
-                bases.len()
-            );
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "Precompute factor {} does not divide the number of bases {}",
+                    cfg.precompute_factor,
+                    bases.len()
+                ),
+            ));
         }
         let bases_size = bases.len() / (cfg.precompute_factor as usize);
         if scalars.len() % bases_size != 0 {
-            panic!(
-                "Number of bases {} does not divide the number of scalars {}",
-                bases_size,
-                scalars.len()
-            );
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "Number of bases {} does not divide the number of scalars {}",
+                    bases_size,
+                    scalars.len()
+                ),
+            ));
         }
         if scalars.len() % results.len() != 0 {
-            panic!(
-                "Number of results {} does not divide the number of scalars {}",
-                results.len(),
-                scalars.len()
-            );
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "Number of results {} does not divide the number of scalars {}",
+                    results.len(),
+                    scalars.len()
+                ),
+            ));
         }
 
         // check device slices are on active device
         if scalars.is_on_device() && !scalars.is_on_active_device() {
-            panic!("scalars not allocated on an inactive device");
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "scalars not allocated on an inactive device",
+            ));
         }
         if bases.is_on_device() && !bases.is_on_active_device() {
-            panic!("bases not allocated on an inactive device");
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "bases not allocated on an inactive device",
+            ));
         }
         if results.is_on_device() && !results.is_on_active_device() {
-            panic!("results not allocated on an inactive device");
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "results not allocated on an inactive device",
+            ));
         }
 
         let mut local_cfg = cfg.clone();
@@ -141,15 +159,24 @@ pub trait MSM<C: Curve> {
         points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
         config: &MSMConfig,
         output_bases: &mut DeviceSlice<Affine<C>>,
-    ) -> Result<(), eIcicleError> {
-        assert_eq!(
-            output_bases.len(),
-            points.len() * (config.precompute_factor as usize),
-            "Precompute factor is probably incorrect: expected {} but got {}",
-            output_bases.len() / points.len(),
-            config.precompute_factor
-        );
-        assert!(output_bases.is_on_device());
+    ) -> Result<(), IcicleError> {
+        if output_bases.len() != points.len() * (config.precompute_factor as usize) {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "Precompute factor is probably incorrect: expected {} but got {}",
+                    output_bases.len() / points.len(),
+                    config.precompute_factor
+                ),
+            ));
+        }
+
+        if !output_bases.is_on_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "output_bases not allocated on a device",
+            ));
+        }
 
         Self::precompute_bases_unchecked(points, config, output_bases)
     }
@@ -169,13 +196,13 @@ pub trait MSM<C: Curve> {
 ///
 /// * `results` - buffer to write results into. Its length is equal to the batch size i.e. number of MSMs to compute.
 ///
-/// Returns `Ok(())` if no errors occurred or a `CudaError` otherwise.
+/// Returns `Ok(())` if no errors occurred or an `IcicleError` otherwise.
 pub fn msm<C: Curve + MSM<C>>(
     scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
     bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
     cfg: &MSMConfig,
     results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
-) -> Result<(), eIcicleError> {
+) -> Result<(), IcicleError> {
     C::msm(scalars, bases, cfg, results)
 }
 
@@ -197,12 +224,12 @@ pub fn msm<C: Curve + MSM<C>>(
 ///
 /// * `output_bases` - Device-allocated buffer of size `bases_size` * `precompute_factor` for the extended bases.
 ///
-/// Returns `Ok(())` if no errors occurred or a `eIcicleError` otherwise.
+/// Returns `Ok(())` if no errors occurred or an `IcicleError` otherwise.
 pub fn precompute_bases<C: Curve + MSM<C>>(
     points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
     config: &MSMConfig,
     output_bases: &mut DeviceSlice<Affine<C>>,
-) -> Result<(), eIcicleError> {
+) -> Result<(), IcicleError> {
     C::precompute_bases(points, config, output_bases)
 }
 
@@ -243,7 +270,7 @@ macro_rules! impl_msm {
                 points: &(impl HostOrDeviceSlice<Affine<$curve>> + ?Sized),
                 cfg: &MSMConfig,
                 results: &mut (impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 unsafe {
                     $curve_prefix_ident::msm_ffi(
                         scalars.as_ptr(),
@@ -260,7 +287,7 @@ macro_rules! impl_msm {
                 points: &(impl HostOrDeviceSlice<Affine<$curve>> + ?Sized),
                 config: &MSMConfig,
                 output_bases: &mut DeviceSlice<Affine<$curve>>,
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 unsafe {
                     $curve_prefix_ident::precompute_bases_ffi(
                         points.as_ptr(),

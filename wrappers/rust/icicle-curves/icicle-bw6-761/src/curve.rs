@@ -5,7 +5,7 @@ use icicle_core::{
     impl_curve, impl_field, impl_field_arithmetic, impl_generate_random, impl_montgomery_convertible,
     vec_ops::VecOpsConfig,
 };
-use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
+use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream, IcicleError};
 use std::fmt::{Debug, Display};
 use std::ops::{Add, Mul, Sub};
 
@@ -48,7 +48,7 @@ impl_curve!(
 mod tests {
     #[cfg(feature = "g2")]
     use super::G2CurveCfg;
-    use super::{CurveCfg, ScalarField, BASE_LIMBS};
+    use super::{CurveCfg, ScalarField};
     use icicle_core::curve::Curve;
     use icicle_core::tests::*;
     use icicle_core::{impl_curve_tests, impl_field_tests};

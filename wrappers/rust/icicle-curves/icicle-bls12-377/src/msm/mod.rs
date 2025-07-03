@@ -6,7 +6,7 @@ use icicle_core::{
     msm::{MSMConfig, MSM},
 };
 use icicle_runtime::{
-    errors::eIcicleError,
+    errors::IcicleError,
     memory::{DeviceSlice, HostOrDeviceSlice},
 };
 

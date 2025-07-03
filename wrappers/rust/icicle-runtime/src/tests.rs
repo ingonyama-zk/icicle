@@ -235,7 +235,7 @@ mod tests {
             set_device(&device).unwrap();
 
             let device_props = get_device_properties().unwrap();
-            assert_eq!(device_props.using_host_memory, false); // for "cuda"
+            assert!(!device_props.using_host_memory); // for "cuda"
         }
     }
 
@@ -247,7 +247,7 @@ mod tests {
         config_ext.set_bool("example_bool", true);
 
         assert_eq!(config_ext.get_int("example_int"), 42);
-        assert_eq!(config_ext.get_bool("example_bool"), true);
+        assert!(config_ext.get_bool("example_bool"));
     }
     #[test]
     fn test_memset() {

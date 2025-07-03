@@ -1,8 +1,7 @@
 use crate::ring::ScalarRing;
 use icicle_core::norm::NormType;
 use icicle_core::{impl_norm, vec_ops::VecOpsConfig};
-use icicle_runtime::errors::eIcicleError;
-use icicle_runtime::memory::HostOrDeviceSlice;
+use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, IcicleError};
 
 impl_norm!("labrador", ScalarRing, ScalarRing);
 

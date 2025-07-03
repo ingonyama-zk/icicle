@@ -6,8 +6,8 @@ use icicle_core::{
     msm::{MSMConfig, MSM},
 };
 use icicle_runtime::{
-    errors::eIcicleError,
     memory::{DeviceSlice, HostOrDeviceSlice},
+    IcicleError,
 };
 
 impl_msm!("bls12_381", bls12_381, CurveCfg);
