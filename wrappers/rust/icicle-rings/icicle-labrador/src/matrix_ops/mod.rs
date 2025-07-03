@@ -20,8 +20,9 @@ mod tests {
     //     use super::*;
     //     impl_matrix_ops_tests!(crate::ring::ScalarRingRns);
     // }
-    // mod poly_ring { // TODO: add poly ring matrix tests ?
-    //     use super::*;
-    //     impl_matrix_ops_tests!(crate::polynomial_ring::PolyRing);
-    // }
+    mod poly_ring {
+        // TODO: add poly ring matrix tests ?
+        use super::*;
+        impl_matrix_ops_tests!(crate::polynomial_ring::PolyRing);
+    }
 }
