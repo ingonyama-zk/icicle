@@ -274,9 +274,9 @@ macro_rules! impl_matrix_ops_tests {
         }
 
         #[test]
-        pub fn test_matrix_transpose() {
+        fn test_matrix_transpose() {
             initialize();
-            check_matrix_transpose_device_memory::<$element_type>()
+            check_matrix_transpose_device_memory::<$element_type>();
         }
     };
 }
