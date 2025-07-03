@@ -35,7 +35,7 @@ jobs:
             echo "pr-number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
             echo "conditional-testing=true" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event_name }}" == "issue_comment" ]] && [[ "${{ github.event.issue.pull_request }}" != "" ]]; then
-            COMMENT_BODY=${{ github.event.comment.body }}
+            COMMENT_BODY="${{ github.event.comment.body }}"
             COMMENT_BODY_LOWER=$(echo "$COMMENT_BODY" | tr '[:upper:]' '[:lower:]')
             if [[ "$COMMENT_BODY_LOWER" == *"run full ci"* ]]; then
               echo "should-run=true" >> $GITHUB_OUTPUT
