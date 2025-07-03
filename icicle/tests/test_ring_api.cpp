@@ -1445,7 +1445,7 @@ TEST_F(RingTestBase, ComplexFFT_Alternating)
     poly[i] = i % 2;
 
   uint64_t opnorm = operator_norm(poly); // returns u64
-  ASSERT_EQ(opnorm, 21);                 // Python computed '20.380016247096133' but losing precision with fixed point
+  ASSERT_EQ(opnorm, 21);                 // Python computed '20.38001624709613' but losing precision with fixed point
 }
 
 TEST_F(RingTestBase, ComplexFFT_QMinus2X)
