@@ -89,7 +89,7 @@ where
     T::matrix_transpose(input, nof_rows, nof_cols, &cfg, output)
 }
 
-/// Implements matrix multiplication over polynomial rings via FFI
+/// Implements matrix Ops any type via FFI
 #[macro_export]
 macro_rules! impl_matrix_ops {
     ($prefix: literal, $prefix_ident:ident, $element_type: ty) => {
