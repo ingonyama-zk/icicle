@@ -1,6 +1,6 @@
 use crate::field::PrimeField;
 use crate::vec_ops::VecOpsConfig;
-use crate::{polynomial_ring::PolynomialRing, traits::FieldImpl};
+use crate::polynomial_ring::PolynomialRing;
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
@@ -147,7 +147,7 @@ pub fn challenge_space_polynomials_sampling<T>(
 ) -> Result<(), eIcicleError>
 where
     T: PolynomialRing,
-    T::Base: FieldImpl,
+    T::Base: PrimeField,
     T: ChallengeSpacePolynomialsSampling<T>,
 {
     T::challenge_space_polynomials_sampling(seed, cfg, ones, twos, norm, output)

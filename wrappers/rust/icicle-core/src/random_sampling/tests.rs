@@ -49,7 +49,7 @@ where
 pub fn check_challenge_space_polynomials_sampling<P>()
 where
     P: PolynomialRing,
-    P::Base: FieldImpl + Arithmetic,
+    P::Base: PrimeField + Arithmetic,
     P: ChallengeSpacePolynomialsSampling<P>,
 {
     let output_size = 1 << 10;

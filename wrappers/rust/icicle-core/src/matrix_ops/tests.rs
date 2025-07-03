@@ -164,8 +164,8 @@ where
 /// The test is repeated for both main and reference devices.
 pub fn check_matrix_transpose_device_memory<P: PolynomialRing + MatrixOps<P>>()
 where
-    P::Base: FieldImpl,
-    P: GenerateRandom<P>,
+    P::Base: PrimeField,
+    P: GenerateRandom,
 {
     let cfg = VecOpsConfig::default();
     let nof_rows = 1 << 5;
