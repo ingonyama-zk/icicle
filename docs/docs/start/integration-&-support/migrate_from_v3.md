@@ -72,7 +72,7 @@ ICICLE v4 implements field arithmetic operations through the `Arithmetic` trait 
 
 #### Field Arithmetic Operations
 
-| v3 (Static Methods) | v3, v4 (Instance Methods) | v4 (Operators) |
+| (Static Methods) | (Instance Methods) | (Operators) |
 |---------------------|----------------------|----------------|
 | `Fr::add(a, b)` | `a.add(b)` | `a + b` |
 | `Fr::sub(a, b)` | `a.sub(b)` | `a - b` |
@@ -96,21 +96,38 @@ pub trait Arithmetic: Sized + Add<Output = Self> + Sub<Output = Self> + Mul<Outp
 
 This trait extends the standard Rust operators (`Add`, `Sub`, `Mul`) and adds specialized field operations like square, inverse, and exponentiation.
 
-#### Montgomery Conversion
+### Deprecation of the `FieldImpl` Trait
 
-| v3 (Static Methods) | v4 (Instance Methods) |
-|---------------------|----------------------|
-| `Fr::to_montgomery(a)` | `MontgomeryConvertible::to_mont(values, stream)` |
-| `Fr::from_montgomery(a)` | `MontgomeryConvertible::from_mont(values, stream)` |
+In ICICLE v3, generic code typically bounded field types by the heavyweight `FieldImpl` super-trait.  It lumped together arithmetic, random generation, Montgomery helpers, device handles, and more.  While convenient, that design made API signatures noisy and hid which capabilities a function truly needed.
 
-The `MontgomeryConvertible` trait provides methods for converting field elements to and from Montgomery form:
+With **v4**, `FieldImpl` is gone.  Its functionality has been split across smaller, focused traits inside `icicle_core::traits`:
+
+| New trait | What it covers | Typical import |
+|-----------|----------------|-----------------|
+| `Arithmetic` | Core math + operator overloads (`+`, `-`, `*`, `sqr`, `inv`, `pow`) | `use icicle_core::traits::Arithmetic;` |
+| `GenerateRandom` | Host-side sampling (`generate_random`) | `use icicle_core::traits::GenerateRandom;` |
+| `MontgomeryConvertible` | Batch Montgomery ⇄ canonical conversion for host/device slices | `use icicle_core::traits::MontgomeryConvertible;` |
+| `Handle` | Low-level FFI pointer access | `use icicle_core::traits::Handle;` |
+
+Because these traits are orthogonal you can now declare **precise** bounds.  For example:
 
 ```rust
-pub trait MontgomeryConvertible: Sized {
-    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError;
-    fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError;
+// v3 – required the full FieldImpl bundle
+fn scale_in_place<T: FieldImpl>(v: &mut [T], k: &T) {
+    for x in v.iter_mut() {
+        *x = *x * *k;
+    }
+}
+
+// v4 – only Arithmetic is needed
+fn scale_in_place<T: Arithmetic>(v: &mut [T], k: &T) {
+    for x in v.iter_mut() {
+        *x = *x * *k;
+    }
 }
 ```
+
+If you still see `FieldImpl` in your codebase, replace it with the minimal set of new traits your algorithm actually requires (most commonly `Arithmetic` and perhaps `GenerateRandom`).
 
 ### Refactor Program from Vecops to Program module
 
@@ -220,10 +237,26 @@ use icicle_core::traits::GenerateRandom;
 let random_values = ScalarField::generate_random(size);
 ```
 
-## Other Considerations
+### Removal of the `FieldCfg` Trait
 
-- **API Consistency**: The v4 API provides a more consistent experience across different programming languages, making it easier to switch between them.
-- **Code Readability**: The new API improves code readability by making the operations more intuitive and reducing the need for explicit type references.
-- **Performance**: These API changes are purely syntactic and do not affect the performance of the underlying operations.
+`FieldCfg` previously exposed compile-time field parameters (modulus, root, etc.) **and** helper functions like `generate_random`.  In v4 these responsibilities are split:
+
+* Concrete field types now publish constants directly (e.g., `ScalarField::MODULUS`).
+* Random sampling moved to the standalone `GenerateRandom` trait.
+
+Migration steps:
+
+1. Replace `use icicle_core::traits::FieldCfg;` with `use icicle_core::traits::GenerateRandom;` when you only need random values.
+2. Access constants directly from the field type:
+
+```rust
+// v3
+let p = <Fr as FieldCfg>::MODULUS;
+
+// v4
+let p = ScalarField::MODULUS;
+```
+
+All constant names are unchanged, so the update is usually a simple search-and-replace.
 
 For further details and examples, refer to the [Programmer's Guide](start/programmers_guide/general.md).
