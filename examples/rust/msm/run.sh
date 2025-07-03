@@ -43,8 +43,8 @@ done
 
 DEVICE_TYPE_LOWERCASE=$(echo "$DEVICE_TYPE" | tr '[:upper:]' '[:lower:]')
 
-ICILE_DIR=$(realpath "../../../icicle/")
-ICICLE_BACKEND_SOURCE_DIR="${ICILE_DIR}/backend/${DEVICE_TYPE_LOWERCASE}"
+ICICLE_DIR=$(realpath "../../../icicle/")
+ICICLE_BACKEND_SOURCE_DIR="${ICICLE_DIR}/backend/${DEVICE_TYPE_LOWERCASE}"
 
 # Build Icicle and the example app that links to it
 if [ "$DEVICE_TYPE" != "CPU" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_BACKEND_SOURCE_DIR}" ]; then

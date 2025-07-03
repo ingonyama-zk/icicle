@@ -15,11 +15,11 @@ use icicle_core::{curve::Curve, msm, traits::GenerateRandom};
 #[derive(Parser, Debug)]
 struct Args {
     /// Lower bound (inclusive) of MSM sizes to run for
-    #[arg(short, long, default_value_t = 10)]
+    #[arg(short, long, default_value_t = 24)]
     lower_bound_log_size: u8,
 
     /// Upper bound of MSM sizes to run for
-    #[arg(short, long, default_value_t = 10)]
+    #[arg(short, long, default_value_t = 24)]
     upper_bound_log_size: u8,
 
     /// Device type (e.g., "CPU", "CUDA")
@@ -50,8 +50,12 @@ fn main() {
 
     println!("Generating random inputs on host for bn254...");
     let upper_points = CurveCfg::generate_random_affine_points(upper_size);
+    let upper_points0 = CurveCfg::generate_random_affine_points(upper_size);
+    let upper_points1 = CurveCfg::generate_random_affine_points(upper_size);
     let g2_upper_points = G2CurveCfg::generate_random_affine_points(upper_size);
     let upper_scalars = ScalarCfg::generate_random(upper_size);
+    let upper_scalars0 = ScalarCfg::generate_random(upper_size);
+    let upper_scalars1 = ScalarCfg::generate_random(upper_size);
 
     println!("Generating random inputs on host for bls12377...");
     let upper_points_bls12377 = BLS12377CurveCfg::generate_random_affine_points(upper_size);
@@ -67,22 +71,31 @@ fn main() {
 
         // Setting Bn254 points and scalars
         let points = HostSlice::from_slice(&upper_points[..size]);
+        let points0 = HostSlice::from_slice(&upper_points0[..size]);
+        let points1 = HostSlice::from_slice(&upper_points1[..size]);
         let g2_points = HostSlice::from_slice(&g2_upper_points[..size]);
         let scalars = HostSlice::from_slice(&upper_scalars[..size]);
+        let scalars0 = HostSlice::from_slice(&upper_scalars0[..size]);
+        let scalars1 = HostSlice::from_slice(&upper_scalars1[..size]);
 
         // Setting bls12377 points and scalars
         let points_bls12377 = HostSlice::from_slice(&upper_points_bls12377[..size]);
         let scalars_bls12377 = HostSlice::from_slice(&upper_scalars_bls12377[..size]);
 
         println!("Configuring bn254 MSM...");
-        let mut msm_results = DeviceVec::<G1Projective>::device_malloc(1).unwrap();
+        let mut msm_results0 = DeviceVec::<G1Projective>::device_malloc(1).unwrap();
+        let mut msm_results1 = DeviceVec::<G1Projective>::device_malloc(1).unwrap();
         let mut g2_msm_results = DeviceVec::<G2Projective>::device_malloc(1).unwrap();
-        let mut stream = IcicleStream::create().unwrap();
+        let mut stream0 = IcicleStream::create().unwrap();
+        let mut stream1 = IcicleStream::create().unwrap();
         let mut g2_stream = IcicleStream::create().unwrap();
-        let mut cfg = msm::MSMConfig::default();
+        let mut cfg0 = msm::MSMConfig::default();
+        let mut cfg1 = msm::MSMConfig::default();
         let mut g2_cfg = msm::MSMConfig::default();
-        cfg.stream_handle = *stream;
-        cfg.is_async = true;
+        cfg0.stream_handle = *stream0;
+        cfg0.is_async = true;
+        cfg1.stream_handle = *stream1;
+        cfg1.is_async = true;
         g2_cfg.stream_handle = *g2_stream;
         g2_cfg.is_async = true;
 
@@ -94,9 +107,18 @@ fn main() {
         cfg_bls12377.is_async = true;
 
         println!("Executing bn254 MSM on device...");
-        msm::msm(scalars, points, &cfg, &mut msm_results[..]).unwrap();
+        println!("G1 0");
+        let start_time0 = std::time::Instant::now();
+        msm::msm(scalars0, points0, &cfg0, &mut msm_results0[..]).unwrap();
+        println!("G1 0 time: {:?}", start_time0.elapsed());
+        println!("G1 1");
+        let start_time1 = std::time::Instant::now();
+        msm::msm(scalars1, points1, &cfg1, &mut msm_results1[..]).unwrap();
+        println!("G1 1 time: {:?}", start_time1.elapsed());
+        println!("G2");
+        let start_time2 = std::time::Instant::now();
         msm::msm(scalars, g2_points, &g2_cfg, &mut g2_msm_results[..]).unwrap();
-
+        println!("G2 time: {:?}", start_time2.elapsed());
         println!("Executing bls12377 MSM on device...");
         msm::msm(
             scalars_bls12377,
@@ -107,17 +129,25 @@ fn main() {
         .unwrap();
 
         println!("Moving results to host...");
-        let mut msm_host_result = vec![G1Projective::zero(); 1];
+        let mut msm_host_result0 = vec![G1Projective::zero(); 1];
+        let mut msm_host_result1 = vec![G1Projective::zero(); 1];
         let mut g2_msm_host_result = vec![G2Projective::zero(); 1];
         let mut msm_host_result_bls12377 = vec![BLS12377G1Projective::zero(); 1];
 
-        stream
+        stream0
             .synchronize()
             .unwrap();
-        msm_results
-            .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result[..]))
+        stream1
+            .synchronize()
             .unwrap();
-        println!("bn254 result: {:#?}", msm_host_result);
+        msm_results0
+            .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result0[..]))
+            .unwrap();
+        msm_results1
+            .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result1[..]))
+            .unwrap();
+        println!("bn254 result: {:#?}", msm_host_result0);
+        println!("bn254 result: {:#?}", msm_host_result1);
 
         g2_stream
             .synchronize()
@@ -136,7 +166,10 @@ fn main() {
         println!("bls12377 result: {:#?}", msm_host_result_bls12377);
 
         println!("Cleaning up bn254...");
-        stream
+        stream0
+            .destroy()
+            .unwrap();
+        stream1
             .destroy()
             .unwrap();
         g2_stream
