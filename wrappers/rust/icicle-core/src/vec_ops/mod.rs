@@ -109,14 +109,6 @@ pub trait VecOps: PrimeField {
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
-    fn transpose(
-        input: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        nof_rows: u32,
-        nof_cols: u32,
-        output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
-        cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
-
     fn bit_reverse(
         input: &(impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
@@ -200,31 +192,6 @@ fn check_vec_ops_args_reduction_ops<F>(
     setup_config(input, input, result, cfg, batch_size)
 }
 
-fn check_vec_ops_args_transpose<F>(
-    input: &(impl HostOrDeviceSlice<F> + ?Sized),
-    nof_rows: u32,
-    nof_cols: u32,
-    output: &(impl HostOrDeviceSlice<F> + ?Sized),
-    cfg: &VecOpsConfig,
-) -> VecOpsConfig {
-    if input.len() != output.len() {
-        panic!(
-            "Input size, and output size do not match {} != {}",
-            input.len(),
-            output.len()
-        );
-    }
-    if input.len() as u32 % (nof_rows * nof_cols) != 0 {
-        panic!(
-            "Input size is not a whole multiple of matrix size (#rows * #cols), {} % ({} * {}) != 0",
-            input.len(),
-            nof_rows,
-            nof_cols,
-        );
-    }
-    let batch_size = input.len() / (nof_rows * nof_cols) as usize;
-    setup_config(input, input, output, cfg, batch_size)
-}
 
 fn check_vec_ops_args_slice<F>(
     input: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -259,7 +226,7 @@ fn check_vec_ops_args_slice<F>(
 }
 
 /// Modify VecopsConfig according to the given vectors
-fn setup_config<F, T>(
+pub(crate) fn setup_config<F, T>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -432,19 +399,6 @@ where
     F::scalar_mul(a, b, result, &cfg)
 }
 
-pub fn transpose_matrix<F>(
-    input: &(impl HostOrDeviceSlice<F> + ?Sized),
-    nof_rows: u32,
-    nof_cols: u32,
-    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-    cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
-where
-    F: PrimeField + VecOps,
-{
-    let cfg = check_vec_ops_args_transpose(input, nof_rows, nof_cols, output, cfg);
-    F::transpose(input, nof_rows, nof_cols, output, &cfg)
-}
 
 pub fn bit_reverse<F>(
     input: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -591,15 +545,6 @@ macro_rules! impl_vec_ops_field {
                     size: u32,
                     cfg: *const VecOpsConfig,
                     result: *mut $field,
-                ) -> eIcicleError;
-
-                #[link_name = concat!($field_prefix, "_matrix_transpose")]
-                pub(crate) fn matrix_transpose_ffi(
-                    input: *const $field,
-                    nof_rows: u32,
-                    nof_cols: u32,
-                    cfg: *const VecOpsConfig,
-                    output: *mut $field,
                 ) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_bit_reverse")]
@@ -815,25 +760,6 @@ macro_rules! impl_vec_ops_field {
                 }
             }
 
-            fn transpose(
-                input: &(impl HostOrDeviceSlice<Self> + ?Sized),
-                nof_rows: u32,
-                nof_cols: u32,
-                output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
-                cfg: &VecOpsConfig,
-            ) -> Result<(), eIcicleError> {
-                unsafe {
-                    $field_prefix_ident::matrix_transpose_ffi(
-                        input.as_ptr(),
-                        nof_rows,
-                        nof_cols,
-                        cfg as *const VecOpsConfig,
-                        output.as_mut_ptr(),
-                    )
-                    .wrap()
-                }
-            }
-
             fn bit_reverse(
                 input: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 cfg: &VecOpsConfig,
@@ -1033,11 +959,7 @@ macro_rules! impl_vec_ops_tests {
                 check_vec_ops_scalars_inv::<$field>(test_size);
             }
 
-            #[test]
-            pub fn test_matrix_transpose() {
-                initialize();
-                check_matrix_transpose::<$field>()
-            }
+
 
             #[test]
             pub fn test_bit_reverse() {

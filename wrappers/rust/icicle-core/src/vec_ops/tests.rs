@@ -6,7 +6,7 @@ use crate::vec_ops::poly_vecops::{polyvec_add, polyvec_mul, polyvec_mul_by_scala
 use crate::vec_ops::{
     accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, inv_scalars, mixed_mul_scalars,
     mul_scalars, product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars,
-    transpose_matrix, MixedVecOps, VecOps, VecOpsConfig,
+    MixedVecOps, VecOps, VecOpsConfig,
 };
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostOrDeviceSlice, HostSlice};
@@ -342,43 +342,6 @@ where
     accumulate_scalars(a_clone_slice, b_slice, &cfg).unwrap();
 
     assert_eq!(a_clone_slice.as_slice(), a_main_slice.as_slice());
-}
-
-pub fn check_matrix_transpose<F>()
-where
-    F: PrimeField + VecOps + GenerateRandom,
-{
-    let cfg = VecOpsConfig::default();
-    let batch_size = 3;
-
-    let (r, c): (u32, u32) = (1u32 << 10, 1u32 << 4);
-    let test_size = (r * c * batch_size) as usize;
-
-    let input_matrix = F::generate_random(test_size);
-    let mut result_main = vec![F::zero(); test_size];
-    let mut result_ref = vec![F::zero(); test_size];
-
-    test_utilities::test_set_main_device();
-    transpose_matrix(
-        HostSlice::from_slice(&input_matrix),
-        r,
-        c,
-        HostSlice::from_mut_slice(&mut result_main),
-        &cfg,
-    )
-    .unwrap();
-
-    test_utilities::test_set_ref_device();
-    transpose_matrix(
-        HostSlice::from_slice(&input_matrix),
-        r,
-        c,
-        HostSlice::from_mut_slice(&mut result_ref),
-        &cfg,
-    )
-    .unwrap();
-
-    assert_eq!(result_main, result_ref);
 }
 
 pub fn check_slice<F>()
