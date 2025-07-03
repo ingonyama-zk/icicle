@@ -158,6 +158,7 @@ TEST_F(RingTestBase, BalancedDecompositionZQ)
   const size_t size = 1 << 20;
   auto input = std::vector<field_t>(size);
   field_t::rand_host_many(input.data(), size);
+  auto recomposed_ref = std::vector<field_t>(size);
   auto recomposed = std::vector<field_t>(size);
 
   const auto q_sqrt = static_cast<uint32_t>(std::sqrt(q));
@@ -177,8 +178,8 @@ TEST_F(RingTestBase, BalancedDecompositionZQ)
 
     for (const auto base : bases) {
       // Number of digits needed to represent an element mod q in balanced base-b representation
-      const size_t digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
-      const size_t decomposed_size = size * digits_per_element;
+      const size_t num_digits = balanced_decomposition::compute_nof_digits<field_t>(base);
+      const size_t decomposed_size = size * num_digits;
       auto decomposed = std::vector<field_t>(decomposed_size);
 
       std::stringstream timer_label_decompose, timer_label_recompose;
@@ -205,6 +206,21 @@ TEST_F(RingTestBase, BalancedDecompositionZQ)
         ASSERT_TRUE(is_balanced) << "Digit " << digit << " is out of expected balanced range for base=" << base;
       }
 
+      // Recompose manually to check to layout is digit-major, as it should be
+      // Generate the powers b^i for i in [0..num_digits]
+      Zq power = Zq::from(1);
+      std::vector<Zq> powers(num_digits);
+      for (size_t digit_idx = 0; digit_idx < num_digits; ++digit_idx) {
+        powers[digit_idx] = power;
+        power = power * Zq::from(base);
+      }
+      // Consider the decomposition as a [num_digits][size] matrix where rows are a single digit for the entire input
+      // vector. Then a linear combination with scalars [1, b, b^2, ...] is exactly the recomposition
+      ICICLE_CHECK(
+        matmul(powers.data(), 1, num_digits, decomposed.data(), num_digits, size, {}, recomposed_ref.data()));
+      ASSERT_EQ(0, memcmp(input.data(), recomposed_ref.data(), sizeof(field_t) * size))
+        << "Recomposition failed for base=" << base;
+
       // Recompose and compare to original input
       START_TIMER(recomposition);
       ICICLE_CHECK(balanced_decomposition::recompose(d_decomposed, decomposed_size, base, cfg, d_recomposed, size));
@@ -220,6 +236,67 @@ TEST_F(RingTestBase, BalancedDecompositionZQ)
     icicle_free(d_input);
     icicle_free(d_recomposed);
   } // device loop
+}
+
+TEST_F(RingTestBase, BalancedDecompositionSmallValues)
+{
+  static_assert(field_t::TLC == 2, "Balanced decomposition assumes q ~64-bit");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *reinterpret_cast<const int64_t*>(&q_storage);
+  ICICLE_ASSERT(q > 0) << "Expecting q to fit in int64_t";
+
+  const size_t size = 1 << 10;
+  std::vector<field_t> input(size);
+
+  // Fill input with small values requiring at most 2 bits
+  constexpr int max_val = 4;
+  const size_t num_digits_used = static_cast<size_t>(std::log2(max_val));
+  for (auto& e : input) {
+    e = field_t::from(rand() % max_val);
+  }
+
+  std::vector<field_t> recomposed(size);
+  std::vector<field_t> recomposed_ref(size);
+
+  const uint32_t q_sqrt = static_cast<uint32_t>(std::sqrt(q));
+  const std::vector<uint32_t> bases = {2, q_sqrt};
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    for (uint32_t base : bases) {
+      // Compute the number of digits required to fully represent any element mod q
+      const size_t num_digits_required = balanced_decomposition::compute_nof_digits<field_t>(base);
+      ASSERT_GT(num_digits_required, num_digits_used)
+        << "Test requires decomposition to use less digits than are needed for worst case";
+
+      const size_t decomposed_size = size * num_digits_used;
+      std::vector<field_t> decomposed(decomposed_size);
+
+      // Perform decomposition
+      ICICLE_CHECK(balanced_decomposition::decompose(input.data(), size, base, {}, decomposed.data(), decomposed_size));
+
+      // Validate layout by manually recomposing using digit-major interpretation
+      std::vector<Zq> powers(num_digits_used);
+      Zq power = Zq::from(1);
+      for (size_t i = 0; i < num_digits_used; ++i) {
+        powers[i] = power;
+        power = power * Zq::from(base);
+      }
+
+      // Treat decomposition output as a [num_digits_used][size] matrix and compute dot product
+      ICICLE_CHECK(
+        matmul(powers.data(), 1, num_digits_used, decomposed.data(), num_digits_used, size, {}, recomposed_ref.data()));
+      ASSERT_EQ(0, memcmp(input.data(), recomposed_ref.data(), sizeof(field_t) * size))
+        << "Manual recomposition failed for base=" << base;
+
+      // Perform recompose() and verify equality with original input
+      ICICLE_CHECK(
+        balanced_decomposition::recompose(decomposed.data(), decomposed_size, base, {}, recomposed.data(), size));
+      ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), sizeof(field_t) * size))
+        << "API recomposition failed for base=" << base;
+    }
+  }
 }
 
 TEST_F(RingTestBase, BalancedDecompositionZqErrorCases)
