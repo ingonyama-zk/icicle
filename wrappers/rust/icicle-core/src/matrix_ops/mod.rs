@@ -12,25 +12,10 @@
 //! All functions are backend-agnostic and dispatched using [`VecOpsConfig`].
 
 use crate::vec_ops::VecOpsConfig;
-
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
-/// Trait defining matrix operations for types stored in host or device memory.
-///
-/// ### Supported Operations
-/// - **Matrix multiplication (`matmul`)**  
-///   Multiplies two matrices `a` and `b`, both stored in **row-major** (rows-first) order,
-///   and writes the result to `result`, also in row-major order.
-///
-///   Dimensions must satisfy:
-///   - `a` is of shape `(a_rows × a_cols)`
-///   - `b` is of shape `(b_rows × b_cols)`
-///   - `a_cols == b_rows`
-///   - `result` must be sized to hold `(a_rows × b_cols)` elements
-///
-///   Memory for all inputs and the result can reside on either the host or device.
 /// Trait defining matrix operations over row-major matrices stored in host or device memory.
 pub trait MatrixOps<T> {
     /// Performs matrix multiplication: `result = a × b`
