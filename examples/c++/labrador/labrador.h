@@ -164,7 +164,7 @@ namespace icicle {
     /// - **Slow mode** (`fast_mode = false`): each element is sampled independently via hashing (seed || index).
     /// - **Fast mode** (`fast_mode = true`): one base element is sampled and all others are powers of it.
     inline eIcicleError random_sampling(
-      const std::byte* seed, size_t seed_len, bool fast_mode, const VecOpsConfig& cfg, Tq* output, size_t output_size)
+      size_t output_size, bool fast_mode, const std::byte* seed, size_t seed_len, const VecOpsConfig& cfg, Tq* output)
     {
       return random_sampling(output_size * Tq::d, fast_mode, seed, seed_len, cfg, (Zq*)output);
     }

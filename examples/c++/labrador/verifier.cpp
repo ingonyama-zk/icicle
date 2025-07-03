@@ -49,7 +49,7 @@ void LabradorBaseVerifier::create_transcript()
   trs.alpha_hat.resize(K);
   std::vector<std::byte> alpha_seed(trs.seed3);
   alpha_seed.push_back(std::byte('1'));
-  random_sampling(alpha_seed.data(), alpha_seed.size(), false, {}, trs.alpha_hat.data(), K);
+  random_sampling(K, true, alpha_seed.data(), alpha_seed.size(), {}, trs.alpha_hat.data());
 
   // 6. seed4 from u2
   const auto& u2 = trs.prover_msg.u2;

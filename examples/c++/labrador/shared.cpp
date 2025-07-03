@@ -8,7 +8,7 @@ std::vector<Tq> ajtai_commitment(
   assert(batch_size * input_len == S_len);
   // TODO: change this so that A need not be computed and stored
   std::vector<Tq> A(input_len * output_len);
-  ICICLE_CHECK(random_sampling(ajtai_mat_seed, seed_len, false, {}, A.data(), A.size()));
+  ICICLE_CHECK(random_sampling(A.size(), true, ajtai_mat_seed, seed_len, {}, A.data()));
 
   std::vector<Tq> comm(batch_size * output_len);
   ICICLE_CHECK(matmul(S, batch_size, input_len, A.data(), input_len, output_len, {}, comm.data()));
@@ -205,8 +205,8 @@ LabradorInstance prepare_recursion_instance(
   std::vector<std::byte> seed_B(prev_param.ajtai_seed), seed_C(prev_param.ajtai_seed);
   seed_B.push_back(std::byte('1'));
   seed_C.push_back(std::byte('2'));
-  ICICLE_CHECK(random_sampling(seed_B.data(), seed_B.size(), false, {}, B.data(), B.size()));
-  ICICLE_CHECK(random_sampling(seed_C.data(), seed_C.size(), false, {}, C.data(), C.size()));
+  ICICLE_CHECK(random_sampling(B.size(), true, seed_B.data(), seed_B.size(), {}, B.data()));
+  ICICLE_CHECK(random_sampling(C.size(), true, seed_C.data(), seed_C.size(), {}, C.data()));
 
   // B_t, C_t are transposed B, C
   ICICLE_CHECK(matrix_transpose<Tq>(B.data(), prev_param.t_len(), prev_param.kappa1, {}, B_t.data()));
@@ -246,7 +246,7 @@ LabradorInstance prepare_recursion_instance(
 
   std::vector<std::byte> seed_D(prev_param.ajtai_seed);
   seed_D.push_back(std::byte('3'));
-  ICICLE_CHECK(random_sampling(seed_D.data(), seed_D.size(), false, {}, D.data(), D.size()));
+  ICICLE_CHECK(random_sampling(D.size(), true, seed_D.data(), seed_D.size(), {}, D.data()));
   ICICLE_CHECK(matrix_transpose<Tq>(D.data(), h_len, prev_param.kappa2, {}, D_t.data()));
 
   // negate u2
@@ -279,7 +279,7 @@ LabradorInstance prepare_recursion_instance(
 
   std::vector<std::byte> seed_A(prev_param.ajtai_seed);
   seed_A.push_back(std::byte('0'));
-  ICICLE_CHECK(random_sampling(seed_A.data(), seed_A.size(), false, {}, A.data(), n * kappa));
+  ICICLE_CHECK(random_sampling(n * kappa, true, seed_A.data(), seed_A.size(), {}, A.data()));
 
   // A transpose
   std::vector<Tq> A_t(kappa * n);
