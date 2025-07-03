@@ -2,7 +2,11 @@ use icicle_core::impl_matrix_ops;
 
 impl_matrix_ops!("labrador", labrador, crate::ring::ScalarRing);
 impl_matrix_ops!("labrador_rns", labrador_rns, crate::ring::ScalarRingRns);
-impl_matrix_ops!("labrador_poly_ring", labrador_poly_ring, crate::polynomial_ring::PolyRing);
+impl_matrix_ops!(
+    "labrador_poly_ring",
+    labrador_poly_ring,
+    crate::polynomial_ring::PolyRing
+);
 
 #[cfg(test)]
 mod tests {

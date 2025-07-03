@@ -192,7 +192,6 @@ fn check_vec_ops_args_reduction_ops<F>(
     setup_config(input, input, result, cfg, batch_size)
 }
 
-
 fn check_vec_ops_args_slice<F>(
     input: &(impl HostOrDeviceSlice<F> + ?Sized),
     offset: u64,
@@ -398,7 +397,6 @@ where
     let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
     F::scalar_mul(a, b, result, &cfg)
 }
-
 
 pub fn bit_reverse<F>(
     input: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -958,8 +956,6 @@ macro_rules! impl_vec_ops_tests {
                 let test_size = 1 << 14;
                 check_vec_ops_scalars_inv::<$field>(test_size);
             }
-
-
 
             #[test]
             pub fn test_bit_reverse() {

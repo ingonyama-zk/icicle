@@ -13,4 +13,4 @@ mod tests {
     //     use icicle_core::impl_matrix_ops_tests;
     //     impl_matrix_ops_tests!(ExtensionField);
     // }
-} 
+}

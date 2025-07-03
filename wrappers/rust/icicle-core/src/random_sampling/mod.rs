@@ -1,6 +1,6 @@
 use crate::field::PrimeField;
-use crate::vec_ops::VecOpsConfig;
 use crate::polynomial_ring::PolynomialRing;
+use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
