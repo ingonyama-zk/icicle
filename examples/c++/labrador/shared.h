@@ -87,9 +87,3 @@ struct RecursionPreparer {
   eIcicleError copy_like_g(Rq* dst, const Rq* src) const;
   eIcicleError copy_like_h(Rq* dst, const Rq* src) const;
 };
-
-// returns a choice of mu, nu given n, m
-std::pair<size_t, size_t> get_rec_param(size_t n, size_t m);
-
-// put in LabradorParam
-// uint32_t calc_base0(size_t beta, size_t r);

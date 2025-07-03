@@ -573,16 +573,14 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
   LabradorInstance lab_inst_i = lab_inst;
   std::vector<Rq> S_i = S;
   for (size_t i = 0; i < NUM_REC; i++) {
-    std::cout << "Recursion iteration = " << i << "\n";
+    std::cout << "Prover::Recursion iteration = " << i << "\n";
     LabradorBaseProver base_prover(lab_inst_i, S_i, oracle);
     std::tie(base_proof, part_trs) = base_prover.base_case_prover();
 
-    // TODO: figure out param using Lattirust code
-    // make it 2^32-1 - so that z always decomposes to 2 limbs
+    // NOTE: base0 needs to be large enough
     uint32_t base0 = calc_base0(lab_inst_i.param.r, OP_NORM_BOUND, lab_inst_i.param.beta);
-    size_t m =
-      base_prover.lab_inst.param.t_len() + base_prover.lab_inst.param.g_len() + base_prover.lab_inst.param.h_len();
-    auto [mu, nu] = get_rec_param(base_prover.lab_inst.param.n, m);
+    size_t m = lab_inst_i.param.t_len() + lab_inst_i.param.g_len() + lab_inst_i.param.h_len();
+    auto [mu, nu] = compute_mu_nu(lab_inst_i.param.n, m);
 
     // Prepare recursion problem and witness
     S_i = prepare_recursion_witness(lab_inst_i.param, base_proof, base0, mu, nu);

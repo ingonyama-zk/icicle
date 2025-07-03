@@ -50,9 +50,9 @@ int main(int argc, char* argv[])
     n,
     {reinterpret_cast<const std::byte*>(ajtai_seed_str.data()),
      reinterpret_cast<const std::byte*>(ajtai_seed_str.data()) + ajtai_seed_str.size()},
-    1 << 8, // kappa
-    1 << 8, // kappa1
-    1 << 8, // kappa2,
+    1 << 4, // kappa
+    1 << 4, // kappa1
+    1 << 4, // kappa2,
     base0,  // base1
     base0,  // base2
     base0,  // base3
@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
   // assert(lab_witness_legit(rec_inst, rec_S));
   // std::cout << "VALID\n";
 
-  size_t NUM_REC = 1;
+  size_t NUM_REC = 2;
   LabradorProver prover{
     lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size(), NUM_REC};
 
@@ -165,6 +165,5 @@ int main(int argc, char* argv[])
   } else {
     std::cout << "Verification failed. \n";
   }
-  std::cout << "Hello\n";
   return 0;
 }

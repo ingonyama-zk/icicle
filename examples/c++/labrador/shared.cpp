@@ -179,9 +179,10 @@ LabradorInstance prepare_recursion_instance(
   std::vector<std::byte> new_ajtai_seed(prev_param.ajtai_seed);
   new_ajtai_seed.push_back(std::byte('1'));
 
-  // TODO: figure out param using Lattirust code
   // TODO: beta needs to be set correctly for protocol to run
+  // currently too large
   double beta = r * n * d * prev_param.beta;
+  uint32_t base_prime0 = calc_base0(r_prime, OP_NORM_BOUND, beta);
   LabradorParam recursion_param{
     r_prime,
     n_prime,
@@ -189,9 +190,9 @@ LabradorInstance prepare_recursion_instance(
     prev_param.kappa,  // kappa
     prev_param.kappa1, // kappa1
     prev_param.kappa2, // kappa2,
-    base0,             // base1
-    base0,             // base2
-    base0,             // base3
+    base_prime0,       // base1
+    base_prime0,       // base2
+    base_prime0,       // base3
     beta,              // beta
   };
   LabradorInstance recursion_instance{recursion_param};
