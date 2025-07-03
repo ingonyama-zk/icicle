@@ -1,8 +1,5 @@
 use icicle_runtime::{
-    config::ConfigExtension,
-    errors::IcicleError,
-    memory::HostOrDeviceSlice,
-    stream::IcicleStreamHandle,
+    config::ConfigExtension, errors::IcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
 
 use crate::field::PrimeField;

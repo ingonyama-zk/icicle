@@ -1,5 +1,5 @@
 use crate::{polynomial_ring::PolynomialRing, vec_ops::VecOpsConfig};
-use icicle_runtime::{IcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
 pub mod tests;
 

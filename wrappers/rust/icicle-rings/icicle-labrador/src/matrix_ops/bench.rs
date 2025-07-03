@@ -3,11 +3,7 @@ use icicle_core::vec_ops::VecOpsConfig;
 use icicle_labrador::polynomial_ring;
 use std::hint::black_box;
 
-use icicle_core::{
-    matrix_ops::*,
-    polynomial_ring::PolynomialRing,
-    traits::GenerateRandom,
-};
+use icicle_core::{matrix_ops::*, polynomial_ring::PolynomialRing, traits::GenerateRandom};
 
 use icicle_runtime::{
     memory::{DeviceSlice, HostSlice},

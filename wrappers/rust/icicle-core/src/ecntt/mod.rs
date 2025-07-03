@@ -101,7 +101,7 @@ macro_rules! impl_ecntt {
             use icicle_core::ecntt::ECNTT;
             use icicle_core::impl_ntt_without_domain;
             use icicle_core::ntt::{NTTConfig, NTTDir, NTTInitDomainConfig, NTT};
-            use icicle_runtime::{eIcicleError, IcicleError, memory::HostOrDeviceSlice};
+            use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, IcicleError};
 
             type ProjectiveType = Projective<$curve>;
             impl_ntt_without_domain!($field_prefix, $field, ECNTT, "_ecntt", ProjectiveType);

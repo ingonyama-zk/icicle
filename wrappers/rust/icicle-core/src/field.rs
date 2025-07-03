@@ -319,17 +319,24 @@ macro_rules! impl_montgomery_convertible {
                         is_into,
                         &config,
                         values.as_mut_ptr(),
-                    ).wrap()
+                    )
+                    .wrap()
                 }
             }
         }
 
         impl MontgomeryConvertible for $field {
-            fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> Result<(), IcicleError> {
+            fn to_mont(
+                values: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+                stream: &IcicleStream,
+            ) -> Result<(), IcicleError> {
                 $field::convert_montgomery(values, stream, true)
             }
 
-            fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> Result<(), IcicleError> {
+            fn from_mont(
+                values: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+                stream: &IcicleStream,
+            ) -> Result<(), IcicleError> {
                 $field::convert_montgomery(values, stream, false)
             }
         }
