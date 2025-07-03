@@ -21,9 +21,9 @@ TYPED_TEST(FieldTest, FieldSanityTest)
 {
   auto a = TypeParam::rand_host();
   auto b = TypeParam::rand_host();
-  auto b_inv = TypeParam::inverse(b);
-  auto a_neg = TypeParam::neg(a);
-  ASSERT_EQ(TypeParam::from_montgomery(TypeParam::to_montgomery(a)), a);
+  auto b_inv = b.inverse();
+  auto a_neg = a.neg();
+  ASSERT_EQ(a.to_montgomery().from_montgomery(), a);
   ASSERT_EQ(a + TypeParam::zero(), a);
   ASSERT_EQ(a + b - a, b);
   ASSERT_EQ(b * a * b_inv, a);
@@ -1335,7 +1335,7 @@ TEST_F(FieldTestBase, FieldStorageReduceSanityTest)
     storage<18> product = {};
     host_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
     auto c_red = scalar_t::from(c);
-    auto c_inv = scalar_t::inverse(c_red);
+    auto c_inv = c_red.inverse();
     storage<(scalar_t::TLC > 1 ? scalar_t::TLC : 2)> c_inv_s = {c_inv.limbs_storage.limbs[0]};
     if (scalar_t::TLC > 1) {
       for (int i = 1; i < scalar_t::TLC; i++) {

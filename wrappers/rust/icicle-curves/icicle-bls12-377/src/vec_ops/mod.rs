@@ -5,9 +5,6 @@ use icicle_core::{
 };
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
-use icicle_core::program::Program;
-use icicle_core::traits::FieldImpl;
-
 impl_vec_ops_field!("bls12_377", bls12_377, ScalarField, ScalarCfg);
 
 #[cfg(test)]

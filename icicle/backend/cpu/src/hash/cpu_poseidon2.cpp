@@ -342,7 +342,7 @@ namespace icicle {
       }
 #pragma unroll
       for (int element_idx_in_hash = 0; element_idx_in_hash < T; element_idx_in_hash++) {
-        states[element_idx_in_hash] = S::pow(states[element_idx_in_hash], alpha);
+        states[element_idx_in_hash] = states[element_idx_in_hash].pow(alpha);
       }
 
       full_matrix_mul_vec<T>(states, mds_matrix, states);
@@ -370,7 +370,7 @@ namespace icicle {
     {
       state[0] = state[0] + rounds_constants[rc_offset];
 
-      state[0] = S::pow(state[0], alpha);
+      state[0] = state[0].pow(alpha);
 
       // Multiply partial matrix by vector.
       // Partial matrix is represented by T members - diagonal members of the matrix.
