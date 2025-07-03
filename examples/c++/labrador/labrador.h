@@ -169,6 +169,7 @@ namespace icicle {
       return random_sampling(output_size * Tq::d, fast_mode, seed, seed_len, cfg, (Zq*)output);
     }
 
+    /// TODO update:
     /// @brief Sample Rq challenge polynomials from challenge space C.
     /// Does not ensure norm constraints (e.g., τ, T) hold. User must check and possibly return with another seed.
     /// seed, seed_len: random seed for sampling and its length
@@ -180,11 +181,17 @@ namespace icicle {
     /// Then, you should randomly flip the signs of the coefficients.
     /// Finally, you need to permute the coefficients randomly
 
-    // TODO Yuval: update this based on Roman's API. Cannot use std::vectors
-    inline eIcicleError sample_challenge_polynomials(
-      const std::byte* seed, size_t seed_len, std::vector<size_t> coeff_val, std::vector<size_t> num_occur, Rq output)
+    inline eIcicleError sample_challenge_space_polynomials(
+      const std::byte* seed,
+      size_t seed_len,
+      size_t size,
+      uint32_t ones,
+      uint32_t twos,
+      uint64_t norm,
+      const VecOpsConfig& config,
+      Rq* output)
     {
-      return eIcicleError::API_NOT_IMPLEMENTED; // TODO
+      return icicle::sample_challenge_space_polynomials(seed, seed_len, size, ones, twos, norm, config, output);
     }
 
   } // namespace labrador
