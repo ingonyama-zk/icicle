@@ -21,7 +21,13 @@ std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std:
     // check norm
     bool JL_check = false;
     double beta = lab_inst.param.beta;
-    ICICLE_CHECK(check_norm_bound(p.data(), JL_out, eNormType::L2, uint64_t(sqrt(JL_out / 2) * beta), {}, &JL_check));
+
+    // ignore ICICLE errors when elements of p are greater than sqrt(q)
+    try {
+      ICICLE_CHECK(check_norm_bound(p.data(), JL_out, eNormType::L2, uint64_t(sqrt(JL_out / 2) * beta), {}, &JL_check));
+    } catch (const std::exception& e) {
+      // simply pass here
+    }
 
     if (JL_check) {
       break;
@@ -181,6 +187,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
 }
 
 // This destroys the lab_inst in LabradorBaseProver
+// TODO: Prover only needs to send BaseProverMessages
 std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_case_prover()
 {
   // Step 1: Pack the Witnesses into a Matrix S
@@ -262,6 +269,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // Step 8: decompose g to g_tilde
   size_t base2 = lab_inst.param.base2;
+  // TODO: Take advantage of g being small and truncate upper limbs
   size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base2);
   std::vector<Rq> g_tilde(l2 * g.size());
   ICICLE_CHECK(decompose(g.data(), g.size(), base2, {}, g_tilde.data(), g_tilde.size()));
@@ -521,6 +529,15 @@ std::vector<Rq> LabradorProver::prepare_recursion_witness(
   std::vector<Rq> z_tilde(2 * n);
   ICICLE_CHECK(decompose(z.data(), n, base0, {}, z_tilde.data(), z_tilde.size()));
 
+  if (TESTING) {
+    std::vector<Rq> temp(n);
+    ICICLE_CHECK(recompose(z_tilde.data(), z_tilde.size(), base0, {}, temp.data(), temp.size()));
+    if (!poly_vec_eq(z.data(), temp.data(), n)) {
+      throw std::runtime_error("Error: z could not be recomposed from z_tilde in prepare_recursion_witness");
+    } else {
+      std::cout << "\tprepare_recursion_witness: z recomposition passes.\n";
+    }
+  }
   // Step 3:
   // z0 = z_tilde[:n]
   // z1 = z_tilde[n:2*n]
@@ -557,15 +574,14 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
   for (size_t i = 0; i < NUM_REC; i++) {
     std::cout << "Recursion iteration = " << i << "\n";
     LabradorBaseProver base_prover(lab_inst_i, S_i, oracle);
-    auto [base_proof, part_trs] = base_prover.base_case_prover();
+    std::tie(base_proof, part_trs) = base_prover.base_case_prover();
+
     // TODO: figure out param using Lattirust code
     // make it 2^32-1 - so that z always decomposes to 2 limbs
-    uint32_t base0 = -1;
-    // size_t m =
-    //   base_prover.lab_inst.param.t_len() + base_prover.lab_inst.param.g_len() + base_prover.lab_inst.param.h_len();
-    // auto [mu, nu] = get_rec_param(base_prover.lab_inst.param.n, m);
-
-    size_t mu = 1 << 3, nu = 1 << 3;
+    uint32_t base0 = calc_base0(lab_inst_i.param.r, OP_NORM_BOUND, lab_inst_i.param.beta);
+    size_t m =
+      base_prover.lab_inst.param.t_len() + base_prover.lab_inst.param.g_len() + base_prover.lab_inst.param.h_len();
+    auto [mu, nu] = get_rec_param(base_prover.lab_inst.param.n, m);
 
     // Prepare recursion problem and witness
     S_i = prepare_recursion_witness(lab_inst_i.param, base_proof, base0, mu, nu);

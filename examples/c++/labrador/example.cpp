@@ -27,7 +27,9 @@ int main(int argc, char* argv[])
   const size_t n = 1 << 4;
   const size_t r = 1 << 2;
   constexpr size_t d = Rq::d;
-  const std::vector<Rq> S = rand_poly_vec(r * n, 1); // S = 2^14 Zq elements
+  const size_t max_value = 2;
+
+  const std::vector<Rq> S = rand_poly_vec(r * n, max_value); // S = 2^12 Zq elements
   EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
   assert(witness_legit_eq(eq_inst, S));
   ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(n, r, S);
@@ -40,18 +42,21 @@ int main(int argc, char* argv[])
   auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
   std::string ajtai_seed_str = std::to_string(millis);
   std::cout << "Ajtai seed = " << ajtai_seed_str << std::endl;
+
+  double beta = sqrt(max_value * n * r * d);
+  uint32_t base0 = calc_base0(r, OP_NORM_BOUND, beta);
   LabradorParam param{
     r,
     n,
     {reinterpret_cast<const std::byte*>(ajtai_seed_str.data()),
      reinterpret_cast<const std::byte*>(ajtai_seed_str.data()) + ajtai_seed_str.size()},
-    1 << 4,    // kappa
-    1 << 4,    // kappa1
-    1 << 4,    // kappa2,
-    1 << 16,   // base1
-    1 << 16,   // base2
-    1 << 16,   // base3
-    n * r * d, // beta
+    1 << 8, // kappa
+    1 << 8, // kappa1
+    1 << 8, // kappa2,
+    base0,  // base1
+    base0,  // base2
+    base0,  // base3
+    beta,   // beta
   };
   LabradorInstance lab_inst{param};
   lab_inst.add_equality_constraint(eq_inst);
@@ -60,19 +65,19 @@ int main(int argc, char* argv[])
 
   std::string oracle_seed = "ORACLE_SEED";
 
-  LabradorBaseProver base_prover{
-    lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size()};
+  // LabradorBaseProver base_prover{
+  //   lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size()};
 
-  auto [base_proof, trs] = base_prover.base_case_prover();
+  // auto [base_proof, trs] = base_prover.base_case_prover();
 
-  LabradorInstance verif_lab_inst{param};
-  verif_lab_inst.add_equality_constraint(eq_inst);
-  verif_lab_inst.add_const_zero_constraint(const_zero_inst);
-  verif_lab_inst.add_const_zero_constraint(const_zero_inst2);
-  // to break verification:
-  // verif_lab_inst.const_zero_constraints[0].b = verif_lab_inst.const_zero_constraints[0].b + Zq::one();
-  LabradorBaseVerifier base_verifier{
-    verif_lab_inst, trs.prover_msg, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size()};
+  // LabradorInstance verif_lab_inst{param};
+  // verif_lab_inst.add_equality_constraint(eq_inst);
+  // verif_lab_inst.add_const_zero_constraint(const_zero_inst);
+  // verif_lab_inst.add_const_zero_constraint(const_zero_inst2);
+  // // to break verification:
+  // // verif_lab_inst.const_zero_constraints[0].b = verif_lab_inst.const_zero_constraints[0].b + Zq::one();
+  // LabradorBaseVerifier base_verifier{
+  //   verif_lab_inst, trs.prover_msg, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size()};
 
   // // // Assert that Verifier trs and Prover trs are equal
   // // auto bytes_eq = [](const std::vector<std::byte>& a, const std::vector<std::byte>& b) { return a == b; };
@@ -112,13 +117,13 @@ int main(int argc, char* argv[])
   // // }
   // // std::cout << "Transcript check passed ✅\n";
 
-  bool verification_result = base_verifier.verify(base_proof);
+  // bool verification_result = base_verifier.fully_verify(base_proof);
 
-  if (verification_result) {
-    std::cout << "Base proof verification passed\n";
-  } else {
-    std::cout << "Base proof verification failed\n";
-  }
+  // if (verification_result) {
+  //   std::cout << "Base proof verification passed\n";
+  // } else {
+  //   std::cout << "Base proof verification failed\n";
+  // }
 
   // std::cout << "Beginning recursion... \n";
   // uint32_t base0 = 1 << 3;
@@ -139,12 +144,27 @@ int main(int argc, char* argv[])
   // assert(lab_witness_legit(rec_inst, rec_S));
   // std::cout << "VALID\n";
 
-  // size_t NUM_REC = 1;
-  // LabradorProver prover{
-  //   lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size(), NUM_REC};
+  size_t NUM_REC = 1;
+  LabradorProver prover{
+    lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size(), NUM_REC};
 
-  // auto [trs, base_proof] = prover.prove();
+  auto [trs, final_proof] = prover.prove();
 
+  // extract all prover_msg from trs vector into a vector prover_msgs
+  std::vector<BaseProverMessages> prover_msgs;
+  for (const auto& transcript : trs) {
+    prover_msgs.push_back(transcript.prover_msg);
+  }
+  LabradorVerifier verifier{lab_inst,           prover_msgs,
+                            final_proof,        reinterpret_cast<const std::byte*>(oracle_seed.data()),
+                            oracle_seed.size(), NUM_REC};
+
+  std::cout << "Verification result: \n";
+  if (verifier.verify()) {
+    std::cout << "Verification passed. \n";
+  } else {
+    std::cout << "Verification failed. \n";
+  }
   std::cout << "Hello\n";
   return 0;
 }
