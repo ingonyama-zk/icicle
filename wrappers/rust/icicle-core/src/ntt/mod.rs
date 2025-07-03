@@ -1,5 +1,8 @@
 use icicle_runtime::{
-    config::ConfigExtension, errors::{eIcicleError, IcicleError}, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
+    config::ConfigExtension,
+    errors::{eIcicleError, IcicleError},
+    memory::HostOrDeviceSlice,
+    stream::IcicleStreamHandle,
 };
 
 use crate::field::PrimeField;
@@ -154,15 +157,28 @@ pub trait NTT<T>: NTTDomain {
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> Result<(), IcicleError> {
         if input.len() != output.len() {
-            return Err(IcicleError::new(eIcicleError::InvalidArgument, format!("input and output lengths {}; {} do not match", input.len(), output.len())));
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "input and output lengths {}; {} do not match",
+                    input.len(),
+                    output.len()
+                ),
+            ));
         }
 
         // check device slices are on active device
         if input.is_on_device() && !input.is_on_active_device() {
-            return Err(IcicleError::new(eIcicleError::InvalidArgument, "input not allocated on an inactive device"));
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "input not allocated on an inactive device",
+            ));
         }
         if output.is_on_device() && !output.is_on_active_device() {
-            return Err(IcicleError::new(eIcicleError::InvalidArgument, "output not allocated on an inactive device"));
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "output not allocated on an inactive device",
+            ));
         }
 
         let mut local_cfg = cfg.clone();

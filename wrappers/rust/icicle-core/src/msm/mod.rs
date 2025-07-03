@@ -94,25 +94,55 @@ pub trait MSM<C: Curve> {
         results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
     ) -> Result<(), IcicleError> {
         if bases.len() % (cfg.precompute_factor as usize) != 0 {
-            return Err(IcicleError::new(eIcicleError::InvalidArgument, format!("Precompute factor {} does not divide the number of bases {}", cfg.precompute_factor, bases.len())));
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "Precompute factor {} does not divide the number of bases {}",
+                    cfg.precompute_factor,
+                    bases.len()
+                ),
+            ));
         }
         let bases_size = bases.len() / (cfg.precompute_factor as usize);
         if scalars.len() % bases_size != 0 {
-            return Err(IcicleError::new(eIcicleError::InvalidArgument, format!("Number of bases {} does not divide the number of scalars {}", bases_size, scalars.len())));
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "Number of bases {} does not divide the number of scalars {}",
+                    bases_size,
+                    scalars.len()
+                ),
+            ));
         }
         if scalars.len() % results.len() != 0 {
-            return Err(IcicleError::new(eIcicleError::InvalidArgument, format!("Number of results {} does not divide the number of scalars {}", results.len(), scalars.len())));
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "Number of results {} does not divide the number of scalars {}",
+                    results.len(),
+                    scalars.len()
+                ),
+            ));
         }
 
         // check device slices are on active device
         if scalars.is_on_device() && !scalars.is_on_active_device() {
-            return Err(IcicleError::new(eIcicleError::InvalidArgument, "scalars not allocated on an inactive device"));
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "scalars not allocated on an inactive device",
+            ));
         }
         if bases.is_on_device() && !bases.is_on_active_device() {
-            return Err(IcicleError::new(eIcicleError::InvalidArgument, "bases not allocated on an inactive device"));
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "bases not allocated on an inactive device",
+            ));
         }
         if results.is_on_device() && !results.is_on_active_device() {
-            return Err(IcicleError::new(eIcicleError::InvalidArgument, "results not allocated on an inactive device"));
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "results not allocated on an inactive device",
+            ));
         }
 
         let mut local_cfg = cfg.clone();
@@ -131,11 +161,21 @@ pub trait MSM<C: Curve> {
         output_bases: &mut DeviceSlice<Affine<C>>,
     ) -> Result<(), IcicleError> {
         if output_bases.len() != points.len() * (config.precompute_factor as usize) {
-            return Err(IcicleError::new(eIcicleError::InvalidArgument, format!("Precompute factor is probably incorrect: expected {} but got {}", output_bases.len() / points.len(), config.precompute_factor)));
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "Precompute factor is probably incorrect: expected {} but got {}",
+                    output_bases.len() / points.len(),
+                    config.precompute_factor
+                ),
+            ));
         }
 
         if !output_bases.is_on_device() {
-            return Err(IcicleError::new(eIcicleError::InvalidArgument, "output_bases not allocated on a device"));
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "output_bases not allocated on a device",
+            ));
         }
 
         Self::precompute_bases_unchecked(points, config, output_bases)
