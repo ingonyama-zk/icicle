@@ -1,4 +1,4 @@
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
 pub use crate::curve::Projective;
 use crate::{
@@ -17,7 +17,7 @@ pub trait ECNTT<T>: PrimeField {
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     fn ntt_inplace_unchecked(
         inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
@@ -59,7 +59,7 @@ pub fn ecntt<C: Curve>(
     dir: NTTDir,
     cfg: &NTTConfig<C::ScalarField>,
     output: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     C::ScalarField: PrimeField + ECNTT<Projective<C>>,
 {
@@ -79,7 +79,7 @@ pub fn ecntt_inplace<C: Curve>(
     inout: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
     dir: NTTDir,
     cfg: &NTTConfig<C::ScalarField>,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     C::ScalarField: PrimeField + ECNTT<Projective<C>>,
 {

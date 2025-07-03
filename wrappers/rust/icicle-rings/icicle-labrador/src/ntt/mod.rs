@@ -6,8 +6,7 @@ use icicle_core::{
     negacyclic_ntt::{NegacyclicNtt, NegacyclicNttConfig},
 };
 use icicle_core::{impl_ntt, impl_ntt_without_domain};
-use icicle_runtime::errors::eIcicleError;
-use icicle_runtime::memory::HostOrDeviceSlice;
+use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, IcicleError};
 
 impl_ntt!("labrador", labrador, ScalarRing);
 impl_ntt!("labrador_rns", labrador_rns, ScalarRingRns);

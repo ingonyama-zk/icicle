@@ -93,7 +93,7 @@ where
             }
         })
         .collect();
-    P::from_slice(&conjugated_coeffs)
+    P::from_slice(&conjugated_coeffs).unwrap()
 }
 
 pub fn check_jl_projection_polyring<Poly>()
@@ -131,7 +131,7 @@ where
             .map(|i| {
                 let offset = i * d;
                 let coeffs = &scalar_data[offset..offset + d];
-                let poly = Poly::from_slice(coeffs);
+                let poly = Poly::from_slice(coeffs).unwrap();
                 if conjugate {
                     conjugate_poly(poly)
                 } else {

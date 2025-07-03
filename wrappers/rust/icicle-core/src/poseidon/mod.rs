@@ -20,7 +20,7 @@ pub trait PoseidonHasher: PrimeField {
 
 /// Function to create a Poseidon hasher for a specific field type and t (branching factor).
 /// Delegates the creation to the `new` method of the `PoseidonHasher` trait.
-pub fn create_poseidon_hasher<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>
+pub fn create_poseidon_hasher<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, IcicleError>
 where
     F: PrimeField + PoseidonHasher,
 {
@@ -30,14 +30,14 @@ where
 pub struct Poseidon;
 
 impl Poseidon {
-    pub fn new<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>
+    pub fn new<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, IcicleError>
     where
         F: PrimeField + PoseidonHasher, // F must implement the PrimeField trait
     {
         create_poseidon_hasher::<F>(t, domain_tag)
     }
 
-    pub fn new_with_input_size<F>(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, eIcicleError>
+    pub fn new_with_input_size<F>(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, IcicleError>
     where
         F: PrimeField,
         F: PoseidonHasher,
@@ -60,7 +60,7 @@ macro_rules! impl_poseidon {
                 hash::{Hasher, HasherHandle},
                 poseidon::PoseidonHasher,
             };
-            use icicle_runtime::errors::eIcicleError;
+            use icicle_runtime::errors::{eIcicleError, IcicleError};
             use std::marker::PhantomData;
 
             extern "C" {
@@ -74,7 +74,7 @@ macro_rules! impl_poseidon {
                     t: u32,
                     domain_tag: Option<&$field>,
                     input_size: u32,
-                ) -> Result<Hasher, eIcicleError> {
+                ) -> Result<Hasher, IcicleError> {
                     let handle: HasherHandle = unsafe {
                         create_poseidon_hasher(
                             t,
@@ -83,7 +83,10 @@ macro_rules! impl_poseidon {
                         )
                     };
                     if handle.is_null() {
-                        return Err(eIcicleError::UnknownError);
+                        return Err(IcicleError::new(
+                            eIcicleError::UnknownError,
+                            "poseidon hasher handle is null",
+                        ));
                     }
                     Ok(Hasher::from_handle(handle))
                 }

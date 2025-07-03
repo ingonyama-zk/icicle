@@ -18,7 +18,7 @@ pub trait JLProjection<T: PrimeField> {
         seed: &[u8],
         cfg: &VecOpsConfig,
         output_projection: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     /// Generates raw JL matrix rows over the scalar ring `T`.
     ///
@@ -30,7 +30,7 @@ pub trait JLProjection<T: PrimeField> {
         num_rows: usize,
         cfg: &VecOpsConfig,
         output_rows: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 /// Trait for JL matrix generation in polynomial ring form (e.g., Rq),
@@ -49,7 +49,7 @@ pub trait JLProjectionPolyRing<P: PolynomialRing> {
         conjugate: bool,
         cfg: &VecOpsConfig,
         output_rows: &mut (impl HostOrDeviceSlice<P> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 /// Projects an input vector using a Johnson–Lindenstrauss (JL) random projection matrix.
@@ -76,7 +76,7 @@ pub fn jl_projection<T>(
     seed: &[u8],
     cfg: &VecOpsConfig,
     output_projection: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     T: PrimeField,
     T: JLProjection<T>,
@@ -112,7 +112,7 @@ pub fn get_jl_matrix_rows<T>(
     num_rows: usize,
     cfg: &VecOpsConfig,
     output_rows: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     T: PrimeField,
     T: JLProjection<T>,
@@ -153,7 +153,7 @@ pub fn get_jl_matrix_rows_as_polyring<P>(
     conjugate: bool,
     cfg: &VecOpsConfig,
     output_rows: &mut (impl HostOrDeviceSlice<P> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     P: PolynomialRing + JLProjectionPolyRing<P>,
 {
@@ -166,8 +166,8 @@ macro_rules! impl_jl_projection {
     ($prefix:literal, $scalar_type:ty, $implement_for:ty) => {
         use icicle_core::jl_projection::JLProjection;
         use icicle_core::vec_ops::VecOpsConfig;
-        use icicle_runtime::eIcicleError;
         use icicle_runtime::memory::HostOrDeviceSlice;
+        use icicle_runtime::{eIcicleError, IcicleError};
 
         extern "C" {
             #[link_name = concat!($prefix, "_jl_projection")]
@@ -199,15 +199,19 @@ macro_rules! impl_jl_projection {
                 seed: &[u8],
                 cfg: &VecOpsConfig,
                 output: &mut (impl HostOrDeviceSlice<$scalar_type> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 if input.is_on_device() && !input.is_on_active_device() {
-                    eprintln!("Input is on an inactive device");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Input is on an inactive device",
+                    ));
                 }
 
                 if output.is_on_device() && !output.is_on_active_device() {
-                    eprintln!("Output is on an inactive device");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Output is on an inactive device",
+                    ));
                 }
 
                 let mut cfg_clone = cfg.clone();
@@ -235,10 +239,12 @@ macro_rules! impl_jl_projection {
                 num_rows: usize,
                 cfg: &VecOpsConfig,
                 output_rows: &mut (impl HostOrDeviceSlice<$scalar_type> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 if output_rows.is_on_device() && !output_rows.is_on_active_device() {
-                    eprintln!("Output is on an inactive device");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Output is on an inactive device",
+                    ));
                 }
 
                 let mut cfg_clone = cfg.clone();
@@ -290,10 +296,12 @@ macro_rules! impl_jl_projection_as_polyring {
                 conjugate: bool,
                 cfg: &VecOpsConfig,
                 output_rows: &mut (impl HostOrDeviceSlice<$poly_type> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 if output_rows.is_on_device() && !output_rows.is_on_active_device() {
-                    eprintln!("Output is on an inactive device");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Output is on an inactive device",
+                    ));
                 }
 
                 let mut cfg_clone = cfg.clone();

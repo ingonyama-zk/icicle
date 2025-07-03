@@ -3,7 +3,7 @@ use icicle_core::{
     impl_vec_ops_field,
     vec_ops::{/*BitReverseConfig,*/ VecOps, VecOpsConfig},
 };
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{errors::IcicleError, memory::HostOrDeviceSlice};
 
 impl_vec_ops_field!("bn254", bn254, ScalarField);
 #[cfg(test)]

@@ -583,9 +583,9 @@ where
             .map(|(x, y)| *x * *y)
             .collect::<Vec<_>>();
 
-        expected_add[i] = P::from_slice(&add);
-        expected_sub[i] = P::from_slice(&sub);
-        expected_mul[i] = P::from_slice(&mul);
+        expected_add[i] = P::from_slice(&add).unwrap();
+        expected_sub[i] = P::from_slice(&sub).unwrap();
+        expected_mul[i] = P::from_slice(&mul).unwrap();
     }
 
     // Assertions
@@ -626,7 +626,7 @@ where
             .iter()
             .map(|c| *c * scalar)
             .collect::<Vec<_>>();
-        expected_result[i] = P::from_slice(&product);
+        expected_result[i] = P::from_slice(&product).unwrap();
     }
 
     // Check correctness
@@ -665,7 +665,7 @@ where
             acc[i] = acc[i] + *coeff;
         }
     }
-    expected[0] = P::from_slice(&acc);
+    expected[0] = P::from_slice(&acc).unwrap();
 
     // Assert result matches manual sum
     assert_eq!(result, expected, "polyvec_sum_reduce mismatch");

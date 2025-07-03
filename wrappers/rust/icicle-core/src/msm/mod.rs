@@ -1,7 +1,8 @@
 use crate::curve::{Affine, Curve, Projective};
 use icicle_runtime::{
     config::ConfigExtension,
-    errors::eIcicleError,
+    eIcicleError,
+    errors::IcicleError,
     memory::{DeviceSlice, HostOrDeviceSlice},
     stream::IcicleStreamHandle,
 };
@@ -79,7 +80,7 @@ pub trait MSM<C: Curve> {
         bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
         cfg: &MSMConfig,
         results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     fn precompute_bases_unchecked(
         bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
@@ -169,7 +170,7 @@ pub trait MSM<C: Curve> {
 ///
 /// * `results` - buffer to write results into. Its length is equal to the batch size i.e. number of MSMs to compute.
 ///
-/// Returns `Ok(())` if no errors occurred or a `CudaError` otherwise.
+/// Returns `Ok(())` if no errors occurred or an `IcicleError` otherwise.
 pub fn msm<C: Curve + MSM<C>>(
     scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
     bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
@@ -197,7 +198,7 @@ pub fn msm<C: Curve + MSM<C>>(
 ///
 /// * `output_bases` - Device-allocated buffer of size `bases_size` * `precompute_factor` for the extended bases.
 ///
-/// Returns `Ok(())` if no errors occurred or a `eIcicleError` otherwise.
+/// Returns `Ok(())` if no errors occurred or an `IcicleError` otherwise.
 pub fn precompute_bases<C: Curve + MSM<C>>(
     points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
     config: &MSMConfig,
@@ -243,7 +244,7 @@ macro_rules! impl_msm {
                 points: &(impl HostOrDeviceSlice<Affine<$curve>> + ?Sized),
                 cfg: &MSMConfig,
                 results: &mut (impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 unsafe {
                     $curve_prefix_ident::msm_ffi(
                         scalars.as_ptr(),
@@ -260,7 +261,7 @@ macro_rules! impl_msm {
                 points: &(impl HostOrDeviceSlice<Affine<$curve>> + ?Sized),
                 config: &MSMConfig,
                 output_bases: &mut DeviceSlice<Affine<$curve>>,
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 unsafe {
                     $curve_prefix_ident::precompute_bases_ffi(
                         points.as_ptr(),

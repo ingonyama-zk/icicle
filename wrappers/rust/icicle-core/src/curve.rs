@@ -146,50 +146,68 @@ impl<C: Curve> From<Projective<C>> for Affine<C> {
 }
 
 impl<C: Curve> MontgomeryConvertible for Affine<C> {
-    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
+    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> Result<(), IcicleError> {
         if values.is_on_device() && !values.is_on_active_device() {
-            panic!("values not allocated on the active device");
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "values not allocated on the active device",
+            ));
         }
         let mut config = VecOpsConfig::default();
         config.is_a_on_device = values.is_on_device();
         config.is_async = !stream.is_null();
         config.stream_handle = (&*stream).into();
-        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &config)
+        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &config).wrap()
     }
 
-    fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
+    fn from_mont(
+        values: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        stream: &IcicleStream,
+    ) -> Result<(), IcicleError> {
         if values.is_on_device() && !values.is_on_active_device() {
-            panic!("values not allocated on the active device");
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "values not allocated on the active device",
+            ));
         }
         let mut config = VecOpsConfig::default();
         config.is_a_on_device = values.is_on_device();
         config.is_async = !stream.is_null();
         config.stream_handle = (&*stream).into();
-        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, &config)
+        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, &config).wrap()
     }
 }
 
 impl<C: Curve> MontgomeryConvertible for Projective<C> {
-    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
+    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> Result<(), IcicleError> {
         if values.is_on_device() && !values.is_on_active_device() {
-            panic!("values not allocated on the active device");
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "values not allocated on the active device",
+            ));
         }
         let mut config = VecOpsConfig::default();
         config.is_a_on_device = values.is_on_device();
         config.is_async = !stream.is_null();
         config.stream_handle = (&*stream).into();
-        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &config)
+        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &config).wrap()
     }
 
-    fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
+    fn from_mont(
+        values: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        stream: &IcicleStream,
+    ) -> Result<(), IcicleError> {
         if values.is_on_device() && !values.is_on_active_device() {
-            panic!("values not allocated on the active device");
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "values not allocated on the active device",
+            ));
         }
         let mut config = VecOpsConfig::default();
         config.is_a_on_device = values.is_on_device();
         config.is_async = !stream.is_null();
         config.stream_handle = (&*stream).into();
-        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, &config)
+        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, &config).wrap()
     }
 }
 

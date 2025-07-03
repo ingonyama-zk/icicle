@@ -1,6 +1,6 @@
 use crate::field::PrimeField;
 use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
 pub mod tests;
 
@@ -12,7 +12,7 @@ pub trait RandomSampling<T: PrimeField> {
         seed: &[u8],
         cfg: &VecOpsConfig,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 pub fn random_sampling<T>(
@@ -21,7 +21,7 @@ pub fn random_sampling<T>(
     seed: &[u8],
     cfg: &VecOpsConfig,
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     T: PrimeField,
     T: RandomSampling<T>,
@@ -35,7 +35,7 @@ macro_rules! impl_random_sampling {
     ($prefix:literal, $scalar_type:ty, $implement_for:ty) => {
         use icicle_core::random_sampling::RandomSampling;
         use icicle_core::vec_ops::VecOpsConfig;
-        use icicle_runtime::eIcicleError;
+        use icicle_runtime::errors::{eIcicleError, IcicleError};
         use icicle_runtime::memory::HostOrDeviceSlice;
 
         extern "C" {
@@ -57,10 +57,12 @@ macro_rules! impl_random_sampling {
                 seed: &[u8],
                 cfg: &VecOpsConfig,
                 output: &mut (impl HostOrDeviceSlice<$scalar_type> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 if output.is_on_device() && !output.is_on_active_device() {
-                    eprintln!("Output is on an inactive device");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Output is on an inactive device",
+                    ));
                 }
 
                 let mut cfg_clone = cfg.clone();

@@ -20,11 +20,11 @@ where
 {
     type ProgSymbol: Symbol<F>;
 
-    fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>), nof_parameters: u32) -> Result<Self, eIcicleError>;
+    fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>), nof_parameters: u32) -> Result<Self, IcicleError>;
 
-    fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
+    fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, IcicleError>;
 
-    fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), eIcicleError>
+    fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), IcicleError>
     where
         F: PrimeField,
         Data: HostOrDeviceSlice<F> + ?Sized;
@@ -37,9 +37,9 @@ pub trait ReturningValueProgram: Sized + Handle {
     fn new(
         program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>) -> Self::ProgSymbol,
         nof_parameters: u32,
-    ) -> Result<Self, eIcicleError>;
+    ) -> Result<Self, IcicleError>;
 
-    fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
+    fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, IcicleError>;
 }
 
 #[macro_export]
@@ -57,7 +57,7 @@ macro_rules! impl_program_field {
             use icicle_core::symbol::{Symbol, SymbolHandle};
             use icicle_core::traits::Handle;
             use icicle_core::vec_ops::VecOpsConfig;
-            use icicle_runtime::errors::eIcicleError;
+            use icicle_runtime::errors::{eIcicleError, IcicleError};
             use icicle_runtime::memory::HostOrDeviceSlice;
             use std::ffi::c_void;
             use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
@@ -117,7 +117,7 @@ macro_rules! impl_program_field {
                 fn new(
                     program_func: impl FnOnce(&mut Vec<FieldSymbol>),
                     nof_parameters: u32,
-                ) -> Result<Self, eIcicleError> {
+                ) -> Result<Self, IcicleError> {
                     let mut program_parameters: Vec<FieldSymbol> = (0..nof_parameters)
                         .enumerate()
                         .map(|(i, _)| FieldSymbol::new_input(i as u32).unwrap())
@@ -135,12 +135,14 @@ macro_rules! impl_program_field {
                             handles.as_ptr(),
                             program_parameters.len() as u32,
                             &mut prog_handle,
-                        );
+                        )
+                        .wrap()?;
                     }
-                    if ffi_status != eIcicleError::Success {
-                        Err(ffi_status)
-                    } else if prog_handle.is_null() {
-                        Err(eIcicleError::AllocationFailed)
+                    if prog_handle.is_null() {
+                        Err(IcicleError::new(
+                            eIcicleError::AllocationFailed,
+                            "program handle is null",
+                        ))
                     } else {
                         Ok(Self {
                             m_handle: prog_handle,
@@ -148,11 +150,14 @@ macro_rules! impl_program_field {
                     }
                 }
 
-                fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError> {
+                fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, IcicleError> {
                     unsafe {
                         let prog_handle = ffi_create_predefined_program(pre_def);
                         if prog_handle.is_null() {
-                            return Err(eIcicleError::AllocationFailed);
+                            return Err(IcicleError::new(
+                                eIcicleError::AllocationFailed,
+                                "program handle is null",
+                            ));
                         } else {
                             Ok(Self {
                                 m_handle: prog_handle,
@@ -161,7 +166,7 @@ macro_rules! impl_program_field {
                     }
                 }
 
-                fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), eIcicleError>
+                fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), IcicleError>
                 where
                     $field: PrimeField,
                     Data: HostOrDeviceSlice<$field> + ?Sized,
@@ -212,7 +217,7 @@ macro_rules! impl_program_field {
                 fn new(
                     program_func: impl FnOnce(&mut Vec<FieldSymbol>) -> FieldSymbol,
                     nof_parameters: u32,
-                ) -> Result<Self, eIcicleError> {
+                ) -> Result<Self, IcicleError> {
                     let mut program_parameters: Vec<FieldSymbol> = (0..nof_parameters)
                         .enumerate()
                         .map(|(i, _)| FieldSymbol::new_input(i as u32).unwrap())
@@ -231,12 +236,14 @@ macro_rules! impl_program_field {
                             handles.as_ptr(),
                             program_parameters.len() as u32,
                             &mut prog_handle,
-                        );
+                        )
+                        .wrap()?;
                     }
-                    if ffi_status != eIcicleError::Success {
-                        Err(ffi_status)
-                    } else if prog_handle.is_null() {
-                        Err(eIcicleError::AllocationFailed)
+                    if prog_handle.is_null() {
+                        Err(IcicleError::new(
+                            eIcicleError::AllocationFailed,
+                            "program handle is null",
+                        ))
                     } else {
                         Ok(Self {
                             m_handle: prog_handle,
@@ -244,11 +251,14 @@ macro_rules! impl_program_field {
                     }
                 }
 
-                fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError> {
+                fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, IcicleError> {
                     unsafe {
                         let prog_handle = ffi_create_predefined_returning_value_program(pre_def);
                         if prog_handle.is_null() {
-                            return Err(eIcicleError::AllocationFailed);
+                            return Err(IcicleError::new(
+                                eIcicleError::AllocationFailed,
+                                "program handle is null",
+                            ));
                         } else {
                             Ok(Self {
                                 m_handle: prog_handle,

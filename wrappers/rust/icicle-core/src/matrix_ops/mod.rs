@@ -1,5 +1,5 @@
 use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
 pub mod tests;
 
@@ -27,7 +27,7 @@ pub trait MatrixOps<T> {
         b_cols: u32,
         cfg: &VecOpsConfig,
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 pub fn matmul<T>(
@@ -39,7 +39,7 @@ pub fn matmul<T>(
     b_cols: u32,
     cfg: &VecOpsConfig,
     result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     T: MatrixOps<T>,
 {
@@ -53,8 +53,8 @@ macro_rules! impl_matmul {
         mod labrador {
             use crate::matrix_ops::labrador;
             use icicle_core::{matrix_ops::MatrixOps, vec_ops::VecOpsConfig};
-            use icicle_runtime::errors::eIcicleError;
             use icicle_runtime::memory::HostOrDeviceSlice;
+            use icicle_runtime::{eIcicleError, IcicleError};
 
             extern "C" {
                 #[link_name = concat!($prefix, "_matmul")]
@@ -80,53 +80,65 @@ macro_rules! impl_matmul {
                     nof_cols_b: u32,
                     cfg: &VecOpsConfig,
                     result: &mut (impl HostOrDeviceSlice<$poly_type> + ?Sized),
-                ) -> Result<(), eIcicleError> {
+                ) -> Result<(), IcicleError> {
                     if a.len() as u32 != nof_rows_a * nof_cols_a {
-                        eprintln!(
-                            "Matrix A has invalid size: got {}, expected {} ({} × {})",
-                            a.len(),
-                            nof_rows_a * nof_cols_a,
-                            nof_rows_a,
-                            nof_cols_a
-                        );
-                        return Err(eIcicleError::InvalidArgument);
+                        return Err(IcicleError::new(
+                            eIcicleError::InvalidArgument,
+                            format!(
+                                "Matrix A has invalid size: got {}, expected {} ({} × {})",
+                                a.len(),
+                                nof_rows_a * nof_cols_a,
+                                nof_rows_a,
+                                nof_cols_a
+                            ),
+                        ));
                     }
 
                     if b.len() as u32 != nof_rows_b * nof_cols_b {
-                        eprintln!(
-                            "Matrix B has invalid size: got {}, expected {} ({} × {})",
-                            b.len(),
-                            nof_rows_b * nof_cols_b,
-                            nof_rows_b,
-                            nof_cols_b
-                        );
-                        return Err(eIcicleError::InvalidArgument);
+                        return Err(IcicleError::new(
+                            eIcicleError::InvalidArgument,
+                            format!(
+                                "Matrix B has invalid size: got {}, expected {} ({} × {})",
+                                b.len(),
+                                nof_rows_b * nof_cols_b,
+                                nof_rows_b,
+                                nof_cols_b
+                            ),
+                        ));
                     }
 
                     if result.len() as u32 != nof_rows_a * nof_cols_b {
-                        eprintln!(
-                            "Result matrix has invalid size: got {}, expected {} ({} × {})",
-                            result.len(),
-                            nof_rows_a * nof_cols_b,
-                            nof_rows_a,
-                            nof_cols_b
-                        );
-                        return Err(eIcicleError::InvalidArgument);
+                        return Err(IcicleError::new(
+                            eIcicleError::InvalidArgument,
+                            format!(
+                                "Result matrix has invalid size: got {}, expected {} ({} × {})",
+                                result.len(),
+                                nof_rows_a * nof_cols_b,
+                                nof_rows_a,
+                                nof_cols_b
+                            ),
+                        ));
                     }
 
                     if result.is_on_device() && !result.is_on_active_device() {
-                        eprintln!("Result matrix is on an inactive device");
-                        return Err(eIcicleError::InvalidArgument);
+                        return Err(IcicleError::new(
+                            eIcicleError::InvalidArgument,
+                            "Result matrix is on an inactive device",
+                        ));
                     }
 
                     if a.is_on_device() && !a.is_on_active_device() {
-                        eprintln!("Input a is on an inactive device");
-                        return Err(eIcicleError::InvalidArgument);
+                        return Err(IcicleError::new(
+                            eIcicleError::InvalidArgument,
+                            "Input a is on an inactive device",
+                        ));
                     }
 
                     if b.is_on_device() && !b.is_on_active_device() {
-                        eprintln!("Input b  is on an inactive device");
-                        return Err(eIcicleError::InvalidArgument);
+                        return Err(IcicleError::new(
+                            eIcicleError::InvalidArgument,
+                            "Input b is on an inactive device",
+                        ));
                     }
 
                     let mut cfg_clone = cfg.clone();

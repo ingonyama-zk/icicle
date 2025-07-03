@@ -1,4 +1,7 @@
-use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{
+    errors::{eIcicleError, IcicleError},
+    memory::HostOrDeviceSlice,
+};
 
 use super::{config::MlKemConfig, ffi::*};
 
@@ -23,7 +26,7 @@ pub trait KyberParams {
         config: *const MlKemConfig,
         public_keys: *mut u8, // batch_size × PUBLIC_KEY_BYTES
         secret_keys: *mut u8, // batch_size × SECRET_KEY_BYTES
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     unsafe fn encapsulate_ffi(
         message: *const u8,     // batch_size × 32 bytes
@@ -31,39 +34,69 @@ pub trait KyberParams {
         config: *const MlKemConfig,
         ciphertexts: *mut u8,    // batch_size × CIPHERTEXT_BYTES
         shared_secrets: *mut u8, // batch_size × SHARED_SECRET_BYTES
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     unsafe fn decapsulate_ffi(
         secret_keys: *const u8, // batch_size × SECRET_KEY_BYTES
         ciphertexts: *const u8, // batch_size × CIPHERTEXT_BYTES
         config: *const MlKemConfig,
         shared_secrets: *mut u8, // batch_size × SHARED_SECRET_BYTES
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     fn keygen(
         entropy: &(impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × 64 bytes
         config: &MlKemConfig,
         public_keys: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × PUBLIC_KEY_BYTES
         secret_keys: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × SECRET_KEY_BYTES
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         let mut config = config.clone();
         if entropy.len() != config.batch_size as usize * ENTROPY_BYTES {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "entropy length does not match batch size * entropy bytes: {} != {}",
+                    entropy.len(),
+                    config.batch_size * ENTROPY_BYTES
+                ),
+            ));
         }
         if public_keys.len() != config.batch_size as usize * Self::PUBLIC_KEY_BYTES {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "public keys length does not match batch size * public key bytes: {} != {}",
+                    public_keys.len(),
+                    config.batch_size * Self::PUBLIC_KEY_BYTES
+                ),
+            ));
         }
         if secret_keys.len() != config.batch_size as usize * Self::SECRET_KEY_BYTES {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "secret keys length does not match batch size * secret key bytes: {} != {}",
+                    secret_keys.len(),
+                    config.batch_size * Self::SECRET_KEY_BYTES
+                ),
+            ));
         }
         if entropy.is_on_device() && !entropy.is_on_active_device() {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "entropy is allocated on an inactive device",
+            ));
         }
         if public_keys.is_on_device() && !public_keys.is_on_active_device() {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "public keys is allocated on an inactive device",
+            ));
         }
         if secret_keys.is_on_device() && !secret_keys.is_on_active_device() {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "secret keys is allocated on an inactive device",
+            ));
         }
 
         config.entropy_on_device = entropy.is_on_device();
@@ -86,19 +119,72 @@ pub trait KyberParams {
         config: &MlKemConfig,
         ciphertexts: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × CIPHERTEXT_BYTES
         shared_secrets: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × SHARED_SECRET_BYTES
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         let mut config = config.clone();
         if message.len() != config.batch_size as usize * MESSAGE_BYTES {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "message length does not match batch size * message bytes: {} != {}",
+                    message.len(),
+                    config.batch_size * MESSAGE_BYTES
+                ),
+            ));
         }
         if public_keys.len() != config.batch_size as usize * Self::PUBLIC_KEY_BYTES {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "public keys length does not match batch size * public key bytes: {} != {}",
+                    public_keys.len(),
+                    config.batch_size * Self::PUBLIC_KEY_BYTES
+                ),
+            ));
         }
         if ciphertexts.len() != config.batch_size as usize * Self::CIPHERTEXT_BYTES {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "ciphertexts length does not match batch size * ciphertext bytes: {} != {}",
+                    ciphertexts.len(),
+                    config.batch_size * Self::CIPHERTEXT_BYTES
+                ),
+            ));
         }
         if shared_secrets.len() != config.batch_size as usize * Self::SHARED_SECRET_BYTES {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "shared secrets length does not match batch size * shared secret bytes: {} != {}",
+                    shared_secrets.len(),
+                    config.batch_size * Self::SHARED_SECRET_BYTES
+                ),
+            ));
+        }
+
+        if message.is_on_device() && !message.is_on_active_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "message is allocated on an inactive device",
+            ));
+        }
+        if public_keys.is_on_device() && !public_keys.is_on_active_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "public keys is allocated on an inactive device",
+            ));
+        }
+        if ciphertexts.is_on_device() && !ciphertexts.is_on_active_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "ciphertexts is allocated on an inactive device",
+            ));
+        }
+        if shared_secrets.is_on_device() && !shared_secrets.is_on_active_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "shared secrets is allocated on an inactive device",
+            ));
         }
 
         config.messages_on_device = message.is_on_device();
@@ -122,16 +208,56 @@ pub trait KyberParams {
         ciphertexts: &(impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × CIPHERTEXT_BYTES
         config: &MlKemConfig,
         shared_secrets: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × SHARED_SECRET_BYTES
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         let mut config = config.clone();
         if secret_keys.len() != config.batch_size as usize * Self::SECRET_KEY_BYTES {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "secret keys length does not match batch size * secret key bytes: {} != {}",
+                    secret_keys.len(),
+                    config.batch_size * Self::SECRET_KEY_BYTES
+                ),
+            ));
         }
         if ciphertexts.len() != config.batch_size as usize * Self::CIPHERTEXT_BYTES {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "ciphertexts length does not match batch size * ciphertext bytes: {} != {}",
+                    ciphertexts.len(),
+                    config.batch_size * Self::CIPHERTEXT_BYTES
+                ),
+            ));
         }
         if shared_secrets.len() != config.batch_size as usize * Self::SHARED_SECRET_BYTES {
-            return Err(eIcicleError::InvalidArgument);
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "shared secrets length does not match batch size * shared secret bytes: {} != {}",
+                    shared_secrets.len(),
+                    config.batch_size * Self::SHARED_SECRET_BYTES
+                ),
+            ));
+        }
+
+        if secret_keys.is_on_device() && !secret_keys.is_on_active_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "secret keys is allocated on an inactive device",
+            ));
+        }
+        if ciphertexts.is_on_device() && !ciphertexts.is_on_active_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "ciphertexts is allocated on an inactive device",
+            ));
+        }
+        if shared_secrets.is_on_device() && !shared_secrets.is_on_active_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "shared secrets is allocated on an inactive device",
+            ));
         }
 
         config.secret_keys_on_device = secret_keys.is_on_device();
@@ -169,7 +295,7 @@ impl KyberParams for Kyber512Params {
         config: *const MlKemConfig,
         public_keys: *mut u8, // batch_size × PUBLIC_KEY_BYTES
         secret_keys: *mut u8, // batch_size × SECRET_KEY_BYTES
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         keygen_ffi512(entropy, config, public_keys, secret_keys).wrap()
     }
 
@@ -179,7 +305,7 @@ impl KyberParams for Kyber512Params {
         config: *const MlKemConfig,
         ciphertexts: *mut u8,
         shared_secrets: *mut u8,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         encapsulate_ffi512(message, public_keys, config, ciphertexts, shared_secrets).wrap()
     }
 
@@ -188,7 +314,7 @@ impl KyberParams for Kyber512Params {
         ciphertexts: *const u8,
         config: *const MlKemConfig,
         shared_secrets: *mut u8,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         decapsulate_ffi512(secret_keys, ciphertexts, config, shared_secrets).wrap()
     }
 }
@@ -212,7 +338,7 @@ impl KyberParams for Kyber768Params {
         config: *const MlKemConfig,
         public_keys: *mut u8,
         secret_keys: *mut u8,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         keygen_ffi768(entropy, config, public_keys, secret_keys).wrap()
     }
 
@@ -222,7 +348,7 @@ impl KyberParams for Kyber768Params {
         config: *const MlKemConfig,
         ciphertexts: *mut u8,
         shared_secrets: *mut u8,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         encapsulate_ffi768(message, public_keys, config, ciphertexts, shared_secrets).wrap()
     }
 
@@ -231,7 +357,7 @@ impl KyberParams for Kyber768Params {
         ciphertexts: *const u8,
         config: *const MlKemConfig,
         shared_secrets: *mut u8,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         decapsulate_ffi768(secret_keys, ciphertexts, config, shared_secrets).wrap()
     }
 }
@@ -255,7 +381,7 @@ impl KyberParams for Kyber1024Params {
         config: *const MlKemConfig,
         public_keys: *mut u8,
         secret_keys: *mut u8,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         keygen_ffi1024(entropy, config, public_keys, secret_keys).wrap()
     }
 
@@ -265,7 +391,7 @@ impl KyberParams for Kyber1024Params {
         config: *const MlKemConfig,
         ciphertexts: *mut u8,
         shared_secrets: *mut u8,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         encapsulate_ffi1024(message, public_keys, config, ciphertexts, shared_secrets).wrap()
     }
 
@@ -274,7 +400,7 @@ impl KyberParams for Kyber1024Params {
         ciphertexts: *const u8,
         config: *const MlKemConfig,
         shared_secrets: *mut u8,
-    ) -> Result<(), eIcicleError> {
+    ) -> Result<(), IcicleError> {
         decapsulate_ffi1024(secret_keys, ciphertexts, config, shared_secrets).wrap()
     }
 }
