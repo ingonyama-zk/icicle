@@ -285,7 +285,7 @@ bool LabradorBaseVerifier::_verify_base_proof(const LabradorBaseCaseProof& base_
 
 // modifies the instance
 // returns num_aggregation_rounds number of polynomials
-void LabradorBaseVerifier::agg_const_zero_constraints(size_t num_aggregation_rounds, const std::vector<Tq>& Q_hat)
+void LabradorBaseVerifier::agg_const_zero_constraints(size_t num_aggregation_rounds)
 {
   size_t r = lab_inst.param.r;
   size_t n = lab_inst.param.n;
@@ -293,6 +293,8 @@ void LabradorBaseVerifier::agg_const_zero_constraints(size_t num_aggregation_rou
   size_t JL_out = lab_inst.param.JL_out;
   const size_t L = lab_inst.const_zero_constraints.size();
 
+  size_t JL_i = trs.prover_msg.JL_i;
+  const std::vector<std::byte> seed1 = trs.seed1;
   const std::vector<Zq>& p = trs.prover_msg.p;
   const std::vector<Zq>& psi = trs.psi;
   const std::vector<Zq>& omega = trs.omega;
@@ -308,12 +310,14 @@ void LabradorBaseVerifier::agg_const_zero_constraints(size_t num_aggregation_rou
     return k * JL_out + l;
   };
 
+  std::vector<std::byte> jl_seed(seed1);
+  jl_seed.push_back(std::byte(JL_i));
+
   std::vector<Zq> test_b0(num_aggregation_rounds, Zq::zero());
 
   for (size_t k = 0; k < num_aggregation_rounds; k++) {
     EqualityInstance new_constraint(r, n);
     std::vector<ConstZeroInstance> temp_const(lab_inst.const_zero_constraints);
-    std::vector<Tq> Q_hat_copy(Q_hat);
 
     // Compute a''_{ij} = sum_{l=0}^{L-1} psi^{(k)}(l) * a'_{ij}^{(l)}
 
@@ -357,20 +361,30 @@ void LabradorBaseVerifier::agg_const_zero_constraints(size_t num_aggregation_rou
     }
 
     // For each j do:
-    // Q_hat[j, :, :] = omega[k,j]* Q_hat[j, :, :]
-    // use async_config to parallelise
-    // TODO: can async with a aggregation above- leave for later
+    //    new_constraint.phi[:,:] += omega[k,j]* Q_hat[j, :, :]
     for (size_t j = 0; j < JL_out; j++) {
       Zq omega_scalar = omega[omega_index(k, j)];
 
+      // Q_j = Q_hat[j, :, :]
+      std::vector<Rq> Q_j(r * n);
+      // compute the Pi matrix row, conjugated in Rq
+      ICICLE_CHECK(get_jl_matrix_rows<Rq>(
+        jl_seed.data(), jl_seed.size(),
+        r * n, // row_size
+        j,     // row_index
+        1,     // num_rows
+        true,  // conjugate
+        {},    // config
+        Q_j.data()));
+
+      std::vector<Tq> Q_j_hat(r * n);
+      // Q_j_hat = NTT(Q_j)
+      ICICLE_CHECK(ntt(Q_j.data(), Q_j.size(), NTTDir::kForward, {}, Q_j_hat.data()));
+      // Q_hat[j, :, :] = omega[k,j]* Q_hat[j, :, :]
       ICICLE_CHECK(scalar_mul_vec(
-        &omega_scalar, reinterpret_cast<Zq*>(&Q_hat_copy[j * n * r]), r * n * d, async_config,
-        reinterpret_cast<Zq*>(&Q_hat_copy[j * n * r])));
-    }
-    ICICLE_CHECK(icicle_device_synchronize());
-    // new_constraint.phi[i,:] += \sum_j Q_hat[j, i, :]
-    for (size_t j = 0; j < JL_out; j++) {
-      ICICLE_CHECK(vector_add(new_constraint.phi.data(), &Q_hat_copy[j * n * r], r * n, {}, new_constraint.phi.data()));
+        &omega_scalar, reinterpret_cast<Zq*>(Q_j_hat.data()), r * n * d, {}, reinterpret_cast<Zq*>(Q_j_hat.data())));
+
+      ICICLE_CHECK(vector_add(new_constraint.phi.data(), Q_j_hat.data(), r * n, {}, new_constraint.phi.data()));
     }
 
     new_constraint.b = trs.prover_msg.b_agg[k];
@@ -442,12 +456,7 @@ bool LabradorBaseVerifier::part_verify()
   }
 
   // construct the final constraint correctly
-  std::vector<Rq> Q = compute_Q_poly(n, r, JL_out, trs.seed1.data(), trs.seed1.size(), trs.prover_msg.JL_i);
-  std::vector<Tq> Q_hat(JL_out * r * n);
-  // Q_hat = NTT(Q)
-  ICICLE_CHECK(ntt(Q.data(), Q.size(), NTTDir::kForward, {}, Q_hat.data()));
-
-  agg_const_zero_constraints(num_aggregation_rounds, Q_hat);
+  agg_const_zero_constraints(num_aggregation_rounds);
   lab_inst.agg_equality_constraints(trs.alpha_hat);
 
   return true;

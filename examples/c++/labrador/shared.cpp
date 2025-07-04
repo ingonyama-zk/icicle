@@ -14,29 +14,6 @@ ajtai_commitment(const std::vector<Tq>& A, size_t input_len, size_t output_len, 
   return comm;
 }
 
-std::vector<Rq> compute_Q_poly(size_t n, size_t r, size_t JL_out, const std::byte* seed, size_t seed_len, size_t JL_i)
-{
-  size_t d = Rq::d;
-
-  // Step 17: Create conjugated polynomial vectors from JL matrix rows
-  std::vector<Rq> Q(JL_out * r * n);
-  // Create seed for P matrix (same as in step 12)
-  std::vector<std::byte> jl_seed(seed, seed + seed_len);
-  jl_seed.push_back(std::byte(JL_i));
-
-  // compute the Pi matrix, conjugated in Rq
-  ICICLE_CHECK(get_jl_matrix_rows<Rq>(
-    jl_seed.data(), jl_seed.size(),
-    r * n,  // row_size
-    0,      // row_index
-    JL_out, // num_rows
-    true,   // conjugate
-    {},     // config
-    Q.data()));
-
-  return Q;
-}
-
 std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, const std::byte* seed, size_t seed_len)
 {
   size_t d = Rq::d;

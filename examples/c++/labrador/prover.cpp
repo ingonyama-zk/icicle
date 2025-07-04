@@ -49,9 +49,10 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
   const std::vector<Tq>& S_hat,
   const std::vector<Tq>& G_hat,
   const std::vector<Zq>& p,
-  const std::vector<Tq>& Q_hat,
   const std::vector<Zq>& psi,
-  const std::vector<Zq>& omega)
+  const std::vector<Zq>& omega,
+  size_t JL_i,
+  const std::vector<std::byte>& seed1)
 {
   size_t r = lab_inst.param.r;
   size_t n = lab_inst.param.n;
@@ -72,13 +73,15 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
     return k * JL_out + l;
   };
 
+  std::vector<std::byte> jl_seed(seed1);
+  jl_seed.push_back(std::byte(JL_i));
+
   std::vector<Zq> verif_test_b0(num_aggregation_rounds, Zq::zero());
 
   std::vector<Tq> msg3;
   for (size_t k = 0; k < num_aggregation_rounds; k++) {
     EqualityInstance new_constraint(r, n);
     std::vector<ConstZeroInstance> temp_const(lab_inst.const_zero_constraints);
-    std::vector<Tq> Q_hat_copy(Q_hat);
 
     // Compute a''_{ij} = sum_{l=0}^{L-1} psi^{(k)}(l) * a'_{ij}^{(l)}
 
@@ -122,20 +125,30 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
     }
 
     // For each j do:
-    // Q_hat[j, :, :] = omega[k,j]* Q_hat[j, :, :]
-    // use async_config to parallelise
-    // TODO: can async with a aggregation above- leave for later
+    //    new_constraint.phi[:,:] += omega[k,j]* Q_hat[j, :, :]
     for (size_t j = 0; j < JL_out; j++) {
       Zq omega_scalar = omega[omega_index(k, j)];
 
+      // Q_j = Q_hat[j, :, :]
+      std::vector<Rq> Q_j(r * n);
+      // compute the Pi matrix row, conjugated in Rq
+      ICICLE_CHECK(get_jl_matrix_rows<Rq>(
+        jl_seed.data(), jl_seed.size(),
+        r * n, // row_size
+        j,     // row_index
+        1,     // num_rows
+        true,  // conjugate
+        {},    // config
+        Q_j.data()));
+
+      std::vector<Tq> Q_j_hat(r * n);
+      // Q_j_hat = NTT(Q_j)
+      ICICLE_CHECK(ntt(Q_j.data(), Q_j.size(), NTTDir::kForward, {}, Q_j_hat.data()));
+      // Q_hat[j, :, :] = omega[k,j]* Q_hat[j, :, :]
       ICICLE_CHECK(scalar_mul_vec(
-        &omega_scalar, reinterpret_cast<Zq*>(&Q_hat_copy[j * n * r]), r * n * d, async_config,
-        reinterpret_cast<Zq*>(&Q_hat_copy[j * n * r])));
-    }
-    ICICLE_CHECK(icicle_device_synchronize());
-    // new_constraint.phi[i,:] += \sum_j Q_hat[j, i, :]
-    for (size_t j = 0; j < JL_out; j++) {
-      ICICLE_CHECK(vector_add(new_constraint.phi.data(), &Q_hat_copy[j * n * r], r * n, {}, new_constraint.phi.data()));
+        &omega_scalar, reinterpret_cast<Zq*>(Q_j_hat.data()), r * n * d, {}, reinterpret_cast<Zq*>(Q_j_hat.data())));
+
+      ICICLE_CHECK(vector_add(new_constraint.phi.data(), Q_j_hat.data(), r * n, {}, new_constraint.phi.data()));
     }
 
     // Compute B^{(k)} = sum_{ij} a''_{ij}^{(k)}  * g_{ij} + sum_i <phi'_i^{(k)}, s_i>
@@ -327,7 +340,6 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // Step 15, 16: already done
 
   // Step 17: Create conjugated polynomial vectors from JL matrix rows
-  std::vector<Rq> Q = compute_Q_poly(n, r, JL_out, seed1.data(), seed1.size(), JL_i);
   std::cout << "Step 17 completed: Computed Q polynomial" << std::endl;
 
   // Step 18: Let L be the number of constZeroInstance constraints in LabradorInstance.
@@ -356,26 +368,23 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::cout << "Step 18 completed: Sampled psi and omega" << std::endl;
 
   // Step 19: Aggregate ConstZeroInstance constraints
-  std::vector<Tq> Q_hat(JL_out * r * n);
-  // Q_hat = NTT(Q)
-  ICICLE_CHECK(ntt(Q.data(), Q.size(), NTTDir::kForward, {}, Q_hat.data()));
 
-  if (TESTING) {
-    bool Q_testing = true;
-    for (size_t l = 0; l < JL_out; l++) {
-      std::vector<Tq> a{r * r, zero()}, phi{&Q_hat[l * r * n], &Q_hat[(l + 1) * r * n]};
+  // if (TESTING) {
+  //   bool Q_testing = true;
+  //   for (size_t l = 0; l < JL_out; l++) {
+  //     std::vector<Tq> a{r * r, zero()}, phi{&Q_hat[l * r * n], &Q_hat[(l + 1) * r * n]};
 
-      ConstZeroInstance cz{r, n, a, phi, Zq::neg(p[l])};
-      if (!witness_legit_const_zero(cz, S)) {
-        std::cout << "\tQ-constraint-check fails for " << l << "\n";
-        Q_testing = false;
-        break;
-      };
-    }
-    if (Q_testing) { std::cout << "\tQ-constraint-check passed... " << "\n"; }
-  }
+  //     ConstZeroInstance cz{r, n, a, phi, Zq::neg(p[l])};
+  //     if (!witness_legit_const_zero(cz, S)) {
+  //       std::cout << "\tQ-constraint-check fails for " << l << "\n";
+  //       Q_testing = false;
+  //       break;
+  //     };
+  //   }
+  //   if (Q_testing) { std::cout << "\tQ-constraint-check passed... " << "\n"; }
+  // }
 
-  std::vector<Tq> msg3 = agg_const_zero_constraints(S_hat, G_hat, p, Q_hat, psi, omega);
+  std::vector<Tq> msg3 = agg_const_zero_constraints(S_hat, G_hat, p, psi, omega, JL_i, seed1);
   std::cout << "Step 19 completed: Aggregated ConstZeroInstance constraints" << std::endl;
 
   if (TESTING) {
