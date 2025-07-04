@@ -574,10 +574,11 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
   LabradorBaseCaseProof base_proof;
   LabradorInstance lab_inst_i = lab_inst;
   std::vector<Rq> S_i = S;
-  for (size_t i = 0; i < NUM_REC; i++) {
+  for (size_t i = 0; i < NUM_REC - 1; i++) {
     std::cout << "Prover::Recursion iteration = " << i << "\n";
     LabradorBaseProver base_prover(lab_inst_i, S_i, oracle);
     std::tie(base_proof, part_trs) = base_prover.base_case_prover();
+    trs.push_back(part_trs);
 
     // Prepare recursion problem and witness
     // NOTE: base0 needs to be large enough
@@ -588,7 +589,7 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
     S_i = prepare_recursion_witness(lab_inst_i.param, base_proof, base0, mu, nu);
     EqualityInstance final_const = base_prover.lab_inst.equality_constraints[0];
     lab_inst_i = prepare_recursion_instance(base_prover.lab_inst.param, final_const, part_trs, base0, mu, nu);
-    trs.push_back(part_trs);
+
     oracle = base_prover.oracle;
 
     std::cout << "\tRecursion problem prepared\n";
@@ -624,5 +625,10 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
       }
     }
   }
+  std::cout << "Prover::Recursion iteration = " << NUM_REC - 1 << "\n";
+  LabradorBaseProver base_prover(lab_inst_i, S_i, oracle);
+  std::tie(base_proof, part_trs) = base_prover.base_case_prover();
+  trs.push_back(part_trs);
+
   return std::make_pair(trs, base_proof);
 }
