@@ -84,7 +84,7 @@ struct LabradorParam {
   double beta;                            // Witness norm bound
   uint64_t op_norm_bound = OP_NORM_BOUND; // Operator norm bound for challenges
 
-  size_t num_aggregation_rounds = std::ceil(128.0 / std::log2(get_q<Zq>()));
+  size_t num_aggregation_rounds = std::ceil(128.0 / std::log2(get_q<Zq>())); // 3
 
   LabradorParam(
     size_t r,

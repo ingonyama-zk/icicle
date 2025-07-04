@@ -167,3 +167,5 @@ int main(int argc, char* argv[])
   }
   return 0;
 }
+
+// ./run.sh > labrador_output.txt 2>&1 &
