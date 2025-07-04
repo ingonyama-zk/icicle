@@ -100,17 +100,12 @@ ConstZeroInstance create_rand_const_zero_inst(size_t n, size_t r, const std::vec
   return const_zero_inst;
 }
 
-// Check if the given EqualityInstance is satisfied by the witness S or not
-bool witness_legit_eq(const EqualityInstance& eq_inst, const std::vector<Rq>& S)
+bool witness_legit_eq_all_ntt(const EqualityInstance& eq_inst, const std::vector<Tq>& S_hat)
 {
-  int64_t q = get_q<Zq>();
   size_t r = eq_inst.r;
   size_t n = eq_inst.n;
 
-  assert(S.size() == r * n);
-  // S_hat = NTT(S)
-  std::vector<Tq> S_hat(r * n);
-  ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
+  assert(S_hat.size() == r * n);
 
   std::vector<Tq> S_hat_transposed(n * r);
   ICICLE_CHECK(matrix_transpose<Tq>(S_hat.data(), r, n, {}, S_hat_transposed.data()));
@@ -136,16 +131,26 @@ bool witness_legit_eq(const EqualityInstance& eq_inst, const std::vector<Rq>& S)
   return true;
 }
 
-// Check if the given ConstZeroInstance is satisfied by the witness S or not
-bool witness_legit_const_zero(const ConstZeroInstance& cz_inst, const std::vector<Rq>& S)
+// Check if the given EqualityInstance is satisfied by the witness S or not
+bool witness_legit_eq(const EqualityInstance& eq_inst, const std::vector<Rq>& S)
 {
-  int64_t q = get_q<Zq>();
-  size_t r = cz_inst.r;
-  size_t n = cz_inst.n;
+  size_t r = eq_inst.r;
+  size_t n = eq_inst.n;
 
+  assert(S.size() == r * n);
   // S_hat = NTT(S)
   std::vector<Tq> S_hat(r * n);
   ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
+
+  return witness_legit_eq_all_ntt(eq_inst, S_hat);
+}
+
+bool witness_legit_const_zero_all_ntt(const ConstZeroInstance& cz_inst, const std::vector<Tq>& S_hat)
+{
+  size_t r = cz_inst.r;
+  size_t n = cz_inst.n;
+
+  assert(S_hat.size() == r * n);
 
   std::vector<Tq> S_hat_transposed(n * r);
   ICICLE_CHECK(matrix_transpose<Tq>(S_hat.data(), r, n, {}, S_hat_transposed.data()));
@@ -175,68 +180,32 @@ bool witness_legit_const_zero(const ConstZeroInstance& cz_inst, const std::vecto
   }
 }
 
-bool lab_witness_legit(const LabradorInstance& lab_inst, const std::vector<Rq>& S)
+// Check if the given ConstZeroInstance is satisfied by the witness S or not
+bool witness_legit_const_zero(const ConstZeroInstance& cz_inst, const std::vector<Rq>& S)
 {
-  for (auto& eq_inst : lab_inst.equality_constraints) {
-    if (!witness_legit_eq(eq_inst, S)) { return false; }
-  }
-  for (auto& cz_inst : lab_inst.const_zero_constraints) {
-    if (!witness_legit_const_zero(cz_inst, S)) { return false; }
-  }
-  return true;
+  size_t r = cz_inst.r;
+  size_t n = cz_inst.n;
+
+  // S_hat = NTT(S)
+  std::vector<Tq> S_hat(r * n);
+  ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
+
+  return witness_legit_const_zero_all_ntt(cz_inst, S_hat);
 }
 
-void test_jl()
+bool lab_witness_legit(const LabradorInstance& lab_inst, const std::vector<Rq>& S)
 {
-  size_t n = 100, JL_out = 32;
-  std::vector<Rq> p = rand_poly_vec(n, 8);
-  // y = Pi*p
-  std::vector<Zq> y(JL_out);
-  const char* jl_seed = "RAND";
-  ICICLE_CHECK(jl_projection(
-    reinterpret_cast<const Zq*>(p.data()), n * Rq::d, reinterpret_cast<const std::byte*>(&jl_seed), 4, {}, y.data(),
-    JL_out));
+  size_t r = lab_inst.param.r;
+  size_t n = lab_inst.param.n;
+  // S_hat = NTT(S)
+  std::vector<Tq> S_hat(r * n);
+  ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
 
-  print_vec(y.data(), y.size(), "y = Pi*p");
-
-  // std::vector<Zq> Pi(JL_out * n * Rq::d);
-  // // compute the Pi matrix, conjugated in Rq
-  // ICICLE_CHECK(get_jl_matrix_rows<Zq>(
-  //   reinterpret_cast<const std::byte*>(&jl_seed), 4,
-  //   n * Rq::d, // row_size
-  //   0,         // row_index
-  //   JL_out,    // num_rows
-  //   false,     // conjugate
-  //   {},        // config
-  //   Pi.data()));
-
-  std::vector<Rq> Q(JL_out * n);
-  // compute the Pi matrix, conjugated in Rq
-  ICICLE_CHECK(get_jl_matrix_rows<Rq>(
-    reinterpret_cast<const std::byte*>(&jl_seed), 4,
-    n,      // row_size
-    0,      // row_index
-    JL_out, // num_rows
-    true,   // conjugate
-    {},     // config
-    Q.data()));
-
-  std::vector<Tq> Q_hat(JL_out * n), p_hat(n), z_hat(JL_out);
-  ICICLE_CHECK(ntt(Q.data(), JL_out * n, NTTDir::kForward, {}, Q_hat.data()));
-  ICICLE_CHECK(ntt(p.data(), n, NTTDir::kForward, {}, p_hat.data()));
-  // z_hat = Q_hat * p_hat
-  ICICLE_CHECK(matmul(Q_hat.data(), JL_out, n, p_hat.data(), n, 1, {}, z_hat.data()));
-  std::vector<Rq> z(JL_out);
-  ICICLE_CHECK(ntt(z_hat.data(), JL_out, NTTDir::kInverse, {}, z.data()));
-
-  bool succ = true;
-  for (int i = 0; i < JL_out; i++) {
-    // const(z) == y
-    if (z[i].values[0] != y[i]) { succ = false; }
+  for (auto& eq_inst : lab_inst.equality_constraints) {
+    if (!witness_legit_eq_all_ntt(eq_inst, S_hat)) { return false; }
   }
-  if (succ) {
-    std::cout << "Success\n";
-  } else {
-    std::cout << "Fail\n";
+  for (auto& cz_inst : lab_inst.const_zero_constraints) {
+    if (!witness_legit_const_zero_all_ntt(cz_inst, S_hat)) { return false; }
   }
+  return true;
 }
