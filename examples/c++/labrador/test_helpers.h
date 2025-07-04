@@ -3,7 +3,7 @@
 #include "types.h"
 #include "utils.h"
 
-constexpr bool TESTING = true;
+constexpr bool TESTING = false;
 
 // print a polynomial
 void print_vec(const Zq* vec, size_t len, const std::string& name);

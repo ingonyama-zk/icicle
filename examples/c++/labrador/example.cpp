@@ -24,8 +24,8 @@ int main(int argc, char* argv[])
   // TODO use icicle_malloc() instead of std::vector. Consider a DeviceVector<T> that behaves like std::vector
 
   // randomize the witness Si with low norm
-  const size_t n = 1 << 4;
-  const size_t r = 1 << 2;
+  const size_t n = 1 << 10;
+  const size_t r = 1 << 5;
   constexpr size_t d = Rq::d;
   const size_t max_value = 2;
 
@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
   // assert(lab_witness_legit(rec_inst, rec_S));
   // std::cout << "VALID\n";
 
-  size_t NUM_REC = 1;
+  size_t NUM_REC = 2;
   LabradorProver prover{
     lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size(), NUM_REC};
 
