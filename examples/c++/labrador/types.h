@@ -69,6 +69,9 @@ struct LabradorParam {
   size_t kappa1; // Matrix B,C dimensions for committing to decomposed vectors (t,g)
   size_t kappa2; // Matrix D dimensions for committing to decomposed h vectors
 
+  // Store Ajtai matrices
+  std::vector<Tq> A, B, C, D;
+
   // Decomposition bases
   uint32_t base1; // Base for decomposing t
   uint32_t base2; // Base for decomposing g
@@ -94,9 +97,29 @@ struct LabradorParam {
     uint32_t base2,
     uint32_t base3,
     double beta)
-      : r(r), n(n), ajtai_seed(ajtai_seed), kappa(kappa), kappa1(kappa1), kappa2(kappa2), base1(base1), base2(base2),
-        base3(base3), beta(beta)
+      : r(r), n(n), ajtai_seed(ajtai_seed), kappa(kappa), kappa1(kappa1), kappa2(kappa2), A(), B(), C(), D(),
+        base1(base1), base2(base2), base3(base3), beta(beta)
   {
+    std::vector<std::byte> seed_A(ajtai_seed), seed_B(ajtai_seed), seed_C(ajtai_seed), seed_D(ajtai_seed);
+    seed_A.push_back(std::byte('0'));
+    seed_B.push_back(std::byte('1'));
+    seed_C.push_back(std::byte('2'));
+    seed_D.push_back(std::byte('3'));
+
+    A.resize(n * kappa);
+    B.resize(t_len() * kappa1);
+    C.resize(g_len() * kappa1);
+    D.resize(h_len() * kappa2);
+
+    VecOpsConfig async_config = default_vec_ops_config();
+    async_config.is_async = true;
+
+    ICICLE_CHECK(random_sampling(A.size(), true, seed_A.data(), seed_A.size(), async_config, A.data()));
+    ICICLE_CHECK(random_sampling(B.size(), true, seed_B.data(), seed_B.size(), async_config, B.data()));
+    ICICLE_CHECK(random_sampling(C.size(), true, seed_C.data(), seed_C.size(), async_config, C.data()));
+    ICICLE_CHECK(random_sampling(D.size(), true, seed_D.data(), seed_D.size(), async_config, D.data()));
+
+    ICICLE_CHECK(icicle_device_synchronize());
   }
 
   LabradorParam(const LabradorParam& o) = default;

@@ -1,4 +1,5 @@
 #include "prover.h"
+#include <cassert>
 
 /// Prover uses this function to select a valid JL projection for which the norm condition is satisfied .
 /// Returns (JL_i, p) such that [seed, JL_i] is the seed for the valid JL projection
@@ -208,13 +209,11 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::cout << "Step 2 completed: NTT conversion" << std::endl;
 
   // Step 3: S@A = T
-  const std::vector<std::byte>& ajtai_seed = lab_inst.param.ajtai_seed;
-  std::vector<std::byte> seed_A(ajtai_seed);
-  seed_A.push_back(std::byte('0'));
-
-  // Use ajtai_commitment to compute T_hat = S_hat @ A
   size_t kappa = lab_inst.param.kappa;
-  std::vector<Tq> T_hat = ajtai_commitment(seed_A.data(), seed_A.size(), n, kappa, S_hat.data(), r * n);
+  const std::vector<Tq>& A = lab_inst.param.A; // n × kappa matrix
+
+  // Compute T_hat = S_hat @ A
+  std::vector<Tq> T_hat = ajtai_commitment(A, n, kappa, S_hat.data(), r * n);
   std::cout << "Step 3 completed: Ajtai commitment T_hat" << std::endl;
 
   // Step 4: already done
@@ -279,21 +278,18 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // Step 10: u1 = B@T_tilde + C@g_tilde
   size_t kappa1 = lab_inst.param.kappa1;
-  std::vector<std::byte> seed_B(ajtai_seed), seed_C(ajtai_seed);
-  seed_B.push_back(std::byte('1'));
-  seed_C.push_back(std::byte('2'));
+  const std::vector<Tq>& B = lab_inst.param.B; // (t_len × kappa1)
+  const std::vector<Tq>& C = lab_inst.param.C; // (g_len × kappa1)
 
   // compute NTTs for T_tilde, g_tilde
   std::vector<Tq> T_tilde_hat(T_tilde.size()), g_tilde_hat(g_tilde.size());
   ICICLE_CHECK(ntt(T_tilde.data(), T_tilde.size(), NTTDir::kForward, {}, T_tilde_hat.data()));
   ICICLE_CHECK(ntt(g_tilde.data(), g_tilde.size(), NTTDir::kForward, {}, g_tilde_hat.data()));
 
-  // v1 = B@T_tilde
-  std::vector<Tq> v1 =
-    ajtai_commitment(seed_B.data(), seed_B.size(), l1 * r * kappa, kappa1, T_tilde_hat.data(), T_tilde_hat.size());
-  // v2 = C@g_tilde
-  std::vector<Tq> v2 =
-    ajtai_commitment(seed_C.data(), seed_C.size(), (r_choose_2)*l2, kappa1, g_tilde_hat.data(), g_tilde_hat.size());
+  // v1 = B @ T_tilde
+  std::vector<Tq> v1 = ajtai_commitment(B, T_tilde_hat.size(), kappa1, T_tilde_hat.data(), T_tilde_hat.size());
+  // v2 = C @ g_tilde
+  std::vector<Tq> v2 = ajtai_commitment(C, g_tilde_hat.size(), kappa1, g_tilde_hat.data(), g_tilde_hat.size());
 
   std::vector<Tq> u1(kappa1);
   vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
@@ -461,11 +457,10 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // Step 25: already done
   // Step 26: commit to h_tilde
   size_t kappa2 = lab_inst.param.kappa2;
-  std::vector<std::byte> seed_D(ajtai_seed);
-  seed_D.push_back(std::byte('3'));
-  // u2 = D@h_tilde
-  std::vector<Tq> u2 =
-    ajtai_commitment(seed_D.data(), seed_D.size(), l3 * r_choose_2, kappa2, h_tilde_hat.data(), h_tilde_hat.size());
+  const std::vector<Tq>& D = lab_inst.param.D; // (h_len × kappa2)
+
+  // u2 = D @ h_tilde
+  std::vector<Tq> u2 = ajtai_commitment(D, h_tilde_hat.size(), kappa2, h_tilde_hat.data(), h_tilde_hat.size());
   std::cout << "Step 26 completed: Computed u2 commitment" << std::endl;
 
   // Step 27:
@@ -495,7 +490,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   if (TESTING) {
     std::vector<Tq> ct_hat(kappa);
     ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, T_hat.data(), r, kappa, {}, ct_hat.data()));
-    std::vector<Tq> zA_hat = ajtai_commitment(seed_A.data(), seed_A.size(), n, kappa, z_hat.data(), n);
+    std::vector<Tq> zA_hat = ajtai_commitment(A, n, kappa, z_hat.data(), z_hat.size());
 
     // zA_hat == \sum_i c_i t_i
     bool succ = true;
@@ -532,14 +527,13 @@ std::vector<Rq> LabradorProver::prepare_recursion_witness(
   std::vector<Rq> z_tilde(2 * n);
   ICICLE_CHECK(decompose(z.data(), n, base0, {}, z_tilde.data(), z_tilde.size()));
 
-  if (TESTING) {
-    std::vector<Rq> temp(n);
-    ICICLE_CHECK(recompose(z_tilde.data(), z_tilde.size(), base0, {}, temp.data(), temp.size()));
-    if (!poly_vec_eq(z.data(), temp.data(), n)) {
-      throw std::runtime_error("Error: z could not be recomposed from z_tilde in prepare_recursion_witness");
-    } else {
-      std::cout << "\tprepare_recursion_witness: z recomposition passes.\n";
-    }
+  std::vector<Rq> temp(n);
+  ICICLE_CHECK(recompose(z_tilde.data(), z_tilde.size(), base0, {}, temp.data(), temp.size()));
+  if (!poly_vec_eq(z.data(), temp.data(), n)) {
+    throw std::runtime_error("Parameter Choice Error: z could not be recomposed from z_tilde in "
+                             "prepare_recursion_witness. Consider changing base0 parameter.");
+  } else {
+    std::cout << "\tprepare_recursion_witness: z recomposition passes.\n";
   }
   // Step 3:
   // z0 = z_tilde[:n]

@@ -154,20 +154,16 @@ bool LabradorBaseVerifier::_verify_base_proof(const LabradorBaseCaseProof& base_
   ICICLE_CHECK(ntt(g_tilde.data(), g_tilde.size(), NTTDir::kForward, {}, g_tilde_hat.data()));
   ICICLE_CHECK(ntt(h_tilde.data(), h_tilde.size(), NTTDir::kForward, {}, h_tilde_hat.data()));
 
-  const std::vector<std::byte>& ajtai_seed = lab_inst.param.ajtai_seed;
-  std::vector<std::byte> seed_A(ajtai_seed), seed_B(ajtai_seed), seed_C(ajtai_seed), seed_D(ajtai_seed);
-  seed_A.push_back(std::byte('0'));
-  seed_B.push_back(std::byte('1'));
-  seed_C.push_back(std::byte('2'));
-  seed_D.push_back(std::byte('3'));
-
   size_t kappa1 = lab_inst.param.kappa1;
+
+  const std::vector<Tq>& A = lab_inst.param.A;
+  const std::vector<Tq>& B = lab_inst.param.B;
+  const std::vector<Tq>& C = lab_inst.param.C;
+  const std::vector<Tq>& D = lab_inst.param.D;
   // v1 = B@T_tilde
-  std::vector<Tq> v1 =
-    ajtai_commitment(seed_B.data(), seed_B.size(), t_tilde_hat.size(), kappa1, t_tilde_hat.data(), t_tilde_hat.size());
+  std::vector<Tq> v1 = ajtai_commitment(B, t_tilde_hat.size(), kappa1, t_tilde_hat.data(), t_tilde_hat.size());
   // v2 = C@g_tilde
-  std::vector<Tq> v2 =
-    ajtai_commitment(seed_C.data(), seed_C.size(), g_tilde_hat.size(), kappa1, g_tilde_hat.data(), g_tilde_hat.size());
+  std::vector<Tq> v2 = ajtai_commitment(C, g_tilde_hat.size(), kappa1, g_tilde_hat.data(), g_tilde_hat.size());
   // u1 = v1+v2
   std::vector<Tq> u1(kappa1);
   vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
@@ -180,8 +176,7 @@ bool LabradorBaseVerifier::_verify_base_proof(const LabradorBaseCaseProof& base_
 
   size_t kappa2 = lab_inst.param.kappa2;
   // u2 = D@h_tilde
-  std::vector<Tq> u2 =
-    ajtai_commitment(seed_D.data(), seed_D.size(), h_tilde_hat.size(), kappa2, h_tilde_hat.data(), h_tilde_hat.size());
+  std::vector<Tq> u2 = ajtai_commitment(D, h_tilde_hat.size(), kappa2, h_tilde_hat.data(), h_tilde_hat.size());
 
   // check h_tilde opens to u2 in trs
   if (!(poly_vec_eq(u2.data(), trs.prover_msg.u2.data(), kappa2))) {
@@ -193,7 +188,7 @@ bool LabradorBaseVerifier::_verify_base_proof(const LabradorBaseCaseProof& base_
 
   // Use ajtai_commitment to compute z_hat @ A
   size_t kappa = lab_inst.param.kappa;
-  std::vector<Tq> zA_hat = ajtai_commitment(seed_A.data(), seed_A.size(), n, kappa, z_hat.data(), n);
+  std::vector<Tq> zA_hat = ajtai_commitment(A, n, kappa, z_hat.data(), n);
 
   std::vector<Rq> t(r * kappa);
   ICICLE_CHECK(recompose(t_tilde.data(), t_tilde.size(), base1, {}, t.data(), t.size()));

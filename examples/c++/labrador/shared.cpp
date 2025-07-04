@@ -1,14 +1,13 @@
 #include "shared.h"
 
-std::vector<Tq> ajtai_commitment(
-  const std::byte* ajtai_mat_seed, size_t seed_len, size_t input_len, size_t output_len, const Tq* S, size_t S_len)
+std::vector<Tq>
+ajtai_commitment(const std::vector<Tq>& A, size_t input_len, size_t output_len, const Tq* S, size_t S_len)
 {
+  assert(A.size() == output_len * input_len);
+
   size_t batch_size = S_len / input_len;
   // Assert that data_len is a multiple of input_len
   assert(batch_size * input_len == S_len);
-  // TODO: change this so that A need not be computed and stored
-  std::vector<Tq> A(input_len * output_len);
-  ICICLE_CHECK(random_sampling(A.size(), true, ajtai_mat_seed, seed_len, {}, A.data()));
 
   std::vector<Tq> comm(batch_size * output_len);
   ICICLE_CHECK(matmul(S, batch_size, input_len, A.data(), input_len, output_len, {}, comm.data()));
@@ -131,8 +130,8 @@ std::pair<size_t, size_t> compute_mu_nu(size_t n, size_t m)
 
 size_t secure_msis_rank()
 {
-  const double log_delta = log(1.0045);
-  const double log_q = log(get_q<Zq>());
+  const double log_delta = log2(1.0045);
+  const double log_q = log2(get_q<Zq>());
 
   double k_f = pow(log_q - 1.0, 2) / 4 / log_delta / log_q / Rq::d;
   return ceil(k_f);
@@ -197,6 +196,11 @@ LabradorInstance prepare_recursion_instance(
   std::vector<Tq> u2 = trs.prover_msg.u2;
   std::vector<Tq> challenges_hat = trs.challenges_hat;
 
+  const std::vector<Tq>& A = prev_param.A;
+  const std::vector<Tq>& B = prev_param.B;
+  const std::vector<Tq>& C = prev_param.C;
+  const std::vector<Tq>& D = prev_param.D;
+
   RecursionPreparer preparer{prev_param, mu, nu, base0};
 
   size_t n_prime = preparer.n_prime;
@@ -236,18 +240,9 @@ LabradorInstance prepare_recursion_instance(
   size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base3);
 
   // Step 8: add the equality constraint u1=tB + gC to recursion_instance
-  // Generate B, C
-  // TODO: change this so that B,C need not be computed and stored
-  std::vector<Tq> B(prev_param.t_len() * prev_param.kappa1), C(prev_param.g_len() * prev_param.kappa1),
-    B_t(prev_param.kappa1 * prev_param.t_len()), C_t(prev_param.kappa1 * prev_param.g_len());
-
-  std::vector<std::byte> seed_B(prev_param.ajtai_seed), seed_C(prev_param.ajtai_seed);
-  seed_B.push_back(std::byte('1'));
-  seed_C.push_back(std::byte('2'));
-  ICICLE_CHECK(random_sampling(B.size(), true, seed_B.data(), seed_B.size(), {}, B.data()));
-  ICICLE_CHECK(random_sampling(C.size(), true, seed_C.data(), seed_C.size(), {}, C.data()));
-
   // B_t, C_t are transposed B, C
+  std::vector<Tq> B_t(prev_param.kappa1 * prev_param.t_len()), C_t(prev_param.kappa1 * prev_param.g_len());
+
   ICICLE_CHECK(matrix_transpose<Tq>(B.data(), prev_param.t_len(), prev_param.kappa1, {}, B_t.data()));
   ICICLE_CHECK(matrix_transpose<Tq>(C.data(), prev_param.g_len(), prev_param.kappa1, {}, C_t.data()));
 
@@ -268,24 +263,15 @@ LabradorInstance prepare_recursion_instance(
     recursion_instance.add_equality_constraint(new_constraint);
   }
 
-  // The vectors B, C, B_t, C_t are no longer needed, so we delete them to free memory.
-  B.clear();
-  B.shrink_to_fit();
-  C.clear();
-  C.shrink_to_fit();
+  // The vectors B_t, C_t are no longer needed, so we delete them to free memory.
   B_t.clear();
   B_t.shrink_to_fit();
   C_t.clear();
   C_t.shrink_to_fit();
 
   // Step 9: add the equality constraint u2=hD to recursion_instance
-  // Generate D
-  // TODO: change this so that D need not be computed and stored
-  std::vector<Tq> D(h_len * prev_param.kappa2), D_t(prev_param.kappa2 * h_len);
-
-  std::vector<std::byte> seed_D(prev_param.ajtai_seed);
-  seed_D.push_back(std::byte('3'));
-  ICICLE_CHECK(random_sampling(D.size(), true, seed_D.data(), seed_D.size(), {}, D.data()));
+  // D_t = D^t
+  std::vector<Tq> D_t(prev_param.kappa2 * h_len);
   ICICLE_CHECK(matrix_transpose<Tq>(D.data(), h_len, prev_param.kappa2, {}, D_t.data()));
 
   // negate u2
@@ -303,9 +289,7 @@ LabradorInstance prepare_recursion_instance(
 
     recursion_instance.add_equality_constraint(new_constraint);
   }
-  // The vectors D, D_t are no longer needed, so we delete them to free memory.
-  D.clear();
-  D.shrink_to_fit();
+  // The vectors D_t are no longer needed, so we delete them to free memory.
   D_t.clear();
   D_t.shrink_to_fit();
 
@@ -314,11 +298,6 @@ LabradorInstance prepare_recursion_instance(
   // TODO: change this so that A need not be computed and stored
   size_t kappa = prev_param.kappa;
   size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base1);
-  std::vector<Tq> A(n * kappa);
-
-  std::vector<std::byte> seed_A(prev_param.ajtai_seed);
-  seed_A.push_back(std::byte('0'));
-  ICICLE_CHECK(random_sampling(n * kappa, true, seed_A.data(), seed_A.size(), {}, A.data()));
 
   // A transpose
   std::vector<Tq> A_t(kappa * n);
