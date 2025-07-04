@@ -21,12 +21,6 @@ using namespace icicle::labrador;
 std::vector<Tq>
 ajtai_commitment(const std::vector<Tq>& A, size_t input_len, size_t output_len, const Tq* S, size_t S_len);
 
-/// returns Q: JL_out X r X n matrix such that
-/// Q(i,:,:) is the conjugation of the ith row of the JL projection viewed as a polynomial vector.
-/// So that const(<Q(i,:,:), S(:,:)>) = p_i
-/// JL_i needs to be the same as the one given by select_valid_jl_proj
-std::vector<Rq> compute_Q_poly(size_t n, size_t r, size_t JL_out, const std::byte* seed, size_t seed_len, size_t JL_i);
-
 // TODO: Simply returns the polynomial x for every challenge rn
 std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, const std::byte* seed, size_t seed_len);
 
