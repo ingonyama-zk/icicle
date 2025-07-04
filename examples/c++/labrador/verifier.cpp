@@ -28,11 +28,13 @@ void LabradorBaseVerifier::create_transcript()
   // psi seed = seed2 || 0x01
   std::vector<std::byte> psi_seed(trs.seed2);
   psi_seed.push_back(std::byte('1'));
-  random_sampling(trs.psi.size(), false, psi_seed.data(), psi_seed.size(), {}, trs.psi.data());
+  if (trs.psi.size() > 0) {
+    random_sampling(trs.psi.size(), true, psi_seed.data(), psi_seed.size(), {}, trs.psi.data());
+  }
   // omega seed = seed2 || 0x02
   std::vector<std::byte> omega_seed(trs.seed2);
   omega_seed.push_back(std::byte('2'));
-  random_sampling(trs.omega.size(), false, omega_seed.data(), omega_seed.size(), {}, trs.omega.data());
+  random_sampling(trs.omega.size(), true, omega_seed.data(), omega_seed.size(), {}, trs.omega.data());
 
   // 4. seed3 from msg3 (b_agg)
   const auto& msg3 = trs.prover_msg.b_agg;
@@ -45,6 +47,7 @@ void LabradorBaseVerifier::create_transcript()
   // have `num_agg_rounds` extra EqualityInstances, so we must sample
   // α for the *final* size in advance.
   const size_t K = lab_inst.equality_constraints.size() + num_agg_rounds;
+  assert(K > 0);
 
   trs.alpha_hat.resize(K);
   std::vector<std::byte> alpha_seed(trs.seed3);
@@ -63,6 +66,30 @@ void LabradorBaseVerifier::create_transcript()
   std::vector<Rq> challenge = sample_low_norm_challenges(n, r, trs.seed4.data(), trs.seed4.size());
   trs.challenges_hat.resize(r);
   ntt(challenge.data(), challenge.size(), NTTDir::kForward, {}, trs.challenges_hat.data());
+}
+
+// NEW: Chunked LInfinity norm check to support vectors larger than 2^16 elements.
+// Uses the same API as `check_norm_bound` except the norm type is fixed to LInfinity.
+inline eIcicleError check_norm_bound_LInfinity_chunked(
+  const Zq* input, size_t size, uint64_t norm_bound, const VecOpsConfig& cfg, bool* output)
+{
+  if (output == nullptr) { return eIcicleError::INVALID_ARGUMENT; }
+
+  constexpr size_t CHUNK_SIZE = 1 << 16; // 65,536 elements – maximum supported by backend per call
+  *output = true;
+
+  for (size_t offset = 0; offset < size; offset += CHUNK_SIZE) {
+    size_t chunk_size = std::min(CHUNK_SIZE, size - offset);
+    bool chunk_ok = true;
+    eIcicleError err = check_norm_bound(input + offset, chunk_size, eNormType::LInfinity, norm_bound, cfg, &chunk_ok);
+    if (err != eIcicleError::SUCCESS) { return err; }
+    if (!chunk_ok) {
+      *output = false;
+      return eIcicleError::SUCCESS; // Early exit – entire vector fails the bound check
+    }
+  }
+  // All chunks within bound
+  return eIcicleError::SUCCESS;
 }
 
 // TODO: maybe make BaseProof more consistent by making everything Rq, since we have to convert z_hat to Rq before norm
@@ -86,16 +113,13 @@ bool LabradorBaseVerifier::_verify_base_proof(const LabradorBaseCaseProof& base_
   size_t base3 = lab_inst.param.base3;
 
   // 1. LInfinity checks: check t_tilde, g_tilde, h_tilde are small- correctly decomposed
-  // TODO: These vectors get too large
-  ICICLE_CHECK(check_norm_bound(
-    reinterpret_cast<const Zq*>(t_tilde.data()), t_tilde.size() * d, eNormType::LInfinity, (base1 + 1) / 2, {},
-    &t_tilde_small));
-  ICICLE_CHECK(check_norm_bound(
-    reinterpret_cast<const Zq*>(h_tilde.data()), h_tilde.size() * d, eNormType::LInfinity, (base2 + 1) / 2, {},
-    &h_tilde_small));
-  ICICLE_CHECK(check_norm_bound(
-    reinterpret_cast<const Zq*>(g_tilde.data()), g_tilde.size() * d, eNormType::LInfinity, (base3 + 1) / 2, {},
-    &g_tilde_small));
+  // bounds + 1 because norm check uses strict inequality
+  ICICLE_CHECK(check_norm_bound_LInfinity_chunked(
+    reinterpret_cast<const Zq*>(t_tilde.data()), t_tilde.size() * d, (base1 + 1) / 2 + 1, {}, &t_tilde_small));
+  ICICLE_CHECK(check_norm_bound_LInfinity_chunked(
+    reinterpret_cast<const Zq*>(h_tilde.data()), h_tilde.size() * d, (base2 + 1) / 2 + 1, {}, &h_tilde_small));
+  ICICLE_CHECK(check_norm_bound_LInfinity_chunked(
+    reinterpret_cast<const Zq*>(g_tilde.data()), g_tilde.size() * d, (base3 + 1) / 2 + 1, {}, &g_tilde_small));
 
   // Fail if any of the LInfinity are large
   if (!(t_tilde_small && h_tilde_small && g_tilde_small)) {
@@ -380,6 +404,7 @@ bool LabradorBaseVerifier::part_verify()
   const std::vector<Zq>& omega = trs.omega;
 
   std::vector<Rq> b_agg_unhat(b_agg.size());
+  // TODO: don't need complete NTT on Verifier side
   ICICLE_CHECK(ntt(b_agg.data(), b_agg.size(), NTTDir::kInverse, {}, b_agg_unhat.data()));
 
   // create_transcript called in constructor - so transcript is ready to be used
@@ -453,13 +478,11 @@ bool LabradorVerifier::verify()
       return false;
     }
 
-    // TODO: figure out param using Lattirust code
-    // make it 2^32-1 - so that z always decomposes to 2 limbs
+    // NOTE: base0 needs to be large enough
     uint32_t base0 = calc_base0(lab_inst_i.param.r, OP_NORM_BOUND, lab_inst_i.param.beta);
 
-    size_t m = base_verifier.lab_inst.param.t_len() + base_verifier.lab_inst.param.g_len() +
-               base_verifier.lab_inst.param.h_len();
-    auto [mu, nu] = get_rec_param(base_verifier.lab_inst.param.n, m);
+    size_t m = lab_inst_i.param.t_len() + lab_inst_i.param.g_len() + lab_inst_i.param.h_len();
+    auto [mu, nu] = compute_mu_nu(lab_inst_i.param.n, m);
 
     // Prepare recursion problem
     EqualityInstance final_const = base_verifier.lab_inst.equality_constraints[0];
