@@ -18,15 +18,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 5
       - name: Calculate conditions
         id: conditional-testing
         run: |
-          COMMIT_MSG=$(git log -1 --pretty=format:"%s")
+          COMMIT_MSG=$(git log ${{ github.event.pull_request.head.sha }} -1 --pretty=format:"%s")
+          echo "COMMIT_MSG: $COMMIT_MSG"
           COMMIT_MSG_LOWER=$(echo "$COMMIT_MSG" | tr '[:upper:]' '[:lower:]')
+          echo "COMMIT_MSG_LOWER: $COMMIT_MSG_LOWER"
           if [[ "$COMMIT_MSG_LOWER" == *"[full ci]"* ]]; then
-            echo "conditional-testing=false" >> $GITHUB_OUTPUT
+            CONDITIONAL_TESTING=false
+            echo "CONDITIONAL_TESTING=$CONDITIONAL_TESTING"
+            echo "conditional-testing=$CONDITIONAL_TESTING" >> $GITHUB_OUTPUT
           else
-            echo "conditional-testing=true" >> $GITHUB_OUTPUT
+            CONDITIONAL_TESTING=true
+            echo "CONDITIONAL_TESTING=$CONDITIONAL_TESTING"
+            echo "conditional-testing=$CONDITIONAL_TESTING" >> $GITHUB_OUTPUT
           fi
 
   spelling-checker:
@@ -921,3 +929,4 @@ jobs:
       run: |
         export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_pqc -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
         go test ./tests -count=1 -failfast -p 2 -timeout 10m -v
+
