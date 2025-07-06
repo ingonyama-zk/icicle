@@ -364,8 +364,10 @@ jobs:
         if [[ "${{ needs.check-conditional-testing.outputs.conditional-testing }}" == "true" ]]; then
           BUILD_TAGS="-tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }}"
         else
-          # NOTE: Include ntt tag inorder to tell go to use the tests that initialize the NTT domain
-          BUILD_TAGS="ntt"
+          # NOTE: Include ntt tag inorder to use the tests that initialize the NTT domain
+          if [[ "${{ contains(matrix.field.go-supported-features, 'ntt') }}" = "true" ]]; then
+            BUILD_TAGS="ntt"
+          fi
         fi
         
         go test ./$CURVE_DIR/tests $BUILD_TAGS -count=1 -failfast -p 2 -timeout 10m -v
@@ -611,8 +613,10 @@ jobs:
         if [[ "${{ needs.check-conditional-testing.outputs.conditional-testing }}" == "true" ]]; then
           BUILD_TAGS="-tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }}"
         else
-          # NOTE: Include ntt tag inorder to tell go to use the tests that initialize the NTT domain
-          BUILD_TAGS="ntt"
+          # NOTE: Include ntt tag inorder to use the tests that initialize the NTT domain
+          if [[ "${{ contains(matrix.field.go-supported-features, 'ntt') }}" = "true" ]]; then
+            BUILD_TAGS="ntt"
+          fi
         fi
 
         go test ./$FIELD_DIR/tests $BUILD_TAGS -count=1 -failfast -p 2 -timeout 10m -v
