@@ -366,7 +366,7 @@ jobs:
         else
           # NOTE: Include ntt tag inorder to use the tests that initialize the NTT domain
           if [[ "${{ contains(matrix.field.go-supported-features, 'ntt') }}" = "true" ]]; then
-            BUILD_TAGS="ntt"
+            BUILD_TAGS="-tags=ntt"
           fi
         fi
         
@@ -615,7 +615,7 @@ jobs:
         else
           # NOTE: Include ntt tag inorder to use the tests that initialize the NTT domain
           if [[ "${{ contains(matrix.field.go-supported-features, 'ntt') }}" = "true" ]]; then
-            BUILD_TAGS="ntt"
+            BUILD_TAGS="-tags=ntt"
           fi
         fi
 
