@@ -1,6 +1,6 @@
-use crate::field::PrimeField;
 use crate::negacyclic_ntt::{ntt, ntt_inplace, NegacyclicNtt, NegacyclicNttConfig};
 use crate::ntt::NTTDir;
+use crate::ring::IntegerRing;
 use crate::{polynomial_ring::PolynomialRing, traits::GenerateRandom};
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
@@ -10,7 +10,7 @@ use icicle_runtime::{
 /// Basic roundtrip test for NTT + inverse NTT
 pub fn test_negacyclic_ntt_roundtrip<P: PolynomialRing + NegacyclicNtt<P>>()
 where
-    P::Base: PrimeField,
+    P::Base: IntegerRing,
     P: GenerateRandom,
 {
     let cfg = NegacyclicNttConfig::default();

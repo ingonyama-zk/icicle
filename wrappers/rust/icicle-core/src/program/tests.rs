@@ -1,16 +1,16 @@
-use crate::field::PrimeField;
 use crate::program::{PreDefinedProgram, Program};
+use crate::ring::IntegerRing;
 use crate::symbol::Symbol;
-use crate::traits::{Arithmetic, GenerateRandom};
+use crate::traits::{Arithmetic, GenerateRandom, Invertible};
 use crate::vec_ops::{VecOps, VecOpsConfig};
 use icicle_runtime::memory::HostSlice;
 
 pub fn check_program<F, Prog>()
 where
-    F: PrimeField,
-    F: VecOps + GenerateRandom + Arithmetic,
+    F: IntegerRing + Invertible,
+    F: VecOps<F> + GenerateRandom,
     Prog: Program<F>,
-    Prog::ProgSymbol: Symbol<F> + Arithmetic,
+    Prog::ProgSymbol: Symbol<F> + Arithmetic + Invertible,
 {
     let example_lambda = |vars: &mut Vec<Prog::ProgSymbol>| {
         let a = vars[0]; // Shallow copies pointing to the same memory in the backend
@@ -18,10 +18,10 @@ where
         let c = vars[2];
         let d = vars[3];
 
-        vars[4] = d * (a * b - c) + F::from_u32(9);
-        vars[5] = a * b - Arithmetic::inv(&c);
-        vars[6] += a * b - Arithmetic::inv(&c);
-        vars[3] = (vars[0] + vars[1]) * F::from_u32(2); // all variables can be both inputs and outputs
+        vars[4] = d * (a * b - c) + F::from(9);
+        vars[5] = a * b - c.inv();
+        vars[6] += a * b - c.inv();
+        vars[3] = (vars[0] + vars[1]) * F::from(2); // all variables can be both inputs and outputs
     };
 
     const TEST_SIZE: usize = 1 << 10;
@@ -59,15 +59,15 @@ where
         let var6 = parameters[6][i];
         assert_eq!(
             var3,
-            F::from_u32(2) * (a + b) // 2 * (a + b)
+            F::from(2) * (a + b) // 2 * (a + b)
         );
         assert_eq!(
             var4,
-            eq * (a * b - c) + F::from_u32(9) // eq * (a * b - c) + 9
+            eq * (a * b - c) + F::from(9) // eq * (a * b - c) + 9
         );
         assert_eq!(
             var5,
-            a * b - Arithmetic::inv(&c) // a * b - c.inv()
+            a * b - c.inv() // a * b - c.inv()
         );
         assert_eq!(var6, var5);
     }
@@ -75,8 +75,8 @@ where
 
 pub fn check_predefined_program<F, Prog>()
 where
-    F: PrimeField,
-    F: VecOps + GenerateRandom + Arithmetic,
+    F: IntegerRing,
+    F: VecOps<F> + GenerateRandom + Arithmetic,
     Prog: Program<F>,
 {
     const TEST_SIZE: usize = 1 << 10;

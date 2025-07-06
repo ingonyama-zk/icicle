@@ -1,7 +1,6 @@
 use crate::ring::ScalarRing;
-use icicle_core::field::PrimeField;
 use icicle_core::polynomial_ring::PolynomialRing;
-use icicle_core::traits::GenerateRandom;
+use icicle_core::traits::{GenerateRandom, Zero};
 
 // Define the Polynomial Ring Zq[X]/X^d+1
 #[derive(Clone, Copy, Debug, PartialEq)]

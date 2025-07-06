@@ -1,7 +1,7 @@
-use crate::curve::{Affine, Curve, Projective};
-use crate::field::PrimeField;
+use crate::curve::Curve;
 use crate::msm::{msm, precompute_bases, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR, MSM};
-use crate::traits::{GenerateRandom, MontgomeryConvertible};
+use crate::ring::IntegerRing;
+use crate::traits::{GenerateRandom, MontgomeryConvertible, Zero};
 use icicle_runtime::{memory::HostOrDeviceSlice, test_utilities};
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
@@ -13,11 +13,11 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rand::thread_rng;
 use rand::Rng;
 
-pub fn generate_random_affine_points_with_zeroes<C: Curve>(size: usize, num_zeroes: usize) -> Vec<Affine<C>> {
+pub fn generate_random_affine_points_with_zeroes<C: Curve>(size: usize, num_zeroes: usize) -> Vec<C::Affine> {
     let mut rng = thread_rng();
-    let mut points = C::generate_random_affine_points(size);
+    let mut points = C::Affine::generate_random(size);
     for _ in 0..num_zeroes {
-        points[rng.gen_range(0..size)] = Affine::<C>::zero();
+        points[rng.gen_range(0..size)] = C::Affine::zero();
     }
     points
 }
@@ -37,7 +37,7 @@ pub fn check_msm<C: Curve + MSM<C>>() {
             let test_sizes = [1, 5, 16, 32, 64, 128, 256, 1000, 1 << 18];
             test_utilities::test_set_main_device_with_id(device_id);
             let mut stream = IcicleStream::create().unwrap();
-            let mut msm_results = DeviceVec::<Projective<C>>::device_malloc_async(1, &stream).unwrap();
+            let mut msm_results = DeviceVec::<C::Projective>::device_malloc_async(1, &stream).unwrap();
             for test_size in test_sizes {
                 let points = generate_random_affine_points_with_zeroes::<C>(test_size, 2);
                 let scalars = C::ScalarField::generate_random(test_size);
@@ -56,7 +56,7 @@ pub fn check_msm<C: Curve + MSM<C>>() {
                 cfg.stream_handle = *stream;
                 cfg.are_scalars_montgomery_form = true;
                 cfg.is_async = true;
-                msm(
+                msm::<C>(
                     &scalars_d[..],
                     HostSlice::from_slice(&points),
                     &cfg,
@@ -64,7 +64,7 @@ pub fn check_msm<C: Curve + MSM<C>>() {
                 )
                 .unwrap();
 
-                let mut msm_host_result = vec![Projective::<C>::zero(); 1];
+                let mut msm_host_result = vec![C::Projective::zero(); 1];
                 msm_results
                     .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result[..]))
                     .unwrap();
@@ -74,8 +74,8 @@ pub fn check_msm<C: Curve + MSM<C>>() {
 
                 // (2) compute on ref device and compare
                 test_utilities::test_set_ref_device();
-                let mut ref_msm_host_result = vec![Projective::<C>::zero(); 1];
-                msm(
+                let mut ref_msm_host_result = vec![C::Projective::zero(); 1];
+                msm::<C>(
                     HostSlice::from_slice(&scalars),
                     HostSlice::from_slice(&points),
                     &MSMConfig::default(),
@@ -112,26 +112,26 @@ pub fn check_msm_batch_shared<C: Curve + MSM<C>>() {
         cfg.precompute_factor = precompute_factor;
         let points = generate_random_affine_points_with_zeroes::<C>(test_size, 10);
         let mut precomputed_points_d =
-            DeviceVec::<Affine<C>>::device_malloc(cfg.precompute_factor as usize * test_size).unwrap();
-        precompute_bases(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
+            DeviceVec::<C::Affine>::device_malloc(cfg.precompute_factor as usize * test_size).unwrap();
+        precompute_bases::<C>(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
         for batch_size in batch_sizes {
             let scalars = C::ScalarField::generate_random(test_size * batch_size);
             let scalars_h = HostSlice::from_slice(&scalars);
 
-            let mut msm_results_1 = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
-            let mut msm_results_2 = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
-            let mut points_d = DeviceVec::<Affine<C>>::device_malloc(test_size).unwrap();
+            let mut msm_results_1 = DeviceVec::<C::Projective>::device_malloc(batch_size).unwrap();
+            let mut msm_results_2 = DeviceVec::<C::Projective>::device_malloc(batch_size).unwrap();
+            let mut points_d = DeviceVec::<C::Affine>::device_malloc(test_size).unwrap();
             points_d
                 .copy_from_host_async(HostSlice::from_slice(&points), &stream)
                 .unwrap();
 
             cfg.precompute_factor = precompute_factor;
-            msm(scalars_h, &precomputed_points_d[..], &cfg, &mut msm_results_1[..]).unwrap();
+            msm::<C>(scalars_h, &precomputed_points_d[..], &cfg, &mut msm_results_1[..]).unwrap();
             cfg.precompute_factor = 1;
-            msm(scalars_h, &points_d[..], &cfg, &mut msm_results_2[..]).unwrap();
+            msm::<C>(scalars_h, &points_d[..], &cfg, &mut msm_results_2[..]).unwrap();
 
-            let mut msm_host_result_1 = vec![Projective::<C>::zero(); batch_size];
-            let mut msm_host_result_2 = vec![Projective::<C>::zero(); batch_size];
+            let mut msm_host_result_1 = vec![C::Projective::zero(); batch_size];
+            let mut msm_host_result_2 = vec![C::Projective::zero(); batch_size];
             msm_results_1
                 .copy_to_host_async(HostSlice::from_mut_slice(&mut msm_host_result_1), &stream)
                 .unwrap();
@@ -144,10 +144,10 @@ pub fn check_msm_batch_shared<C: Curve + MSM<C>>() {
 
             // (2) compute on ref device and compare to both cases (with or w/o precompute)
             test_utilities::test_set_ref_device();
-            let mut msm_ref_result = vec![Projective::<C>::zero(); batch_size];
+            let mut msm_ref_result = vec![C::Projective::zero(); batch_size];
             let mut ref_msm_config = MSMConfig::default();
             ref_msm_config.c = 4;
-            msm(
+            msm::<C>(
                 scalars_h,
                 HostSlice::from_slice(&points),
                 &MSMConfig::default(),
@@ -190,26 +190,26 @@ pub fn check_msm_batch_not_shared<C: Curve + MSM<C>>() {
             let points = generate_random_affine_points_with_zeroes::<C>(test_size * batch_size, 10);
             println!("points len: {}", points.len());
             let mut precomputed_points_d =
-                DeviceVec::<Affine<C>>::device_malloc(cfg.precompute_factor as usize * test_size * batch_size).unwrap();
+                DeviceVec::<C::Affine>::device_malloc(cfg.precompute_factor as usize * test_size * batch_size).unwrap();
             cfg.batch_size = batch_size as i32;
             cfg.are_points_shared_in_batch = false;
-            precompute_bases(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
+            precompute_bases::<C>(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
             println!("precomputed points len: {}", (precomputed_points_d).len());
 
-            let mut msm_results_1 = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
-            let mut msm_results_2 = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
-            let mut points_d = DeviceVec::<Affine<C>>::device_malloc(test_size * batch_size).unwrap();
+            let mut msm_results_1 = DeviceVec::<C::Projective>::device_malloc(batch_size).unwrap();
+            let mut msm_results_2 = DeviceVec::<C::Projective>::device_malloc(batch_size).unwrap();
+            let mut points_d = DeviceVec::<C::Affine>::device_malloc(test_size * batch_size).unwrap();
             points_d
                 .copy_from_host_async(HostSlice::from_slice(&points), &stream)
                 .unwrap();
 
             cfg.precompute_factor = precompute_factor;
-            msm(scalars_h, &precomputed_points_d[..], &cfg, &mut msm_results_1[..]).unwrap();
+            msm::<C>(scalars_h, &precomputed_points_d[..], &cfg, &mut msm_results_1[..]).unwrap();
             cfg.precompute_factor = 1;
-            msm(scalars_h, &points_d[..], &cfg, &mut msm_results_2[..]).unwrap();
+            msm::<C>(scalars_h, &points_d[..], &cfg, &mut msm_results_2[..]).unwrap();
 
-            let mut msm_host_result_1 = vec![Projective::<C>::zero(); batch_size];
-            let mut msm_host_result_2 = vec![Projective::<C>::zero(); batch_size];
+            let mut msm_host_result_1 = vec![C::Projective::zero(); batch_size];
+            let mut msm_host_result_2 = vec![C::Projective::zero(); batch_size];
             msm_results_1
                 .copy_to_host_async(HostSlice::from_mut_slice(&mut msm_host_result_1), &stream)
                 .unwrap();
@@ -222,10 +222,10 @@ pub fn check_msm_batch_not_shared<C: Curve + MSM<C>>() {
 
             // (2) compute on ref device and compare to both cases (with or w/o precompute)
             test_utilities::test_set_ref_device();
-            let mut msm_ref_result = vec![Projective::<C>::zero(); batch_size];
+            let mut msm_ref_result = vec![C::Projective::zero(); batch_size];
             let mut ref_msm_config = MSMConfig::default();
             ref_msm_config.c = 4;
-            msm(
+            msm::<C>(
                 scalars_h,
                 HostSlice::from_slice(&points),
                 &MSMConfig::default(),
@@ -264,8 +264,8 @@ pub fn check_msm_skewed_distributions<C: Curve + MSM<C>>() {
                 cfg.bitsize = 1;
             }
             test_utilities::test_set_main_device();
-            let mut msm_results = vec![Projective::<C>::zero(); batch_size];
-            msm(
+            let mut msm_results = vec![C::Projective::zero(); batch_size];
+            msm::<C>(
                 HostSlice::from_slice(&scalars),
                 HostSlice::from_slice(&points),
                 &cfg,
@@ -274,8 +274,8 @@ pub fn check_msm_skewed_distributions<C: Curve + MSM<C>>() {
             .unwrap();
 
             test_utilities::test_set_ref_device();
-            let mut msm_results_ref = vec![Projective::<C>::zero(); batch_size];
-            msm(
+            let mut msm_results_ref = vec![C::Projective::zero(); batch_size];
+            msm::<C>(
                 HostSlice::from_slice(&scalars),
                 HostSlice::from_slice(&points),
                 &cfg,

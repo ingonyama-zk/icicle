@@ -2,7 +2,7 @@ use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
 
-use crate::field::PrimeField;
+use crate::ring::IntegerRing;
 
 pub mod tests;
 
@@ -73,7 +73,7 @@ pub const CUDA_NTT_ALGORITHM: &str = "ntt_algorithm";
 
 #[repr(C)]
 #[derive(Debug, Clone)]
-pub struct NTTConfig<S> {
+pub struct NTTConfig<S: IntegerRing> {
     pub stream_handle: IcicleStreamHandle,
     /// Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()` (corresponding to no coset being used).
     pub coset_gen: S,
@@ -91,7 +91,7 @@ pub struct NTTConfig<S> {
     pub ext: ConfigExtension,
 }
 
-impl<S: PrimeField> NTTConfig<S> {
+impl<S: IntegerRing> NTTConfig<S> {
     pub fn default() -> Self {
         Self {
             stream_handle: std::ptr::null_mut(),
@@ -126,31 +126,31 @@ impl NTTInitDomainConfig {
 }
 
 #[doc(hidden)]
-pub trait NTTDomain: PrimeField {
-    fn get_root_of_unity(max_size: u64) -> Self;
-    fn initialize_domain(primitive_root: Self, config: &NTTInitDomainConfig) -> Result<(), eIcicleError>;
+pub trait NTTDomain<T: IntegerRing> {
+    fn get_root_of_unity(max_size: u64) -> T;
+    fn initialize_domain(primitive_root: T, config: &NTTInitDomainConfig) -> Result<(), eIcicleError>;
     fn release_domain() -> Result<(), eIcicleError>;
 }
 
 #[doc(hidden)]
-pub trait NTT<T>: NTTDomain {
+pub trait NTT<T, F: IntegerRing> {
     fn ntt_unchecked(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
-        cfg: &NTTConfig<Self>,
+        cfg: &NTTConfig<F>,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> Result<(), eIcicleError>;
 
     fn ntt_inplace_unchecked(
         inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
-        cfg: &NTTConfig<Self>,
+        cfg: &NTTConfig<F>,
     ) -> Result<(), eIcicleError>;
 
     fn ntt(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
-        cfg: &NTTConfig<Self>,
+        cfg: &NTTConfig<F>,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> Result<(), eIcicleError> {
         if input.len() != output.len() {
@@ -179,7 +179,7 @@ pub trait NTT<T>: NTTDomain {
     fn ntt_inplace(
         inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
-        cfg: &NTTConfig<Self>,
+        cfg: &NTTConfig<F>,
     ) -> Result<(), eIcicleError> {
         let mut local_cfg = cfg.clone();
         local_cfg.are_inputs_on_device = inout.is_on_device();
@@ -207,7 +207,7 @@ pub fn ntt<T, F>(
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField + NTT<T>,
+    F: IntegerRing + NTT<T, F>,
 {
     F::ntt(input, dir, cfg, output)
 }
@@ -227,7 +227,7 @@ pub fn ntt_inplace<T, F>(
     cfg: &NTTConfig<F>,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField + NTT<T>,
+    F: IntegerRing + NTT<T, F>,
 {
     F::ntt_inplace(inout, dir, cfg)
 }
@@ -242,23 +242,23 @@ where
 ///
 pub fn initialize_domain<F>(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), eIcicleError>
 where
-    F: PrimeField + NTTDomain,
+    F: IntegerRing + NTTDomain<F>,
 {
-    <F as NTTDomain>::initialize_domain(primitive_root, config)
+    <F as NTTDomain<F>>::initialize_domain(primitive_root, config)
 }
 
 pub fn release_domain<F>() -> Result<(), eIcicleError>
 where
-    F: PrimeField + NTTDomain,
+    F: IntegerRing + NTTDomain<F>,
 {
-    <F as NTTDomain>::release_domain()
+    <F as NTTDomain<F>>::release_domain()
 }
 
 pub fn get_root_of_unity<F>(max_size: u64) -> F
 where
-    F: PrimeField + NTTDomain,
+    F: IntegerRing + NTTDomain<F>,
 {
-    <F as NTTDomain>::get_root_of_unity(max_size)
+    <F as NTTDomain<F>>::get_root_of_unity(max_size)
 }
 
 #[macro_export]
@@ -281,7 +281,7 @@ macro_rules! impl_ntt_without_domain {
             ) -> eIcicleError;
         }
 
-        impl $ntt_type<$inout> for $domain_field {
+        impl $ntt_type<$inout, $domain_field> for $domain_field {
             fn ntt_unchecked(
                 input: &(impl HostOrDeviceSlice<$inout> + ?Sized),
                 dir: NTTDir,
@@ -341,7 +341,7 @@ macro_rules! impl_ntt {
                 fn get_root_of_unity(max_size: u64, rou: *mut $field) -> eIcicleError;
             }
 
-            impl NTTDomain for $field {
+            impl NTTDomain<$field> for $field {
                 fn initialize_domain(primitive_root: $field, config: &NTTInitDomainConfig) -> Result<(), eIcicleError> {
                     unsafe { initialize_ntt_domain(&primitive_root, config).wrap() }
                 }
@@ -451,15 +451,21 @@ macro_rules! impl_ntt_bench {
       $field_prefix:literal,
       $field:ident
     ) => {
-        use std::{env, sync::OnceLock};
         use criterion::{black_box, criterion_group, criterion_main, Criterion};
-        use icicle_runtime::{memory::{HostSlice,HostOrDeviceSlice},device::Device,is_device_available,  get_active_device, set_device, runtime::load_backend_from_env_or_default};
+        use icicle_core::ring::IntegerRing;
         use icicle_core::{
-            ntt::{NTTConfig, NTTInitDomainConfig, NTTDir, NttAlgorithm, Ordering, NTTDomain, ntt, NTT},
+            ntt::{ntt, NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NttAlgorithm, Ordering, NTT},
             traits::GenerateRandom,
             vec_ops::VecOps,
         };
-        use icicle_core::field::PrimeField;
+        use icicle_runtime::{
+            device::Device,
+            get_active_device, is_device_available,
+            memory::{HostOrDeviceSlice, HostSlice},
+            runtime::load_backend_from_env_or_default,
+            set_device,
+        };
+        use std::{env, sync::OnceLock};
 
         static INIT: OnceLock<()> = OnceLock::new();
 
@@ -484,9 +490,9 @@ macro_rules! impl_ntt_bench {
             println!("ICICLE benchmark with {:?}", device);
         }
 
-        fn benchmark_ntt<T, F: PrimeField>(c: &mut Criterion)
+        fn benchmark_ntt<F: IntegerRing>(c: &mut Criterion)
         where
-        F: NTT<F> + GenerateRandom + VecOps,
+            F: NTT<F, F> + GenerateRandom,
         {
             use criterion::SamplingMode;
             use icicle_core::ntt::tests::init_domain;
@@ -529,7 +535,7 @@ macro_rules! impl_ntt_bench {
                     let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
                     let batch_ntt_result = HostSlice::from_mut_slice(&mut batch_ntt_result);
                     let mut config = NTTConfig::<F>::default();
-                    for dir in [NTTDir::kForward, NTTDir::kInverse ] {
+                    for dir in [NTTDir::kForward, NTTDir::kInverse] {
                         for ordering in [
                             Ordering::kNN,
                             Ordering::kNR,
@@ -540,19 +546,9 @@ macro_rules! impl_ntt_bench {
                         ] {
                             config.ordering = ordering;
                             config.batch_size = batch_size as i32;
-                            let bench_descr = format!(
-                                "{:?} {:?} {} x {}",
-                                ordering, dir, test_size, batch_size
-                            );
+                            let bench_descr = format!("{:?} {:?} {} x {}", ordering, dir, test_size, batch_size);
                             group.bench_function(&bench_descr, |b| {
-                                b.iter(|| {
-                                    ntt::<F, F>(
-                                        input,
-                                        dir,
-                                        &mut config,
-                                        batch_ntt_result
-                                    )
-                                })
+                                b.iter(|| ntt::<F, F>(input, dir, &mut config, batch_ntt_result))
                             });
                         }
                     }
@@ -562,7 +558,7 @@ macro_rules! impl_ntt_bench {
             group.finish();
         }
 
-        criterion_group!(benches, benchmark_ntt<$field, $field>);
+        criterion_group!(benches, benchmark_ntt::<$field>);
         criterion_main!(benches);
     };
 }

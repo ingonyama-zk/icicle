@@ -1,10 +1,4 @@
-use icicle_core::field::PrimeField;
-use icicle_core::traits::{Arithmetic, GenerateRandom, MontgomeryConvertible};
-use icicle_core::vec_ops::VecOpsConfig;
-use icicle_core::{impl_field, impl_field_arithmetic, impl_generate_random, impl_montgomery_convertible};
-
-use std::fmt::{Debug, Display};
-use std::ops::{Add, Mul, Sub};
+use icicle_core::{impl_field, impl_generate_random_ffi, impl_montgomery_convertible_ffi};
 
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
@@ -13,21 +7,18 @@ use icicle_runtime::stream::IcicleStream;
 pub(crate) const SCALAR_LIMBS: usize = 1;
 pub(crate) const EXTENSION_LIMBS: usize = 4;
 
-impl_field!(ScalarField, "m31", SCALAR_LIMBS, true);
-impl_field_arithmetic!(ScalarField, "m31", m31);
-impl_montgomery_convertible!(ScalarField, m31_scalar_convert_montgomery);
-impl_generate_random!(ScalarField, m31_generate_scalars);
+impl_field!(ScalarField, "m31", SCALAR_LIMBS, true, true);
+impl_montgomery_convertible_ffi!(ScalarField, m31_scalar_convert_montgomery);
+impl_generate_random_ffi!(ScalarField, m31_generate_scalars);
 
-impl_field!(ExtensionField, "m31_extension", EXTENSION_LIMBS, true);
-impl_field_arithmetic!(ExtensionField, "m31_extension", m31_extension);
-impl_montgomery_convertible!(ExtensionField, m31_extension_scalar_convert_montgomery);
-impl_generate_random!(ExtensionField, m31_extension_generate_scalars);
+impl_field!(ExtensionField, "m31_extension", EXTENSION_LIMBS, true, true);
+impl_montgomery_convertible_ffi!(ExtensionField, m31_extension_scalar_convert_montgomery);
+impl_generate_random_ffi!(ExtensionField, m31_extension_generate_scalars);
 
 #[cfg(test)]
 mod tests {
     use super::{ExtensionField, ScalarField};
     use icicle_core::impl_field_tests;
-    use icicle_core::tests::*;
 
     impl_field_tests!(ScalarField);
     mod extension {

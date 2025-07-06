@@ -1,4 +1,6 @@
+pub mod affine;
 pub mod balanced_decomposition;
+pub mod bignum;
 pub mod curve;
 pub mod ecntt;
 pub mod field;
@@ -17,7 +19,9 @@ pub mod polynomials;
 pub mod poseidon;
 pub mod poseidon2;
 pub mod program;
+pub mod projective;
 pub mod random_sampling;
+pub mod ring;
 pub mod rns;
 pub mod sumcheck;
 pub mod symbol;

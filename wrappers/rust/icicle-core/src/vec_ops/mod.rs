@@ -1,4 +1,4 @@
-use crate::field::PrimeField;
+use crate::ring::IntegerRing;
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
@@ -35,108 +35,108 @@ impl VecOpsConfig {
 }
 
 #[doc(hidden)]
-pub trait VecOps: PrimeField {
+pub trait VecOps<T: IntegerRing> {
     fn add(
-        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
     fn accumulate(
-        a: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
-        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        a: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        b: &(impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
     fn sub(
-        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
     fn mul(
-        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
     fn div(
-        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
     fn inv(
-        input: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
     fn sum(
-        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
     fn product(
-        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
     fn scalar_add(
-        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
     fn scalar_sub(
-        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
     fn scalar_mul(
-        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
     fn bit_reverse(
-        input: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        input: &(impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
-        output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> Result<(), eIcicleError>;
 
     fn bit_reverse_inplace(
-        input: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        input: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
     fn slice(
-        input: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        input: &(impl HostOrDeviceSlice<T> + ?Sized),
         offset: u64,
         stride: u64,
         size_in: u64,
         size_out: u64,
         cfg: &VecOpsConfig,
-        output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> Result<(), eIcicleError>;
 }
 
 #[doc(hidden)]
-pub trait MixedVecOps<T>: PrimeField {
+pub trait MixedVecOps<T, S: IntegerRing> {
     fn mul(
-        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        a: &(impl HostOrDeviceSlice<S> + ?Sized),
         b: &(impl HostOrDeviceSlice<T> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<S> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 }
@@ -251,49 +251,49 @@ fn setup_config<F, T>(
     res_cfg
 }
 
-pub fn add_scalars<F: VecOps>(
-    a: &(impl HostOrDeviceSlice<F> + ?Sized),
-    b: &(impl HostOrDeviceSlice<F> + ?Sized),
-    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+pub fn add_scalars<T: IntegerRing + VecOps<T>>(
+    a: &(impl HostOrDeviceSlice<T> + ?Sized),
+    b: &(impl HostOrDeviceSlice<T> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError> {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    F::add(a, b, result, &cfg)
+    <T as VecOps<T>>::add(a, b, result, &cfg)
 }
 
-pub fn accumulate_scalars<F: VecOps>(
-    a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+pub fn accumulate_scalars<T: IntegerRing + VecOps<T>>(
+    a: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+    b: &(impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError> {
     let cfg = check_vec_ops_args(a, b, a, cfg);
-    F::accumulate(a, b, &cfg)
+    <T as VecOps<T>>::accumulate(a, b, &cfg)
 }
 
-pub fn sub_scalars<F>(
-    a: &(impl HostOrDeviceSlice<F> + ?Sized),
-    b: &(impl HostOrDeviceSlice<F> + ?Sized),
-    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+pub fn sub_scalars<T: IntegerRing + VecOps<T>>(
+    a: &(impl HostOrDeviceSlice<T> + ?Sized),
+    b: &(impl HostOrDeviceSlice<T> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField + VecOps,
+    T: IntegerRing + VecOps<T>,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    F::sub(a, b, result, &cfg)
+    <T as VecOps<T>>::sub(a, b, result, &cfg)
 }
 
-pub fn mul_scalars<F>(
-    a: &(impl HostOrDeviceSlice<F> + ?Sized),
-    b: &(impl HostOrDeviceSlice<F> + ?Sized),
-    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+pub fn mul_scalars<T: IntegerRing + VecOps<T>>(
+    a: &(impl HostOrDeviceSlice<T> + ?Sized),
+    b: &(impl HostOrDeviceSlice<T> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField + VecOps,
+    T: IntegerRing + VecOps<T>,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    F::mul(a, b, result, &cfg)
+    <T as VecOps<T>>::mul(a, b, result, &cfg)
 }
 
 pub fn mixed_mul_scalars<F, T>(
@@ -303,138 +303,111 @@ pub fn mixed_mul_scalars<F, T>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField + MixedVecOps<T>,
-    T: PrimeField,
+    F: IntegerRing + MixedVecOps<T, F>,
+    T: IntegerRing,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    F::mul(a, b, result, &cfg)
+    <F as MixedVecOps<T, F>>::mul(a, b, result, &cfg)
 }
 
-pub fn div_scalars<F>(
-    a: &(impl HostOrDeviceSlice<F> + ?Sized),
-    b: &(impl HostOrDeviceSlice<F> + ?Sized),
-    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+pub fn div_scalars<T: IntegerRing + VecOps<T>>(
+    a: &(impl HostOrDeviceSlice<T> + ?Sized),
+    b: &(impl HostOrDeviceSlice<T> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField + VecOps,
+    T: IntegerRing + VecOps<T>,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    F::div(a, b, result, &cfg)
+    <T as VecOps<T>>::div(a, b, result, &cfg)
 }
 
-pub fn inv_scalars<F>(
-    input: &(impl HostOrDeviceSlice<F> + ?Sized),
-    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+pub fn inv_scalars<T: IntegerRing + VecOps<T>>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
+    output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
-where
-    F: PrimeField + VecOps,
-{
+) -> Result<(), eIcicleError> {
     let cfg = check_vec_ops_args(input, input, output, cfg);
-    F::inv(input, output, &cfg)
+    <T as VecOps<T>>::inv(input, output, &cfg)
 }
 
-pub fn sum_scalars<F>(
-    a: &(impl HostOrDeviceSlice<F> + ?Sized),
-    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+pub fn sum_scalars<T: IntegerRing + VecOps<T>>(
+    a: &(impl HostOrDeviceSlice<T> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
-where
-    F: PrimeField + VecOps,
-{
+) -> Result<(), eIcicleError> {
     let cfg = check_vec_ops_args_reduction_ops(a, result, cfg);
-    F::sum(a, result, &cfg)
+    <T as VecOps<T>>::sum(a, result, &cfg)
 }
 
-pub fn product_scalars<F>(
-    a: &(impl HostOrDeviceSlice<F> + ?Sized),
-    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+pub fn product_scalars<T: IntegerRing + VecOps<T>>(
+    a: &(impl HostOrDeviceSlice<T> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
-where
-    F: PrimeField + VecOps,
-{
+) -> Result<(), eIcicleError> {
     let cfg = check_vec_ops_args_reduction_ops(a, result, cfg);
-    F::product(a, result, &cfg)
+    <T as VecOps<T>>::product(a, result, &cfg)
 }
 
-pub fn scalar_add<F>(
-    a: &(impl HostOrDeviceSlice<F> + ?Sized),
-    b: &(impl HostOrDeviceSlice<F> + ?Sized),
-    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+pub fn scalar_add<T: IntegerRing + VecOps<T>>(
+    a: &(impl HostOrDeviceSlice<T> + ?Sized),
+    b: &(impl HostOrDeviceSlice<T> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
-where
-    F: PrimeField + VecOps,
-{
+) -> Result<(), eIcicleError> {
     let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
-    F::scalar_add(a, b, result, &cfg)
+    <T as VecOps<T>>::scalar_add(a, b, result, &cfg)
 }
 
-pub fn scalar_sub<F>(
-    a: &(impl HostOrDeviceSlice<F> + ?Sized),
-    b: &(impl HostOrDeviceSlice<F> + ?Sized),
-    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+pub fn scalar_sub<T: IntegerRing + VecOps<T>>(
+    a: &(impl HostOrDeviceSlice<T> + ?Sized),
+    b: &(impl HostOrDeviceSlice<T> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
-where
-    F: PrimeField + VecOps,
-{
+) -> Result<(), eIcicleError> {
     let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
-    F::scalar_sub(a, b, result, &cfg)
+    <T as VecOps<T>>::scalar_sub(a, b, result, &cfg)
 }
 
-pub fn scalar_mul<F>(
-    a: &(impl HostOrDeviceSlice<F> + ?Sized),
-    b: &(impl HostOrDeviceSlice<F> + ?Sized),
-    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+pub fn scalar_mul<T: IntegerRing + VecOps<T>>(
+    a: &(impl HostOrDeviceSlice<T> + ?Sized),
+    b: &(impl HostOrDeviceSlice<T> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
-where
-    F: PrimeField + VecOps,
-{
+) -> Result<(), eIcicleError> {
     let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
-    F::scalar_mul(a, b, result, &cfg)
+    <T as VecOps<T>>::scalar_mul(a, b, result, &cfg)
 }
 
-pub fn bit_reverse<F>(
-    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+pub fn bit_reverse<T: IntegerRing + VecOps<T>>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
-    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-) -> Result<(), eIcicleError>
-where
-    F: PrimeField + VecOps,
-{
+    output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+) -> Result<(), eIcicleError> {
     let cfg = check_vec_ops_args(input, input /*dummy*/, output, cfg);
-    F::bit_reverse(input, &cfg, output)
+    <T as VecOps<T>>::bit_reverse(input, &cfg, output)
 }
 
-pub fn bit_reverse_inplace<F>(
-    input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+pub fn bit_reverse_inplace<T: IntegerRing + VecOps<T>>(
+    input: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
-where
-    F: PrimeField + VecOps,
-{
+) -> Result<(), eIcicleError> {
     let cfg = check_vec_ops_args(input, input /*dummy*/, input, cfg);
-    F::bit_reverse_inplace(input, &cfg)
+    <T as VecOps<T>>::bit_reverse_inplace(input, &cfg)
 }
 
-pub fn slice<F>(
-    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+pub fn slice<T: IntegerRing + VecOps<T>>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
     offset: u64,
     stride: u64,
     size_in: u64,
     size_out: u64,
     cfg: &VecOpsConfig,
-    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-) -> Result<(), eIcicleError>
-where
-    F: PrimeField + VecOps,
-{
+    output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+) -> Result<(), eIcicleError> {
     let cfg = check_vec_ops_args_slice(input, offset, stride, size_in, size_out, output, cfg);
-    F::slice(input, offset, stride, size_in, size_out, &cfg, output)
+    <T as VecOps<T>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
 #[macro_export]
@@ -567,7 +540,7 @@ macro_rules! impl_vec_ops_field {
             }
         }
 
-        impl VecOps for $field {
+        impl VecOps<$field> for $field {
             fn add(
                 a: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 b: &(impl HostOrDeviceSlice<Self> + ?Sized),
@@ -841,7 +814,7 @@ macro_rules! impl_vec_ops_mixed_field {
             }
         }
 
-        impl MixedVecOps<$field> for $ext_field {
+        impl MixedVecOps<$field, $ext_field> for $ext_field {
             fn mul(
                 a: &(impl HostOrDeviceSlice<$ext_field> + ?Sized),
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),

@@ -1,4 +1,4 @@
-use crate::{field::PrimeField, vec_ops::VecOpsConfig};
+use crate::{ring::IntegerRing, vec_ops::VecOpsConfig};
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
@@ -14,7 +14,7 @@ pub enum NormType {
 ///
 /// This trait provides functionality to check if the norm of a vector is within a specified bound
 /// or to compare norms of two vectors with a scaling factor.
-pub trait Norm<T: PrimeField> {
+pub trait Norm<T: IntegerRing> {
     /// Checks whether the norm of a vector is within a specified bound.
     ///
     /// This function assumes that:
@@ -43,7 +43,7 @@ pub trait Norm<T: PrimeField> {
 }
 
 // Public floating functions around the trait
-pub fn check_norm_bound<T: PrimeField>(
+pub fn check_norm_bound<T: IntegerRing>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     norm_type: NormType,
     norm_bound: u64,
@@ -56,7 +56,7 @@ where
     T::check_norm_bound(input, norm_type, norm_bound, cfg, output)
 }
 
-pub fn check_norm_relative<T: PrimeField>(
+pub fn check_norm_relative<T: IntegerRing>(
     input_a: &(impl HostOrDeviceSlice<T> + ?Sized),
     input_b: &(impl HostOrDeviceSlice<T> + ?Sized),
     norm_type: NormType,

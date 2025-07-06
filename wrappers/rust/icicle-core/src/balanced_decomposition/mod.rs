@@ -18,13 +18,13 @@ pub mod tests;
 ///     - The next `n` entries are the **second digit** of all elements.
 ///     - And so on, until all `d` digits are emitted.
 ///
-/// This layout is consistent for both scalar fields (e.g. `Zq`) and polynomial rings (e.g. `Rq`),
+/// This layout is consistent for both scalar rings (e.g. `Zq`) and polynomial rings (e.g. `Rq`),
 /// where the digit decomposition is applied element-wise to the entire input slice.
 pub trait BalancedDecomposition<T> {
-    /// Computes the number of balanced base-b digits required to represent a field element.
+    /// Computes the number of balanced base-b digits required to represent a ring element.
     fn count_digits(base: u32) -> u32;
 
-    /// Decomposes field elements into balanced base-b digits.
+    /// Decomposes ring elements into balanced base-b digits.
     ///
     /// The output buffer must have length `input.len() * count_digits(base)`.
     fn decompose(
@@ -34,7 +34,7 @@ pub trait BalancedDecomposition<T> {
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
-    /// Recomposes field elements from balanced base-b digits.
+    /// Recomposes ring elements from balanced base-b digits.
     ///
     /// The input buffer must have length `output.len() * count_digits(base)`.
     fn recompose(

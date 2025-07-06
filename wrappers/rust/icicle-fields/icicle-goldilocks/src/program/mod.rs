@@ -1,9 +1,9 @@
 use crate::field::{ExtensionField, ScalarField};
 
-use icicle_core::impl_program_field;
+use icicle_core::impl_program_ring;
 
-impl_program_field!("goldilocks", goldilocks, ScalarField);
-impl_program_field!("goldilocks_extension", goldilocks_extension, ExtensionField);
+impl_program_ring!("goldilocks", goldilocks, ScalarField);
+impl_program_ring!("goldilocks_extension", goldilocks_extension, ExtensionField);
 
 #[cfg(test)]
 use icicle_core::impl_program_tests;
