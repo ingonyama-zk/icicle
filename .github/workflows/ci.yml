@@ -4,73 +4,36 @@ on:
   pull_request:
     branches:
       - main
-  issue_comment:
-    types:
-      - created
-      - edited
 
 concurrency:
   group:  ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  calculate-conditions:
-    name: Calculate Workflow Conditions
+  check-conditional-testing:
+    name: Check Conditional Testing
     runs-on: ubuntu-latest
     outputs:
-      should-run: ${{ steps.conditions.outputs.should-run }}
-      checkout-ref: ${{ steps.conditions.outputs.checkout-ref }}
-      pr-number: ${{ steps.conditions.outputs.pr-number }}
-      conditional-testing: ${{ steps.conditions.outputs.conditional-testing }}
+      conditional-testing: ${{ steps.conditional-testing.outputs.conditional-testing }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Calculate conditions
-        id: conditions
+        id: conditional-testing
         run: |
-          echo "Event name: ${{ github.event_name }}"
-          
-          # Check if workflow should run
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "should-run=true" >> $GITHUB_OUTPUT
-            echo "checkout-ref=${{ github.ref }}" >> $GITHUB_OUTPUT
-            echo "pr-number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-            echo "conditional-testing=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "issue_comment" ]] && [[ "${{ github.event.issue.pull_request }}" != "" ]]; then
-            COMMENT_BODY="${{ github.event.comment.body }}"
-            COMMENT_BODY_LOWER=$(echo "$COMMENT_BODY" | tr '[:upper:]' '[:lower:]')
-            if [[ "$COMMENT_BODY_LOWER" == *"run full ci"* ]]; then
-              echo "should-run=true" >> $GITHUB_OUTPUT
-              echo "checkout-ref=refs/pull/${{ github.event.issue.number }}/head" >> $GITHUB_OUTPUT
-              echo "pr-number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
-              echo "conditional-testing=false" >> $GITHUB_OUTPUT
-            else
-              echo "should-run=false" >> $GITHUB_OUTPUT
-              echo "checkout-ref=${{ github.ref }}" >> $GITHUB_OUTPUT
-              echo "pr-number=" >> $GITHUB_OUTPUT
-              echo "conditional-testing=true" >> $GITHUB_OUTPUT
-            fi
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s")
+          COMMIT_MSG_LOWER=$(echo "$COMMIT_MSG" | tr '[:upper:]' '[:lower:]')
+          if [[ "$COMMIT_MSG_LOWER" == *"[full ci]"* ]]; then
+            echo "conditional-testing=false" >> $GITHUB_OUTPUT
           else
-            echo "should-run=false" >> $GITHUB_OUTPUT
-            echo "checkout-ref=${{ github.ref }}" >> $GITHUB_OUTPUT
-            echo "pr-number=" >> $GITHUB_OUTPUT
             echo "conditional-testing=true" >> $GITHUB_OUTPUT
           fi
-          
-          # Debug: Show what was set
-          echo "Final outputs:"
-          echo "should-run=$(cat $GITHUB_OUTPUT | grep '^should-run=' | cut -d'=' -f2)"
-          echo "checkout-ref=$(cat $GITHUB_OUTPUT | grep '^checkout-ref=' | cut -d'=' -f2)"
-          echo "pr-number=$(cat $GITHUB_OUTPUT | grep '^pr-number=' | cut -d'=' -f2)"
-          echo "conditional-testing=$(cat $GITHUB_OUTPUT | grep '^conditional-testing=' | cut -d'=' -f2)"
 
   spelling-checker:
     name: Check Spelling
     runs-on: ubuntu-latest
-    needs: calculate-conditions
-    if: needs.calculate-conditions.outputs.should-run == 'true'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
       - uses: codespell-project/actions-codespell@fad9339798e1ee3fe979ae0a022c931786a408b8
         with:
           # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-skip
@@ -80,21 +43,14 @@ jobs:
 
   check-changed-files:
     uses: ./.github/workflows/check-changed-files.yml
-    needs: calculate-conditions
-    if: needs.calculate-conditions.outputs.should-run == 'true'
-    with:
-      ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
 
   check-format:
     name: Check Code Format
     runs-on: [self-hosted, Linux, X64, formatter]
-    needs: [calculate-conditions, check-changed-files]
-    if: needs.calculate-conditions.outputs.should-run == 'true'
+    needs: [check-changed-files]
     steps:
     - name: Checkout
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      with:
-        ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
     - name: Setup go
       if: needs.check-changed-files.outputs.go == 'true'
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
@@ -118,26 +74,21 @@ jobs:
 
   extract-cuda-backend-branch:
     uses: ./.github/workflows/extract-backend.yml
-    needs: calculate-conditions
-    if: needs.calculate-conditions.outputs.should-run == 'true'
     with:
-      pr-number: ${{ fromJSON(needs.calculate-conditions.outputs.pr-number) }}
+      pr-number: ${{ github.event.pull_request.number }}
       backend-type: cuda
 
   # extract-metal-backend-branch:
   #   uses: ./.github/workflows/extract-backend.yml
-  #   needs: calculate-conditions
-  #   if: needs.calculate-conditions.outputs.should-run == 'true'
   #   with:
-  #     pr-number: ${{ needs.calculate-conditions.outputs.pr-number }}
+  #     pr-number: ${{ github.event.pull_request.number }}
   #     backend-type: metal
   
   test-curve:
     name: Test ${{ matrix.curve.name }} on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
-    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
-    if: needs.calculate-conditions.outputs.should-run == 'true'
-    # needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    needs: [check-conditional-testing, check-changed-files, check-format, extract-cuda-backend-branch]
+    # needs: [check-conditional-testing, check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
@@ -205,10 +156,8 @@ jobs:
         fi
     - name: Checkout repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      with:
-        ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
     - name: Checkout ${{ matrix.backend_upper }} backend
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.curve == 'true'
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.curve == 'true'
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
         repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
@@ -217,7 +166,7 @@ jobs:
         ref: ${{ env.BACKEND_BRANCH }}
     - name: Set feature and build flags
       id: feature_flags
-      if: needs.calculate-conditions.outputs.conditional-testing == 'true' && needs.check-changed-files.outputs.curve == 'true'
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'true' && needs.check-changed-files.outputs.curve == 'true'
       run: |
         FEATURE_FLAGS="-DDISABLE_ALL_FEATURES=ON"
         CPP_TEST_REGEX="CurveSanity|CurveApi|ModArith|MatrixTest|Symbol|Program"
@@ -335,7 +284,7 @@ jobs:
         
     - name: Build curve
       working-directory: ./icicle
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.curve == 'true'
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.curve == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
@@ -343,7 +292,7 @@ jobs:
 
     - name: Run C++ curve tests
       working-directory: ./icicle/build/tests
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.curve == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true'))
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.curve == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true'))
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
 
@@ -353,7 +302,7 @@ jobs:
         fi
         echo "SKIP_TESTS: $SKIP_TESTS"
 
-        if [[ "${{ needs.calculate-conditions.outputs.conditional-testing }}" == "true" ]]; then
+        if [[ "${{ needs.check-conditional-testing.outputs.conditional-testing }}" == "true" ]]; then
           ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}" -E "$SKIP_TESTS"
         else
           ctest --output-on-failure -E "$SKIP_TESTS"
@@ -361,7 +310,7 @@ jobs:
         
     - name: Run Rust curve tests
       working-directory: ./wrappers/rust/icicle-curves
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.curve == 'true' && needs.check-changed-files.outputs.rust == 'true')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.curve == 'true' && needs.check-changed-files.outputs.rust == 'true')
       run: |
         CURVE=${{ matrix.curve.name }}
         CURVE_DIR=icicle-${CURVE//_/-}
@@ -375,7 +324,7 @@ jobs:
         fi
 
         FEATURES=""
-        if [[ "${{ needs.calculate-conditions.outputs.conditional-testing }}" == "true" ]]; then
+        if [[ "${{ needs.check-conditional-testing.outputs.conditional-testing }}" == "true" ]]; then
           if [[ -z "${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}" ]]; then
             FEATURES="--no-default-features"
           else
@@ -390,21 +339,21 @@ jobs:
         cargo test phase4 --release $FEATURES -- $SKIP_RUST_TESTS
         
     - name: Setup go
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.curve == 'true' && needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-curves == 'false')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.curve == 'true' && needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-curves == 'false')
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
         cache: false
     - name: Run Golang curve tests
       working-directory: ./wrappers/golang/curves
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.curve == 'true' && needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-curves == 'false')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.curve == 'true' && needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-curves == 'false')
       run: |
         CURVE=${{ matrix.curve.name }}
         CURVE_DIR=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
 
-        if [[ "${{ needs.calculate-conditions.outputs.conditional-testing }}" == "true" ]]; then
+        if [[ "${{ needs.check-conditional-testing.outputs.conditional-testing }}" == "true" ]]; then
           BUILD_TAGS="-tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }}"
         else
           BUILD_TAGS=""
@@ -416,9 +365,8 @@ jobs:
   test-field:
     name: Test ${{ matrix.field.name }} on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
-    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
-    if: needs.calculate-conditions.outputs.should-run == 'true'
-    # needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    needs: [check-conditional-testing, check-changed-files, check-format, extract-cuda-backend-branch]
+    # needs: [check-conditional-testing, check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
@@ -489,10 +437,8 @@ jobs:
         fi
     - name: Checkout repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      with:
-        ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
     - name: Checkout ${{ matrix.backend_upper }} backend
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.field == 'true'
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.field == 'true'
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
         repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
@@ -502,7 +448,7 @@ jobs:
     
     - name: Set feature and build flags
       id: feature_flags
-      if: needs.calculate-conditions.outputs.conditional-testing == 'true' && needs.check-changed-files.outputs.field == 'true'
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'true' && needs.check-changed-files.outputs.field == 'true'
       run: |
         FEATURE_FLAGS="-DDISABLE_ALL_FEATURES=ON"
         CPP_TEST_REGEX="FieldTest|ModArith|MatrixTest|Symbol|Program"
@@ -588,7 +534,7 @@ jobs:
     
     - name: Build field
       working-directory: ./icicle
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.field == 'true'
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.field == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
@@ -596,7 +542,7 @@ jobs:
 
     - name: Run C++ field tests
       working-directory: ./icicle/build/tests
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.field == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true'))
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.field == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true'))
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export SKIP_TESTS="${{ matrix.skip-cpp-all-fields }}"
@@ -604,7 +550,7 @@ jobs:
           export SKIP_TESTS="${{ matrix.skip-cpp-all-fields }}|${{ matrix.field.metal-skip-cpp-field-specific }}"
         fi
         echo "SKIP_TESTS: $SKIP_TESTS"
-        if [[ "${{ needs.calculate-conditions.outputs.conditional-testing }}" == "true" ]]; then
+        if [[ "${{ needs.check-conditional-testing.outputs.conditional-testing }}" == "true" ]]; then
           ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}" -E "$SKIP_TESTS"
         else
           ctest --output-on-failure -E "$SKIP_TESTS"
@@ -612,7 +558,7 @@ jobs:
 
     - name: Run Rust field tests
       working-directory: ./wrappers/rust/icicle-fields
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.rust == 'true')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.rust == 'true')
       run: |
         FIELD=${{ matrix.field.name }}
         FIELD_DIR=icicle-${FIELD//_/-}
@@ -625,7 +571,7 @@ jobs:
           export SKIP_RUST_TESTS="${{ matrix.skip-rust-all-fields }} ${{ matrix.field.metal-skip-rust-field-specific }}"
         fi
         FEATURES=""
-        if [[ "${{ needs.calculate-conditions.outputs.conditional-testing }}" == "true" ]]; then
+        if [[ "${{ needs.check-conditional-testing.outputs.conditional-testing }}" == "true" ]]; then
           if [[ -z "${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}" ]]; then
             FEATURES="--no-default-features"
           else
@@ -639,21 +585,21 @@ jobs:
         cargo test phase3 --release $FEATURES -- $SKIP_RUST_TESTS
         cargo test phase4 --release $FEATURES -- $SKIP_RUST_TESTS
     - name: Setup go
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-fields == 'false')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-fields == 'false')
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
         cache: false
     - name: Run Golang field tests
       working-directory: ./wrappers/golang/fields
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-fields == 'false')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-fields == 'false')
       run: |
         FIELD=${{ matrix.field.name }}
         FIELD_DIR=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_field_$FIELD -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
 
-        if [[ "${{ needs.calculate-conditions.outputs.conditional-testing }}" == "true" ]]; then
+        if [[ "${{ needs.check-conditional-testing.outputs.conditional-testing }}" == "true" ]]; then
           BUILD_TAGS="-tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }}"
         else
           BUILD_TAGS=""
@@ -664,8 +610,7 @@ jobs:
   test-ring:
     name: Test ${{ matrix.ring.name }} on ${{ matrix.backend }}
     runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
-    if: needs.calculate-conditions.outputs.should-run == 'true'
+    needs: [check-conditional-testing, check-changed-files, check-format, extract-cuda-backend-branch]
     strategy:
       matrix:
         # not supported in Metal yet
@@ -678,9 +623,9 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
-        ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
+        ref: ${{ needs.check-conditional-testing.outputs.checkout-ref }}
     - name: Checkout CUDA backend
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.ring == 'true'
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.ring == 'true'
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
         repository: ingonyama-zk/icicle-cuda-backend
@@ -689,7 +634,7 @@ jobs:
         ref: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
     - name: Set feature and build flags
       id: feature_flags
-      if: needs.calculate-conditions.outputs.conditional-testing == 'true' && needs.check-changed-files.outputs.ring == 'true'
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'true' && needs.check-changed-files.outputs.ring == 'true'
       run: |
         FEATURE_FLAGS="-DDISABLE_ALL_FEATURES=ON -DHASH=ON"
         CPP_TEST_REGEX="RingTest|ModArith|MatrixTest|Symbol|Program"
@@ -722,24 +667,24 @@ jobs:
 
     - name: Build ring
       working-directory: ./icicle
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.ring == 'true'
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.ring == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DRING=${{ matrix.ring.name }} -DCUDA_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
         cmake --build build
     - name: Run C++ ring tests
       working-directory: ./icicle/build/tests
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.ring == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true'))
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.ring == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true'))
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
-        if [[ "${{ needs.calculate-conditions.outputs.conditional-testing }}" == "true" ]]; then
+        if [[ "${{ needs.check-conditional-testing.outputs.conditional-testing }}" == "true" ]]; then
           ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}"
         else
           ctest --output-on-failure
         fi
     - name: Run Rust ring tests
       working-directory: ./wrappers/rust/icicle-rings
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.ring == 'true' && needs.check-changed-files.outputs.rust == 'true')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.ring == 'true' && needs.check-changed-files.outputs.rust == 'true')
       run: |
         RING=${{ matrix.ring.name }}
         RING_DIR=icicle-${RING//_/-}
@@ -747,7 +692,7 @@ jobs:
         export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
         cd ./$RING_DIR
         FEATURES=""
-        if [[ "${{ needs.calculate-conditions.outputs.conditional-testing }}" == "true" ]]; then
+        if [[ "${{ needs.check-conditional-testing.outputs.conditional-testing }}" == "true" ]]; then
           if [[ -z "${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}" ]]; then
             FEATURES="--no-default-features"
           else
@@ -763,9 +708,8 @@ jobs:
   test-hash:
     name: Test hash on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
-    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
-    if: needs.calculate-conditions.outputs.should-run == 'true'
-    # needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    needs: [check-conditional-testing, check-changed-files, check-format, extract-cuda-backend-branch]
+    # needs: [check-conditional-testing, check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
@@ -800,9 +744,9 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
-        ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
+        ref: ${{ needs.check-conditional-testing.outputs.checkout-ref }}
     - name: Checkout ${{ matrix.backend_upper }} backend
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.hash == 'true'
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.hash == 'true'
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
         repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
@@ -812,21 +756,21 @@ jobs:
 
     - name: Build
       working-directory: ./icicle
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.hash == 'true'
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.hash == 'true'
       run:  |
         mkdir -p build && rm -rf build/*
         cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -DHASH=ON -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
         cmake --build build
     - name: Run C++ hash tests
       working-directory: ./icicle/build/tests
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.hash == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true'))
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.hash == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true'))
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         ctest --output-on-failure -R "HashApiTest" -E "${{ matrix.skip-cpp }}"
 
     - name: Run Rust hash tests
       working-directory: ./wrappers/rust/icicle-hash
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.rust == 'true')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.rust == 'true')
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
@@ -834,14 +778,14 @@ jobs:
         rustup override set nightly
         cargo test --release --verbose -- ${{ matrix.skip-rust }}
     - name: Setup go
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.go == 'true')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.go == 'true')
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
         cache: false
     - name: Run Go hash and merkle tree tests
       working-directory: ./wrappers/golang
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.go == 'true')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.go == 'true')
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_hash -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
@@ -851,9 +795,8 @@ jobs:
   test-runtime:
     name: Test runtime on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
-    needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch]
-    if: needs.calculate-conditions.outputs.should-run == 'true'
-    # needs: [calculate-conditions, check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    needs: [check-conditional-testing, check-changed-files, check-format, extract-cuda-backend-branch]
+    # needs: [check-conditional-testing, check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
@@ -883,9 +826,9 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
+          ref: ${{ needs.check-conditional-testing.outputs.checkout-ref }}
       - name: Checkout ${{ matrix.backend_upper }} backend
-        if: needs.calculate-conditions.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.runtime == 'true'
+        if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.runtime == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
@@ -894,20 +837,20 @@ jobs:
           ref: ${{ env.BACKEND_BRANCH }}
       - name: Build Runtime
         working-directory: ./icicle
-        if: needs.calculate-conditions.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.runtime == 'true'
+        if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.runtime == 'true'
         run: |
           mkdir -p build && rm -rf build/*
           cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -D${{ matrix.backend_upper }}_BACKEND=local -S . -B build
           cmake --build build
       - name: Run C++ Runtime Tests
         working-directory: ./icicle/build/tests
-        if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.runtime == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true'))
+        if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.runtime == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true'))
         run: |
           export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
           ctest --output-on-failure -R "DeviceApiTest"
       - name: Run Rust Runtime Tests
         working-directory: ./wrappers/rust/icicle-runtime
-        if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.rust == 'true')
+        if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.rust == 'true')
         run: |
           export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
           export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
@@ -915,14 +858,14 @@ jobs:
           rustup override set nightly
           cargo test --release --verbose
       - name: Setup go
-        if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.go == 'true')
+        if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.go == 'true')
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
         with:
           go-version: '1.22.0'
           cache: false
       - name: Run Golang Runtime Tests
         working-directory: ./wrappers/golang/runtime
-        if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.go == 'true')
+        if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.go == 'true')
         run: |
           export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
           export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_device -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
@@ -931,17 +874,16 @@ jobs:
   test-pqc-ml-kem:
     name: Test PQC ML-KEM
     runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [calculate-conditions, check-changed-files, check-format]
-    if: needs.calculate-conditions.outputs.should-run == 'true'
+    needs: [check-conditional-testing, check-changed-files, check-format]
     steps:
     - name: Checkout Repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
-        ref: ${{ needs.calculate-conditions.outputs.checkout-ref }}
+        ref: ${{ needs.check-conditional-testing.outputs.checkout-ref }}
 
     - name: Build PQC library & tests
       working-directory: ./icicle
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.pqc == 'true'
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.pqc == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -DCUDA_PQC_BACKEND=ON -S . -B build
@@ -949,25 +891,25 @@ jobs:
 
     - name: Run backend specific PQC Tests
       working-directory: ./icicle/build/backend/cuda_pqc/tests
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.cuda-pqc-backend == 'true')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.cuda-pqc-backend == 'true')
       run: |
         ctest --output-on-failure
 
     - name: Run C++ PQC Tests
       working-directory: ./icicle/build/tests
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.cpp == 'true')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.cpp == 'true')
       run: |
         ./test_pqc_api --output-on-failure
 
     - name: Run Rust ML-KEM Tests
       working-directory: ./wrappers/rust/icicle-pqc
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.rust == 'true')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.rust == 'true')
       run: |
         export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
         cargo test --release --verbose
 
     - name: Setup go
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.go == 'true')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.go == 'true')
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
@@ -975,7 +917,7 @@ jobs:
 
     - name: Test GoLang PQC
       working-directory: ./wrappers/golang/pqc
-      if: needs.calculate-conditions.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.go == 'true')
+      if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.go == 'true')
       run: |
         export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_pqc -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
         go test ./tests -count=1 -failfast -p 2 -timeout 10m -v
