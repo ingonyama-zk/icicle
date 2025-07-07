@@ -53,11 +53,7 @@ pub trait Projective:
     }
 
     fn zero() -> Self {
-        Self::from_xyz(
-            Self::BaseField::zero(),
-            Self::BaseField::one(),
-            Self::BaseField::zero(),
-        )
+        Self::from_xyz(Self::BaseField::zero(), Self::BaseField::one(), Self::BaseField::zero())
     }
 }
 
@@ -102,19 +98,6 @@ macro_rules! impl_projective {
                     pub(crate) fn is_on_curve(point: *const $projective) -> bool;
                 }
                 unsafe { is_on_curve(&self as *const Self) }
-            }
-        }
-
-        impl icicle_core::traits::GenerateRandom for $projective {
-            fn generate_random(size: usize) -> Vec<Self> {
-                extern "C" {
-                    #[link_name = concat!($curve_prefix, "_generate_projective_points")]
-                    pub(crate) fn generate_projective_points(points: *mut $projective, size: usize);
-                }
-
-                let mut res = vec![Self::zero(); size];
-                unsafe { generate_projective_points(&mut res[..] as *mut _ as *mut $projective, size) };
-                res
             }
         }
 
@@ -203,7 +186,7 @@ macro_rules! impl_projective {
                 Self {
                     x: aff.x,
                     y: aff.y,
-                    z: <$base_field as icicle_core::bignum::BigNum>::from_bytes_le(&[1]),
+                    z: $base_field::one(),
                 }
             }
         }
@@ -219,6 +202,8 @@ macro_rules! impl_projective {
                 aff
             }
         }
+
+        icicle_core::impl_generate_random!($projective, concat!($curve_prefix, "_generate_projective_points"));
 
         icicle_core::impl_montgomery_convertible!(
             $projective,

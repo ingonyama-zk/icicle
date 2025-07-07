@@ -53,19 +53,7 @@ macro_rules! impl_affine {
             }
         }
 
-        impl icicle_core::traits::GenerateRandom for $affine {
-            fn generate_random(size: usize) -> Vec<Self> {
-                extern "C" {
-                    #[link_name = concat!($curve_prefix, "_generate_affine_points")]
-                    pub(crate) fn generate_affine_points(points: *mut $affine, size: usize);
-                }
-
-                let mut res = vec![$affine::zero(); size];
-                unsafe { generate_affine_points(&mut res as *mut _ as *mut $affine, size) };
-                res
-            }
-        }
-
+        icicle_core::impl_generate_random!($affine, concat!($curve_prefix, "_generate_affine_points"));
         icicle_core::impl_montgomery_convertible!($affine, concat!($curve_prefix, "_affine_convert_montgomery"));
     };
 }

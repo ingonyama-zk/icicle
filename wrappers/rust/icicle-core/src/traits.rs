@@ -19,7 +19,7 @@ macro_rules! impl_generate_random {
             fn generate_random(size: usize) -> Vec<$obj> {
                 extern "C" {
                     #[link_name = $generate_random_function_name]
-                    pub(crate) fn generate_random_ffi(scalars: *mut $obj, size: usize);
+                    pub(crate) fn generate_random_ffi(elements: *mut $obj, size: usize);
                 }
 
                 let mut res = vec![$obj::zero(); size];

@@ -74,7 +74,6 @@ pub trait BigNum:
     fn debug_fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "{}", self.to_string())
     }
-
 }
 
 #[macro_export]

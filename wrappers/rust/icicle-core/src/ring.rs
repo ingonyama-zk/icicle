@@ -11,7 +11,13 @@ macro_rules! impl_integer_ring {
         $use_ffi_for_eq:expr,
         $use_ffi_for_from_u32:expr
     ) => {
-        icicle_core::impl_bignum!($ring, $ring_prefix, $num_limbs, $use_ffi_for_eq, $use_ffi_for_from_u32);
+        icicle_core::impl_bignum!(
+            $ring,
+            $ring_prefix,
+            $num_limbs,
+            $use_ffi_for_eq,
+            $use_ffi_for_from_u32
+        );
 
         impl icicle_core::ring::IntegerRing for $ring {}
 
