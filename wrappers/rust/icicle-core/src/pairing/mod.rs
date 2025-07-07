@@ -47,7 +47,7 @@ macro_rules! impl_pairing {
                 p: &<$curve as icicle_core::curve::Curve>::Affine,
                 q: &<$curve_g2 as icicle_core::curve::Curve>::Affine,
             ) -> Result<$target_field, IcicleError> {
-                let mut result = <$target_field as icicle_core::traits::Zero>::zero();
+                let mut result = $target_field::zero();
                 unsafe {
                     $curve_prefix_ident::pairing_ffi(
                         p as *const <$curve as icicle_core::curve::Curve>::Affine,

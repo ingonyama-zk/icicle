@@ -1,7 +1,6 @@
 use crate::bignum::BigNum;
 use crate::polynomial_ring::{flatten_polyring_slice, PolynomialRing};
 use crate::ring::IntegerRing;
-use crate::traits::Zero;
 use crate::{
     curve::Curve,
     field::Field,
@@ -112,7 +111,7 @@ pub fn check_point_equality<C: Curve>() {
 
 pub fn check_montgomery_convert_host<T>()
 where
-    T: Debug + Clone + PartialEq + Zero + GenerateRandom + MontgomeryConvertible,
+    T: Debug + Clone + PartialEq + GenerateRandom + MontgomeryConvertible,
 {
     let size = 1 << 10;
     let mut elements = T::generate_random(size);
@@ -126,7 +125,7 @@ where
 
 pub fn check_montgomery_convert_device<T>()
 where
-    T: Debug + Clone + PartialEq + Zero + GenerateRandom + MontgomeryConvertible,
+    T: Debug + Default + Clone + PartialEq + GenerateRandom + MontgomeryConvertible,
 {
     let mut stream = IcicleStream::create().unwrap();
 
@@ -141,7 +140,7 @@ where
     T::to_mont(&mut d_elements, &stream).unwrap();
     T::from_mont(&mut d_elements, &stream).unwrap();
 
-    let mut elements_copy = vec![T::zero(); size];
+    let mut elements_copy = vec![T::default(); size];
     d_elements
         .copy_to_host_async(HostSlice::from_mut_slice(&mut elements_copy), &stream)
         .unwrap();

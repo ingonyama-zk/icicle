@@ -4,7 +4,7 @@ use crate::curve::Curve;
 use crate::{
     ecntt::*,
     ntt::{NTTConfig, NTTDir, Ordering},
-    traits::{GenerateRandom, Zero},
+    traits::GenerateRandom,
 };
 
 pub fn check_ecntt<C: Curve>()

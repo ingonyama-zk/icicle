@@ -1,9 +1,7 @@
 use std::fmt::{Debug, Display};
 
-use crate::traits::Zero;
-
 pub trait BigNum:
-    Display + Debug + Copy + PartialEq + Clone + Into<Self::Limbs> + From<Self::Limbs> + Send + Sync + Zero
+    Display + Debug + Default + Copy + PartialEq + Clone + Into<Self::Limbs> + From<Self::Limbs> + Send + Sync
 {
     const LIMBS_SIZE: usize;
     type Limbs: AsRef<[u32]> + AsMut<[u32]> + Copy;
@@ -39,6 +37,10 @@ pub trait BigNum:
             limbs[i] = u32::from_le_bytes(chunk_array);
         }
         result
+    }
+
+    fn zero() -> Self {
+        Self::default()
     }
 
     fn from_hex(s: &str) -> Self {
@@ -82,7 +84,9 @@ macro_rules! impl_bignum {
 
         impl Default for $bignum {
             fn default() -> Self {
-                <Self as icicle_core::traits::Zero>::zero()
+                Self {
+                    limbs: [0u32; $num_limbs],
+                }
             }
         }
 
@@ -120,12 +124,6 @@ macro_rules! impl_bignum {
         impl std::fmt::Debug for $bignum {
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
                 <Self as icicle_core::bignum::BigNum>::debug_fmt(self, f)
-            }
-        }
-
-        impl icicle_core::traits::Zero for $bignum {
-            fn zero() -> Self {
-                Self::from([0; <Self as icicle_core::bignum::BigNum>::LIMBS_SIZE])
             }
         }
 

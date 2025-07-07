@@ -1,7 +1,10 @@
+use crate::affine::Affine;
+use crate::bignum::BigNum;
 use crate::curve::Curve;
 use crate::msm::{msm, precompute_bases, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR, MSM};
+use crate::projective::Projective;
 use crate::ring::IntegerRing;
-use crate::traits::{GenerateRandom, MontgomeryConvertible, Zero};
+use crate::traits::{GenerateRandom, MontgomeryConvertible};
 use icicle_runtime::{memory::HostOrDeviceSlice, test_utilities};
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},

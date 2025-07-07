@@ -1,7 +1,8 @@
 #![allow(unused_imports)]
+use crate::bignum::BigNum;
 use crate::polynomial_ring::PolynomialRing;
 use crate::ring::IntegerRing;
-use crate::traits::{Arithmetic, GenerateRandom, Zero};
+use crate::traits::{Arithmetic, GenerateRandom};
 use crate::vec_ops::poly_vecops::{polyvec_add, polyvec_mul, polyvec_mul_by_scalar, polyvec_sub, polyvec_sum_reduce};
 use crate::vec_ops::{
     accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, inv_scalars, mixed_mul_scalars,

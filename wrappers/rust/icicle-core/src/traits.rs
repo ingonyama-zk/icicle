@@ -22,7 +22,7 @@ macro_rules! impl_generate_random_ffi {
                     pub(crate) fn generate_random_ffi(scalars: *mut $obj, size: usize);
                 }
 
-                let mut res = vec![<$obj as icicle_core::traits::Zero>::zero(); size];
+                let mut res = vec![$obj::zero(); size];
                 unsafe { generate_random_ffi(&mut res[..] as *mut _ as *mut $obj, size) };
                 res
             }
@@ -120,7 +120,7 @@ macro_rules! impl_arithmetic_ffi {
                     pub(crate) fn add(a: *const $obj, b: *const $obj, result: *mut $obj);
                 }
 
-                let mut result = <Self as icicle_core::traits::Zero>::zero();
+                let mut result = Self::zero();
                 unsafe {
                     add(
                         &self as *const $obj,
@@ -141,7 +141,7 @@ macro_rules! impl_arithmetic_ffi {
                     pub(crate) fn sub(a: *const $obj, b: *const $obj, result: *mut $obj);
                 }
 
-                let mut result = <Self as icicle_core::traits::Zero>::zero();
+                let mut result = Self::zero();
                 unsafe {
                     sub(
                         &self as *const $obj,
@@ -162,7 +162,7 @@ macro_rules! impl_arithmetic_ffi {
                     pub(crate) fn mul(a: *const $obj, b: *const $obj, result: *mut $obj);
                 }
 
-                let mut result = <Self as icicle_core::traits::Zero>::zero();
+                let mut result = Self::zero();
                 unsafe {
                     mul(
                         &self as *const $obj,
@@ -181,7 +181,7 @@ macro_rules! impl_arithmetic_ffi {
                     pub(crate) fn sqr(a: *const $obj, result: *mut $obj);
                 }
 
-                let mut result = <Self as icicle_core::traits::Zero>::zero();
+                let mut result = Self::zero();
                 unsafe {
                     sqr(self as *const $obj, &mut result as *mut $obj);
                 }
@@ -194,7 +194,7 @@ macro_rules! impl_arithmetic_ffi {
                     pub(crate) fn pow(a: *const $obj, exp: usize, result: *mut $obj);
                 }
 
-                let mut result = <Self as icicle_core::traits::Zero>::zero();
+                let mut result = Self::zero();
                 unsafe {
                     pow(self as *const $obj, exp, &mut result as *mut $obj);
                 }
@@ -202,10 +202,6 @@ macro_rules! impl_arithmetic_ffi {
             }
         }
     };
-}
-
-pub trait Zero {
-    fn zero() -> Self;
 }
 
 pub trait Invertible: Sized {
@@ -224,7 +220,7 @@ macro_rules! impl_invertible_ffi {
                     #[link_name = concat!($obj_prefix, "_inv")]
                     pub(crate) fn inverse(a: *const $obj, result: *mut $obj);
                 }
-                let mut result = <Self as icicle_core::traits::Zero>::zero();
+                let mut result = Self::zero();
                 unsafe { inverse(self as *const $obj, &mut result as *mut $obj) };
                 result
             }

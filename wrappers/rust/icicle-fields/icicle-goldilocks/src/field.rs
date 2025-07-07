@@ -1,6 +1,7 @@
 use icicle_core::{impl_field, impl_generate_random_ffi, impl_montgomery_convertible_ffi};
 
-use icicle_runtime::errors::{eIcicleError, IcicleError};
+use icicle_core::bignum::BigNum;
+use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 

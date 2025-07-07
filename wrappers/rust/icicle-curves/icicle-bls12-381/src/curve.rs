@@ -1,3 +1,6 @@
+use icicle_core::affine::Affine;
+use icicle_core::bignum::BigNum;
+use icicle_core::projective::Projective;
 use icicle_core::{impl_bignum, impl_curve, impl_field, impl_generate_random_ffi, impl_montgomery_convertible_ffi};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 

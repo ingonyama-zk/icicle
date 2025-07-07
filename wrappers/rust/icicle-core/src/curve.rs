@@ -58,7 +58,7 @@ macro_rules! impl_curve {
                 }
 
                 unsafe {
-                    let mut result = <$projective_type as icicle_core::traits::Zero>::zero();
+                    let mut result = $projective_type::zero();
                     generator(&mut result);
                     result
                 }

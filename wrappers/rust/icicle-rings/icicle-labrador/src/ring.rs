@@ -1,5 +1,6 @@
+use icicle_core::bignum::BigNum;
 use icicle_core::impl_integer_ring;
-use icicle_core::{impl_generate_random_ffi, impl_montgomery_convertible_ffi, vec_ops::VecOpsConfig};
+use icicle_core::{impl_generate_random_ffi, impl_montgomery_convertible_ffi};
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 
 pub(crate) const SCALAR_LIMBS: usize = 2;

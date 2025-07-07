@@ -256,6 +256,7 @@ macro_rules! impl_sumcheck {
         mod $field_prefix_ident {
             use crate::sumcheck::$field;
             use crate::symbol::$field_prefix_ident::RingSymbol;
+            use icicle_core::bignum::BigNum;
             use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgram};
             use icicle_core::ring::IntegerRing;
             use icicle_core::sumcheck::{
@@ -452,7 +453,7 @@ macro_rules! impl_sumcheck {
                     unsafe { icicle_sumcheck_get_challenge_size(self.handle, &mut challenge_size).wrap()? };
 
                     // Initialize the challenge vector with zeros; will be resized after getting the actual size from FFI
-                    let mut challenge_vector = vec![<$field as icicle_core::traits::Zero>::zero(); challenge_size];
+                    let mut challenge_vector = vec![<$field>::zero(); challenge_size];
                     unsafe {
                         icicle_sumcheck_get_challenge_vector(
                             self.handle,
@@ -476,67 +477,6 @@ macro_rules! impl_sumcheck {
                     }
                 }
             }
-            // impl Serialize for SumcheckProof {
-            //     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            //     where
-            //         S: Serializer,
-            //     {
-            //         let mut size = 0;
-            //         unsafe {
-            //             icicle_sumcheck_proof_get_serialized_size(self.handle, &mut size)
-            //                 .wrap_value(size)
-            //                 .map_err(serde::ser::Error::custom)?;
-            //             let mut buffer = vec![0u8; size];
-            //             icicle_sumcheck_proof_serialize(self.handle, buffer.as_mut_ptr(), buffer.len())
-            //                 .wrap()
-            //                 .map_err(serde::ser::Error::custom)?;
-            //             serializer.serialize_bytes(&buffer)
-            //         }
-            //     }
-            // }
-            // impl<'de> Deserialize<'de> for SumcheckProof {
-            //     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            //     where
-            //         D: Deserializer<'de>,
-            //     {
-            //         struct SumcheckProofVisitor;
-
-            //         impl<'de> Visitor<'de> for SumcheckProofVisitor {
-            //             type Value = SumcheckProof;
-
-            //             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            //                 formatter.write_str("a byte array representing a SumcheckProof")
-            //             }
-
-            //             fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-            //             where
-            //                 E: de::Error,
-            //             {
-            //                 let mut handle = std::ptr::null();
-            //                 unsafe {
-            //                     icicle_sumcheck_proof_deserialize(&mut handle, v.as_ptr(), v.len())
-            //                         .wrap_value(SumcheckProof { handle })
-            //                         .map_err(de::Error::custom)
-            //                 }
-            //             }
-            //             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            //             where
-            //                 A: serde::de::SeqAccess<'de>,
-            //             {
-            //                 let mut buffer = Vec::with_capacity(
-            //                     seq.size_hint()
-            //                         .unwrap_or(0),
-            //                 );
-            //                 while let Some(byte) = seq.next_element::<u8>()? {
-            //                     buffer.push(byte);
-            //                 }
-            //                 self.visit_bytes(&buffer)
-            //             }
-            //         }
-
-            //         deserializer.deserialize_bytes(SumcheckProofVisitor)
-            //     }
-            // }
 
             impl Handle for SumcheckWrapper {
                 fn handle(&self) -> *const c_void {

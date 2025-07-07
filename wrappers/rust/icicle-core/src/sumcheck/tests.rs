@@ -1,8 +1,9 @@
+use crate::bignum::BigNum;
 use crate::hash::Hasher;
 use crate::program::{PreDefinedProgram, ReturningValueProgram};
 use crate::ring::IntegerRing;
 use crate::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
-use crate::traits::{GenerateRandom, Zero};
+use crate::traits::GenerateRandom;
 use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
 use serde::de::DeserializeOwned;
 use serde::Serialize;

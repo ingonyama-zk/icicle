@@ -1,10 +1,10 @@
+use crate::bignum::BigNum;
 use crate::jl_projection::{
     get_jl_matrix_rows, get_jl_matrix_rows_as_polyring, jl_projection, JLProjection, JLProjectionPolyRing,
 };
 use crate::polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut, PolynomialRing};
 use crate::ring::IntegerRing;
 use crate::traits::GenerateRandom;
-use crate::traits::Zero;
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 use rand::Rng;

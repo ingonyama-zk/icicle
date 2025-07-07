@@ -1,11 +1,11 @@
 use crate::{
     bignum::BigNum,
-    traits::{GenerateRandom, MontgomeryConvertible, Zero},
+    traits::{GenerateRandom, MontgomeryConvertible},
 };
 use std::fmt::Debug;
 
 /// An [affine](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) elliptic curve point.
-pub trait Affine: Zero + Debug + PartialEq + Copy + Clone + MontgomeryConvertible + GenerateRandom {
+pub trait Affine: Debug + Default + PartialEq + Copy + Clone + MontgomeryConvertible + GenerateRandom {
     type BaseField: BigNum;
 
     fn x(&self) -> Self::BaseField;
@@ -16,6 +16,8 @@ pub trait Affine: Zero + Debug + PartialEq + Copy + Clone + MontgomeryConvertibl
         Self::from_xy(Self::BaseField::from(x), Self::BaseField::from(y))
     }
 
+    // While this is not a true zero point and not even a valid point, it's still useful
+    // both as a handy default as well as a representation of zero points in other codebases
     fn zero() -> Self {
         Self::from_xy(Self::BaseField::zero(), Self::BaseField::zero())
     }
@@ -28,7 +30,7 @@ macro_rules! impl_affine {
         $curve_prefix:literal,
         $base_field:ident
     ) => {
-        #[derive(Debug, PartialEq, Copy, Clone)]
+        #[derive(Debug, Default, PartialEq, Copy, Clone)]
         #[repr(C)]
         pub struct $affine {
             x: $base_field,
@@ -58,20 +60,12 @@ macro_rules! impl_affine {
                     pub(crate) fn generate_affine_points(points: *mut $affine, size: usize);
                 }
 
-                let mut res = vec![<$affine as icicle_core::traits::Zero>::zero(); size];
+                let mut res = vec![$affine::zero(); size];
                 unsafe { generate_affine_points(&mut res as *mut _ as *mut $affine, size) };
                 res
             }
         }
 
         icicle_core::impl_montgomery_convertible_ffi!($affine, concat!($curve_prefix, "_affine_convert_montgomery"));
-
-        impl icicle_core::traits::Zero for $affine {
-            // While this is not a true zero point and not even a valid point, it's still useful
-            // both as a handy default as well as a representation of zero points in other codebases
-            fn zero() -> Self {
-                <Self as icicle_core::affine::Affine>::zero()
-            }
-        }
     };
 }

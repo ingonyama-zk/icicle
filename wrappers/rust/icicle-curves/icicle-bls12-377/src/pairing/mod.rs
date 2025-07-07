@@ -1,5 +1,6 @@
 use crate::curve::CurveCfg;
 use crate::curve::G2CurveCfg;
+use icicle_core::bignum::BigNum;
 use icicle_core::impl_field;
 use icicle_core::impl_pairing;
 use icicle_core::pairing::Pairing;

@@ -9,7 +9,7 @@ use icicle_runtime::{memory::HostSlice, test_utilities};
 static DEVICES: [&str; 2] = ["ref", "main"];
 // static devices: [&str; 1] = ["ref"];
 
-fn xR_N_R_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Criterion) {
+fn x_r_n_r_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Criterion) {
     macro_rules! testid {
         () => {
             "256_n_r_battery_N={}_R={}_device={}"

@@ -41,7 +41,7 @@ macro_rules! impl_univariate_polynomial_api {
         $ring_prefix_ident:ident,
         $ring:ident
     ) => {
-        use icicle_core::traits::Zero;
+        use icicle_core::bignum::BigNum;
         use icicle_core::{polynomials::UnivariatePolynomial, ring::IntegerRing};
         use icicle_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
         use std::{
@@ -456,8 +456,9 @@ macro_rules! impl_polynomial_tests {
         use icicle_runtime::test_utilities;
         use std::sync::Once;
 
+        use icicle_core::bignum::BigNum;
         use icicle_core::ring::IntegerRing;
-        use icicle_core::traits::{GenerateRandom, Zero};
+        use icicle_core::traits::GenerateRandom;
 
         type Poly = DensePolynomial;
 

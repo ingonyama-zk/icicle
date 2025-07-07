@@ -2,7 +2,7 @@ use crate::{
     affine::Affine,
     bignum::BigNum,
     field::Field,
-    traits::{GenerateRandom, MontgomeryConvertible, Zero},
+    traits::{GenerateRandom, MontgomeryConvertible},
 };
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Sub};
@@ -10,6 +10,7 @@ use std::ops::{Add, Mul, Sub};
 /// A [projective](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) elliptic curve point.
 pub trait Projective:
     Debug
+    + Default
     + PartialEq
     + Copy
     + Clone
@@ -20,7 +21,6 @@ pub trait Projective:
     + Mul<Self::ScalarField, Output = Self>
     + From<Self::Affine>
     + Into<Self::Affine>
-    + Zero
 {
     type ScalarField: Field;
     type BaseField: BigNum;
@@ -51,6 +51,14 @@ pub trait Projective:
     fn from_affine(aff: Self::Affine) -> Self {
         Self::from(aff)
     }
+
+    fn zero() -> Self {
+        Self::from_xyz(
+            Self::BaseField::zero(),
+            Self::BaseField::zero(),
+            Self::BaseField::zero(),
+        )
+    }
 }
 
 #[macro_export]
@@ -62,7 +70,7 @@ macro_rules! impl_projective {
         $base_field:ident,
         $affine:ident
     ) => {
-        #[derive(Debug, Copy, Clone)]
+        #[derive(Debug, Default, Copy, Clone)]
         #[repr(C)]
         pub struct $projective {
             x: $base_field,
@@ -104,7 +112,7 @@ macro_rules! impl_projective {
                     pub(crate) fn generate_projective_points(points: *mut $projective, size: usize);
                 }
 
-                let mut res = vec![<Self as icicle_core::traits::Zero>::zero(); size];
+                let mut res = vec![Self::zero(); size];
                 unsafe { generate_projective_points(&mut res[..] as *mut _ as *mut $projective, size) };
                 res
             }
@@ -128,7 +136,7 @@ macro_rules! impl_projective {
                     #[link_name = concat!($curve_prefix, "_ecadd")]
                     pub(crate) fn add(point1: *const $projective, point2: *const $projective, result: *mut $projective);
                 }
-                let mut result = <Self as icicle_core::traits::Zero>::zero();
+                let mut result = Self::zero();
                 unsafe {
                     add(
                         &self as *const Self,
@@ -148,7 +156,7 @@ macro_rules! impl_projective {
                     #[link_name = concat!($curve_prefix, "_ecsub")]
                     pub(crate) fn sub(point1: *const $projective, point2: *const $projective, result: *mut $projective);
                 }
-                let mut result = <Self as icicle_core::traits::Zero>::zero();
+                let mut result = Self::zero();
                 unsafe {
                     sub(
                         &self as *const Self,
@@ -172,7 +180,7 @@ macro_rules! impl_projective {
                         result: *mut $projective,
                     );
                 }
-                let mut result = <Self as icicle_core::traits::Zero>::zero();
+                let mut result = Self::zero();
                 unsafe {
                     mul_scalar(
                         &self as *const Self,
@@ -190,7 +198,7 @@ macro_rules! impl_projective {
         {
             fn from(aff: $affine) -> Self {
                 if aff == <$affine as icicle_core::affine::Affine>::zero() {
-                    return <Self as icicle_core::traits::Zero>::zero();
+                    return Self::zero();
                 }
                 Self {
                     x: aff.x,
@@ -206,7 +214,7 @@ macro_rules! impl_projective {
                     #[link_name = concat!($curve_prefix, "_to_affine")]
                     pub(crate) fn proj_to_affine(point: *const $projective, point_out: *mut $affine);
                 }
-                let mut aff = <$affine as icicle_core::traits::Zero>::zero();
+                let mut aff = $affine::zero();
                 unsafe { proj_to_affine(&self as *const Self, &mut aff as *mut _ as *mut $affine) };
                 aff
             }
@@ -216,15 +224,5 @@ macro_rules! impl_projective {
             $projective,
             concat!($curve_prefix, "_projective_convert_montgomery")
         );
-
-        impl icicle_core::traits::Zero for $projective {
-            fn zero() -> Self {
-                Self {
-                    x: <$base_field as icicle_core::traits::Zero>::zero(),
-                    y: <$base_field as icicle_core::traits::Zero>::zero(),
-                    z: <$base_field as icicle_core::traits::Zero>::zero(),
-                }
-            }
-        }
     };
 }

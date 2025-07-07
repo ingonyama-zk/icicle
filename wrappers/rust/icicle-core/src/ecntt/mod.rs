@@ -159,11 +159,12 @@ macro_rules! impl_ecntt_bench {
       $curve:ident
     ) => {
         use criterion::{black_box, criterion_group, criterion_main, Criterion};
+        use icicle_core::projective::Projective;
         use icicle_core::{
             curve::Curve,
             ecntt::{ecntt, ECNTT},
             ntt::{ntt, NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NttAlgorithm, Ordering, NTT},
-            traits::{GenerateRandom, Zero},
+            traits::GenerateRandom,
             vec_ops::VecOps,
         };
         use icicle_runtime::{
