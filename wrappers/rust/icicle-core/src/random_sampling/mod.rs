@@ -1,7 +1,7 @@
 use crate::field::PrimeField;
 use crate::polynomial_ring::PolynomialRing;
 use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{errors::IcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
@@ -116,7 +116,7 @@ pub trait ChallengeSpacePolynomialsSampling<T: PolynomialRing> {
         twos: usize,
         norm: usize,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 /// Samples Rq challenge polynomials with {0, 1, 2, -1, -2} coefficients.
@@ -146,7 +146,7 @@ pub fn challenge_space_polynomials_sampling<T>(
     twos: usize,
     norm: usize,
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     T: PolynomialRing,
     T::Base: PrimeField,
@@ -183,10 +183,12 @@ macro_rules! impl_challenge_space_polynomials_sampling {
                 twos: usize,
                 norm: usize,
                 output: &mut (impl HostOrDeviceSlice<$poly_ring_type> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 if output.is_on_device() && !output.is_on_active_device() {
-                    eprintln!("Output is on an inactive device");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Output is on an inactive device",
+                    ));
                 }
 
                 let mut cfg_clone = cfg.clone();
