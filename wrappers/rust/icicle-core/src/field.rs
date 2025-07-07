@@ -70,7 +70,7 @@ pub trait PrimeField:
     }
 
     fn debug_fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self)
     }
 }
 
@@ -299,7 +299,7 @@ macro_rules! impl_montgomery_convertible {
                 values: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
                 stream: &IcicleStream,
                 is_into: bool,
-            ) -> eIcicleError {
+            ) -> Result<(), IcicleError> {
                 extern "C" {
                     fn $convert_montgomery_function_name(
                         values: *const $field,
@@ -312,7 +312,10 @@ macro_rules! impl_montgomery_convertible {
 
                 // check device slice is on active device
                 if values.is_on_device() && !values.is_on_active_device() {
-                    panic!("input not allocated on the active device");
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "input not allocated on the active device",
+                    ));
                 }
                 let mut config = VecOpsConfig::default();
                 config.is_a_on_device = values.is_on_device();
@@ -326,16 +329,23 @@ macro_rules! impl_montgomery_convertible {
                         &config,
                         values.as_mut_ptr(),
                     )
+                    .wrap()
                 }
             }
         }
 
         impl MontgomeryConvertible for $field {
-            fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
+            fn to_mont(
+                values: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+                stream: &IcicleStream,
+            ) -> Result<(), IcicleError> {
                 $field::convert_montgomery(values, stream, true)
             }
 
-            fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
+            fn from_mont(
+                values: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+                stream: &IcicleStream,
+            ) -> Result<(), IcicleError> {
                 $field::convert_montgomery(values, stream, false)
             }
         }

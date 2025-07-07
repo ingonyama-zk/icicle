@@ -6,7 +6,7 @@ use icicle_core::{impl_field, impl_field_arithmetic, impl_generate_random, impl_
 use std::fmt::{Debug, Display};
 use std::ops::{Add, Mul, Sub};
 
-use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::errors::{eIcicleError, IcicleError};
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 

@@ -2,6 +2,7 @@ use crate::ring::ScalarRing;
 use icicle_core::field::PrimeField;
 use icicle_core::polynomial_ring::PolynomialRing;
 use icicle_core::traits::GenerateRandom;
+use icicle_runtime::{eIcicleError, IcicleError};
 
 // Define the Polynomial Ring Zq[X]/X^d+1
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -38,11 +39,16 @@ impl PolynomialRing for PolyRing {
         }
     }
 
-    fn from_slice(input: &[Self::Base]) -> Self {
-        assert_eq!(input.len(), Self::DEGREE);
+    fn from_slice(input: &[Self::Base]) -> Result<Self, IcicleError> {
+        if input.len() != Self::DEGREE {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "Input length does not match the degree of the polynomial ring",
+            ));
+        }
         let mut values = [ScalarRing::zero(); 64];
         values.copy_from_slice(input);
-        Self { values }
+        Ok(Self { values })
     }
 }
 

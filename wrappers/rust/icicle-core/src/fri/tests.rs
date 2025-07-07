@@ -23,7 +23,7 @@ pub fn check_fri<F: PrimeField>(
         let fri_config = FriConfig::default();
         let scalars = F::generate_random(SIZE as usize);
 
-        let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, F::one());
+        let transcript_config = FriTranscriptConfig::new_default_labels(transcript_hash, F::one());
 
         let merkle_tree_min_layer_to_store = 0;
 
@@ -31,8 +31,8 @@ pub fn check_fri<F: PrimeField>(
             &fri_config,
             &transcript_config,
             HostSlice::from_slice(&scalars),
-            &merkle_tree_leaves_hash,
-            &merkle_tree_compress_hash,
+            merkle_tree_leaves_hash,
+            merkle_tree_compress_hash,
             merkle_tree_min_layer_to_store,
         )
         .unwrap();
@@ -52,8 +52,8 @@ pub fn check_fri<F: PrimeField>(
             &fri_config,
             &transcript_config,
             &fri_proof_copy,
-            &merkle_tree_leaves_hash,
-            &merkle_tree_compress_hash,
+            merkle_tree_leaves_hash,
+            merkle_tree_compress_hash,
         )
         .unwrap();
         assert!(valid);
@@ -79,7 +79,7 @@ pub fn check_fri_on_device<F: PrimeField>(
         fri_config.stream_handle = *stream;
         let scalars = F::generate_random(SIZE as usize);
 
-        let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, F::one());
+        let transcript_config = FriTranscriptConfig::new_default_labels(transcript_hash, F::one());
 
         let merkle_tree_min_layer_to_store = 0;
 
@@ -92,8 +92,8 @@ pub fn check_fri_on_device<F: PrimeField>(
             &fri_config,
             &transcript_config,
             &scalars_d,
-            &merkle_tree_leaves_hash,
-            &merkle_tree_compress_hash,
+            merkle_tree_leaves_hash,
+            merkle_tree_compress_hash,
             merkle_tree_min_layer_to_store,
         )
         .unwrap();
@@ -105,8 +105,8 @@ pub fn check_fri_on_device<F: PrimeField>(
             &fri_config,
             &transcript_config,
             &fri_proof,
-            &merkle_tree_leaves_hash,
-            &merkle_tree_compress_hash,
+            merkle_tree_leaves_hash,
+            merkle_tree_compress_hash,
         )
         .unwrap();
         stream
@@ -139,7 +139,7 @@ pub fn check_fri_proof_serialization<F: PrimeField, S, D, T>(
     let fri_config = FriConfig::default();
     let scalars = F::generate_random(SIZE as usize);
 
-    let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, F::one());
+    let transcript_config = FriTranscriptConfig::new_default_labels(transcript_hash, F::one());
 
     let merkle_tree_min_layer_to_store = 0;
 
@@ -152,8 +152,8 @@ pub fn check_fri_proof_serialization<F: PrimeField, S, D, T>(
         &fri_config,
         &transcript_config,
         HostSlice::from_slice(&scalars),
-        &merkle_tree_leaves_hash,
-        &merkle_tree_compress_hash,
+        merkle_tree_leaves_hash,
+        merkle_tree_compress_hash,
         merkle_tree_min_layer_to_store,
     )
     .unwrap();
@@ -183,6 +183,20 @@ pub fn check_fri_proof_serialization<F: PrimeField, S, D, T>(
             assert_eq!(leaf, leaf_deserialized);
         }
     }
-    assert_eq!(fri_proof.get_final_poly(), fri_proof_deserialized.get_final_poly());
-    assert_eq!(fri_proof.get_pow_nonce(), fri_proof_deserialized.get_pow_nonce());
+    assert_eq!(
+        fri_proof
+            .get_final_poly()
+            .unwrap(),
+        fri_proof_deserialized
+            .get_final_poly()
+            .unwrap()
+    );
+    assert_eq!(
+        fri_proof
+            .get_pow_nonce()
+            .unwrap(),
+        fri_proof_deserialized
+            .get_pow_nonce()
+            .unwrap()
+    );
 }

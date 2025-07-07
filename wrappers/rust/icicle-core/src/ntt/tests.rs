@@ -26,7 +26,7 @@ where
     config
         .ext
         .set_bool(CUDA_NTT_FAST_TWIDDLES_MODE, fast_twiddles_mode);
-    let rou = get_root_of_unity::<F>(max_size);
+    let rou = get_root_of_unity::<F>(max_size).unwrap();
     initialize_domain(rou, &config).unwrap();
 }
 
@@ -107,7 +107,7 @@ where
     for test_size in test_sizes {
         test_utilities::test_set_main_device();
         let small_size: usize = test_size >> 1;
-        let test_size_rou = get_root_of_unity::<F>(test_size as u64);
+        let test_size_rou = get_root_of_unity::<F>(test_size as u64).unwrap();
         let mut scalars: Vec<F> = F::generate_random(small_size);
 
         for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
@@ -175,7 +175,7 @@ where
 {
     let test_sizes = [1 << 9, 1 << 10, 1 << 11, 1 << 13, 1 << 14, 1 << 16];
     for test_size in test_sizes {
-        let test_size_rou = get_root_of_unity::<F>((test_size << 1) as u64);
+        let test_size_rou = get_root_of_unity::<F>((test_size << 1) as u64).unwrap();
         let coset_generators = [test_size_rou, F::generate_random(1)[0]];
         let scalars: Vec<F> = F::generate_random(test_size);
 
@@ -239,7 +239,7 @@ where
     for test_size in test_sizes {
         let coset_generators = [
             F::generate_random(1)[0],
-            get_root_of_unity::<F>(test_size as u64),
+            get_root_of_unity::<F>(test_size as u64).unwrap(),
             F::one(),
         ];
         for coset_gen in coset_generators {
@@ -423,7 +423,7 @@ where
                                     .ext
                                     .set_int(CUDA_NTT_ALGORITHM, alg as i32);
                                 let mut ntt_result_h = vec![F::zero(); test_size * batch_size];
-                                let mut ntt_result_slice = HostSlice::from_mut_slice(&mut ntt_result_h);
+                                let ntt_result_slice = HostSlice::from_mut_slice(&mut ntt_result_h);
                                 ntt_inplace(&mut *scalars_d, NTTDir::kForward, &config).unwrap();
 
                                 scalars_d
@@ -436,7 +436,7 @@ where
 
                                 ntt_inplace(&mut *scalars_d, NTTDir::kInverse, &config).unwrap();
                                 scalars_d
-                                    .copy_to_host_async(&mut ntt_result_slice, &stream)
+                                    .copy_to_host_async(ntt_result_slice, &stream)
                                     .unwrap();
                                 stream
                                     .synchronize()
