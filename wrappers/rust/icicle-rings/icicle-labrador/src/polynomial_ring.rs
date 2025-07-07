@@ -11,6 +11,14 @@ pub struct PolyRing {
     values: [ScalarRing; 64],
 }
 
+impl Default for PolyRing {
+    fn default() -> Self {
+        Self {
+            values: [ScalarRing::default(); 64],
+        }
+    }
+}
+
 impl PolynomialRing for PolyRing {
     type Base = ScalarRing;
 
