@@ -141,6 +141,17 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       std::vector<Tq> Q_j_hat(r * n);
       // Q_j_hat = NTT(Q_j)
       ICICLE_CHECK(ntt(Q_j.data(), Q_j.size(), NTTDir::kForward, {}, Q_j_hat.data()));
+
+      if (TESTING) {
+        ConstZeroInstance cz{r, n};
+        cz.phi = Q_j_hat;
+        cz.b = Zq::neg(p[j]);
+        if (!witness_legit_const_zero_all_ntt(cz, S_hat)) {
+          std::cout << "Q_j eqn error for j = " << j << "\n";
+          exit(1);
+        }
+      }
+
       // Q_hat[j, :, :] = omega[k,j]* Q_hat[j, :, :]
       ICICLE_CHECK(scalar_mul_vec(
         &omega_scalar, reinterpret_cast<Zq*>(Q_j_hat.data()), r * n * d, {}, reinterpret_cast<Zq*>(Q_j_hat.data())));
@@ -174,11 +185,16 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       Rq b_rq;
       ICICLE_CHECK(ntt(&new_constraint.b, 1, NTTDir::kInverse, {}, &b_rq));
 
-      // if (verif_test_b0[k] != b_rq.values[0]) {
-      //   std::cout << "\tFail: New constraint b doesn't match verif b for idx" << k << "\n";
-      // } else {
-      //   std::cout << "\tPass: New constraint b matches verif b for idx" << k << "\n";
-      // }
+      Zq lhs = b_rq.values[0];
+      Zq rhs = verif_test_b0[k]; // already available
+      Zq diff = lhs - rhs;       // mod q
+
+      std::cout << "k=" << k << "  lhs=" << lhs << "  rhs=" << rhs << "  diff=" << diff << std::endl;
+      if (verif_test_b0[k] != b_rq.values[0]) {
+        std::cout << "\tFail: New constraint b doesn't match verif b for idx" << k << "\n";
+      } else {
+        std::cout << "\tPass: New constraint b matches verif b for idx" << k << "\n";
+      }
       if (!witness_legit_const_zero({r, n, new_constraint.a, new_constraint.phi, verif_test_b0[k]}, S)) {
         std::cout << "\tVerif test constraint " << k << " failed\n";
       }

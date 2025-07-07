@@ -30,6 +30,12 @@ ConstZeroInstance create_rand_const_zero_inst(size_t n, size_t r, const std::vec
 // Check if the given EqualityInstance is satisfied by the witness S or not
 bool witness_legit_eq(const EqualityInstance& eq_inst, const std::vector<Rq>& S);
 
+// Check if the given EqualityInstance is satisfied by the witness S_hat (NTT form) or not
+bool witness_legit_eq_all_ntt(const EqualityInstance& eq_inst, const std::vector<Tq>& S_hat);
+
+// Check if the given ConstZeroInstance is satisfied by the witness S_hat (NTT form) or not
+bool witness_legit_const_zero_all_ntt(const ConstZeroInstance& cz_inst, const std::vector<Tq>& S_hat);
+
 // Check if the given ConstZeroInstance is satisfied by the witness S or not
 bool witness_legit_const_zero(const ConstZeroInstance& cz_inst, const std::vector<Rq>& S);
 

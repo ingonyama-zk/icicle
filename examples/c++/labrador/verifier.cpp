@@ -453,6 +453,12 @@ bool LabradorBaseVerifier::part_verify()
       test_b0[k] = test_b0[k] - omega[omega_index(k, l)] * p[l];
     }
 
+    Zq lhs = b_agg_unhat[k].values[0];
+    Zq rhs = test_b0[k]; // already available
+    Zq diff = lhs - rhs; // mod q
+
+    std::cout << "k=" << k << "  lhs=" << lhs << "  rhs=" << rhs << "  diff=" << diff << std::endl;
+
     if (test_b0[k] != b_agg_unhat[k].values[0]) {
       std::cout << "verify(): b0 test failed for " << k << std::endl;
       return false;
