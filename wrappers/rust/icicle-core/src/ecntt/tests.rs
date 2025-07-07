@@ -80,11 +80,7 @@ where
                 let one_ntt_result = HostSlice::from_mut_slice(&mut slice);
                 for i in 0..batch_size {
                     ecntt::<C>(
-                        HostSlice::from_slice(
-                            &points[i * test_size..(i + 1) * test_size]
-                                .as_slice()
-                                .to_vec(),
-                        ),
+                        HostSlice::from_slice(&points[i * test_size..(i + 1) * test_size].as_slice()),
                         is_inverse,
                         &config,
                         one_ntt_result,

@@ -1,14 +1,14 @@
 use crate::{curve::Curve, field::Field};
-use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::IcicleError;
 
 #[doc(hidden)]
 pub mod tests;
 
 pub trait Pairing<C1: Curve, C2: Curve, F: Field> {
-    fn pairing(p: &C1::Affine, q: &C2::Affine) -> Result<F, eIcicleError>;
+    fn pairing(p: &C1::Affine, q: &C2::Affine) -> Result<F, IcicleError>;
 }
 
-pub fn pairing<C1, C2, F>(p: &C1::Affine, q: &C2::Affine) -> Result<F, eIcicleError>
+pub fn pairing<C1, C2, F>(p: &C1::Affine, q: &C2::Affine) -> Result<F, IcicleError>
 where
     C1: Curve,
     C2: Curve,
@@ -46,7 +46,7 @@ macro_rules! impl_pairing {
             fn pairing(
                 p: &<$curve as icicle_core::curve::Curve>::Affine,
                 q: &<$curve_g2 as icicle_core::curve::Curve>::Affine,
-            ) -> Result<$target_field, eIcicleError> {
+            ) -> Result<$target_field, IcicleError> {
                 let mut result = <$target_field as icicle_core::traits::Zero>::zero();
                 unsafe {
                     $curve_prefix_ident::pairing_ffi(

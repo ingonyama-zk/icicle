@@ -70,40 +70,6 @@ macro_rules! impl_projective {
             z: $base_field,
         }
 
-        impl $projective {
-            pub fn convert_montgomery(
-                input: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
-                is_into: bool,
-                stream: &IcicleStream,
-            ) -> eIcicleError {
-                extern "C" {
-                    #[link_name = concat!($curve_prefix, "_projective_convert_montgomery")]
-                    pub(crate) fn convert_projective_montgomery(
-                        input: *const $projective,
-                        size: usize,
-                        is_into: bool,
-                        config: &icicle_core::vec_ops::VecOpsConfig,
-                        output: *mut $projective,
-                    ) -> eIcicleError;
-                }
-
-                let mut config = icicle_core::vec_ops::VecOpsConfig::default();
-                config.is_a_on_device = input.is_on_device();
-                config.is_async = !stream.is_null();
-                config.stream_handle = (&*stream).into();
-
-                unsafe {
-                    convert_projective_montgomery(
-                        input.as_mut_ptr(),
-                        input.len(),
-                        is_into,
-                        &config,
-                        input.as_mut_ptr(),
-                    )
-                }
-            }
-        }
-
         impl icicle_core::projective::Projective for $projective {
             type ScalarField = $scalar_field;
             type BaseField = $base_field;
@@ -141,16 +107,6 @@ macro_rules! impl_projective {
                 let mut res = vec![<Self as icicle_core::traits::Zero>::zero(); size];
                 unsafe { generate_projective_points(&mut res[..] as *mut _ as *mut $projective, size) };
                 res
-            }
-        }
-
-        impl icicle_core::traits::MontgomeryConvertible for $projective {
-            fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
-                $projective::convert_montgomery(values, true, stream)
-            }
-
-            fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
-                $projective::convert_montgomery(values, false, stream)
             }
         }
 
@@ -255,6 +211,11 @@ macro_rules! impl_projective {
                 aff
             }
         }
+
+        icicle_core::impl_montgomery_convertible_ffi!(
+            $projective,
+            concat!($curve_prefix, "_projective_convert_montgomery")
+        );
 
         impl icicle_core::traits::Zero for $projective {
             fn zero() -> Self {

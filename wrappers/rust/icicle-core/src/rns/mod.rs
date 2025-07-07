@@ -1,5 +1,5 @@
 use crate::{ring::IntegerRing, vec_ops::VecOpsConfig};
-use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
 pub mod tests;
 
@@ -9,13 +9,13 @@ pub trait RnsConversion<Zq: IntegerRing, ZqRns: IntegerRing> {
         input: &(impl HostOrDeviceSlice<Zq> + ?Sized),
         output: &mut (impl HostOrDeviceSlice<ZqRns> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     fn from_rns(
         input: &(impl HostOrDeviceSlice<ZqRns> + ?Sized),
         output: &mut (impl HostOrDeviceSlice<Zq> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 // Note: An in-place RNS conversion could be implemented, but it's unnecessary for now.
@@ -28,7 +28,7 @@ pub fn to_rns<Zq: IntegerRing, ZqRns: IntegerRing>(
     input: &(impl HostOrDeviceSlice<Zq> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<ZqRns> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     Zq: RnsConversion<Zq, ZqRns>,
 {
@@ -40,7 +40,7 @@ pub fn from_rns<Zq: IntegerRing, ZqRns: IntegerRing>(
     input: &(impl HostOrDeviceSlice<ZqRns> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<Zq> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     Zq: RnsConversion<Zq, ZqRns>,
 {
@@ -75,39 +75,48 @@ macro_rules! impl_rns_conversions {
         }
 
         use icicle_core::rns::RnsConversion;
+        use icicle_runtime::errors::IcicleError;
 
         impl RnsConversion<$ZqType, $ZqRnsType> for $ZqType {
             fn to_rns(
                 input: &(impl HostOrDeviceSlice<$ZqType> + ?Sized),
                 output: &mut (impl HostOrDeviceSlice<$ZqRnsType> + ?Sized),
                 cfg: &VecOpsConfig,
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 // Ensure sizes match and batch-size divides the size
                 if input.len() != output.len() {
-                    eprintln!(
-                        "Mismatched slice sizes: input = {}, output = {}",
-                        input.len(),
-                        output.len()
-                    );
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        format!(
+                            "Mismatched slice sizes: input = {}, output = {}",
+                            input.len(),
+                            output.len()
+                        ),
+                    ));
                 }
                 if input.len() % (cfg.batch_size as usize) != 0 {
-                    eprintln!(
-                        "Batch-size={} does not divide total-size={}",
-                        cfg.batch_size,
-                        input.len()
-                    );
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        format!(
+                            "Batch-size={} does not divide total-size={}",
+                            cfg.batch_size,
+                            input.len()
+                        ),
+                    ));
                 }
 
                 // Ensure input/output are on the active device
                 if input.is_on_device() && !input.is_on_active_device() {
-                    eprintln!("Input is allocated on an inactive device.");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Input is allocated on an inactive device.",
+                    ));
                 }
                 if output.is_on_device() && !output.is_on_active_device() {
-                    eprintln!("Output is allocated on an inactive device.");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Output is allocated on an inactive device.",
+                    ));
                 }
 
                 let mut cfg_clone = cfg.clone();
@@ -129,33 +138,41 @@ macro_rules! impl_rns_conversions {
                 input: &(impl HostOrDeviceSlice<$ZqRnsType> + ?Sized),
                 output: &mut (impl HostOrDeviceSlice<$ZqType> + ?Sized),
                 cfg: &VecOpsConfig,
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 // Ensure sizes match and batch-size divides the size
                 if input.len() != output.len() {
-                    eprintln!(
-                        "Mismatched slice sizes: input = {}, output = {}",
-                        input.len(),
-                        output.len()
-                    );
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        format!(
+                            "Mismatched slice sizes: input = {}, output = {}",
+                            input.len(),
+                            output.len()
+                        ),
+                    ));
                 }
                 if input.len() % (cfg.batch_size as usize) != 0 {
-                    eprintln!(
-                        "Batch-size={} does not divide total-size={}",
-                        cfg.batch_size,
-                        input.len()
-                    );
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        format!(
+                            "Batch-size={} does not divide total-size={}",
+                            cfg.batch_size,
+                            input.len()
+                        ),
+                    ));
                 }
 
                 // Ensure input/output are on the active device
                 if input.is_on_device() && !input.is_on_active_device() {
-                    eprintln!("Input is allocated on an inactive device.");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Input is allocated on an inactive device.",
+                    ));
                 }
                 if output.is_on_device() && !output.is_on_active_device() {
-                    eprintln!("Output is allocated on an inactive device.");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Output is allocated on an inactive device.",
+                    ));
                 }
 
                 let mut cfg_clone = cfg.clone();

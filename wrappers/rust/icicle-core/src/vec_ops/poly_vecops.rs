@@ -21,11 +21,11 @@
 use super::{add_scalars, mul_scalars, scalar_mul, sub_scalars, sum_scalars, VecOps, VecOpsConfig};
 use crate::polynomial_ring::PolynomialRing;
 use icicle_runtime::{
-    errors::eIcicleError,
     memory::{
         reinterpret::{reinterpret_slice, reinterpret_slice_mut},
         HostOrDeviceSlice,
     },
+    IcicleError,
 };
 
 /// Multiplies each polynomial in the input vector by a corresponding scalar field element.
@@ -51,7 +51,7 @@ pub fn polyvec_mul_by_scalar<P>(
     input_scalarvec: &(impl HostOrDeviceSlice<P::Base> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     P: PolynomialRing,
     P::Base: VecOps<P::Base>,
@@ -78,7 +78,7 @@ pub fn polyvec_mul<P>(
     input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     P: PolynomialRing,
     P::Base: VecOps<P::Base>,
@@ -102,7 +102,7 @@ pub fn polyvec_add<P>(
     input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     P: PolynomialRing,
     P::Base: VecOps<P::Base>,
@@ -126,7 +126,7 @@ pub fn polyvec_sub<P>(
     input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     P: PolynomialRing,
     P::Base: VecOps<P::Base>,
@@ -155,7 +155,7 @@ pub fn polyvec_sum_reduce<P>(
     input_polyvec: &(impl HostOrDeviceSlice<P> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     P: PolynomialRing,
     P::Base: VecOps<P::Base>,

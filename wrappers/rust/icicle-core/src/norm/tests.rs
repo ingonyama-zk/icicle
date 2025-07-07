@@ -22,7 +22,7 @@ where
     let mut cfg = VecOpsConfig::default();
     cfg.batch_size = batch as i32;
 
-    let q_mock = 4289678649214369793 as u64;
+    let q_mock = 4289678649214369793_u64;
     let sqrt_q_mock = (q_mock as f64).sqrt() as u32;
 
     for i in 0..total_size {
@@ -41,14 +41,7 @@ where
 
         let mut expected = vec![false; batch];
         let result = HostSlice::from_mut_slice(&mut expected);
-        norm::check_norm_bound(
-            HostSlice::from_slice(&input),
-            norm::NormType::L2,
-            bound.into(),
-            &cfg,
-            result,
-        )
-        .unwrap();
+        norm::check_norm_bound(HostSlice::from_slice(&input), norm::NormType::L2, bound, &cfg, result).unwrap();
 
         assert!(
             result
@@ -72,7 +65,7 @@ where
         norm::check_norm_bound(
             HostSlice::from_slice(&input),
             norm::NormType::LInfinity,
-            bound.into(),
+            bound,
             &cfg,
             result,
         )

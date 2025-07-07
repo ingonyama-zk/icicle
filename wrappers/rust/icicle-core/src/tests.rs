@@ -118,12 +118,8 @@ where
     let mut elements = T::generate_random(size);
     let expected = elements.clone();
 
-    T::to_mont(HostSlice::from_mut_slice(&mut elements), &IcicleStream::default())
-        .wrap()
-        .unwrap();
-    T::from_mont(HostSlice::from_mut_slice(&mut elements), &IcicleStream::default())
-        .wrap()
-        .unwrap();
+    T::to_mont(HostSlice::from_mut_slice(&mut elements), &IcicleStream::default()).unwrap();
+    T::from_mont(HostSlice::from_mut_slice(&mut elements), &IcicleStream::default()).unwrap();
 
     assert_eq!(expected, elements);
 }
@@ -142,8 +138,8 @@ where
         .copy_from_host(HostSlice::from_slice(&elements))
         .unwrap();
 
-    T::to_mont(&mut d_elements, &stream);
-    T::from_mont(&mut d_elements, &stream);
+    T::to_mont(&mut d_elements, &stream).unwrap();
+    T::from_mont(&mut d_elements, &stream).unwrap();
 
     let mut elements_copy = vec![T::zero(); size];
     d_elements
@@ -172,7 +168,7 @@ pub fn check_zero_and_from_slice<P: PolynomialRing>() {
     assert_eq!(zero.values(), expected.as_slice());
 
     let input = vec![P::Base::one(); P::DEGREE];
-    let poly = P::from_slice(&input);
+    let poly = P::from_slice(&input).unwrap();
     assert_eq!(poly.values(), input.as_slice());
 }
 /// Verifies that flattening a slice of polynomials yields a correctly sized,
@@ -219,7 +215,7 @@ where
     let host_polys = P::generate_random(size);
     let mut device_vec = DeviceVec::<P>::device_malloc(size).unwrap();
     device_vec
-        .copy_from_host(&HostSlice::from_slice(&host_polys))
+        .copy_from_host(HostSlice::from_slice(&host_polys))
         .unwrap();
 
     // Flatten the device polynomial slice

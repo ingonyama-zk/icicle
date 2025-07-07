@@ -1,6 +1,6 @@
 use crate::ring::IntegerRing;
 use crate::traits::Handle;
-use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::errors::IcicleError;
 use std::ffi::c_void;
 use std::marker::Copy;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
@@ -31,11 +31,12 @@ pub trait Symbol<T: IntegerRing>:
     + Sized
     + Handle
 {
-    fn new_input(in_idx: u32) -> Result<Self, eIcicleError>; // New input symbol for the execution function
-    fn from_constant(constant: T) -> Result<Self, eIcicleError>; // New symbol from a ring element
+    fn new_input(in_idx: u32) -> Result<Self, IcicleError>; // New input symbol for the execution function
+    fn from_constant(constant: T) -> Result<Self, IcicleError>; // New symbol from a ring element
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_symbol_ring {
   (
     $ring_prefix:literal,
@@ -47,7 +48,7 @@ macro_rules! impl_symbol_ring {
       use icicle_core::ring::IntegerRing;
       use icicle_core::traits::{Arithmetic, Handle};
       use icicle_core::symbol::{Symbol, SymbolHandle};
-      use icicle_runtime::errors::eIcicleError;
+      use icicle_runtime::{eIcicleError, IcicleError};
       use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
       use std::ffi::c_void;
       use std::fmt;
@@ -82,22 +83,22 @@ macro_rules! impl_symbol_ring {
 
       // Implement Symbol UI
       impl Symbol<$ring> for RingSymbol {
-        fn new_input(in_idx: u32) -> Result<Self, eIcicleError> {
+        fn new_input(in_idx: u32) -> Result<Self, IcicleError> {
           unsafe {
             let handle = ffi_input_symbol(in_idx);
             if handle.is_null() {
-              Err(eIcicleError::AllocationFailed)
+              Err(IcicleError::new(eIcicleError::AllocationFailed, "Failed to create input symbol"))
             } else {
               Ok(Self { m_handle: handle })
             }
           }
         }
 
-        fn from_constant(constant: $ring) -> Result<Self, eIcicleError> {
+        fn from_constant(constant: $ring) -> Result<Self, IcicleError> {
           unsafe {
             let handle = ffi_symbol_from_const(&constant as *const $ring);
             if handle.is_null() {
-              Err(eIcicleError::AllocationFailed)
+              Err(IcicleError::new(eIcicleError::AllocationFailed, "Failed to create from constant"))
             } else {
               Ok(Self { m_handle: handle })
             }
@@ -107,61 +108,55 @@ macro_rules! impl_symbol_ring {
 
       // Implement useful functions for the implementation of the above UI
       impl RingSymbol {
-        fn add_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, eIcicleError> {
+        fn add_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, IcicleError> {
           unsafe {
             let mut handle = std::ptr::null();
-            let ffi_status = ffi_add_symbols(op_a, op_b, &mut handle);
-            if ffi_status != eIcicleError::Success {
-              Err(ffi_status)
-            } else if handle.is_null() {
-              Err(eIcicleError::AllocationFailed)
+            ffi_add_symbols(op_a, op_b, &mut handle).wrap()?;
+            if handle.is_null() {
+              Err(IcicleError::new(eIcicleError::AllocationFailed, "Failed to add symbols"))
             } else {
               Ok(handle)
             }
           }
         }
 
-        fn sub_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, eIcicleError> {
+        fn sub_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, IcicleError> {
           unsafe {
             let mut handle = std::ptr::null();
-            let ffi_status = ffi_sub_symbols(op_a, op_b, &mut handle);
-            if ffi_status != eIcicleError::Success {
-              Err(ffi_status)
-            } else if handle.is_null() {
-              Err(eIcicleError::AllocationFailed)
+            ffi_sub_symbols(op_a, op_b, &mut handle).wrap()?;
+            if handle.is_null() {
+              Err(IcicleError::new(eIcicleError::AllocationFailed, "Failed to subtract symbols"))
             } else {
               Ok(handle)
             }
           }
         }
 
-        fn mul_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, eIcicleError> {
+        fn mul_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, IcicleError> {
           unsafe {
             let mut handle = std::ptr::null();
-            let ffi_status = ffi_multiply_symbols(op_a, op_b, &mut handle);
-            if ffi_status != eIcicleError::Success {
-              Err(ffi_status)
-            } else if handle.is_null() {
-              Err(eIcicleError::AllocationFailed)
+            ffi_multiply_symbols(op_a, op_b, &mut handle).wrap()?;
+            if handle.is_null() {
+              Err(IcicleError::new(eIcicleError::AllocationFailed, "Failed to multiply symbols"))
             } else {
               Ok(handle)
             }
           }
         }
 
-        fn add_ring(self, other: $ring) -> Result<Self, eIcicleError> {
+        fn add_ring(self, other: $ring) -> Result<Self, IcicleError> {
           let other_symbol = Self::from_constant(other)?;
           let res_handle = Self::add_handles(self.m_handle, other_symbol.m_handle)?;
           Ok(Self { m_handle: res_handle })
         }
 
-        fn sub_ring(self, other: $ring) -> Result<Self, eIcicleError> {
+        fn sub_ring(self, other: $ring) -> Result<Self, IcicleError> {
           let other_symbol = Self::from_constant(other)?;
           let res_handle = Self::sub_handles(self.m_handle, other_symbol.m_handle)?;
           Ok(Self { m_handle: res_handle })
         }
 
-        fn mul_ring(self, other: $ring) -> Result<Self, eIcicleError> {
+        fn mul_ring(self, other: $ring) -> Result<Self, IcicleError> {
           let other_symbol = Self::from_constant(other)?;
           let res_handle = Self::mul_handles(self.m_handle, other_symbol.m_handle)?;
           Ok(Self { m_handle: res_handle })

@@ -21,7 +21,7 @@ where
             continue;
         };
         for domain_tag in [None, Some(&domain_tag)] {
-            let inputs: Vec<F> = if domain_tag != None {
+            let inputs: Vec<F> = if domain_tag.is_some() {
                 F::generate_random(batch * (t - 1))
             } else {
                 F::generate_random(batch * t)
@@ -74,7 +74,7 @@ where
         test_utilities::test_set_main_device();
         let poseidon_hasher_main = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
-        let main_device_err = poseidon_hasher_main
+        poseidon_hasher_main
             .hash(
                 HostSlice::from_slice(&inputs),
                 &HashConfig::default(),
@@ -85,7 +85,7 @@ where
         test_utilities::test_set_ref_device();
         let poseidon_hasher_ref = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
-        let ref_device_err = poseidon_hasher_ref
+        poseidon_hasher_ref
             .hash(
                 HostSlice::from_slice(&inputs),
                 &HashConfig::default(),
@@ -93,7 +93,7 @@ where
             )
             .unwrap();
 
-        assert_eq!(main_device_err, ref_device_err);
+        assert_eq!((), ());
     }
 }
 
@@ -182,5 +182,5 @@ where
     let verification_valid = merkle_tree
         .verify(&merkle_proof)
         .unwrap();
-    assert_eq!(verification_valid, true);
+    assert!(verification_valid);
 }

@@ -1,4 +1,4 @@
-use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::errors::IcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 use std::ffi::c_void;
@@ -13,16 +13,17 @@ pub trait GenerateRandom: Sized {
 macro_rules! impl_generate_random_ffi {
     (
         $obj:ident,
-        $generate_random_function_name:ident
+        $generate_random_function_name:expr
     ) => {
         impl icicle_core::traits::GenerateRandom for $obj {
             fn generate_random(size: usize) -> Vec<$obj> {
                 extern "C" {
-                    pub(crate) fn $generate_random_function_name(scalars: *mut $obj, size: usize);
+                    #[link_name = $generate_random_function_name]
+                    pub(crate) fn generate_random_ffi(scalars: *mut $obj, size: usize);
                 }
 
                 let mut res = vec![<$obj as icicle_core::traits::Zero>::zero(); size];
-                unsafe { $generate_random_function_name(&mut res[..] as *mut _ as *mut $obj, size) };
+                unsafe { generate_random_ffi(&mut res[..] as *mut _ as *mut $obj, size) };
                 res
             }
         }
@@ -30,24 +31,28 @@ macro_rules! impl_generate_random_ffi {
 }
 
 pub trait MontgomeryConvertible: Sized {
-    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError;
-    fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError;
+    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> Result<(), IcicleError>;
+    fn from_mont(
+        values: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        stream: &IcicleStream,
+    ) -> Result<(), IcicleError>;
 }
 
 #[macro_export]
 macro_rules! impl_montgomery_convertible_ffi {
     (
         $obj:ident,
-        $convert_montgomery_function_name:ident
+        $convert_montgomery_function_name:expr
     ) => {
         impl $obj {
             fn convert_montgomery(
                 values: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
                 stream: &IcicleStream,
                 is_into: bool,
-            ) -> eIcicleError {
+            ) -> Result<(), icicle_runtime::IcicleError> {
                 extern "C" {
-                    fn $convert_montgomery_function_name(
+                    #[link_name = $convert_montgomery_function_name]
+                    fn convert_montgomery_ffi(
                         values: *const $obj,
                         size: u64,
                         is_into: bool,
@@ -65,23 +70,30 @@ macro_rules! impl_montgomery_convertible_ffi {
                 config.is_async = !stream.is_null();
                 config.stream_handle = (&*stream).into();
                 unsafe {
-                    $convert_montgomery_function_name(
+                    convert_montgomery_ffi(
                         values.as_ptr(),
                         values.len() as u64,
                         is_into,
                         &config,
                         values.as_mut_ptr(),
                     )
+                    .wrap()
                 }
             }
         }
 
         impl icicle_core::traits::MontgomeryConvertible for $obj {
-            fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
+            fn to_mont(
+                values: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+                stream: &IcicleStream,
+            ) -> Result<(), icicle_runtime::IcicleError> {
                 $obj::convert_montgomery(values, stream, true)
             }
 
-            fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
+            fn from_mont(
+                values: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+                stream: &IcicleStream,
+            ) -> Result<(), icicle_runtime::IcicleError> {
                 $obj::convert_montgomery(values, stream, false)
             }
         }

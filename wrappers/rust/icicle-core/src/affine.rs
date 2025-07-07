@@ -35,42 +35,6 @@ macro_rules! impl_affine {
             y: $base_field,
         }
 
-        impl $affine {
-            pub fn convert_montgomery(
-                input: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
-                is_into: bool,
-                stream: &IcicleStream,
-            ) -> eIcicleError {
-                extern "C" {
-                    #[link_name = concat!($curve_prefix, "_affine_convert_montgomery")]
-                    pub(crate) fn convert_affine_montgomery(
-                        input: *const $affine,
-                        size: usize,
-                        is_into: bool,
-                        config: &icicle_core::vec_ops::VecOpsConfig,
-                        output: *mut $affine,
-                    ) -> eIcicleError;
-                }
-
-                if input.is_on_device() && !input.is_on_active_device() {
-                    panic!("input not allocated on the active device");
-                }
-                let mut config = icicle_core::vec_ops::VecOpsConfig::default();
-                config.is_a_on_device = input.is_on_device();
-                config.is_async = !stream.is_null();
-                config.stream_handle = (&*stream).into();
-                unsafe {
-                    convert_affine_montgomery(
-                        input.as_mut_ptr(),
-                        input.len(),
-                        is_into,
-                        &config,
-                        input.as_mut_ptr(),
-                    )
-                }
-            }
-        }
-
         impl icicle_core::affine::Affine for $affine {
             type BaseField = $base_field;
 
@@ -100,15 +64,7 @@ macro_rules! impl_affine {
             }
         }
 
-        impl icicle_core::traits::MontgomeryConvertible for $affine {
-            fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
-                $affine::convert_montgomery(values, true, stream)
-            }
-
-            fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
-                $affine::convert_montgomery(values, false, stream)
-            }
-        }
+        icicle_core::impl_montgomery_convertible_ffi!($affine, concat!($curve_prefix, "_affine_convert_montgomery"));
 
         impl icicle_core::traits::Zero for $affine {
             // While this is not a true zero point and not even a valid point, it's still useful

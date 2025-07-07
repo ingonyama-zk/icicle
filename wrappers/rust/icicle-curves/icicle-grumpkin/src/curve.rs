@@ -5,8 +5,8 @@ pub(crate) const SCALAR_LIMBS: usize = 8;
 pub(crate) const BASE_LIMBS: usize = 8;
 
 impl_field!(ScalarField, "grumpkin", SCALAR_LIMBS, true, true);
-impl_montgomery_convertible_ffi!(ScalarField, grumpkin_scalar_convert_montgomery);
-impl_generate_random_ffi!(ScalarField, grumpkin_generate_scalars);
+impl_montgomery_convertible_ffi!(ScalarField, "grumpkin_scalar_convert_montgomery");
+impl_generate_random_ffi!(ScalarField, "grumpkin_generate_scalars");
 
 impl_bignum!(BaseField, "grumpkin_base_field", BASE_LIMBS, false);
 

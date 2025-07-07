@@ -7,8 +7,8 @@ pub(crate) const BASE_LIMBS: usize = 12;
 pub(crate) const G2_BASE_LIMBS: usize = 24;
 
 impl_field!(ScalarField, "bls12_381", SCALAR_LIMBS, true, true);
-impl_montgomery_convertible_ffi!(ScalarField, bls12_381_scalar_convert_montgomery);
-impl_generate_random_ffi!(ScalarField, bls12_381_generate_scalars);
+impl_montgomery_convertible_ffi!(ScalarField, "bls12_381_scalar_convert_montgomery");
+impl_generate_random_ffi!(ScalarField, "bls12_381_generate_scalars");
 
 impl_bignum!(BaseField, "bls12_381_base_field", BASE_LIMBS, false);
 impl_curve!("bls12_381", CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);

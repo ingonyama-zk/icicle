@@ -2,7 +2,7 @@ use crate::ring::IntegerRing;
 use crate::symbol::Symbol;
 use crate::traits::Handle;
 use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{errors::IcicleError, memory::HostOrDeviceSlice};
 use std::ffi::c_void;
 
 pub type Instruction = u32;
@@ -20,11 +20,11 @@ where
 {
     type ProgSymbol: Symbol<T>;
 
-    fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>), nof_parameters: u32) -> Result<Self, eIcicleError>;
+    fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>), nof_parameters: u32) -> Result<Self, IcicleError>;
 
-    fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
+    fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, IcicleError>;
 
-    fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), eIcicleError>
+    fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), IcicleError>
     where
         T: IntegerRing,
         Data: HostOrDeviceSlice<T> + ?Sized;
@@ -37,12 +37,13 @@ pub trait ReturningValueProgram: Sized + Handle {
     fn new(
         program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>) -> Self::ProgSymbol,
         nof_parameters: u32,
-    ) -> Result<Self, eIcicleError>;
+    ) -> Result<Self, IcicleError>;
 
-    fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
+    fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, IcicleError>;
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_program_ring {
     (
     $ring_prefix:literal,
@@ -57,7 +58,7 @@ macro_rules! impl_program_ring {
             use icicle_core::symbol::{Symbol, SymbolHandle};
             use icicle_core::traits::Handle;
             use icicle_core::vec_ops::VecOpsConfig;
-            use icicle_runtime::errors::eIcicleError;
+            use icicle_runtime::errors::{eIcicleError, IcicleError};
             use icicle_runtime::memory::HostOrDeviceSlice;
             use std::ffi::c_void;
             use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
@@ -117,7 +118,7 @@ macro_rules! impl_program_ring {
                 fn new(
                     program_func: impl FnOnce(&mut Vec<RingSymbol>),
                     nof_parameters: u32,
-                ) -> Result<Self, eIcicleError> {
+                ) -> Result<Self, IcicleError> {
                     let mut program_parameters: Vec<RingSymbol> = (0..nof_parameters)
                         .enumerate()
                         .map(|(i, _)| RingSymbol::new_input(i as u32).unwrap())
@@ -135,12 +136,14 @@ macro_rules! impl_program_ring {
                             handles.as_ptr(),
                             program_parameters.len() as u32,
                             &mut prog_handle,
-                        );
+                        )
+                        .wrap()?;
                     }
-                    if ffi_status != eIcicleError::Success {
-                        Err(ffi_status)
-                    } else if prog_handle.is_null() {
-                        Err(eIcicleError::AllocationFailed)
+                    if prog_handle.is_null() {
+                        Err(IcicleError::new(
+                            eIcicleError::AllocationFailed,
+                            "program handle is null",
+                        ))
                     } else {
                         Ok(Self {
                             m_handle: prog_handle,
@@ -148,11 +151,14 @@ macro_rules! impl_program_ring {
                     }
                 }
 
-                fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError> {
+                fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, IcicleError> {
                     unsafe {
                         let prog_handle = ffi_create_predefined_program(pre_def);
                         if prog_handle.is_null() {
-                            return Err(eIcicleError::AllocationFailed);
+                            return Err(IcicleError::new(
+                                eIcicleError::AllocationFailed,
+                                "program handle is null",
+                            ));
                         } else {
                             Ok(Self {
                                 m_handle: prog_handle,
@@ -161,7 +167,7 @@ macro_rules! impl_program_ring {
                     }
                 }
 
-                fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), eIcicleError>
+                fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), IcicleError>
                 where
                     $ring: IntegerRing,
                     Data: HostOrDeviceSlice<$ring> + ?Sized,
@@ -212,7 +218,7 @@ macro_rules! impl_program_ring {
                 fn new(
                     program_func: impl FnOnce(&mut Vec<RingSymbol>) -> RingSymbol,
                     nof_parameters: u32,
-                ) -> Result<Self, eIcicleError> {
+                ) -> Result<Self, IcicleError> {
                     let mut program_parameters: Vec<RingSymbol> = (0..nof_parameters)
                         .enumerate()
                         .map(|(i, _)| RingSymbol::new_input(i as u32).unwrap())
@@ -231,12 +237,14 @@ macro_rules! impl_program_ring {
                             handles.as_ptr(),
                             program_parameters.len() as u32,
                             &mut prog_handle,
-                        );
+                        )
+                        .wrap()?;
                     }
-                    if ffi_status != eIcicleError::Success {
-                        Err(ffi_status)
-                    } else if prog_handle.is_null() {
-                        Err(eIcicleError::AllocationFailed)
+                    if prog_handle.is_null() {
+                        Err(IcicleError::new(
+                            eIcicleError::AllocationFailed,
+                            "program handle is null",
+                        ))
                     } else {
                         Ok(Self {
                             m_handle: prog_handle,
@@ -244,11 +252,14 @@ macro_rules! impl_program_ring {
                     }
                 }
 
-                fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError> {
+                fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, IcicleError> {
                     unsafe {
                         let prog_handle = ffi_create_predefined_returning_value_program(pre_def);
                         if prog_handle.is_null() {
-                            return Err(eIcicleError::AllocationFailed);
+                            return Err(IcicleError::new(
+                                eIcicleError::AllocationFailed,
+                                "program handle is null",
+                            ));
                         } else {
                             Ok(Self {
                                 m_handle: prog_handle,
@@ -281,6 +292,7 @@ macro_rules! impl_program_ring {
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_program_tests {
     (
       $ring_prefix_ident: ident,
