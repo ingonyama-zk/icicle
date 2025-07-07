@@ -1,6 +1,9 @@
-use crate::{bignum::BigNum, traits::Arithmetic};
+use crate::{
+    bignum::BigNum,
+    traits::{Arithmetic, TryInverse},
+};
 
-pub trait IntegerRing: BigNum + Arithmetic {}
+pub trait IntegerRing: BigNum + Arithmetic + TryInverse {}
 
 #[macro_export]
 macro_rules! impl_integer_ring {
@@ -22,6 +25,7 @@ macro_rules! impl_integer_ring {
         impl icicle_core::ring::IntegerRing for $ring {}
 
         icicle_core::impl_arithmetic!($ring, $ring_prefix);
+        icicle_core::impl_try_inverse!($ring, $ring_prefix);
     };
 }
 

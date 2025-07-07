@@ -204,6 +204,34 @@ macro_rules! impl_arithmetic {
     };
 }
 
+pub trait TryInverse: Sized {
+    fn try_inv(&self) -> Option<Self>;
+}
+
+#[macro_export]
+macro_rules! impl_try_inverse {
+    (
+        $obj:ident,
+        $obj_prefix:literal
+    ) => {
+        impl icicle_core::traits::TryInverse for $obj {
+            fn try_inv(&self) -> Option<Self> {
+                extern "C" {
+                    #[link_name = concat!($obj_prefix, "_inv")]
+                    pub(crate) fn inverse(a: *const $obj, result: *mut $obj);
+                }
+                let mut result = Self::zero();
+                unsafe { inverse(self as *const $obj, &mut result as *mut $obj) };
+                if result == Self::zero() {
+                    None
+                } else {
+                    Some(result)
+                }
+            }
+        }
+    };
+}
+
 pub trait Invertible: Sized {
     fn inv(&self) -> Self;
 }
