@@ -170,6 +170,9 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
     Zq minus_1 = Zq::neg(Zq::from(1));
     ICICLE_CHECK(scalar_mul_vec(&minus_1, new_constraint.b.values, d, {}, new_constraint.b.values));
 
+    // TODO: is this needed
+    ICICLE_CHECK(icicle_device_synchronize());
+
     if (TESTING) {
       // Following should work if our B^{(k)} evaluation is correct above
       if (!witness_legit_eq(new_constraint, S)) { std::cout << "Constraint " << k << " failed\n"; }
@@ -185,16 +188,16 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       Rq b_rq;
       ICICLE_CHECK(ntt(&new_constraint.b, 1, NTTDir::kInverse, {}, &b_rq));
 
-      Zq lhs = b_rq.values[0];
-      Zq rhs = verif_test_b0[k]; // already available
-      Zq diff = lhs - rhs;       // mod q
+      // Zq lhs = b_rq.values[0];
+      // Zq rhs = verif_test_b0[k]; // already available
+      // Zq diff = lhs - rhs;       // mod q
 
-      std::cout << "k=" << k << "  lhs=" << lhs << "  rhs=" << rhs << "  diff=" << diff << std::endl;
-      if (verif_test_b0[k] != b_rq.values[0]) {
-        std::cout << "\tFail: New constraint b doesn't match verif b for idx" << k << "\n";
-      } else {
-        std::cout << "\tPass: New constraint b matches verif b for idx" << k << "\n";
-      }
+      // std::cout << "k=" << k << "  lhs=" << lhs << "  rhs=" << rhs << "  diff=" << diff << std::endl;
+      // if (verif_test_b0[k] != b_rq.values[0]) {
+      //   std::cout << "\tFail: New constraint b doesn't match verif b for idx" << k << "\n";
+      // } else {
+      //   std::cout << "\tPass: New constraint b matches verif b for idx" << k << "\n";
+      // }
       if (!witness_legit_const_zero({r, n, new_constraint.a, new_constraint.phi, verif_test_b0[k]}, S)) {
         std::cout << "\tVerif test constraint " << k << " failed\n";
       }
