@@ -148,6 +148,7 @@ struct LabradorParam {
     C.resize(g_len() * kappa1);
     D.resize(h_len() * kappa2);
 
+    // TODO: is this correct?
     VecOpsConfig async_config = default_vec_ops_config();
     async_config.is_async = true;
 
