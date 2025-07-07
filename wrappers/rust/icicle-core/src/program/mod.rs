@@ -292,38 +292,7 @@ macro_rules! impl_program_ring {
 }
 
 #[macro_export]
-#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_program_tests {
-    (
-      $ring_prefix_ident: ident,
-      $ring:ident
-    ) => {
-        pub(crate) mod test_program {
-            use super::*;
-            use crate::program::$ring_prefix_ident::{RingProgram, RingReturningValueProgram};
-            use icicle_runtime::test_utilities;
-            use icicle_runtime::{device::Device, runtime};
-            use std::sync::Once;
-
-            fn initialize() {
-                test_utilities::test_load_and_init_devices();
-                test_utilities::test_set_main_device();
-            }
-
-            #[test]
-            pub fn test_predefined_program() {
-                initialize();
-                test_utilities::test_set_main_device();
-                icicle_core::program::tests::check_predefined_program::<$ring, RingProgram>();
-                test_utilities::test_set_ref_device();
-                icicle_core::program::tests::check_predefined_program::<$ring, RingProgram>()
-            }
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! impl_program_tests_invertible {
     (
       $ring_prefix_ident: ident,
       $ring:ident
