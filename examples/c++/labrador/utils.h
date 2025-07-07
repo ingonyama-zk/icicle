@@ -127,6 +127,7 @@ inline eIcicleError compute_matrix_trace(const PolyRing* matrix, size_t n, PolyR
       /*stride*/ stride, size_in, n, async_config, &diag_coeff[coeff * n]);
     if (err != eIcicleError::SUCCESS) return err;
   }
+  ICICLE_CHECK(icicle_device_synchronize());
 
   VecOpsConfig sum_config = default_vec_ops_config();
   sum_config.batch_size = d; // d independent vectors of length n
