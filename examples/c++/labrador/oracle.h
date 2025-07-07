@@ -21,17 +21,9 @@ public:
   std::vector<std::byte> state_; // current transcript state
 
   // Construct with an initial seed.
-  Oracle(const std::byte* seed, size_t seed_len) : hasher_(Hash(nullptr)), state_(seed, seed + seed_len)
-  {
-    ScopedCpuDevice cpu_scope{"SHA3 create"};
-    hasher_ = Sha3_256::create();
-  }
+  Oracle(const std::byte* seed, size_t seed_len) : hasher_(Sha3_256::create()), state_(seed, seed + seed_len) {}
   // Copy constructor
-  Oracle(const Oracle& other) : hasher_(Hash(nullptr)), state_(other.state_)
-  {
-    ScopedCpuDevice cpu_scope{"SHA3 create"};
-    hasher_ = Sha3_256::create();
-  }
+  Oracle(const Oracle& other) : hasher_(Sha3_256::create()), state_(other.state_) {}
 
   /**
    * @brief Produce the next challenge.

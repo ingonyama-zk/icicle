@@ -118,7 +118,6 @@ namespace icicle {
       Zq* output,
       size_t output_size)
     {
-      ScopedCpuDevice cpu_scope{"JL projection"};
       return icicle::jl_projection<Zq>(input, input_size, seed, seed_len, cfg, output, output_size);
     }
 
@@ -135,7 +134,6 @@ namespace icicle {
       const VecOpsConfig& cfg,
       Rq* output)
     {
-      ScopedCpuDevice cpu_scope{"get JL rows"};
       return icicle::get_jl_matrix_rows(seed, seed_len, row_size, start_row, num_rows, conjugate, cfg, output);
     }
 
