@@ -52,6 +52,7 @@ macro_rules! impl_symbol_ring {
       use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
       use std::ffi::c_void;
       use std::fmt;
+      use icicle_core::bignum::BigNum;
 
       #[repr(C)]
       #[derive(Copy)]

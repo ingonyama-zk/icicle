@@ -55,7 +55,7 @@ pub trait Projective:
     fn zero() -> Self {
         Self::from_xyz(
             Self::BaseField::zero(),
-            Self::BaseField::zero(),
+            Self::BaseField::one(),
             Self::BaseField::zero(),
         )
     }

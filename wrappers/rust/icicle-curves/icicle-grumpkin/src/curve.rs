@@ -11,7 +11,7 @@ impl_field!(ScalarField, "grumpkin", SCALAR_LIMBS, true, true);
 impl_montgomery_convertible!(ScalarField, "grumpkin_scalar_convert_montgomery");
 impl_generate_random!(ScalarField, "grumpkin_generate_scalars");
 
-impl_bignum!(BaseField, "grumpkin_base_field", BASE_LIMBS, false);
+impl_bignum!(BaseField, "grumpkin_base_field", BASE_LIMBS, false, false);
 
 impl_curve!("grumpkin", CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);
 

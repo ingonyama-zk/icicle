@@ -88,23 +88,23 @@ pub fn check_point_equality<C: Curve>() {
     assert_eq!(left, right);
 
     let x = C::BaseField::zero();
-    let y = C::BaseField::from_bytes_le(&[2]);
+    let y = C::BaseField::from(2);
     let z = C::BaseField::zero();
     let right = C::Projective::from_limbs(*x.limbs(), *y.limbs(), *z.limbs());
     assert_eq!(left, right);
 
-    let z = C::BaseField::from_bytes_le(&[4]);
+    let z = C::BaseField::from(2);
     let right = C::Projective::from_limbs(
         *C::BaseField::zero().limbs(),
-        *C::BaseField::from_bytes_le(&[4]).limbs(),
+        *C::BaseField::from(4).limbs(),
         *z.limbs(),
     );
     assert_ne!(left, right);
 
     let left = C::Projective::from_limbs(
         *C::BaseField::zero().limbs(),
-        *C::BaseField::from_bytes_le(&[2]).limbs(),
-        *C::BaseField::zero().limbs(),
+        *C::BaseField::from(2).limbs(),
+        *C::BaseField::one().limbs(),
     );
     assert_eq!(left, right);
 }

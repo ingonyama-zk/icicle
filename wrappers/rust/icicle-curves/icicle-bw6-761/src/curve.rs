@@ -11,13 +11,13 @@ impl_field!(ScalarField, "bw6_761", SCALAR_LIMBS, true, true);
 impl_montgomery_convertible!(ScalarField, "bw6_761_scalar_convert_montgomery");
 impl_generate_random!(ScalarField, "bw6_761_generate_scalars");
 
-impl_bignum!(BaseField, "bw6_761_base_field", BASE_LIMBS, false);
+impl_bignum!(BaseField, "bw6_761_base_field", BASE_LIMBS, false, false);
 impl_curve!("bw6_761", CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);
 
 // NOTE: Even though both G1 and G2 use the same base field, we define two different field types
 //       to avoid using incorrect FFI functions.
 #[cfg(feature = "g2")]
-impl_bignum!(G2BaseField, "bw6_761_g2_base_field", BASE_LIMBS, false);
+impl_bignum!(G2BaseField, "bw6_761_g2_base_field", BASE_LIMBS, false, false);
 
 #[cfg(feature = "g2")]
 impl_curve!(

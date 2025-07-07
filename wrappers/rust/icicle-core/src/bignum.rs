@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display};
 
 pub trait BigNum:
-    Display + Debug + Default + Copy + PartialEq + Clone + Into<Self::Limbs> + From<Self::Limbs> + Send + Sync
+    Display + Debug + Default + Copy + PartialEq + Clone + Into<Self::Limbs> + From<Self::Limbs> + From<u32> + Send + Sync
 {
     const LIMBS_SIZE: usize;
     type Limbs: AsRef<[u32]> + AsMut<[u32]> + Copy;
@@ -39,8 +39,16 @@ pub trait BigNum:
         result
     }
 
+    fn from_u32(val: u32) -> Self {
+        Self::from(val)
+    }
+
     fn zero() -> Self {
-        Self::default()
+        Self::from(0)
+    }
+
+    fn one() -> Self {
+        Self::from(1)
     }
 
     fn from_hex(s: &str) -> Self {
@@ -66,6 +74,7 @@ pub trait BigNum:
     fn debug_fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "{}", self.to_string())
     }
+
 }
 
 #[macro_export]
@@ -74,7 +83,8 @@ macro_rules! impl_bignum {
         $bignum:ident,
         $bignum_prefix:literal,
         $num_limbs:ident,
-        $use_ffi_for_eq:expr
+        $use_ffi_for_eq:expr,
+        $use_ffi_for_from_u32:expr
     ) => {
         #[derive(Copy, Clone)]
         #[repr(C)]
@@ -148,6 +158,29 @@ macro_rules! impl_bignum {
                     result
                 } else {
                     self.limbs == other.limbs
+                }
+            }
+        }
+
+        impl From<u32> for $bignum {
+            fn from(val: u32) -> Self {
+                if $use_ffi_for_from_u32 {
+                    extern "C" {
+                        #[link_name = concat!($bignum_prefix, "_from_u32")]
+                        pub(crate) fn from_u32(val: u32, result: *mut $bignum);
+                    }
+
+                    let mut limbs = [0u32; $num_limbs];
+
+                    unsafe {
+                        from_u32(val, limbs.as_mut_ptr() as *mut Self);
+                    }
+
+                    Self { limbs }
+                } else {
+                    let mut limbs = [0u32; $num_limbs];
+                    limbs[0] = val;
+                    Self { limbs }
                 }
             }
         }

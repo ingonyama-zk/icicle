@@ -13,11 +13,11 @@ impl_field!(ScalarField, "bls12_381", SCALAR_LIMBS, true, true);
 impl_montgomery_convertible!(ScalarField, "bls12_381_scalar_convert_montgomery");
 impl_generate_random!(ScalarField, "bls12_381_generate_scalars");
 
-impl_bignum!(BaseField, "bls12_381_base_field", BASE_LIMBS, false);
+impl_bignum!(BaseField, "bls12_381_base_field", BASE_LIMBS, false, false);
 impl_curve!("bls12_381", CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);
 
 #[cfg(feature = "g2")]
-impl_bignum!(G2BaseField, "bls12_381_g2_base_field", G2_BASE_LIMBS, false);
+impl_bignum!(G2BaseField, "bls12_381_g2_base_field", G2_BASE_LIMBS, false, false);
 #[cfg(feature = "g2")]
 impl_curve!(
     "bls12_381_g2",
