@@ -31,7 +31,4 @@ public:
    * @return      A vector containing the SHA3-256 digest.
    */
   std::vector<std::byte> generate(const std::byte* msg, size_t len);
-
-  // Expose current state if the caller needs it.
-  const std::vector<std::byte>& state() const { return state_; }
 };

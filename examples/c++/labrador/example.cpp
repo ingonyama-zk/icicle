@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 
   const int64_t q = get_q<Zq>();
 
-  // TODO use icicle_malloc() instead of std::vector. Consider a DeviceVector<T> that behaves like std::vector
+  // TODO: icicle_malloc()/ DeviceVector<T>
 
   // randomize the witness Si with low norm
   const size_t n = 1 << 4;
@@ -29,13 +29,13 @@ int main(int argc, char* argv[])
   constexpr size_t d = Rq::d;
   const size_t max_value = 2;
 
-  const std::vector<Rq> S = rand_poly_vec(r * n, max_value); // S = 2^12 Zq elements
+  const std::vector<Rq> S = rand_poly_vec(r * n, max_value);
   EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
   assert(witness_legit_eq(eq_inst, S));
   ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(n, r, S);
   assert(witness_legit_const_zero(const_zero_inst, S));
-  // ConstZeroInstance const_zero_inst2 = create_rand_const_zero_inst(n, r, S);
-  // assert(witness_legit_const_zero(const_zero_inst2, S));
+  ConstZeroInstance const_zero_inst2 = create_rand_const_zero_inst(n, r, S);
+  assert(witness_legit_const_zero(const_zero_inst2, S));
 
   // Use current time (milliseconds since epoch) as a unique Ajtai seed
   auto now = std::chrono::system_clock::now();
@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
   // assert(lab_witness_legit(rec_inst, rec_S));
   // std::cout << "VALID\n";
 
-  size_t NUM_REC = 1;
+  size_t NUM_REC = 2;
   LabradorProver prover{
     lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size(), NUM_REC};
 

@@ -21,10 +21,10 @@ using namespace icicle::labrador;
 std::vector<Tq>
 ajtai_commitment(const std::vector<Tq>& A, size_t input_len, size_t output_len, const Tq* S, size_t S_len);
 
-// TODO: Simply returns the polynomial x for every challenge rn
+/// TODO: Simply returns the polynomial x for every challenge rn
 std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, const std::byte* seed, size_t seed_len);
 
-// Helper to concatenate oracle_seed and lab_inst bytes and return an Oracle object.
+/// Helper to concatenate oracle_seed and lab_inst bytes and return an Oracle object.
 Oracle create_oracle_seed(const std::byte* seed, size_t seed_len, const LabradorInstance& inst);
 
 /// Returns the LabradorInstance for recursion problem
@@ -36,8 +36,10 @@ LabradorInstance prepare_recursion_instance(
   size_t mu,
   size_t nu);
 
+/// @brief Helper struct to prepare recursive instance of the problem
 struct RecursionPreparer {
   size_t prev_r, prev_n, mu, nu;
+  /// decomposition basis for z
   uint32_t base0;
 
   // These are internally created
@@ -75,19 +77,21 @@ struct RecursionPreparer {
   eIcicleError copy_like_z0(Rq* dst, const Rq* src) const;
   // Needs dst size = r_prime * n_prime and src size = prev_n
   eIcicleError copy_like_z1(Rq* dst, const Rq* src) const;
-  // Needs dst size = r_prime * n_prime and src size = prev_n
+  // Needs dst size = r_prime * n_prime and src size = t_len
   eIcicleError copy_like_t(Rq* dst, const Rq* src) const;
+  // Needs dst size = r_prime * n_prime and src size = g_len
   eIcicleError copy_like_g(Rq* dst, const Rq* src) const;
+  // Needs dst size = r_prime * n_prime and src size = h_len
   eIcicleError copy_like_h(Rq* dst, const Rq* src) const;
 };
 
-// choose base0 such that at the end of a base_case_prover witness z satisfies
-// ||z||_2 <op_norm_bound * beta * sqrt(r) < base0^2
+/// choose base0 such that at the end of a base_case_prover witness z satisfies
+/// ||z||_2 <op_norm_bound * beta * sqrt(r) < base0^2
 uint32_t calc_base0(size_t r, uint64_t op_norm_bound, double beta);
 
-// returns a choice of mu, nu given n, m for recursion
+/// returns a choice of mu, nu given n, m for recursion
 std::pair<size_t, size_t> compute_mu_nu(size_t n, size_t m);
 
-// return kappa such that for a random A: kappa X m the MSIS problem
-// Ax = 0 has at least 128 bits of security
+/// return kappa such that for a random A: kappa X m the MSIS problem
+/// Ax = 0 has at least 128 bits of security
 size_t secure_msis_rank();

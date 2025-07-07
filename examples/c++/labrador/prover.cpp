@@ -1,9 +1,6 @@
 #include "prover.h"
 #include <cassert>
 
-/// Prover uses this function to select a valid JL projection for which the norm condition is satisfied .
-/// Returns (JL_i, p) such that [seed, JL_i] is the seed for the valid JL projection
-/// p is the result of applying this JL projection to the witness
 std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std::byte* seed, size_t seed_len) const
 {
   size_t JL_out = lab_inst.param.JL_out;

@@ -89,14 +89,13 @@ ConstZeroInstance create_rand_const_zero_inst(size_t n, size_t r, const std::vec
   ConstZeroInstance const_zero_inst{r, n, eq_inst.a, eq_inst.phi, Zq::zero()};
 
   // For b only set const coeff equal to the one in eq_inst.b
-  // eq_inst_b = INTT(eq_inst.b)
-  Rq eq_inst_b;
-  ICICLE_CHECK(ntt(&eq_inst.b, 1, NTTDir::kInverse, {}, &eq_inst_b));
+  // eq_inst_b_unhat = INTT(eq_inst.b)
+  Rq eq_inst_b_unhat;
+  ICICLE_CHECK(ntt(&eq_inst.b, 1, NTTDir::kInverse, {}, &eq_inst_b_unhat));
 
-  Rq rand_b = rand_poly_vec(1, q)[0];
-  // make const coeff of rand_b equal to that of eq_inst_b
+  // set const_zero_inst.b equal to const coeff of eq_inst_b
 
-  const_zero_inst.b = eq_inst_b.values[0];
+  const_zero_inst.b = eq_inst_b_unhat.values[0];
   return const_zero_inst;
 }
 

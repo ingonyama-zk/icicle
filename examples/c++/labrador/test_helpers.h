@@ -5,10 +5,10 @@
 
 constexpr bool TESTING = true;
 
-// print a polynomial
+/// print a Zq vector
 void print_vec(const Zq* vec, size_t len, const std::string& name);
 
-// print a polynomial
+/// print a polynomial
 void print_poly(const PolyRing& poly, const std::string& name);
 
 /// @brief Compares two vectors of PolyRing polynomials element-wise

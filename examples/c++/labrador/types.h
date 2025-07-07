@@ -14,31 +14,49 @@ using namespace icicle::labrador;
 
 constexpr uint64_t OP_NORM_BOUND = 15;
 
+/// @brief Struct for storing an equality instance of the form:
+/// \sum_ij a[i,j]<s[i], s[j]> + \sum_i <phi[i], s[i]> + b = 0
 struct EqualityInstance {
-  size_t r;            // Number of witness vectors
-  size_t n;            // Dimension of each vector in Tq
-  std::vector<Tq> a;   // a[i,j]  – r×r  matrix over Tq
-  std::vector<Tq> phi; // phi[i,j] – r vectors, each length n  (row-major)
-  Tq b;                // Polynomial in Tq
+  /// Number of witness vectors
+  size_t r;
+  /// Dimension of each vector in Tq
+  size_t n;
+  /// a[i,j]  – r×r  matrix over Tq
+  std::vector<Tq> a;
+  /// phi[i,j] – r vectors, each length n  (row-major)
+  std::vector<Tq> phi;
+  /// Polynomial in Tq
+  Tq b;
+
+  // constructors
 
   EqualityInstance(size_t r, size_t n) : r(r), n(n), a(r * r, zero()), phi(r * n, zero()), b(zero()) {}
 
-  EqualityInstance(size_t r, size_t n, const std::vector<Tq>& a, const std::vector<Tq>& phi, Tq b)
+  EqualityInstance(size_t r, size_t n, const std::vector<Tq>& a, const std::vector<Tq>& phi, const Tq& b)
       : r(r), n(n), a(a), phi(phi), b(b)
   {
     if (a.size() != r * r || phi.size() != r * n)
-      throw std::invalid_argument("EqualityInstance: incorrect ‘a’ or ‘phi’ size");
+      throw std::invalid_argument("EqualityInstance: incorrect 'a' or 'phi' size");
   }
 
   EqualityInstance(const EqualityInstance& o) = default;
 };
 
+/// @brief Struct for storing a constant-zero constraints of the form:
+/// constant(\sum_ij a[i,j]<s[i], s[j]> + \sum_i <phi[i], s[i]> + b) = 0
 struct ConstZeroInstance {
-  size_t r;            // Number of witness vectors
-  size_t n;            // Dimension of each vector in Tq
-  std::vector<Tq> a;   // a[i,j]  – r×r  matrix over Tq
-  std::vector<Tq> phi; // phi[i,j] – r vectors, each length n  (row-major)
-  Zq b;                // Such that \sum_ij a[i,j]<s[i], s[j]> + \sum_i <phi[i], s[i]> + b has 0 const coeff
+  /// Number of witness vectors
+  size_t r;
+  /// Dimension of each vector in Tq
+  size_t n;
+  /// a[i,j] – r×r matrix over Tq
+  std::vector<Tq> a;
+  /// phi[i,j] – r vectors, each length n (row-major)
+  std::vector<Tq> phi;
+  /// Constant term b such that the entire expression has zero constant coefficient
+  Zq b;
+
+  // constructors
 
   ConstZeroInstance(size_t r, size_t n) : r(r), n(n), a(r * r, zero()), phi(r * n, zero()), b(Zq::zero()) {}
 
@@ -56,35 +74,54 @@ struct ConstZeroInstance {
  *  Protocol parameters
  * ====================================================================*/
 
+/// @brief struct for storing parameter for the Labrador protocol
 struct LabradorParam {
-  // Problem size
-  size_t r; // number of witness vectors
-  size_t n; // dimension of each vector in Tq
+  /// Problem size
 
-  // Seed for Ajtai matrix generation
+  /// Number of witness vectors
+  size_t r;
+  /// Dimension of each vector in Tq
+  size_t n;
+
+  /// Seed for Ajtai matrix generation
   std::vector<std::byte> ajtai_seed;
 
-  // Matrix dimensions for Ajtai commitments
-  size_t kappa;  // Ajtai matrix A dimensions: n × kappa
-  size_t kappa1; // Matrix B,C dimensions for committing to decomposed vectors (t,g)
-  size_t kappa2; // Matrix D dimensions for committing to decomposed h vectors
+  /// Matrix dimensions for Ajtai commitments
 
-  // Store Ajtai matrices
+  /// Ajtai matrix A dimensions: n × kappa
+  size_t kappa;
+  /// Matrix B,C dimensions for committing to decomposed vectors (t,g)
+  size_t kappa1;
+  /// Matrix D dimensions for committing to decomposed h vectors
+  size_t kappa2;
+
+  /// Store Ajtai matrices
   std::vector<Tq> A, B, C, D;
 
-  // Decomposition bases
-  uint32_t base1; // Base for decomposing t
-  uint32_t base2; // Base for decomposing g
-  uint32_t base3; // Base for decomposing h
+  /// Decomposition bases
 
-  // JL projection parameters
-  size_t JL_out = 256; // Output dimension for Johnson-Lindenstrauss projection (typically 256)
+  /// Base for decomposing t
+  uint32_t base1;
+  /// Base for decomposing g
+  uint32_t base2;
+  /// Base for decomposing h
+  uint32_t base3;
 
-  // Norm bounds
-  double beta;                            // Witness norm bound
-  uint64_t op_norm_bound = OP_NORM_BOUND; // Operator norm bound for challenges
+  /// JL projection parameters
 
-  size_t num_aggregation_rounds = std::ceil(128.0 / std::log2(get_q<Zq>()));
+  /// Output dimension for Johnson-Lindenstrauss projection (typically 256)
+  size_t JL_out = 256;
+
+  /// Norm bounds
+  /// Witness norm bound
+  double beta;
+  /// Operator norm bound for challenges
+  uint64_t op_norm_bound = OP_NORM_BOUND;
+
+  /// Number of times aggregation is repeated for constant zero constraints
+  size_t num_aggregation_rounds = std::ceil(128.0 / std::log2(get_q<Zq>())); // = 3
+
+  // constructors
 
   LabradorParam(
     size_t r,
@@ -124,7 +161,7 @@ struct LabradorParam {
 
   LabradorParam(const LabradorParam& o) = default;
 
-  /* helper lengths for compressed vectors --------------------------------*/
+  /* helper lengths for base proof vectors --------------------------------*/
   size_t t_len() const
   {
     size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base1);
@@ -150,12 +187,18 @@ struct LabradorParam {
  *  Instance to be proved
  * ====================================================================*/
 
+/// An instance of the Labrador problem: consists of multiple equality constraints and constant zero constraints
 struct LabradorInstance {
-  LabradorParam param;                                   // LabradorParam for this instance
-  std::vector<EqualityInstance> equality_constraints;    // K equality constraints
-  std::vector<ConstZeroInstance> const_zero_constraints; // L const-zero constraints
+  /// LabradorParam for this instance
+  LabradorParam param;
+  /// Equality constraints
+  std::vector<EqualityInstance> equality_constraints;
+  /// Const-zero constraints
+  std::vector<ConstZeroInstance> const_zero_constraints;
 
-  explicit LabradorInstance(const LabradorParam& p) : param(p) {}
+  // constructors
+
+  LabradorInstance(const LabradorParam& p) : param(p) {}
   LabradorInstance(const LabradorInstance&) = default;
 
   /* -------- constraint helpers ---------------------------------------- */
@@ -173,6 +216,8 @@ struct LabradorInstance {
     const_zero_constraints.push_back(inst);
   }
 
+  /// @brief Aggregates all equality constraints into a single equality constraint by creating a random linear
+  /// combination of the constraints using the random polynomials in alpha_hat
   void agg_equality_constraints(const std::vector<Tq>& alpha_hat);
 };
 
@@ -180,12 +225,17 @@ struct LabradorInstance {
  *  Transcript + base-case proof
  * ====================================================================*/
 
+/// @brief Contains messages sent by the Prover to the Verifier in the base case of the Labrador protocol
 struct BaseProverMessages {
-  // committed by the Prover
+  /// Ajtai commitment of (t,g)
   std::vector<Tq> u1;
+  /// Nonce used by Prover of JL projection
   size_t JL_i;
+  /// JL projection of the witness
   std::vector<Zq> p;
+  /// Polynomials created during constant zero constraint aggregation
   std::vector<Tq> b_agg;
+  /// Ajtai commitment of h
   std::vector<Tq> u2;
 
   BaseProverMessages() = default;
@@ -197,12 +247,13 @@ struct BaseProverMessages {
 };
 
 struct PartialTranscript {
+  /// Prover messages during the protocol
   BaseProverMessages prover_msg;
 
-  // hash evaluations
+  /// hash evaluations
   std::vector<std::byte> seed1, seed2, seed3, seed4;
 
-  // Challenges- stored for convenience
+  /// Challenges- stored for convenience
   std::vector<Zq> psi, omega;
   std::vector<Tq> alpha_hat, challenges_hat;
 
@@ -211,17 +262,17 @@ struct PartialTranscript {
   inline size_t proof_size() { return prover_msg.proof_size(); }
 };
 
-/// Encapsulates the problem and witness for the reduced instance
+/// @brief Struct to hold the proof for the base case
 ///
-/// z_hat: is the vector computed in Step 29
+/// z_hat: is the vector computed in Step 29 of the base_case_prover
 ///
-/// t: vector computed in Step 9 (T_tilde in the code)
+/// t: vector computed in Step 9 of the base_case_prover (T_tilde in the code)
 ///
-/// g: vector computed in Step 9 (g_tilde in the code)
+/// g: vector computed in Step 9 of the base_case_prover (g_tilde in the code)
 ///
-/// h: vector computed in Step 25 (H_tilde in the code)
+/// h: vector computed in Step 25 of the base_case_prover (H_tilde in the code)
 ///
-/// Note: constructor doesn't check dimensions
+/// @note constructor doesn't check dimensions
 struct LabradorBaseCaseProof {
   std::vector<Tq> z_hat;
   std::vector<Rq> t, g, h;

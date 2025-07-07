@@ -1,5 +1,6 @@
 #include "verifier.h"
 
+// Fills up trs correctly assuming trs.prover_msg are correctly filled
 void LabradorBaseVerifier::create_transcript()
 {
   const size_t d = Rq::d;
@@ -68,7 +69,7 @@ void LabradorBaseVerifier::create_transcript()
   ntt(challenge.data(), challenge.size(), NTTDir::kForward, {}, trs.challenges_hat.data());
 }
 
-// NEW: Chunked LInfinity norm check to support vectors larger than 2^16 elements.
+// Chunked LInfinity norm check to support vectors larger than 2^16 elements.
 // Uses the same API as `check_norm_bound` except the norm type is fixed to LInfinity.
 inline eIcicleError check_norm_bound_LInfinity_chunked(
   const Zq* input, size_t size, uint64_t norm_bound, const VecOpsConfig& cfg, bool* output)
@@ -138,6 +139,7 @@ bool LabradorBaseVerifier::_verify_base_proof(const LabradorBaseCaseProof& base_
   uint64_t op_norm_bound = lab_inst.param.op_norm_bound;
   double beta = lab_inst.param.beta;
   // Check ||z|| < op_norm*beta*sqrt(r)
+  // NOTE: if n > 2^10 then this fails-- Verifier can again test this using a JL projection
   ICICLE_CHECK(check_norm_bound(
     reinterpret_cast<Zq*>(z.data()), z.size() * d, eNormType::L2, op_norm_bound * beta * sqrt(r), {}, &z_small));
 
@@ -284,13 +286,15 @@ bool LabradorBaseVerifier::_verify_base_proof(const LabradorBaseCaseProof& base_
 }
 
 // modifies the instance
+// Doesn't perform any checks
 // returns num_aggregation_rounds number of polynomials
-void LabradorBaseVerifier::agg_const_zero_constraints(size_t num_aggregation_rounds)
+void LabradorBaseVerifier::agg_const_zero_constraints()
 {
   size_t r = lab_inst.param.r;
   size_t n = lab_inst.param.n;
   size_t d = Rq::d;
   size_t JL_out = lab_inst.param.JL_out;
+  size_t num_aggregation_rounds = lab_inst.param.num_aggregation_rounds;
   const size_t L = lab_inst.const_zero_constraints.size();
 
   size_t JL_i = trs.prover_msg.JL_i;
@@ -456,7 +460,7 @@ bool LabradorBaseVerifier::part_verify()
   }
 
   // construct the final constraint correctly
-  agg_const_zero_constraints(num_aggregation_rounds);
+  agg_const_zero_constraints();
   lab_inst.agg_equality_constraints(trs.alpha_hat);
 
   return true;
@@ -481,14 +485,14 @@ bool LabradorVerifier::verify()
       std::cout << "\tProver message verification failed\n";
       return false;
     }
+    // Part verify correctly aggregates constraints
 
+    // Prepare recursion problem
     // NOTE: base0 needs to be large enough
     uint32_t base0 = calc_base0(lab_inst_i.param.r, OP_NORM_BOUND, lab_inst_i.param.beta);
-
     size_t m = lab_inst_i.param.t_len() + lab_inst_i.param.g_len() + lab_inst_i.param.h_len();
     auto [mu, nu] = compute_mu_nu(lab_inst_i.param.n, m);
 
-    // Prepare recursion problem
     EqualityInstance final_const = base_verifier.lab_inst.equality_constraints[0];
     lab_inst_i =
       prepare_recursion_instance(base_verifier.lab_inst.param, final_const, base_verifier.trs, base0, mu, nu);

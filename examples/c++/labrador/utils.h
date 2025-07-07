@@ -5,8 +5,10 @@
 
 using namespace icicle::labrador;
 
+/// returns 0 polynomial
 PolyRing zero();
 
+/// returns q for Zq
 template <typename Zq>
 int64_t get_q()
 {
@@ -81,6 +83,7 @@ std::vector<T> reconstruct_symm_matrix(const std::vector<T>& v, size_t n)
 }
 
 // ----------- Generic helper (works for Zq etc.) ------------------
+/// computes the trace of a n X n matrix and stores the result in trace_result
 template <typename T>
 eIcicleError compute_matrix_trace(const T* matrix, size_t n, T* trace_result)
 {
@@ -98,10 +101,9 @@ eIcicleError compute_matrix_trace(const T* matrix, size_t n, T* trace_result)
   return vector_sum(diagonal.data(), n, {}, trace_result);
 }
 
-// -----------------------------------------------------------------------------
-//  PolyRing overload – treats the n×n polynomial matrix as an
-//  (n×n)*d Zq-matrix and re-uses slice / vector_sum on Zq.
-// -----------------------------------------------------------------------------
+/// Computes the trace of a polynomial matrix
+/// PolyRing overload – treats the n×n polynomial matrix as an
+/// (n×n)*d Zq-matrix and re-uses slice / vector_sum on Zq.
 inline eIcicleError compute_matrix_trace(const PolyRing* matrix, size_t n, PolyRing* trace_result)
 {
   constexpr size_t d = PolyRing::d;
