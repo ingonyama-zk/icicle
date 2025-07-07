@@ -401,7 +401,7 @@ where
     let cfg = VecOpsConfig::default();
     bit_reverse(input, &cfg, &mut intermediate[..]).unwrap();
 
-    let mut intermediate_host = [F::one(); TEST_SIZE];
+    let mut intermediate_host = vec![F::one(); TEST_SIZE];
     intermediate
         .copy_to_host(HostSlice::from_mut_slice(&mut intermediate_host[..]))
         .unwrap();
