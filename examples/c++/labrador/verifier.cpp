@@ -372,7 +372,7 @@ void LabradorBaseVerifier::agg_const_zero_constraints()
       // Q_j = Q_hat[j, :, :]
       std::vector<Rq> Q_j(r * n);
       // compute the Pi matrix row, conjugated in Rq
-      ICICLE_CHECK(get_jl_matrix_rows<Rq>(
+      ICICLE_CHECK(icicle::labrador::get_jl_matrix_rows(
         jl_seed.data(), jl_seed.size(),
         r * n, // row_size
         j,     // row_index

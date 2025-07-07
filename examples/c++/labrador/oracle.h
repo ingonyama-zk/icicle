@@ -4,6 +4,7 @@
 #include <cstddef>              // std::byte
 #include <cstring>              // std::memcpy
 #include "icicle/hash/keccak.h" // Sha3_256::create()
+#include "examples_utils.h"
 
 /**
  * @brief A very small SHA3-256 based random-oracle.
@@ -20,9 +21,17 @@ public:
   std::vector<std::byte> state_; // current transcript state
 
   // Construct with an initial seed.
-  Oracle(const std::byte* seed, size_t seed_len) : hasher_(Sha3_256::create()), state_(seed, seed + seed_len) {}
+  Oracle(const std::byte* seed, size_t seed_len) : hasher_(Hash(nullptr)), state_(seed, seed + seed_len)
+  {
+    ScopedCpuDevice cpu_scope{"SHA3 create"};
+    hasher_ = Sha3_256::create();
+  }
   // Copy constructor
-  Oracle(const Oracle& other) : hasher_(Sha3_256::create()), state_(other.state_) {}
+  Oracle(const Oracle& other) : hasher_(Hash(nullptr)), state_(other.state_)
+  {
+    ScopedCpuDevice cpu_scope{"SHA3 create"};
+    hasher_ = Sha3_256::create();
+  }
 
   /**
    * @brief Produce the next challenge.

@@ -14,7 +14,7 @@ std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std:
   while (true) {
     jl_seed.push_back(std::byte(JL_i));
     // create JL projection: P*(s_1, s_2, ..., s_r)
-    ICICLE_CHECK(jl_projection(
+    ICICLE_CHECK(icicle::labrador::jl_projection(
       reinterpret_cast<const Zq*>(S.data()), n * r * d, jl_seed.data(), jl_seed.size(), {}, p.data(), JL_out));
     // check norm
     bool JL_check = false;
@@ -129,7 +129,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       // Q_j = Q_hat[j, :, :]
       std::vector<Rq> Q_j(r * n);
       // compute the Pi matrix row, conjugated in Rq
-      ICICLE_CHECK(get_jl_matrix_rows<Rq>(
+      ICICLE_CHECK(icicle::labrador::get_jl_matrix_rows(
         jl_seed.data(), jl_seed.size(),
         r * n, // row_size
         j,     // row_index

@@ -13,6 +13,7 @@
 #include "icicle/norm.h"
 #include "icicle/hash/keccak.h" // For Hash
 #include "icicle/random_sampling.h"
+#include "examples_utils.h"
 
 namespace icicle {
   namespace labrador {
@@ -54,6 +55,12 @@ namespace icicle {
       Tq* C)
     {
       return icicle::matmul(A, A_nof_rows, A_nof_cols, B, B_nof_rows, B_nof_cols, config, C);
+    }
+
+    inline eIcicleError matrix_transpose(
+      const PolyRing* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, PolyRing* mat_out)
+    {
+      return icicle::matrix_transpose<PolyRing>(mat_in, nof_rows, nof_cols, config, mat_out);
     }
 
     //------------------------------------------------------------------------------
@@ -111,6 +118,7 @@ namespace icicle {
       Zq* output,
       size_t output_size)
     {
+      ScopedCpuDevice cpu_scope{"JL projection"};
       return icicle::jl_projection<Zq>(input, input_size, seed, seed_len, cfg, output, output_size);
     }
 
@@ -127,6 +135,7 @@ namespace icicle {
       const VecOpsConfig& cfg,
       Rq* output)
     {
+      ScopedCpuDevice cpu_scope{"get JL rows"};
       return icicle::get_jl_matrix_rows(seed, seed_len, row_size, start_row, num_rows, conjugate, cfg, output);
     }
 
