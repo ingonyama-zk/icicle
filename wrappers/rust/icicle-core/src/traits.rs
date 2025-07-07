@@ -10,7 +10,7 @@ pub trait GenerateRandom: Sized {
 }
 
 #[macro_export]
-macro_rules! impl_generate_random_ffi {
+macro_rules! impl_generate_random {
     (
         $obj:ident,
         $generate_random_function_name:expr
@@ -39,7 +39,7 @@ pub trait MontgomeryConvertible: Sized {
 }
 
 #[macro_export]
-macro_rules! impl_montgomery_convertible_ffi {
+macro_rules! impl_montgomery_convertible {
     (
         $obj:ident,
         $convert_montgomery_function_name:expr
@@ -106,7 +106,7 @@ pub trait Arithmetic: Sized + Add<Output = Self> + Sub<Output = Self> + Mul<Outp
 }
 
 #[macro_export]
-macro_rules! impl_arithmetic_ffi {
+macro_rules! impl_arithmetic {
     (
         $obj:ident,
         $obj_prefix:literal
@@ -209,7 +209,7 @@ pub trait Invertible: Sized {
 }
 
 #[macro_export]
-macro_rules! impl_invertible_ffi {
+macro_rules! impl_invertible {
     (
         $obj:ident,
         $obj_prefix:literal

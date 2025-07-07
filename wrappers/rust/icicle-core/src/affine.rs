@@ -66,6 +66,6 @@ macro_rules! impl_affine {
             }
         }
 
-        icicle_core::impl_montgomery_convertible_ffi!($affine, concat!($curve_prefix, "_affine_convert_montgomery"));
+        icicle_core::impl_montgomery_convertible!($affine, concat!($curve_prefix, "_affine_convert_montgomery"));
     };
 }

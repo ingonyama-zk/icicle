@@ -1,4 +1,4 @@
-use icicle_core::{impl_field, impl_generate_random_ffi, impl_montgomery_convertible_ffi};
+use icicle_core::{impl_field, impl_generate_random, impl_montgomery_convertible};
 
 use icicle_core::bignum::BigNum;
 use icicle_runtime::errors::eIcicleError;
@@ -9,12 +9,12 @@ pub(crate) const SCALAR_LIMBS: usize = 2; // Goldilocks uses 2 limbs for 64-bit 
 pub(crate) const EXTENSION_LIMBS: usize = 4;
 
 impl_field!(ScalarField, "goldilocks", SCALAR_LIMBS, true, true);
-impl_montgomery_convertible_ffi!(ScalarField, "goldilocks_scalar_convert_montgomery");
-impl_generate_random_ffi!(ScalarField, "goldilocks_generate_scalars");
+impl_montgomery_convertible!(ScalarField, "goldilocks_scalar_convert_montgomery");
+impl_generate_random!(ScalarField, "goldilocks_generate_scalars");
 
 impl_field!(ExtensionField, "goldilocks_extension", EXTENSION_LIMBS, true, true);
-impl_montgomery_convertible_ffi!(ExtensionField, "goldilocks_extension_scalar_convert_montgomery");
-impl_generate_random_ffi!(ExtensionField, "goldilocks_extension_generate_scalars");
+impl_montgomery_convertible!(ExtensionField, "goldilocks_extension_scalar_convert_montgomery");
+impl_generate_random!(ExtensionField, "goldilocks_extension_generate_scalars");
 
 #[cfg(test)]
 mod tests {

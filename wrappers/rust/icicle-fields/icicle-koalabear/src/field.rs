@@ -1,4 +1,4 @@
-use icicle_core::{impl_field, impl_generate_random_ffi, impl_montgomery_convertible_ffi};
+use icicle_core::{impl_field, impl_generate_random, impl_montgomery_convertible};
 
 use icicle_core::bignum::BigNum;
 use icicle_runtime::errors::eIcicleError;
@@ -9,12 +9,12 @@ pub(crate) const SCALAR_LIMBS: usize = 1;
 pub(crate) const EXTENSION_LIMBS: usize = 4;
 
 impl_field!(ScalarField, "koalabear", SCALAR_LIMBS, true, true);
-impl_montgomery_convertible_ffi!(ScalarField, "koalabear_scalar_convert_montgomery");
-impl_generate_random_ffi!(ScalarField, "koalabear_generate_scalars");
+impl_montgomery_convertible!(ScalarField, "koalabear_scalar_convert_montgomery");
+impl_generate_random!(ScalarField, "koalabear_generate_scalars");
 
 impl_field!(ExtensionField, "koalabear_extension", EXTENSION_LIMBS, true, true);
-impl_montgomery_convertible_ffi!(ExtensionField, "koalabear_extension_scalar_convert_montgomery");
-impl_generate_random_ffi!(ExtensionField, "koalabear_extension_generate_scalars");
+impl_montgomery_convertible!(ExtensionField, "koalabear_extension_scalar_convert_montgomery");
+impl_generate_random!(ExtensionField, "koalabear_extension_generate_scalars");
 
 #[cfg(test)]
 mod tests {

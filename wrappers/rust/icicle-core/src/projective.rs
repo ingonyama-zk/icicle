@@ -220,7 +220,7 @@ macro_rules! impl_projective {
             }
         }
 
-        icicle_core::impl_montgomery_convertible_ffi!(
+        icicle_core::impl_montgomery_convertible!(
             $projective,
             concat!($curve_prefix, "_projective_convert_montgomery")
         );

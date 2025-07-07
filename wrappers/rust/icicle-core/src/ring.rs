@@ -46,7 +46,7 @@ macro_rules! impl_integer_ring {
             }
         }
 
-        icicle_core::impl_arithmetic_ffi!($ring, $ring_prefix);
+        icicle_core::impl_arithmetic!($ring, $ring_prefix);
     };
 }
 

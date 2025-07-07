@@ -1,7 +1,7 @@
 use icicle_core::affine::Affine;
 use icicle_core::bignum::BigNum;
 use icicle_core::projective::Projective;
-use icicle_core::{impl_bignum, impl_curve, impl_field, impl_generate_random_ffi, impl_montgomery_convertible_ffi};
+use icicle_core::{impl_bignum, impl_curve, impl_field, impl_generate_random, impl_montgomery_convertible};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 
 pub(crate) const SCALAR_LIMBS: usize = 8;
@@ -10,8 +10,8 @@ pub(crate) const BASE_LIMBS: usize = 8;
 pub(crate) const G2_BASE_LIMBS: usize = 16;
 
 impl_field!(ScalarField, "bn254", SCALAR_LIMBS, true, true);
-impl_montgomery_convertible_ffi!(ScalarField, "bn254_scalar_convert_montgomery");
-impl_generate_random_ffi!(ScalarField, "bn254_generate_scalars");
+impl_montgomery_convertible!(ScalarField, "bn254_scalar_convert_montgomery");
+impl_generate_random!(ScalarField, "bn254_generate_scalars");
 
 impl_bignum!(BaseField, "bn254", BASE_LIMBS, false);
 impl_curve!("bn254", CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);

@@ -18,7 +18,7 @@ macro_rules! impl_field {
             $use_ffi_for_eq,
             $use_ffi_for_from_u32
         );
-        icicle_core::impl_invertible_ffi!($field, $field_prefix);
+        icicle_core::impl_invertible!($field, $field_prefix);
         impl icicle_core::field::Field for $field {}
     };
 }
