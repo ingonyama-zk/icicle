@@ -33,8 +33,8 @@ macro_rules! impl_affine {
         #[derive(Debug, Default, PartialEq, Copy, Clone)]
         #[repr(C)]
         pub struct $affine {
-            x: $base_field,
-            y: $base_field,
+            pub x: $base_field,
+            pub y: $base_field,
         }
 
         impl icicle_core::affine::Affine for $affine {

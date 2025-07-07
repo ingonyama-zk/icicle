@@ -1,8 +1,9 @@
 use icicle_babybear::field::ScalarField;
+use icicle_core::bignum::BigNum;
 use icicle_core::{
-    field::PrimeField,
+    field::Field,
     hash::{HashConfig, Hasher},
-    merkle::{MerkleProof, MerkleTree, MerkleTreeConfig, PaddingPolicy},
+    merkle::{MerkleTree, MerkleTreeConfig, PaddingPolicy},
     poseidon2::Poseidon2,
 };
 use icicle_m31::field::ScalarField as M31Field;
@@ -33,7 +34,7 @@ fn try_load_and_set_backend_device(args: &Args) {
     icicle_runtime::set_device(&device).unwrap();
 }
 
-pub fn hash_test<F: PrimeField>(test_vec: Vec<F>, config: HashConfig, hash: Hasher) {
+pub fn hash_test<F: Field>(test_vec: Vec<F>, config: HashConfig, hash: Hasher) {
     let input_slice = HostSlice::from_slice(&test_vec);
     let out_init: F = F::zero();
     let mut binding = [out_init];
@@ -48,7 +49,7 @@ pub fn hash_test<F: PrimeField>(test_vec: Vec<F>, config: HashConfig, hash: Hash
     );
 }
 
-pub fn compute_binary_tree<F: PrimeField>(
+pub fn compute_binary_tree<F: Field>(
     mut test_vec: Vec<F>,
     leaf_size: u64,
     hasher: Hasher,
@@ -205,7 +206,7 @@ pub fn main() {
 
     let nof_leaves = 1 << args.log_nof_leaves as usize;
     let nof_elements = nof_leaves * poseidon_state_size;
-    let mut test_vec = vec![M31Field::from_u32(random::<u32>()); nof_elements];
+    let test_vec = vec![M31Field::from_u32(random::<u32>()); nof_elements];
     println!("Generated random vector of size {:?}", nof_elements);
     //to use later for merkle proof
     let mut binding = test_vec.clone();

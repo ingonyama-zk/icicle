@@ -2,7 +2,8 @@ use icicle_babybear::field::ScalarField;
 use icicle_core::{
     ntt::{self, get_root_of_unity, initialize_domain, ntt, NTTConfig},
     traits::GenerateRandom,
-    field::PrimeField
+    field::Field,
+    bignum::BigNum,
 };
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 use icicle_runtime::{self, Device};

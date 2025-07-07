@@ -69,9 +69,9 @@ macro_rules! impl_projective {
         #[derive(Debug, Default, Copy, Clone)]
         #[repr(C)]
         pub struct $projective {
-            x: $base_field,
-            y: $base_field,
-            z: $base_field,
+            pub x: $base_field,
+            pub y: $base_field,
+            pub z: $base_field,
         }
 
         impl icicle_core::projective::Projective for $projective {

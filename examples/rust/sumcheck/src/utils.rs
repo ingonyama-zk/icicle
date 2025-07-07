@@ -1,7 +1,7 @@
 use clap::Parser;
-use icicle_core::field::PrimeField;
+use icicle_core::field::Field;
 use icicle_core::traits::GenerateRandom;
-use icicle_runtime::{runtime, Device};
+use icicle_runtime::Device;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -25,7 +25,7 @@ pub fn set_backend_cpu() {
     icicle_runtime::set_device(&device_cpu).unwrap();
 }
 
-pub fn generate_random_vector<F: PrimeField>(size: usize) -> Vec<F>
+pub fn generate_random_vector<F: Field>(size: usize) -> Vec<F>
 where
     F: GenerateRandom,
 {
