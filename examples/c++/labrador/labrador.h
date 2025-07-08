@@ -178,16 +178,6 @@ namespace icicle {
 
     /// TODO update:
     /// @brief Sample Rq challenge polynomials from challenge space C.
-    /// Does not ensure norm constraints (e.g., τ, T) hold. User must check and possibly return with another seed.
-    /// seed, seed_len: random seed for sampling and its length
-    /// coeff_val = [a1,a2,a3, ..., aN]
-    /// num_occur = [m1,m2,m3, ..., mN]
-    /// assert(coeff_val.size() == num_occur.size())
-    /// Sampling should initialise a polynomial with coefficients consisting of m1 number of a1s, m2 number of a2s, ...,
-    /// mN number of aNs. The rest of the coefficients should be 0.
-    /// Then, you should randomly flip the signs of the coefficients.
-    /// Finally, you need to permute the coefficients randomly
-
     inline eIcicleError sample_challenge_space_polynomials(
       const std::byte* seed,
       size_t seed_len,

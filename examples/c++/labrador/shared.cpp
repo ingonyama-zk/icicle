@@ -18,28 +18,8 @@ std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, const std::byte* 
 {
   size_t d = Rq::d;
   std::vector<Rq> challenge(r, zero());
-  for (auto& c : challenge) {
-    c.values[1] = Zq::from(1);
-  }
-  // std::vector<size_t> j_ch(r, 0);
-  // // TODO: can parallelise the i loop
-  // for (size_t i = 0; i < r; i++) {
-  //   while (true) {
-  //     std::vector<std::byte> ch_seed(seed, seed + seed_len);
-  //     ch_seed.push_back(std::byte(i));
-  //     ch_seed.push_back(std::byte(j_ch[i]));
-  //     ICICLE_CHECK(sample_challenge_polynomials(ch_seed.data(), ch_seed.size(), {1, 2}, {31, 10}, challenge[i]));
 
-  //     bool norm_bound = false;
-  //     ICICLE_CHECK(check_norm_bound(challenge[i].values, d, eNormType::Lop, OP_NORM_BOUND, {}, &norm_bound));
-
-  //     if (norm_bound) {
-  //       break;
-  //     } else {
-  //       j_ch[i]++;
-  //     }
-  //   }
-  // }
+  sample_challenge_space_polynomials(seed, seed_len, r, 31, 10, OP_NORM_BOUND, {}, challenge.data());
   return challenge;
 }
 
