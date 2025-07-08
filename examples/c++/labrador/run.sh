@@ -60,7 +60,7 @@ else
   export ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR}"
   cmake -DCMAKE_BUILD_TYPE=Release -DRING=labrador -S "${ICILE_DIR}" -B build/icicle
 fi
-cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build/example
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B build/example
 
 cmake --build build/icicle -j
 cmake --build build/example -j

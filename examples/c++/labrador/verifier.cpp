@@ -30,12 +30,12 @@ void LabradorBaseVerifier::create_transcript()
   std::vector<std::byte> psi_seed(trs.seed2);
   psi_seed.push_back(std::byte('1'));
   if (trs.psi.size() > 0) {
-    ICICLE_CHECK(random_sampling(trs.psi.size(), true, psi_seed.data(), psi_seed.size(), {}, trs.psi.data()));
+    ICICLE_CHECK(random_sampling(trs.psi.size(), false, psi_seed.data(), psi_seed.size(), {}, trs.psi.data()));
   }
   // omega seed = seed2 || 0x02
   std::vector<std::byte> omega_seed(trs.seed2);
   omega_seed.push_back(std::byte('2'));
-  ICICLE_CHECK(random_sampling(trs.omega.size(), true, omega_seed.data(), omega_seed.size(), {}, trs.omega.data()));
+  ICICLE_CHECK(random_sampling(trs.omega.size(), false, omega_seed.data(), omega_seed.size(), {}, trs.omega.data()));
 
   // 4. seed3 from msg3 (b_agg)
   const auto& msg3 = trs.prover_msg.b_agg;
@@ -53,7 +53,7 @@ void LabradorBaseVerifier::create_transcript()
   trs.alpha_hat.resize(K);
   std::vector<std::byte> alpha_seed(trs.seed3);
   alpha_seed.push_back(std::byte('1'));
-  ICICLE_CHECK(random_sampling(K, true, alpha_seed.data(), alpha_seed.size(), {}, trs.alpha_hat.data()));
+  ICICLE_CHECK(random_sampling(K, false, alpha_seed.data(), alpha_seed.size(), {}, trs.alpha_hat.data()));
 
   // 6. seed4 from u2
   const auto& u2 = trs.prover_msg.u2;

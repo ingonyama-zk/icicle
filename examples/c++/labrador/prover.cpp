@@ -171,9 +171,6 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
     Zq minus_1 = Zq::neg(Zq::from(1));
     ICICLE_CHECK(scalar_mul_vec(&minus_1, new_constraint.b.values, d, {}, new_constraint.b.values));
 
-    // TODO: is this needed
-    ICICLE_CHECK(icicle_device_synchronize());
-
     if (TESTING) {
       // Following should work if our B^{(k)} evaluation is correct above
       if (!witness_legit_eq(new_constraint, S)) { std::cout << "Constraint " << k << " failed\n"; }
@@ -190,11 +187,11 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       Rq b_rq;
       ICICLE_CHECK(ntt(&new_constraint.b, 1, NTTDir::kInverse, {}, &b_rq));
 
-      Zq lhs = b_rq.values[0];
-      Zq rhs = verif_test_b0[k]; // already available
-      Zq diff = lhs - rhs;       // mod q
+      // Zq lhs = b_rq.values[0];
+      // Zq rhs = verif_test_b0[k]; // already available
+      // Zq diff = lhs - rhs;       // mod q
 
-      std::cout << "\tk=" << k << "\n\t  lhs=" << lhs << "\n\t  rhs=" << rhs << "\n\t  diff=" << diff << std::endl;
+      // std::cout << "\tk=" << k << "\n\t  lhs=" << lhs << "\n\t  rhs=" << rhs << "\n\t  diff=" << diff << std::endl;
       if (verif_test_b0[k] != b_rq.values[0]) {
         std::cout << "\tFail: New constraint b doesn't match verif b for idx" << k << "\n";
       } else {
@@ -227,8 +224,8 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   const size_t n = lab_inst.param.n; // Dimension of witness vectors
   constexpr size_t d = Rq::d;
 
-  std::cout << "Number of constraints (Eq, Cz): " << lab_inst.equality_constraints.size() << ", "
-            << lab_inst.const_zero_constraints.size() << std::endl;
+  // std::cout << "Number of constraints (Eq, Cz): " << lab_inst.equality_constraints.size() << ", "
+  //           << lab_inst.const_zero_constraints.size() << std::endl;
 
   PartialTranscript trs;
   // std::cout << "Step 1 completed: Initialized variables" << std::endl;
@@ -261,27 +258,6 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Rq> T_tilde(l1 * r * kappa);
   ICICLE_CHECK(decompose(T.data(), r * kappa, base1, {}, T_tilde.data(), T_tilde.size()));
   // std::cout << "Step 6 completed: Decomposed T to T_tilde" << std::endl;
-
-  // if (TESTING) {
-  //   // Ensure that recompose(T_tilde) == T
-  //   std::vector<Rq> temp(r * kappa);
-  //   ICICLE_CHECK(recompose(T_tilde.data(), T_tilde.size(), base1, {}, temp.data(), temp.size()));
-  //   bool decompose_recompose_correct = true;
-  //   for (size_t i = 0; i < r * kappa; i++) {
-  //     for (size_t j = 0; j < d; j++) {
-  //       if (temp[i].values[j] != T[i].values[j]) {
-  //         decompose_recompose_correct = false;
-  //         break;
-  //       }
-  //     }
-  //     if (!decompose_recompose_correct) break;
-  //   }
-  //   if (decompose_recompose_correct) {
-  //     std::cout << "\tDecompose/recompose test passed\n";
-  //   } else {
-  //     std::cout << "\tDecompose/recompose test failed\n";
-  //   }
-  // }
 
   // Step 7: compute g
   std::vector<Tq> S_hat_transposed(n * r);
@@ -373,13 +349,13 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   psi_seed.push_back(std::byte('1'));
   // TODO: change fast mode to false
   if (psi.size() > 0) {
-    ICICLE_CHECK(random_sampling(psi.size(), true, psi_seed.data(), psi_seed.size(), {}, psi.data()));
+    ICICLE_CHECK(random_sampling(psi.size(), false, psi_seed.data(), psi_seed.size(), {}, psi.data()));
   }
   // Sample omega
   // omega seed = seed2 || 0x02
   std::vector<std::byte> omega_seed(seed2);
   omega_seed.push_back(std::byte('2'));
-  ICICLE_CHECK(random_sampling(omega.size(), true, omega_seed.data(), omega_seed.size(), {}, omega.data()));
+  ICICLE_CHECK(random_sampling(omega.size(), false, omega_seed.data(), omega_seed.size(), {}, omega.data()));
 
   trs.psi = psi;
   trs.omega = omega;
@@ -387,23 +363,8 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // Step 19: Aggregate ConstZeroInstance constraints
 
-  // if (TESTING) {
-  //   bool Q_testing = true;
-  //   for (size_t l = 0; l < JL_out; l++) {
-  //     std::vector<Tq> a{r * r, zero()}, phi{&Q_hat[l * r * n], &Q_hat[(l + 1) * r * n]};
-
-  //     ConstZeroInstance cz{r, n, a, phi, Zq::neg(p[l])};
-  //     if (!witness_legit_const_zero(cz, S)) {
-  //       std::cout << "\tQ-constraint-check fails for " << l << "\n";
-  //       Q_testing = false;
-  //       break;
-  //     };
-  //   }
-  //   if (Q_testing) { std::cout << "\tQ-constraint-check passed... " << "\n"; }
-  // }
-
   std::vector<Tq> msg3 = agg_const_zero_constraints(S_hat, G_hat, p, psi, omega, JL_i, seed1);
-  std::cout << "Step 19 completed: Aggregated ConstZeroInstance constraints" << std::endl;
+  // std::cout << "Step 19 completed: Aggregated ConstZeroInstance constraints" << std::endl;
 
   if (TESTING) {
     std::cout << "\tTesting witness validity...";
@@ -427,14 +388,14 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Tq> alpha_hat(K);
   std::vector<std::byte> alpha_seed(seed3);
   alpha_seed.push_back(std::byte('1'));
-  ICICLE_CHECK(random_sampling(K, true, alpha_seed.data(), alpha_seed.size(), {}, alpha_hat.data()));
+  ICICLE_CHECK(random_sampling(K, false, alpha_seed.data(), alpha_seed.size(), {}, alpha_hat.data()));
 
   trs.alpha_hat = alpha_hat;
   // std::cout << "Step 21 completed: Sampled alpha_hat" << std::endl;
 
   // Step 22:
   lab_inst.agg_equality_constraints(alpha_hat);
-  std::cout << "Step 22 completed: Aggregated equality constraints" << std::endl;
+  // std::cout << "Step 22 completed: Aggregated equality constraints" << std::endl;
   if (TESTING) {
     std::cout << "\tTesting witness validity...";
     assert(lab_witness_legit(lab_inst, S));
@@ -536,7 +497,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   LabradorBaseCaseProof final_proof{z_hat, T_tilde, g_tilde, h_tilde};
   // std::cout << "Step 29 completed: Computed z_hat and created final proof" << std::endl;
 
-  std::cout << "base_case_prover completed!\n" << std::endl;
+  // std::cout << "base_case_prover completed!\n" << std::endl;
   return std::make_pair(final_proof, trs);
 }
 
@@ -560,7 +521,7 @@ std::vector<Rq> LabradorProver::prepare_recursion_witness(
     throw std::runtime_error("Parameter Choice Error: z could not be recomposed from z_tilde in "
                              "prepare_recursion_witness. Consider changing base0 parameter.");
   } else {
-    std::cout << "\tprepare_recursion_witness: z recomposition passes.\n";
+    // std::cout << "\tprepare_recursion_witness: z recomposition passes.\n";
   }
   // Step 3:
   // z0 = z_tilde[:n]
@@ -621,28 +582,6 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
         std::cout << "\tRecursion problem-witness valid\n";
       } else {
         throw std::runtime_error("\tRecursion problem-witness INVALID\n");
-        // // Debug: check each constraint individually
-        // std::cout << "\tDebugging constraints (iteration " << i << "):\n";
-        // std::cout << "\tNumber of equality constraints: " << lab_inst_i.equality_constraints.size() << "\n";
-        // std::cout << "\tNumber of const-zero constraints: " << lab_inst_i.const_zero_constraints.size() << "\n";
-        // std::cout << "\tWitness size: " << S_i.size() << ", expected: " << lab_inst_i.param.r * lab_inst_i.param.n
-        //           << "\n";
-
-        // for (size_t j = 0; j < lab_inst_i.equality_constraints.size(); j++) {
-        //   if (!witness_legit_eq(lab_inst_i.equality_constraints[j], S_i)) {
-        //     std::cout << "\t\tEquality constraint " << j << " FAILED\n";
-        //   } else {
-        //     std::cout << "\t\tEquality constraint " << j << " passed\n";
-        //   }
-        // }
-
-        // for (size_t j = 0; j < lab_inst_i.const_zero_constraints.size(); j++) {
-        //   if (!witness_legit_const_zero(lab_inst_i.const_zero_constraints[j], S_i)) {
-        //     std::cout << "\t\tConst-zero constraint " << j << " FAILED\n";
-        //   } else {
-        //     std::cout << "\t\tConst-zero constraint " << j << " passed\n";
-        //   }
-        // }
       }
     }
   }

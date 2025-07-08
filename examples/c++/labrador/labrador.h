@@ -122,8 +122,6 @@ namespace icicle {
     }
 
     /// Returns one or more rows of a JL-matrix, as Rq polynomials, optionally conjugated
-    /// TODO: Note in the docs that row_size is measured in Zq. TODO Ash: we can make it be in Rq too. Let me know
-    /// please
     inline eIcicleError get_jl_matrix_rows(
       const std::byte* seed,
       size_t seed_len,
