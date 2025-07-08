@@ -148,11 +148,9 @@ int main(int argc, char* argv[])
   LabradorProver prover{
     lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size(), NUM_REC};
 
-  std::cout<<"Problem param: n,r = "<<n<<", "<<r<<"\n";
+  std::cout << "Problem param: n,r = " << n << ", " << r << "\n";
   std::cout << "TESTING = " << (TESTING ? "true" : "false") << "\n";
-  if(TESTING){
-    std::cout << "TESTING TRUE IMPLIES TIMING ESTIMATES ARE INCORRECT\n";
-  }
+  if (TESTING) { std::cout << "TESTING TRUE IMPLIES TIMING ESTIMATES ARE INCORRECT\n"; }
   auto [trs, final_proof] = prover.prove();
 
   // extract all prover_msg from trs vector into a vector prover_msgs
@@ -160,18 +158,18 @@ int main(int argc, char* argv[])
   for (const auto& transcript : trs) {
     prover_msgs.push_back(transcript.prover_msg);
   }
-  if(TESTING){
-  LabradorVerifier verifier{lab_inst,           prover_msgs,
-                            final_proof,        reinterpret_cast<const std::byte*>(oracle_seed.data()),
-                            oracle_seed.size(), NUM_REC};
+  if (TESTING) {
+    LabradorVerifier verifier{lab_inst,           prover_msgs,
+                              final_proof,        reinterpret_cast<const std::byte*>(oracle_seed.data()),
+                              oracle_seed.size(), NUM_REC};
 
-  std::cout << "Verification result: \n";
-  if (verifier.verify()) {
-    std::cout << "Verification passed. \n";
-  } else {
-    std::cout << "Verification failed. \n";
+    std::cout << "Verification result: \n";
+    if (verifier.verify()) {
+      std::cout << "Verification passed. \n";
+    } else {
+      std::cout << "Verification failed. \n";
+    }
   }
-}
   return 0;
 
   // Single round TRS test
