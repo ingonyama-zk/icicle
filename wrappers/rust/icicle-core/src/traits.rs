@@ -63,7 +63,10 @@ macro_rules! impl_montgomery_convertible {
 
                 // check device slice is on active device
                 if values.is_on_device() && !values.is_on_active_device() {
-                    panic!("input not allocated on the active device");
+                    return Err(icicle_runtime::errors::IcicleError::new(
+                        icicle_runtime::errors::eIcicleError::InvalidArgument,
+                        "input not allocated on the active device",
+                    ));
                 }
                 let mut config = icicle_core::vec_ops::VecOpsConfig::default();
                 config.is_a_on_device = values.is_on_device();
