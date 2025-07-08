@@ -23,19 +23,19 @@ void LabradorBaseVerifier::create_transcript()
   // 3. psi and omega sampling
   const size_t L = lab_inst.const_zero_constraints.size();
   const size_t JL_out = lab_inst.param.JL_out;
-  const size_t num_agg_rounds = std::ceil(128.0 / std::log2(get_q<Zq>()));
-  trs.psi.resize(num_agg_rounds * L);
-  trs.omega.resize(num_agg_rounds * JL_out);
+  const size_t num_aggregation_rounds = lab_inst.param.num_aggregation_rounds;
+  trs.psi.resize(num_aggregation_rounds * L);
+  trs.omega.resize(num_aggregation_rounds * JL_out);
   // psi seed = seed2 || 0x01
   std::vector<std::byte> psi_seed(trs.seed2);
   psi_seed.push_back(std::byte('1'));
   if (trs.psi.size() > 0) {
-    random_sampling(trs.psi.size(), true, psi_seed.data(), psi_seed.size(), {}, trs.psi.data());
+    ICICLE_CHECK(random_sampling(trs.psi.size(), true, psi_seed.data(), psi_seed.size(), {}, trs.psi.data()));
   }
   // omega seed = seed2 || 0x02
   std::vector<std::byte> omega_seed(trs.seed2);
   omega_seed.push_back(std::byte('2'));
-  random_sampling(trs.omega.size(), true, omega_seed.data(), omega_seed.size(), {}, trs.omega.data());
+  ICICLE_CHECK(random_sampling(trs.omega.size(), true, omega_seed.data(), omega_seed.size(), {}, trs.omega.data()));
 
   // 4. seed3 from msg3 (b_agg)
   const auto& msg3 = trs.prover_msg.b_agg;
@@ -45,15 +45,15 @@ void LabradorBaseVerifier::create_transcript()
 
   // 5. alpha_hat sampling
   // After we aggregate the L const-zero constraints the instance will
-  // have `num_agg_rounds` extra EqualityInstances, so we must sample
+  // have `num_aggregation_rounds` extra EqualityInstances, so we must sample
   // α for the *final* size in advance.
-  const size_t K = lab_inst.equality_constraints.size() + num_agg_rounds;
+  const size_t K = lab_inst.equality_constraints.size() + num_aggregation_rounds;
   assert(K > 0);
 
   trs.alpha_hat.resize(K);
   std::vector<std::byte> alpha_seed(trs.seed3);
   alpha_seed.push_back(std::byte('1'));
-  random_sampling(K, true, alpha_seed.data(), alpha_seed.size(), {}, trs.alpha_hat.data());
+  ICICLE_CHECK(random_sampling(K, true, alpha_seed.data(), alpha_seed.size(), {}, trs.alpha_hat.data()));
 
   // 6. seed4 from u2
   const auto& u2 = trs.prover_msg.u2;
