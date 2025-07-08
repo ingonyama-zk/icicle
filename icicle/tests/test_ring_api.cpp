@@ -849,7 +849,7 @@ TEST_F(RingTestBase, NormBounded)
   ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
   auto square_root = static_cast<uint32_t>(std::sqrt(q));
 
-  const size_t size = 1 << 10;
+  const size_t size = 1 << 20;
   auto input = std::vector<field_t>(size);
 
   for (size_t i = 0; i < size; ++i) {
