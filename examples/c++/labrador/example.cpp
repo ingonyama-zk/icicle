@@ -156,16 +156,16 @@ int main(int argc, char* argv[])
     prover_msgs.push_back(transcript.prover_msg);
   }
 
-  // LabradorVerifier verifier{lab_inst,           prover_msgs,
-  //                           final_proof,        reinterpret_cast<const std::byte*>(oracle_seed.data()),
-  //                           oracle_seed.size(), NUM_REC};
+  LabradorVerifier verifier{lab_inst,           prover_msgs,
+                            final_proof,        reinterpret_cast<const std::byte*>(oracle_seed.data()),
+                            oracle_seed.size(), NUM_REC};
 
-  // std::cout << "Verification result: \n";
-  // if (verifier.verify()) {
-  //   std::cout << "Verification passed. \n";
-  // } else {
-  //   std::cout << "Verification failed. \n";
-  // }
+  std::cout << "Verification result: \n";
+  if (verifier.verify()) {
+    std::cout << "Verification passed. \n";
+  } else {
+    std::cout << "Verification failed. \n";
+  }
   return 0;
 
   // Single round TRS test
