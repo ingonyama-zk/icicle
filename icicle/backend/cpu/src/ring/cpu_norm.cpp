@@ -81,7 +81,7 @@ static eIcicleError cpu_check_norm_bound(
         for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
           for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
             uint64_t val = input_u64[batch_idx * size + idx];
-            // val = abs_centered(val, q); // This is redundant to balance since `val < sqrt(q)` --> `sqrt(q) < q/2`
+            // Note that it is redundant to balance since the value `val < sqrt(q)` --> `sqrt(q) < q/2`
             if (!validate_input_range(val, sqrt_q)) {
               validation_failed.store(true, std::memory_order_relaxed);
               return;
@@ -111,7 +111,7 @@ static eIcicleError cpu_check_norm_bound(
   }
   // For L-infinity norm, we just need to check the max(|input|) < norm_bound
   else if (norm == eNormType::LInfinity) {
-    std::vector<std::atomic<int64_t>> max_abs(config.batch_size);
+    std::vector<std::atomic<uint64_t>> max_abs(config.batch_size);
     for (auto& max : max_abs) {
       max.store(0, std::memory_order_relaxed);
     }
@@ -125,18 +125,18 @@ static eIcicleError cpu_check_norm_bound(
     for (uint64_t start_idx = 0; start_idx < size; start_idx += worker_task_size) {
       taskflow.emplace([=, &max_abs, &validation_failed]() {
         const uint64_t end_idx = std::min(start_idx + worker_task_size, static_cast<uint64_t>(size));
-        std::vector<int64_t> local_max(config.batch_size, 0);
+        std::vector<uint64_t> local_max(config.batch_size, 0);
 
         for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
           for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
-            int64_t val = input_u64[batch_idx * size + idx];
+            uint64_t val = input_u64[batch_idx * size + idx];
             val = abs_centered(val, q);
             local_max[batch_idx] = std::max(local_max[batch_idx], val);
           }
         }
 
         for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
-          int64_t current_max = max_abs[batch_idx].load(std::memory_order_relaxed);
+          uint64_t current_max = max_abs[batch_idx].load(std::memory_order_relaxed);
           if (local_max[batch_idx] > current_max) {
             max_abs[batch_idx].compare_exchange_weak(
               current_max, local_max[batch_idx], std::memory_order_relaxed, std::memory_order_relaxed);
