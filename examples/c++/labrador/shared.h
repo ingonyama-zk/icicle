@@ -21,7 +21,7 @@ using namespace icicle::labrador;
 std::vector<Tq>
 ajtai_commitment(const std::vector<Tq>& A, size_t input_len, size_t output_len, const Tq* S, size_t S_len);
 
-/// TODO: Simply returns the polynomial x for every challenge rn
+/// Samples low norm challenge polynomials for the Labrador protocol
 std::vector<Rq> sample_low_norm_challenges(size_t n, size_t r, const std::byte* seed, size_t seed_len);
 
 /// Helper to concatenate oracle_seed and lab_inst bytes and return an Oracle object.
