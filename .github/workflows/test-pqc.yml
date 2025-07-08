@@ -3,11 +3,6 @@ name: Test PQC ML-KEM
 on:
   workflow_call:
     inputs:
-      ref:
-        description: 'Git ref to checkout'
-        required: false
-        type: string
-        default: ''
       runner:
         description: 'Runner labels as JSON array'
         required: true
@@ -47,8 +42,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          ref: ${{ inputs.ref || github.ref }}
 
       - name: Build PQC
         working-directory: ./icicle
