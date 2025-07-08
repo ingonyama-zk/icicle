@@ -13,7 +13,7 @@ using uint128_t = __uint128_t;
 
 static inline uint64_t abs_centered(uint64_t val, uint64_t q) { return (val > q / 2) ? q - val : val; }
 
-static inline bool validate_input_range(int64_t val, int64_t sqrt_q)
+static inline bool validate_input_range(uint64_t val, uint64_t sqrt_q)
 {
   if (val >= sqrt_q) {
     ICICLE_LOG_ERROR << "Input value " << val << " is greater than sqrt(q) = " << sqrt_q;
@@ -80,7 +80,7 @@ static eIcicleError cpu_check_norm_bound(
 
         for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
           for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
-            uint64_t val = input_u64[batch_idx * size + idx];
+            uint64_t val = abs_centered(input_u64[batch_idx * size + idx], q);
             // Note that it is redundant to balance since the value `val < sqrt(q)` --> `sqrt(q) < q/2`
             if (!validate_input_range(val, sqrt_q)) {
               validation_failed.store(true, std::memory_order_relaxed);
