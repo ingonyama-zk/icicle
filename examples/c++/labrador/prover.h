@@ -72,7 +72,6 @@ struct LabradorBaseProver {
 /// @brief Struct that performs the Prover actions for the entire Labrador protocol
 struct LabradorProver {
   /// The problem instance being proven.
-  /// @note This instance mutates as the proof goes on.
   LabradorInstance lab_inst;
 
   /// The witness matrix S, consisting of r vectors of dimension n, arranged in row-major order.
@@ -108,5 +107,9 @@ struct LabradorProver {
   static std::vector<Rq> prepare_recursion_witness(
     const LabradorParam& prev_param, const LabradorBaseCaseProof& pf, uint32_t base0, size_t mu, size_t nu);
 
+  /// @brief Creates the Labrador proof for the given `lab_inst`.
+  /// @note Only modifies oracle
+  /// @return (trs, final_proof) where trs is NUM_REC long vector of partial transcripts for each recursive instance
+  /// of the protocol and final_proof is the base case proof for the last round
   std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> prove();
 };
