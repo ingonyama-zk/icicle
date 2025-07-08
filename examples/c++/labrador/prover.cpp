@@ -178,6 +178,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       // Following should work if our B^{(k)} evaluation is correct above
       if (!witness_legit_eq(new_constraint, S)) { std::cout << "Constraint " << k << " failed\n"; }
 
+      verif_test_b0[k] = Zq::zero();
       // Verifier performs these checks
       for (size_t l = 0; l < L; l++) {
         verif_test_b0[k] = verif_test_b0[k] + psi[psi_index(k, l)] * lab_inst.const_zero_constraints[l].b;
@@ -193,7 +194,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       Zq rhs = verif_test_b0[k]; // already available
       Zq diff = lhs - rhs;       // mod q
 
-      std::cout << "k=" << k << "  lhs=" << lhs << "  rhs=" << rhs << "  diff=" << diff << std::endl;
+      std::cout << "\tk=" << k << "\n\t  lhs=" << lhs << "\n\t  rhs=" << rhs << "\n\t  diff=" << diff << std::endl;
       if (verif_test_b0[k] != b_rq.values[0]) {
         std::cout << "\tFail: New constraint b doesn't match verif b for idx" << k << "\n";
       } else {
@@ -230,13 +231,13 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
             << lab_inst.const_zero_constraints.size() << std::endl;
 
   PartialTranscript trs;
-  std::cout << "Step 1 completed: Initialized variables" << std::endl;
+  // std::cout << "Step 1 completed: Initialized variables" << std::endl;
 
   // Step 2: Convert S to the NTT Domain
   std::vector<Tq> S_hat(r * n);
   // Perform negacyclic NTT on the witness S
   ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
-  std::cout << "Step 2 completed: NTT conversion" << std::endl;
+  // std::cout << "Step 2 completed: NTT conversion" << std::endl;
 
   // Step 3: S@A = T
   size_t kappa = lab_inst.param.kappa;
@@ -244,7 +245,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // Compute T_hat = S_hat @ A
   std::vector<Tq> T_hat = ajtai_commitment(A, n, kappa, S_hat.data(), r * n);
-  std::cout << "Step 3 completed: Ajtai commitment T_hat" << std::endl;
+  // std::cout << "Step 3 completed: Ajtai commitment T_hat" << std::endl;
 
   // Step 4: already done
 
@@ -252,35 +253,35 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Rq> T(r * kappa);
   // Perform negacyclic INTT
   ICICLE_CHECK(ntt(T_hat.data(), r * kappa, NTTDir::kInverse, {}, T.data()));
-  std::cout << "Step 5 completed: INTT conversion of T_hat" << std::endl;
+  // std::cout << "Step 5 completed: INTT conversion of T_hat" << std::endl;
 
   // Step 6: decompose T to T_tilde
   size_t base1 = lab_inst.param.base1;
   size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base1);
   std::vector<Rq> T_tilde(l1 * r * kappa);
   ICICLE_CHECK(decompose(T.data(), r * kappa, base1, {}, T_tilde.data(), T_tilde.size()));
-  std::cout << "Step 6 completed: Decomposed T to T_tilde" << std::endl;
+  // std::cout << "Step 6 completed: Decomposed T to T_tilde" << std::endl;
 
-  if (TESTING) {
-    // Ensure that recompose(T_tilde) == T
-    std::vector<Rq> temp(r * kappa);
-    ICICLE_CHECK(recompose(T_tilde.data(), T_tilde.size(), base1, {}, temp.data(), temp.size()));
-    bool decompose_recompose_correct = true;
-    for (size_t i = 0; i < r * kappa; i++) {
-      for (size_t j = 0; j < d; j++) {
-        if (temp[i].values[j] != T[i].values[j]) {
-          decompose_recompose_correct = false;
-          break;
-        }
-      }
-      if (!decompose_recompose_correct) break;
-    }
-    if (decompose_recompose_correct) {
-      std::cout << "\tDecompose/recompose test passed\n";
-    } else {
-      std::cout << "\tDecompose/recompose test failed\n";
-    }
-  }
+  // if (TESTING) {
+  //   // Ensure that recompose(T_tilde) == T
+  //   std::vector<Rq> temp(r * kappa);
+  //   ICICLE_CHECK(recompose(T_tilde.data(), T_tilde.size(), base1, {}, temp.data(), temp.size()));
+  //   bool decompose_recompose_correct = true;
+  //   for (size_t i = 0; i < r * kappa; i++) {
+  //     for (size_t j = 0; j < d; j++) {
+  //       if (temp[i].values[j] != T[i].values[j]) {
+  //         decompose_recompose_correct = false;
+  //         break;
+  //       }
+  //     }
+  //     if (!decompose_recompose_correct) break;
+  //   }
+  //   if (decompose_recompose_correct) {
+  //     std::cout << "\tDecompose/recompose test passed\n";
+  //   } else {
+  //     std::cout << "\tDecompose/recompose test failed\n";
+  //   }
+  // }
 
   // Step 7: compute g
   std::vector<Tq> S_hat_transposed(n * r);
@@ -294,7 +295,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Rq> g(r_choose_2);
 
   ICICLE_CHECK(ntt(g_hat.data(), r_choose_2, NTTDir::kInverse, {}, g.data()));
-  std::cout << "Step 7 completed: Computed g" << std::endl;
+  // std::cout << "Step 7 completed: Computed g" << std::endl;
 
   // Step 8: decompose g to g_tilde
   size_t base2 = lab_inst.param.base2;
@@ -302,7 +303,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base2);
   std::vector<Rq> g_tilde(l2 * g.size());
   ICICLE_CHECK(decompose(g.data(), g.size(), base2, {}, g_tilde.data(), g_tilde.size()));
-  std::cout << "Step 8 completed: Decomposed g to g_tilde" << std::endl;
+  // std::cout << "Step 8 completed: Decomposed g to g_tilde" << std::endl;
 
   // Step 9: already done
 
@@ -323,7 +324,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   std::vector<Tq> u1(kappa1);
   vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
-  std::cout << "Step 10 completed: Computed u1" << std::endl;
+  // std::cout << "Step 10 completed: Computed u1" << std::endl;
 
   // Step 11: derive seed1 using the oracle and the actual bytes of u1
   const std::byte* u1_bytes = reinterpret_cast<const std::byte*>(u1.data());
@@ -332,12 +333,12 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // add u1 to the trs
   trs.prover_msg.u1 = u1;
   trs.seed1 = seed1;
-  std::cout << "Step 11 completed: Generated seed1" << std::endl;
+  // std::cout << "Step 11 completed: Generated seed1" << std::endl;
 
   // Step 12: Select a JL projection
   size_t JL_out = lab_inst.param.JL_out;
   auto [JL_i, p] = select_valid_jl_proj(seed1.data(), seed1.size());
-  std::cout << "Step 12 completed: Selected JL projection" << std::endl;
+  // std::cout << "Step 12 completed: Selected JL projection" << std::endl;
 
   trs.prover_msg.JL_i = JL_i;
   trs.prover_msg.p = p;
@@ -351,13 +352,13 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   std::vector<std::byte> seed2 = oracle.generate(jl_buf.data(), jl_buf.size());
   trs.seed2 = seed2;
-  std::cout << "Step 13 completed: Generated seed2" << std::endl;
+  // std::cout << "Step 13 completed: Generated seed2" << std::endl;
 
   // Step 14: removed
   // Step 15, 16: already done
 
   // Step 17: Create conjugated polynomial vectors from JL matrix rows
-  std::cout << "Step 17 completed: Computed Q polynomial" << std::endl;
+  // std::cout << "Step 17 completed: Computed Q polynomial" << std::endl;
 
   // Step 18: Let L be the number of constZeroInstance constraints in LabradorInstance.
   // For 0 ≤ k < ceil(128/log(q)), sample the following random vectors:
@@ -382,7 +383,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   trs.psi = psi;
   trs.omega = omega;
-  std::cout << "Step 18 completed: Sampled psi and omega" << std::endl;
+  // std::cout << "Step 18 completed: Sampled psi and omega" << std::endl;
 
   // Step 19: Aggregate ConstZeroInstance constraints
 
@@ -417,7 +418,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   trs.prover_msg.b_agg = msg3;
   trs.seed3 = seed3;
-  std::cout << "Step 20 completed: Generated seed3" << std::endl;
+  // std::cout << "Step 20 completed: Generated seed3" << std::endl;
 
   // Step 21: Sample random polynomial vectors α using seed3
   // Let K be the number of EqualityInstances in the LabradorInstance
@@ -429,7 +430,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   ICICLE_CHECK(random_sampling(K, true, alpha_seed.data(), alpha_seed.size(), {}, alpha_hat.data()));
 
   trs.alpha_hat = alpha_hat;
-  std::cout << "Step 21 completed: Sampled alpha_hat" << std::endl;
+  // std::cout << "Step 21 completed: Sampled alpha_hat" << std::endl;
 
   // Step 22:
   lab_inst.agg_equality_constraints(alpha_hat);
@@ -468,7 +469,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
     scalar_mul_vec(&two_inv, reinterpret_cast<Zq*>(H.data()), r * r * d, {}, reinterpret_cast<Zq*>(H.data())));
 
   std::vector<Rq> h = extract_symm_part(H.data(), r);
-  std::cout << "Step 23 completed: Computed h vector" << std::endl;
+  // std::cout << "Step 23 completed: Computed h vector" << std::endl;
 
   // Step 24: Decompose h
   size_t base3 = lab_inst.param.base3;
@@ -478,7 +479,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   ICICLE_CHECK(decompose(h.data(), h.size(), base3, {}, h_tilde.data(), h_tilde.size()));
   std::vector<Tq> h_tilde_hat(h_tilde.size());
   ICICLE_CHECK(ntt(h_tilde.data(), h_tilde.size(), NTTDir::kForward, {}, h_tilde_hat.data()));
-  std::cout << "Step 24 completed: Decomposed h to H_tilde" << std::endl;
+  // std::cout << "Step 24 completed: Decomposed h to H_tilde" << std::endl;
 
   // Step 25: already done
   // Step 26: commit to h_tilde
@@ -487,7 +488,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // u2 = D @ h_tilde
   std::vector<Tq> u2 = ajtai_commitment(D, h_tilde_hat.size(), kappa2, h_tilde_hat.data(), h_tilde_hat.size());
-  std::cout << "Step 26 completed: Computed u2 commitment" << std::endl;
+  // std::cout << "Step 26 completed: Computed u2 commitment" << std::endl;
 
   // Step 27:
   // add u2 to the trs
@@ -499,7 +500,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<std::byte> seed4 = oracle.generate(u2_bytes, u2_bytes_len);
 
   trs.seed4 = seed4;
-  std::cout << "Step 27 completed: Generated seed4" << std::endl;
+  // std::cout << "Step 27 completed: Generated seed4" << std::endl;
 
   // Step 28: sampling low operator norm challenges
   std::vector<Rq> challenge = sample_low_norm_challenges(n, r, seed4.data(), seed4.size());
@@ -507,7 +508,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Tq> challenges_hat(r);
   ICICLE_CHECK(ntt(challenge.data(), challenge.size(), NTTDir::kForward, {}, challenges_hat.data()));
   trs.challenges_hat = challenges_hat;
-  std::cout << "Step 28 completed: Sampled challenges" << std::endl;
+  // std::cout << "Step 28 completed: Sampled challenges" << std::endl;
 
   // Step 29: Compute z_hat[:] = \sum_i c_i * S[i,:] = [c1 c2 ... cr] @ S
   std::vector<Tq> z_hat(n);
@@ -533,9 +534,9 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   }
 
   LabradorBaseCaseProof final_proof{z_hat, T_tilde, g_tilde, h_tilde};
-  std::cout << "Step 29 completed: Computed z_hat and created final proof" << std::endl;
+  // std::cout << "Step 29 completed: Computed z_hat and created final proof" << std::endl;
 
-  std::cout << "base_case_prover completed successfully!" << std::endl;
+  std::cout << "base_case_prover completed!\n" << std::endl;
   return std::make_pair(final_proof, trs);
 }
 
@@ -617,9 +618,9 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
 
     if (TESTING) {
       if (lab_witness_legit(lab_inst_i, S_i)) {
-        std::cout << "\tRecursion valid\n";
+        std::cout << "\tRecursion problem-witness valid\n";
       } else {
-        std::cout << "\tRecursion INVALID\n";
+        throw std::runtime_error("\tRecursion problem-witness INVALID\n");
         // // Debug: check each constraint individually
         // std::cout << "\tDebugging constraints (iteration " << i << "):\n";
         // std::cout << "\tNumber of equality constraints: " << lab_inst_i.equality_constraints.size() << "\n";
