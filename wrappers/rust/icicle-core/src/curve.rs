@@ -1,12 +1,11 @@
 use crate::affine::Affine;
-use crate::bignum::BigNum;
 use crate::field::Field;
 use crate::projective::Projective;
 use crate::traits::{GenerateRandom, MontgomeryConvertible};
 
 pub trait Curve {
-    type BaseField: BigNum;
-    type ScalarField: Field + MontgomeryConvertible + GenerateRandom;
+    type BaseField: Field;
+    type ScalarField: Field + MontgomeryConvertible;
 
     type Affine: Affine<BaseField = Self::BaseField>;
     type Projective: Projective<Affine = Self::Affine, ScalarField = Self::ScalarField, BaseField = Self::BaseField>;

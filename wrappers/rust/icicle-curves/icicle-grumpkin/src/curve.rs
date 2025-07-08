@@ -1,18 +1,16 @@
 use icicle_core::affine::Affine;
 use icicle_core::bignum::BigNum;
 use icicle_core::projective::Projective;
-use icicle_core::{impl_bignum, impl_curve, impl_field, impl_generate_random, impl_montgomery_convertible};
+use icicle_core::{impl_curve, impl_field, impl_montgomery_convertible};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 
 pub(crate) const SCALAR_LIMBS: usize = 8;
 pub(crate) const BASE_LIMBS: usize = 8;
 
-impl_field!(ScalarField, "grumpkin", SCALAR_LIMBS, true, true);
+impl_field!(ScalarField, "grumpkin", SCALAR_LIMBS);
 impl_montgomery_convertible!(ScalarField, "grumpkin_scalar_convert_montgomery");
-impl_generate_random!(ScalarField, "grumpkin_generate_scalars");
 
-impl_bignum!(BaseField, "grumpkin_base_field", BASE_LIMBS, false, false);
-
+impl_field!(BaseField, "grumpkin_base_field", BASE_LIMBS);
 impl_curve!("grumpkin", CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);
 
 #[cfg(test)]

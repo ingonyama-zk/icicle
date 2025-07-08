@@ -1,12 +1,13 @@
 use crate::{
     bignum::BigNum,
+    field::Field,
     traits::{GenerateRandom, MontgomeryConvertible},
 };
 use std::fmt::Debug;
 
 /// An [affine](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) elliptic curve point.
 pub trait Affine: Debug + Default + PartialEq + Copy + Clone + MontgomeryConvertible + GenerateRandom {
-    type BaseField: BigNum;
+    type BaseField: Field;
 
     fn x(&self) -> Self::BaseField;
     fn y(&self) -> Self::BaseField;

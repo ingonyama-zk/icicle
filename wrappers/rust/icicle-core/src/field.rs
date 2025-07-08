@@ -7,17 +7,9 @@ macro_rules! impl_field {
     (
         $field:ident,
         $field_prefix:literal,
-        $num_limbs:ident,
-        $use_ffi_for_eq:expr,
-        $use_ffi_for_from_u32:expr
+        $num_limbs:ident
     ) => {
-        icicle_core::impl_integer_ring!(
-            $field,
-            $field_prefix,
-            $num_limbs,
-            $use_ffi_for_eq,
-            $use_ffi_for_from_u32
-        );
+        icicle_core::impl_integer_ring!($field, $field_prefix, $num_limbs);
         icicle_core::impl_invertible!($field, $field_prefix);
         impl icicle_core::field::Field for $field {}
     };

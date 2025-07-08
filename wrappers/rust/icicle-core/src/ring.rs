@@ -1,31 +1,24 @@
 use crate::{
     bignum::BigNum,
-    traits::{Arithmetic, TryInverse},
+    traits::{Arithmetic, GenerateRandom, TryInverse},
 };
 
-pub trait IntegerRing: BigNum + Arithmetic + TryInverse {}
+pub trait IntegerRing: BigNum + GenerateRandom + Arithmetic + TryInverse {}
 
 #[macro_export]
 macro_rules! impl_integer_ring {
     (
         $ring:ident,
         $ring_prefix:literal,
-        $num_limbs:ident,
-        $use_ffi_for_eq:expr,
-        $use_ffi_for_from_u32:expr
+        $num_limbs:ident
     ) => {
-        icicle_core::impl_bignum!(
-            $ring,
-            $ring_prefix,
-            $num_limbs,
-            $use_ffi_for_eq,
-            $use_ffi_for_from_u32
-        );
+        icicle_core::impl_bignum!($ring, $ring_prefix, $num_limbs);
 
         impl icicle_core::ring::IntegerRing for $ring {}
 
         icicle_core::impl_arithmetic!($ring, $ring_prefix);
         icicle_core::impl_try_inverse!($ring, $ring_prefix);
+        icicle_core::impl_generate_random!($ring, concat!($ring_prefix, "_generate_random"));
     };
 }
 

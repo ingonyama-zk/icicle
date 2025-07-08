@@ -11,9 +11,7 @@ pub(crate) const PAIRING_TARGET_FIELD_LIMBS: usize = 288;
 impl_field!(
     PairingTargetField,
     "bls12_381_pairing_target_field",
-    PAIRING_TARGET_FIELD_LIMBS,
-    true,
-    true
+    PAIRING_TARGET_FIELD_LIMBS
 );
 impl_pairing!("bls12_381", bls12_381, CurveCfg, G2CurveCfg, PairingTargetField);
 

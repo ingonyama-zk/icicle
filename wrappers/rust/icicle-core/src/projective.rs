@@ -23,7 +23,7 @@ pub trait Projective:
     + Into<Self::Affine>
 {
     type ScalarField: Field;
-    type BaseField: BigNum;
+    type BaseField: Field;
     type Affine: Affine;
 
     fn x(&self) -> Self::BaseField;

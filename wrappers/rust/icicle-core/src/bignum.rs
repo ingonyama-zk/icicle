@@ -20,25 +20,6 @@ pub trait BigNum:
             .collect()
     }
 
-    // please note that this function zero-pads if there are not enough bytes
-    // and only takes the first bytes in there are too many of them
-    fn from_bytes_le(bytes: &[u8]) -> Self {
-        let mut result = Self::zero();
-        let limbs = result
-            .limbs_mut()
-            .as_mut();
-        for (i, chunk) in bytes
-            .chunks(4)
-            .take(Self::LIMBS_SIZE)
-            .enumerate()
-        {
-            let mut chunk_array: [u8; 4] = [0; 4];
-            chunk_array[..chunk.len()].clone_from_slice(chunk);
-            limbs[i] = u32::from_le_bytes(chunk_array);
-        }
-        result
-    }
-
     fn from_u32(val: u32) -> Self {
         Self::from(val)
     }
@@ -50,6 +31,10 @@ pub trait BigNum:
     fn one() -> Self {
         Self::from(1)
     }
+
+    // please note that this function zero-pads if there are not enough bytes
+    // and only takes the first bytes in there are too many of them
+    fn from_bytes_le(bytes: &[u8]) -> Self;
 
     fn from_hex(s: &str) -> Self {
         let s = if s.starts_with("0x") { &s[2..] } else { s };
@@ -81,9 +66,7 @@ macro_rules! impl_bignum {
     (
         $bignum:ident,
         $bignum_prefix:literal,
-        $num_limbs:ident,
-        $use_ffi_for_eq:expr,
-        $use_ffi_for_from_u32:expr
+        $num_limbs:ident
     ) => {
         #[derive(Copy, Clone)]
         #[repr(C)]
@@ -122,6 +105,23 @@ macro_rules! impl_bignum {
             fn limbs_mut(&mut self) -> &mut Self::Limbs {
                 &mut self.limbs
             }
+
+            fn from_bytes_le(bytes: &[u8]) -> Self {
+                let mut padded = vec![0u8; Self::LIMBS_SIZE * 4];
+                let len = bytes
+                    .len()
+                    .min(Self::LIMBS_SIZE * 4);
+                padded[..len].copy_from_slice(&bytes[..len]);
+                extern "C" {
+                    #[link_name = concat!($bignum_prefix, "_from_bytes_le")]
+                    pub(crate) fn from_bytes_le(bytes: *const u8, result: *mut $bignum);
+                }
+                let mut result = Self::zero();
+                unsafe {
+                    from_bytes_le(padded.as_ptr(), &mut result);
+                }
+                result
+            }
         }
 
         impl std::fmt::Display for $bignum {
@@ -138,49 +138,39 @@ macro_rules! impl_bignum {
 
         impl PartialEq for $bignum {
             fn eq(&self, other: &Self) -> bool {
-                if $use_ffi_for_eq {
-                    extern "C" {
-                        #[link_name = concat!($bignum_prefix, "_eq")]
-                        pub(crate) fn _eq(left: *const $bignum, right: *const $bignum, result: *mut bool);
-                    }
-                    let mut result = false;
-                    unsafe {
-                        _eq(
-                            self.limbs
-                                .as_ptr() as *const $bignum,
-                            other
-                                .limbs
-                                .as_ptr() as *const $bignum,
-                            &mut result,
-                        );
-                    }
-                    result
-                } else {
-                    self.limbs == other.limbs
+                extern "C" {
+                    #[link_name = concat!($bignum_prefix, "_eq")]
+                    pub(crate) fn _eq(left: *const $bignum, right: *const $bignum, result: *mut bool);
                 }
+                let mut result = false;
+                unsafe {
+                    _eq(
+                        self.limbs
+                            .as_ptr() as *const $bignum,
+                        other
+                            .limbs
+                            .as_ptr() as *const $bignum,
+                        &mut result,
+                    );
+                }
+                result
             }
         }
 
         impl From<u32> for $bignum {
             fn from(val: u32) -> Self {
-                if $use_ffi_for_from_u32 {
-                    extern "C" {
-                        #[link_name = concat!($bignum_prefix, "_from_u32")]
-                        pub(crate) fn from_u32(val: u32, result: *mut $bignum);
-                    }
-
-                    let mut limbs = [0u32; $num_limbs];
-
-                    unsafe {
-                        from_u32(val, limbs.as_mut_ptr() as *mut Self);
-                    }
-
-                    Self { limbs }
-                } else {
-                    let mut limbs = [0u32; $num_limbs];
-                    limbs[0] = val;
-                    Self { limbs }
+                extern "C" {
+                    #[link_name = concat!($bignum_prefix, "_from_u32")]
+                    pub(crate) fn from_u32(val: u32, result: *mut $bignum);
                 }
+
+                let mut limbs = [0u32; $num_limbs];
+
+                unsafe {
+                    from_u32(val, limbs.as_mut_ptr() as *mut Self);
+                }
+
+                Self { limbs }
             }
         }
     };
