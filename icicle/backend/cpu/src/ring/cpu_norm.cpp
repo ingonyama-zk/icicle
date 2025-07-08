@@ -11,13 +11,9 @@ int get_nof_workers(const VecOpsConfig& config);
 
 using uint128_t = __uint128_t;
 
-static uint64_t abs_centered(uint64_t val, uint64_t q)
-{
-  if (val > q / 2) { val = q - val; }
-  return val;
-}
+static inline uint64_t abs_centered(uint64_t val, uint64_t q) { return (val > q / 2) ? q - val : val; }
 
-static bool validate_input_range(int64_t val, int64_t sqrt_q)
+static inline bool validate_input_range(int64_t val, int64_t sqrt_q)
 {
   if (val >= sqrt_q) {
     ICICLE_LOG_ERROR << "Input value " << val << " is greater than sqrt(q) = " << sqrt_q;
@@ -40,10 +36,9 @@ static eIcicleError cpu_check_norm_bound(
     return eIcicleError::INVALID_POINTER;
   }
 
-  if (size > 65536) { // size of the element shouldn't be bigger than 2^16
-    ICICLE_LOG_ERROR << "Invalid argument: vector size must be at most 65536.";
-    return eIcicleError::INVALID_ARGUMENT;
-  }
+  // Regarding size: We allow values up to sqrt(q). Since q is ~64 bits, values are typically ~32 bits or less.
+  // For L2 norm, squaring these values gives ~64-bit results, allowing us to safely sum up to 2^64 such elements
+  // without overflow. Therefore we allow any input size.
 
   if (size == 0) {
     ICICLE_LOG_ERROR << "Invalid argument: vector size must be greater than 0.";
@@ -65,7 +60,7 @@ static eIcicleError cpu_check_norm_bound(
 
   auto sqrt_q = static_cast<uint32_t>(std::sqrt(q));
 
-  const int64_t* input_i64 = reinterpret_cast<const int64_t*>(input);
+  const uint64_t* input_u64 = reinterpret_cast<const uint64_t*>(input);
 
   // For L2 norm, we need to check the ||input||² < norm_bound²
   if (norm == eNormType::L2) {
@@ -85,13 +80,13 @@ static eIcicleError cpu_check_norm_bound(
 
         for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
           for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
-            int64_t val = input_i64[batch_idx * size + idx];
-            val = abs_centered(val, q);
+            uint64_t val = input_u64[batch_idx * size + idx];
+            // val = abs_centered(val, q); // This is redundant to balance since `val < sqrt(q)` --> `sqrt(q) < q/2`
             if (!validate_input_range(val, sqrt_q)) {
               validation_failed.store(true, std::memory_order_relaxed);
               return;
             }
-            local_sums[batch_idx] += static_cast<uint128_t>(val) * static_cast<uint128_t>(val);
+            local_sums[batch_idx] += val * val; // Note that since val<q/2 and log2(2)<64, i64 won't overflow here
           }
         }
 
@@ -134,12 +129,8 @@ static eIcicleError cpu_check_norm_bound(
 
         for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
           for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
-            int64_t val = input_i64[batch_idx * size + idx];
+            int64_t val = input_u64[batch_idx * size + idx];
             val = abs_centered(val, q);
-            if (!validate_input_range(val, sqrt_q)) {
-              validation_failed.store(true, std::memory_order_relaxed);
-              return;
-            }
             local_max[batch_idx] = std::max(local_max[batch_idx], val);
           }
         }
@@ -156,8 +147,6 @@ static eIcicleError cpu_check_norm_bound(
 
     executor.run(taskflow).wait();
     taskflow.clear();
-
-    if (validation_failed.load(std::memory_order_relaxed)) { return eIcicleError::INVALID_ARGUMENT; }
 
     for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
       output[batch_idx] = max_abs[batch_idx].load(std::memory_order_relaxed) < static_cast<int64_t>(norm_bound);
