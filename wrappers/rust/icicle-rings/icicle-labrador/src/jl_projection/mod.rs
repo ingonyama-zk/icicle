@@ -16,3 +16,4 @@ pub(crate) mod tests {
     impl_jl_projection_tests!(ScalarRing);
     impl_jl_projection_polyring_tests!(PolyRing);
 }
+
