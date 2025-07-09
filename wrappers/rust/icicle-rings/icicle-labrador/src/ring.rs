@@ -1,33 +1,23 @@
-use icicle_core::traits::{Arithmetic, GenerateRandom, MontgomeryConvertible};
-use icicle_core::{
-    field::PrimeField, impl_field, impl_field_arithmetic, impl_generate_random, impl_montgomery_convertible,
-    vec_ops::VecOpsConfig,
-};
-use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream, IcicleError};
-use std::fmt::{Debug, Display};
-use std::ops::{Add, Mul, Sub};
+use icicle_core::bignum::BigNum;
+use icicle_core::{impl_integer_ring, impl_montgomery_convertible};
+use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 
 pub(crate) const SCALAR_LIMBS: usize = 2;
 
-impl_field!(ScalarRing, "labrador", SCALAR_LIMBS, true);
-impl_field_arithmetic!(ScalarRing, "labrador", labrador);
-impl_montgomery_convertible!(ScalarRing, labrador_scalar_convert_montgomery);
-impl_generate_random!(ScalarRing, labrador_generate_scalars);
+impl_integer_ring!(ScalarRing, "labrador", SCALAR_LIMBS);
+impl_montgomery_convertible!(ScalarRing, "labrador_scalar_convert_montgomery");
 
-impl_field!(ScalarRingRns, "labrador_rns", SCALAR_LIMBS, true);
-impl_field_arithmetic!(ScalarRingRns, "labrador_rns", labrador_rns);
-impl_montgomery_convertible!(ScalarRingRns, labrador_rns_scalar_convert_montgomery);
-impl_generate_random!(ScalarRingRns, labrador_rns_generate_scalars);
+impl_integer_ring!(ScalarRingRns, "labrador_rns", SCALAR_LIMBS);
+impl_montgomery_convertible!(ScalarRingRns, "labrador_rns_scalar_convert_montgomery");
 
 #[cfg(test)]
 mod tests {
     use super::{ScalarRing, ScalarRingRns};
-    use icicle_core::impl_field_tests;
-    use icicle_core::tests::*;
+    use icicle_core::impl_integer_ring_tests;
 
-    impl_field_tests!(ScalarRing);
+    impl_integer_ring_tests!(ScalarRing);
     mod rns {
         use super::*;
-        impl_field_tests!(ScalarRingRns);
+        impl_integer_ring_tests!(ScalarRingRns);
     }
 }

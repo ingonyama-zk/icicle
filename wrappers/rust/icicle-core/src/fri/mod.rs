@@ -2,7 +2,7 @@ pub mod fri_proof;
 pub mod fri_transcript_config;
 pub mod tests;
 use crate::traits::{Arithmetic, GenerateRandom};
-use crate::{field::PrimeField, hash::Hasher};
+use crate::{field::Field, hash::Hasher};
 use fri_proof::FriProofOps;
 use fri_transcript_config::FriTranscriptConfig;
 use icicle_runtime::{config::ConfigExtension, memory::HostOrDeviceSlice, IcicleError, IcicleStreamHandle};
@@ -13,7 +13,7 @@ pub type FriProof<F> = <F as FriMerkleTree<F>>::FriProof;
 /// # Returns
 /// - `Ok(())` if the FRI proof was successfully computed.
 /// - `Err(IcicleError)` if an error occurred during proof generation.
-pub fn fri_merkle_tree_prove<F: PrimeField>(
+pub fn fri_merkle_tree_prove<F: Field>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,
     input_data: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -39,7 +39,7 @@ where
 /// - `Ok(true)` if the proof is valid.
 /// - `Ok(false)` if the proof is invalid.
 /// - `Err(IcicleError)` if verification failed due to an error.
-pub fn fri_merkle_tree_verify<F: PrimeField>(
+pub fn fri_merkle_tree_verify<F: Field>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,
     fri_proof: &FriProof<F>,
@@ -87,8 +87,8 @@ impl Default for FriConfig {
     }
 }
 
-pub trait FriMerkleTree<F: PrimeField> {
-    type FieldConfig: PrimeField + GenerateRandom + Arithmetic;
+pub trait FriMerkleTree<F: Field> {
+    type FieldConfig: Field + GenerateRandom + Arithmetic;
     type FriProof: FriProofOps<F>;
     fn fri_merkle_tree_prove(
         config: &FriConfig,
@@ -119,7 +119,7 @@ macro_rules! impl_fri {
             use super::$field;
             use icicle_core::fri::fri_transcript_config::FriTranscriptConfig;
             use icicle_core::{
-                field::PrimeField,
+                field::Field,
                 fri::{fri_transcript_config::FFIFriTranscriptConfig, FriConfig, FriMerkleTree},
                 hash::{Hasher, HasherHandle},
                 impl_fri_proof,

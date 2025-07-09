@@ -1,6 +1,7 @@
 #![allow(unused_imports)]
-use crate::field::PrimeField;
+use crate::bignum::BigNum;
 use crate::polynomial_ring::PolynomialRing;
+use crate::ring::IntegerRing;
 use crate::traits::{Arithmetic, GenerateRandom};
 use crate::vec_ops::poly_vecops::{polyvec_add, polyvec_mul, polyvec_mul_by_scalar, polyvec_sub, polyvec_sum_reduce};
 use crate::vec_ops::{
@@ -38,7 +39,7 @@ fn test_vec_ops_config() {
 
 pub fn check_vec_ops_scalars<F>()
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     let test_size = 1 << 14;
 
@@ -57,8 +58,8 @@ where
 
 pub fn check_mixed_vec_ops_scalars<F, T>()
 where
-    F: PrimeField + MixedVecOps<T> + GenerateRandom,
-    T: PrimeField + GenerateRandom,
+    F: IntegerRing + MixedVecOps<T, F> + GenerateRandom,
+    T: IntegerRing + GenerateRandom,
 {
     let test_size = 1 << 14;
     check_vec_ops_mixed_scalars_mul::<F, T>(test_size);
@@ -66,7 +67,7 @@ where
 
 pub fn check_vec_ops_scalars_add<F>(test_size: usize)
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     let a_main = F::generate_random(test_size);
     let b = F::generate_random(test_size);
@@ -91,7 +92,7 @@ where
 
 pub fn check_vec_ops_scalars_sub<F>(test_size: usize)
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     let a_main = F::generate_random(test_size);
     let b = F::generate_random(test_size);
@@ -116,7 +117,7 @@ where
 
 pub fn check_vec_ops_scalars_mul<F>(test_size: usize)
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     let a_main = F::generate_random(test_size);
     let b = F::generate_random(test_size);
@@ -141,7 +142,7 @@ where
 
 pub fn check_vec_ops_scalars_div<F>(test_size: usize)
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     let a_main = F::generate_random(test_size);
     let b = F::generate_random(test_size);
@@ -166,7 +167,7 @@ where
 
 pub fn check_vec_ops_scalars_inv<F>(test_size: usize)
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     let cfg = VecOpsConfig::default();
 
@@ -196,7 +197,7 @@ where
 
 pub fn check_vec_ops_scalars_sum<F>(test_size: usize)
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     let cfg = VecOpsConfig::default();
     let batch_size = 3;
@@ -220,7 +221,7 @@ where
 
 pub fn check_vec_ops_scalars_product<F>(test_size: usize)
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     let cfg = VecOpsConfig::default();
     let batch_size = 3;
@@ -244,7 +245,7 @@ where
 
 pub fn check_vec_ops_scalars_add_scalar<F>(test_size: usize)
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     let cfg = VecOpsConfig::default();
     let batch_size = 3;
@@ -270,7 +271,7 @@ where
 
 pub fn check_vec_ops_scalars_sub_scalar<F>(test_size: usize)
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     let cfg = VecOpsConfig::default();
     let batch_size = 3;
@@ -296,7 +297,7 @@ where
 
 pub fn check_vec_ops_scalars_mul_scalar<F>(test_size: usize)
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     let cfg = VecOpsConfig::default();
     let batch_size = 3;
@@ -322,7 +323,7 @@ where
 
 pub fn check_vec_ops_scalars_accumulate<F>(test_size: usize)
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     let mut a_main = F::generate_random(test_size);
     let b = F::generate_random(test_size);
@@ -346,7 +347,7 @@ where
 
 pub fn check_slice<F>()
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     let cfg = VecOpsConfig::default();
     let batch_size = 3;
@@ -389,7 +390,7 @@ where
 
 pub fn check_bit_reverse<F>()
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     test_utilities::test_set_main_device();
 
@@ -420,7 +421,7 @@ where
 
 pub fn check_bit_reverse_inplace<F>()
 where
-    F: PrimeField + VecOps + GenerateRandom,
+    F: IntegerRing + VecOps<F> + GenerateRandom,
 {
     test_utilities::test_set_main_device();
 
@@ -455,8 +456,8 @@ where
 
 pub fn check_vec_ops_mixed_scalars_mul<F, T>(test_size: usize)
 where
-    F: PrimeField + MixedVecOps<T> + GenerateRandom,
-    T: PrimeField + GenerateRandom,
+    F: IntegerRing + MixedVecOps<T, F> + GenerateRandom,
+    T: IntegerRing + GenerateRandom,
 {
     let a_main = F::generate_random(test_size);
     let b = T::generate_random(test_size);
@@ -483,7 +484,7 @@ where
 pub fn check_poly_vecops_add_sub_mul<P>()
 where
     P: PolynomialRing + GenerateRandom + PartialEq + core::fmt::Debug,
-    P::Base: PrimeField + Arithmetic + VecOps + GenerateRandom,
+    P::Base: VecOps<P::Base> + GenerateRandom,
 {
     let size = 1 << 10;
     let a_vec = P::generate_random(size);
@@ -561,7 +562,7 @@ where
 pub fn check_polyvec_mul_by_scalar<P>()
 where
     P: PolynomialRing + GenerateRandom,
-    P::Base: PrimeField + Arithmetic + VecOps + GenerateRandom,
+    P::Base: VecOps<P::Base> + GenerateRandom,
 {
     let size = 1 << 10;
     let polyvec = P::generate_random(size);
@@ -600,7 +601,7 @@ where
 pub fn check_polyvec_sum_reduce<P>()
 where
     P: PolynomialRing + GenerateRandom,
-    P::Base: PrimeField + Arithmetic + VecOps + GenerateRandom,
+    P::Base: VecOps<P::Base> + GenerateRandom,
 {
     let size = 1 << 10;
     let polyvec = P::generate_random(size);

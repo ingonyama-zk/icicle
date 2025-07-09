@@ -6,10 +6,12 @@ use ark_bn254::{Fq, Fr, G1Affine as ArkAffine, G1Projective as ArkProjective};
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::{BigInteger, Field, PrimeField as ArkPrimeField};
 
-use icicle_bn254::curve::{ScalarField, G1Affine as IcicleAffine, G1Projective as IcicleProjective};
+use icicle_bn254::curve::{CurveCfg, G1Affine as IcicleAffine, G1Projective as IcicleProjective, ScalarField};
 use icicle_core::{
-    field::PrimeField,
+    bignum::BigNum,
+    field::Field as IcicleField,
     msm::{msm, MSMConfig},
+    projective::Projective,
     traits::MontgomeryConvertible,
 };
 use icicle_runtime::{
@@ -71,7 +73,7 @@ fn incremental_ark_projective_points(size: usize) -> Vec<ArkProjective> {
 fn from_ark<T, I>(ark: &T) -> I
 where
     T: Field,
-    I: PrimeField,
+    I: BigNum,
 {
     let mut ark_bytes = vec![];
     for base_elem in ark.to_base_prime_field_elements() {
@@ -87,7 +89,7 @@ where
 fn to_ark<T, I>(icicle: &I) -> T
 where
     T: Field,
-    I: PrimeField,
+    I: BigNum,
 {
     T::from_random_bytes(&icicle.to_bytes_le()).unwrap()
 }
@@ -100,7 +102,7 @@ where
 fn transmute_ark_to_icicle_scalars<T, I>(ark_scalars: &mut [T]) -> &mut [I]
 where
     T: ArkPrimeField,
-    I: PrimeField + MontgomeryConvertible,
+    I: IcicleField + MontgomeryConvertible,
 {
     // SAFETY: Reinterpreting Arkworks field elements as Icicle-specific scalars
     let icicle_scalars = unsafe { &mut *(ark_scalars as *mut _ as *mut [I]) };
@@ -108,7 +110,7 @@ where
     let icicle_host_slice = HostSlice::from_mut_slice(&mut icicle_scalars[..]);
 
     // Convert from Montgomery representation using the Icicle type's conversion method
-    I::from_mont(icicle_host_slice, &IcicleStream::default());
+    I::from_mont(icicle_host_slice, &IcicleStream::default()).unwrap();
 
     icicle_scalars
 }
@@ -116,7 +118,7 @@ where
 fn ark_to_icicle_scalars_async<T, I>(ark_scalars: &[T], stream: &IcicleStream) -> DeviceVec<I>
 where
     T: ArkPrimeField,
-    I: PrimeField + MontgomeryConvertible,
+    I: IcicleField + MontgomeryConvertible,
 {
     // SAFETY: Reinterpreting Arkworks field elements as Icicle-specific scalars
     let icicle_scalars = unsafe { &*(ark_scalars as *const _ as *const [I]) };
@@ -130,14 +132,14 @@ where
         .unwrap();
 
     // Convert from Montgomery representation using the Icicle type's conversion method
-    I::from_mont(&mut icicle_scalars, &stream);
+    I::from_mont(&mut icicle_scalars, &stream).unwrap();
     icicle_scalars
 }
 
 fn ark_to_icicle_scalars<T, I>(ark_scalars: &[T]) -> DeviceVec<I>
 where
     T: ArkPrimeField,
-    I: PrimeField + MontgomeryConvertible,
+    I: IcicleField + MontgomeryConvertible,
 {
     ark_to_icicle_scalars_async(ark_scalars, &IcicleStream::default()) // default stream is sync
 }
@@ -279,7 +281,7 @@ fn main() {
 
     let mut icicle_msm_result = vec![IcicleProjective::zero()];
     let start = Instant::now();
-    msm(
+    msm::<CurveCfg>(
         &icicle_scalars_dev,
         HostSlice::from_slice(&icicle_affine_points),
         &MSMConfig::default(),
@@ -317,7 +319,7 @@ fn main() {
         .unwrap();
 
     let start = Instant::now();
-    msm(
+    msm::<CurveCfg>(
         &icicle_scalars_dev,
         &d_icicle_affine_points,
         &MSMConfig::default(),

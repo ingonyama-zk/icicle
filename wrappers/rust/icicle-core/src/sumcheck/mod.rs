@@ -1,10 +1,9 @@
 #[doc(hidden)]
 pub mod tests;
 
-use crate::field::PrimeField;
 use crate::hash::Hasher;
-use crate::program::ReturningValueProgram;
-use crate::traits::Arithmetic;
+use crate::program::ReturningValueProgramImpl;
+use crate::ring::IntegerRing;
 use icicle_runtime::config::ConfigExtension;
 use icicle_runtime::stream::IcicleStreamHandle;
 use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
@@ -93,7 +92,7 @@ pub struct FFISumcheckTranscriptConfig<F> {
 
 impl<'a, F> From<&SumcheckTranscriptConfig<'a, F>> for FFISumcheckTranscriptConfig<F>
 where
-    F: PrimeField,
+    F: IntegerRing,
 {
     fn from(config: &SumcheckTranscriptConfig<'a, F>) -> Self {
         FFISumcheckTranscriptConfig {
@@ -168,7 +167,7 @@ impl Default for SumcheckConfig {
 /// including proof generation and verification. It is generic over the
 /// field type and configuration.
 pub trait Sumcheck {
-    type Field: PrimeField + Arithmetic;
+    type Field: IntegerRing;
     type Proof: SumcheckProofOps<Self::Field>;
 
     /// Creates a new instance of the Sumcheck protocol.
@@ -190,7 +189,7 @@ pub trait Sumcheck {
         mle_polys: &[&(impl HostOrDeviceSlice<Self::Field> + ?Sized)],
         mle_poly_size: u64,
         claimed_sum: Self::Field,
-        combine_function: impl ReturningValueProgram,
+        combine_function: impl ReturningValueProgramImpl,
         transcript_config: &SumcheckTranscriptConfig<Self::Field>,
         sumcheck_config: &SumcheckConfig,
     ) -> Result<Self::Proof, IcicleError>;
@@ -232,7 +231,7 @@ pub trait Sumcheck {
 /// including retrieving round polynomials and printing the proof.
 pub trait SumcheckProofOps<F>: From<Vec<Vec<F>>> + Serialize + DeserializeOwned
 where
-    F: PrimeField,
+    F: IntegerRing,
 {
     /// Retrieves the round polynomials from the proof.
     ///
@@ -255,10 +254,11 @@ where
 macro_rules! impl_sumcheck {
     ($field_prefix:literal, $field_prefix_ident:ident, $field:ident) => {
         mod $field_prefix_ident {
-            use super::$field;
-            use crate::symbol::$field_prefix_ident::FieldSymbol;
-            use icicle_core::field::PrimeField;
-            use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgram};
+            use crate::sumcheck::$field;
+            use crate::symbol::$field_prefix_ident::RingSymbol;
+            use icicle_core::bignum::BigNum;
+            use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgramImpl};
+            use icicle_core::ring::IntegerRing;
             use icicle_core::sumcheck::{
                 FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
             };
@@ -382,7 +382,7 @@ macro_rules! impl_sumcheck {
                     mle_polys: &[&(impl HostOrDeviceSlice<$field> + ?Sized)],
                     mle_poly_size: u64,
                     claimed_sum: $field,
-                    combine_function: impl ReturningValueProgram,
+                    combine_function: impl ReturningValueProgramImpl,
                     transcript_config: &SumcheckTranscriptConfig<$field>,
                     sumcheck_config: &SumcheckConfig,
                 ) -> Result<Self::Proof, IcicleError> {
@@ -453,7 +453,7 @@ macro_rules! impl_sumcheck {
                     unsafe { icicle_sumcheck_get_challenge_size(self.handle, &mut challenge_size).wrap()? };
 
                     // Initialize the challenge vector with zeros; will be resized after getting the actual size from FFI
-                    let mut challenge_vector = vec![$field::zero(); challenge_size];
+                    let mut challenge_vector = vec![<$field>::zero(); challenge_size];
                     unsafe {
                         icicle_sumcheck_get_challenge_vector(
                             self.handle,
@@ -477,67 +477,6 @@ macro_rules! impl_sumcheck {
                     }
                 }
             }
-            // impl Serialize for SumcheckProof {
-            //     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            //     where
-            //         S: Serializer,
-            //     {
-            //         let mut size = 0;
-            //         unsafe {
-            //             icicle_sumcheck_proof_get_serialized_size(self.handle, &mut size)
-            //                 .wrap_value(size)
-            //                 .map_err(serde::ser::Error::custom)?;
-            //             let mut buffer = vec![0u8; size];
-            //             icicle_sumcheck_proof_serialize(self.handle, buffer.as_mut_ptr(), buffer.len())
-            //                 .wrap()
-            //                 .map_err(serde::ser::Error::custom)?;
-            //             serializer.serialize_bytes(&buffer)
-            //         }
-            //     }
-            // }
-            // impl<'de> Deserialize<'de> for SumcheckProof {
-            //     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            //     where
-            //         D: Deserializer<'de>,
-            //     {
-            //         struct SumcheckProofVisitor;
-
-            //         impl<'de> Visitor<'de> for SumcheckProofVisitor {
-            //             type Value = SumcheckProof;
-
-            //             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            //                 formatter.write_str("a byte array representing a SumcheckProof")
-            //             }
-
-            //             fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-            //             where
-            //                 E: de::Error,
-            //             {
-            //                 let mut handle = std::ptr::null();
-            //                 unsafe {
-            //                     icicle_sumcheck_proof_deserialize(&mut handle, v.as_ptr(), v.len())
-            //                         .wrap_value(SumcheckProof { handle })
-            //                         .map_err(de::Error::custom)
-            //                 }
-            //             }
-            //             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            //             where
-            //                 A: serde::de::SeqAccess<'de>,
-            //             {
-            //                 let mut buffer = Vec::with_capacity(
-            //                     seq.size_hint()
-            //                         .unwrap_or(0),
-            //                 );
-            //                 while let Some(byte) = seq.next_element::<u8>()? {
-            //                     buffer.push(byte);
-            //                 }
-            //                 self.visit_bytes(&buffer)
-            //             }
-            //         }
-
-            //         deserializer.deserialize_bytes(SumcheckProofVisitor)
-            //     }
-            // }
 
             impl Handle for SumcheckWrapper {
                 fn handle(&self) -> *const c_void {
@@ -679,7 +618,7 @@ macro_rules! impl_sumcheck_tests {
         $field:ident
     ) => {
         use super::*;
-        use crate::program::$field_prefix_ident::FieldReturningValueProgram as Program;
+        use crate::program::$field_prefix_ident::ReturningValueProgram as Program;
         use icicle_core::sumcheck::tests::*;
         use icicle_hash::keccak::Keccak256;
         use icicle_runtime::{device::Device, runtime, test_utilities};

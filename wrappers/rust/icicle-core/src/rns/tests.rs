@@ -1,5 +1,5 @@
 use crate::{
-    field::PrimeField,
+    ring::IntegerRing,
     rns::{from_rns, to_rns, RnsConversion},
     traits::GenerateRandom,
     vec_ops::{VecOps, VecOpsConfig},
@@ -13,7 +13,7 @@ use icicle_runtime::{
 /// 1. Converting `Zq` to `ZqRns` using both the reference and main device implementations.
 /// 2. Ensuring both implementations produce identical results.
 /// 3. Converting `ZqRns` back to `Zq` and verifying the output matches the original input.
-pub fn check_rns_conversion<Zq: PrimeField, ZqRns: PrimeField>()
+pub fn check_rns_conversion<Zq: IntegerRing, ZqRns: IntegerRing>()
 where
     Zq: RnsConversion<Zq, ZqRns> + GenerateRandom,
 {
@@ -75,8 +75,8 @@ where
 ///   - Matches `c_from_rns = from_rns(a_rns * b_rns)` computed in `ZqRns`
 pub fn check_rns_arithmetic_consistency<Zq, ZqRns>()
 where
-    Zq: PrimeField + VecOps + RnsConversion<Zq, ZqRns> + GenerateRandom,
-    ZqRns: PrimeField + VecOps,
+    Zq: IntegerRing + VecOps<Zq> + RnsConversion<Zq, ZqRns> + GenerateRandom,
+    ZqRns: IntegerRing + VecOps<ZqRns>,
 {
     use crate::vec_ops::mul_scalars;
 

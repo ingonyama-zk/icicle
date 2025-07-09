@@ -1,7 +1,7 @@
 use crate::curve::CurveCfg;
 
 use icicle_core::{
-    curve::{Affine, Curve, Projective},
+    curve::Curve,
     impl_msm,
     msm::{MSMConfig, MSM},
 };

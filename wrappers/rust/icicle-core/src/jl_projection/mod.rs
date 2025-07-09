@@ -1,16 +1,16 @@
 use crate::vec_ops::VecOpsConfig;
-use crate::{field::PrimeField, polynomial_ring::PolynomialRing};
+use crate::{polynomial_ring::PolynomialRing, ring::IntegerRing};
 use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
 pub mod tests;
 
 /// Trait for performing Johnson–Lindenstrauss (JL) projection operations
-/// on scalar field elements (e.g., Zq).
+/// on scalar elements (e.g., Zq).
 ///
 /// This trait defines two core methods:
 /// - `jl_projection` projects an input vector using a pseudo-random matrix
 /// - `get_jl_matrix_rows` generates the raw matrix rows deterministically
-pub trait JLProjection<T: PrimeField> {
+pub trait JLProjection<T: IntegerRing> {
     /// Projects the input vector into a lower-dimensional space using a
     /// deterministic JL matrix with values in {-1, 0, 1}.
     fn jl_projection(
@@ -55,12 +55,12 @@ pub trait JLProjectionPolyRing<P: PolynomialRing> {
 /// Projects an input vector using a Johnson–Lindenstrauss (JL) random projection matrix.
 ///
 /// This is a generic wrapper over the `JLProjection` trait implemented for `T::Config`,
-/// where `T` is a `FieldImpl`. The input vector is projected into a lower-dimensional
+/// where `T` is a `IntegerRing`. The input vector is projected into a lower-dimensional
 /// space defined by the shape of `output_projection`. The projection matrix is derived
 /// deterministically from the given `seed`.
 ///
 /// # Type Parameters
-/// - `T`: The scalar field element type implementing `FieldImpl`.
+/// - `T`: The scalar element type implementing `IntegerRing`.
 ///
 /// # Parameters
 /// - `input`: The input vector to be projected. Must implement `HostOrDeviceSlice<T>`.
@@ -78,21 +78,21 @@ pub fn jl_projection<T>(
     output_projection: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), IcicleError>
 where
-    T: PrimeField,
+    T: IntegerRing,
     T: JLProjection<T>,
 {
     T::jl_projection(input, seed, cfg, output_projection)
 }
 
-/// Generates raw rows from a JL projection matrix over the field type `T`.
+/// Generates raw rows from a JL projection matrix over the type `T`.
 ///
-/// This function uses the `JLProjection` trait implemented by `T::Config`, where `T` is a scalar field.
+/// This function uses the `JLProjection` trait implemented by `T::Config`, where `T` is a scalar.
 /// The generated matrix rows are pseudo-random, derived from a cryptographic hash of the seed
 /// and row indices. Each row contains `row_size` entries, and `num_rows` rows are generated,
 /// starting from `start_row`.
 ///
 /// # Type Parameters
-/// - `T`: The scalar field type implementing `FieldImpl`.
+/// - `T`: The scalar type implementing `IntegerRing`.
 ///
 /// # Parameters
 /// - `seed`: Seed used to deterministically generate matrix content.
@@ -114,7 +114,7 @@ pub fn get_jl_matrix_rows<T>(
     output_rows: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), IcicleError>
 where
-    T: PrimeField,
+    T: IntegerRing,
     T: JLProjection<T>,
 {
     T::get_jl_matrix_rows(seed, row_size, start_row, num_rows, cfg, output_rows)

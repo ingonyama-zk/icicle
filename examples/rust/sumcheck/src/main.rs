@@ -2,8 +2,9 @@ pub mod transcript;
 pub mod utils;
 
 use icicle_bn254::curve::ScalarField as Fr;
-use icicle_bn254::sumcheck::{SumcheckProof, SumcheckWrapper};
-use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
+use icicle_bn254::sumcheck::SumcheckProof;
+use icicle_core::bignum::BigNum;
+use icicle_core::program::{PreDefinedProgram, ReturningValueProgramImpl};
 use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckTranscriptConfig};
 use icicle_hash::blake3::Blake3;
 use icicle_runtime::memory::HostSlice;
@@ -18,7 +19,7 @@ use std::time::Instant;
 
 const SAMPLES: usize = 1 << 22;
 
-pub fn verify_proof(sumcheck: SumcheckWrapper, proof: SumcheckProof, claimed_sum: Fr) {
+pub fn verify_proof(proof: SumcheckProof, claimed_sum: Fr) {
     let mut verifier_previous_transcript = Transcript::new(b"my_sumcheck");
     <Transcript as TranscriptProtocol<Fr>>::append_data(&mut verifier_previous_transcript, b"public", &claimed_sum);
     //get seed based on previous state
@@ -124,7 +125,7 @@ pub fn main() {
     );
     //try different combine functions!
     let combine_function =
-        <icicle_bn254::program::bn254::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(
+        <icicle_bn254::program::bn254::ReturningValueProgram as ReturningValueProgramImpl>::new_predefined(
             PreDefinedProgram::EQtimesABminusC,
         )
         .unwrap();
@@ -143,7 +144,7 @@ pub fn main() {
     set_backend_cpu();
     //experiment with fake sum or fake proof
     let verify_time = Instant::now();
-    verify_proof(sumcheck, proof, claimed_sum);
+    verify_proof(proof.unwrap(), claimed_sum);
     info!("verify time {:?}", verify_time.elapsed());
     info!("total time {:?}", gen_data_time.elapsed());
 }

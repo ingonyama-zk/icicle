@@ -1,5 +1,5 @@
 use super::FriMerkleTree;
-use crate::field::PrimeField;
+use crate::field::Field;
 use crate::{
     fri::{
         fri_merkle_tree_prove, fri_merkle_tree_verify, fri_proof::FriProofOps,
@@ -11,7 +11,7 @@ use crate::{
 use icicle_runtime::{memory::DeviceVec, stream::IcicleStream};
 use icicle_runtime::{memory::HostSlice, test_utilities};
 
-pub fn check_fri<F: PrimeField>(
+pub fn check_fri<F: Field>(
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
     transcript_hash: &Hasher,
@@ -64,7 +64,7 @@ pub fn check_fri<F: PrimeField>(
     check();
 }
 
-pub fn check_fri_on_device<F: PrimeField>(
+pub fn check_fri_on_device<F: Field>(
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
     transcript_hash: &Hasher,
@@ -124,7 +124,7 @@ pub fn check_fri_on_device<F: PrimeField>(
     check();
 }
 
-pub fn check_fri_proof_serialization<F: PrimeField, S, D, T>(
+pub fn check_fri_proof_serialization<F: Field, S, D, T>(
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
     transcript_hash: &Hasher,

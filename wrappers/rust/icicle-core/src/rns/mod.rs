@@ -1,10 +1,10 @@
-use crate::{field::PrimeField, vec_ops::VecOpsConfig};
+use crate::{ring::IntegerRing, vec_ops::VecOpsConfig};
 use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
 pub mod tests;
 
 /// Trait for RNS conversions (`Zq <--> ZqRns`)
-pub trait RnsConversion<Zq: PrimeField, ZqRns: PrimeField> {
+pub trait RnsConversion<Zq: IntegerRing, ZqRns: IntegerRing> {
     fn to_rns(
         input: &(impl HostOrDeviceSlice<Zq> + ?Sized),
         output: &mut (impl HostOrDeviceSlice<ZqRns> + ?Sized),
@@ -24,7 +24,7 @@ pub trait RnsConversion<Zq: PrimeField, ZqRns: PrimeField> {
 // meaning it would need separate implementations for both `Vec` and `DeviceVec`, rather than relying on the `HostOrDeviceSlice` trait.
 
 /// Performs `Zq -> ZqRns` conversion.
-pub fn to_rns<Zq: PrimeField, ZqRns: PrimeField>(
+pub fn to_rns<Zq: IntegerRing, ZqRns: IntegerRing>(
     input: &(impl HostOrDeviceSlice<Zq> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<ZqRns> + ?Sized),
     cfg: &VecOpsConfig,
@@ -36,7 +36,7 @@ where
 }
 
 /// Performs `ZqRns -> Zq` conversion.
-pub fn from_rns<Zq: PrimeField, ZqRns: PrimeField>(
+pub fn from_rns<Zq: IntegerRing, ZqRns: IntegerRing>(
     input: &(impl HostOrDeviceSlice<ZqRns> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<Zq> + ?Sized),
     cfg: &VecOpsConfig,

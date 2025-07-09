@@ -1,6 +1,5 @@
-use crate::ring::{ScalarRing, ScalarRingRns};
+pub use crate::ring::{ScalarRing, ScalarRingRns};
+use icicle_core::impl_symbol_ring;
 
-use icicle_core::impl_symbol_field;
-
-impl_symbol_field!("labrador", labrador, ScalarRing);
-impl_symbol_field!("labrador_rns", labrador_rns, ScalarRingRns);
+impl_symbol_ring!("labrador", labrador, ScalarRing);
+impl_symbol_ring!("labrador_rns", labrador_rns, ScalarRingRns);

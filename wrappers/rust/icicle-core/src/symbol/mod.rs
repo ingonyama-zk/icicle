@@ -1,4 +1,4 @@
-use crate::field::PrimeField;
+use crate::ring::IntegerRing;
 use crate::traits::Handle;
 use icicle_runtime::errors::IcicleError;
 use std::ffi::c_void;
@@ -7,19 +7,19 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
 pub type SymbolHandle = *const c_void;
 #[doc(hidden)]
-pub trait Symbol<F: PrimeField>:
+pub trait Symbol<T: IntegerRing>:
     Add<Output = Self>
     + Sub<Output = Self>
     + Mul<Output = Self>
-    + Add<F, Output = Self>
-    + Sub<F, Output = Self>
-    + Mul<F, Output = Self>
+    + Add<T, Output = Self>
+    + Sub<T, Output = Self>
+    + Mul<T, Output = Self>
     + AddAssign
     + SubAssign
     + MulAssign
-    + AddAssign<F>
-    + SubAssign<F>
-    + MulAssign<F>
+    + AddAssign<T>
+    + SubAssign<T>
+    + MulAssign<T>
     + for<'a> Add<&'a Self, Output = Self>
     + for<'a> Sub<&'a Self, Output = Self>
     + for<'a> Mul<&'a Self, Output = Self>
@@ -32,61 +32,58 @@ pub trait Symbol<F: PrimeField>:
     + Handle
 {
     fn new_input(in_idx: u32) -> Result<Self, IcicleError>; // New input symbol for the execution function
-    fn from_constant(constant: F) -> Result<Self, IcicleError>; // New symbol from a field element
-
-    fn inverse(&self) -> Self; // Field inverse of the symbol
+    fn from_constant(constant: T) -> Result<Self, IcicleError>; // New symbol from a ring element
 }
 
 #[macro_export]
 #[allow(clippy::crate_in_macro_def)]
-macro_rules! impl_symbol_field {
+macro_rules! impl_symbol_ring {
   (
-    $field_prefix:literal,
-    $field_prefix_ident:ident,
-    $field:ident
+    $ring_prefix:literal,
+    $ring_prefix_ident:ident,
+    $ring:ident
   ) => {
-    pub mod $field_prefix_ident {
-      use crate::symbol::$field;
-      use icicle_core::field::PrimeField;
+    pub mod $ring_prefix_ident {
+      use crate::symbol::$ring;
+      use icicle_core::ring::IntegerRing;
       use icicle_core::traits::{Arithmetic, Handle};
       use icicle_core::symbol::{Symbol, SymbolHandle};
       use icicle_runtime::{eIcicleError, IcicleError};
       use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
       use std::ffi::c_void;
       use std::fmt;
+      use icicle_core::bignum::BigNum;
 
       #[repr(C)]
       #[derive(Copy)]
-      pub struct FieldSymbol {
-        m_handle: SymbolHandle,
+      pub struct RingSymbol {
+        pub(crate) m_handle: SymbolHandle,
       }
 
       // Symbol Operations
       extern "C" {
-        #[link_name = concat!($field_prefix, "_create_input_symbol")]
+        #[link_name = concat!($ring_prefix, "_create_input_symbol")]
         pub(crate) fn ffi_input_symbol(in_idx: u32) -> SymbolHandle;
 
-        #[link_name = concat!($field_prefix, "_create_scalar_symbol")]
-        pub(crate) fn ffi_symbol_from_const(constant: *const $field) -> SymbolHandle;
+        #[link_name = concat!($ring_prefix, "_create_scalar_symbol")]
+        pub(crate) fn ffi_symbol_from_const(constant: *const $ring) -> SymbolHandle;
 
-        #[link_name = concat!($field_prefix, "_copy_symbol")]
+        #[link_name = concat!($ring_prefix, "_copy_symbol")]
         pub(crate) fn ffi_copy_symbol(other: SymbolHandle) -> SymbolHandle;
 
-        #[link_name = concat!($field_prefix, "_add_symbols")]
+        #[link_name = concat!($ring_prefix, "_add_symbols")]
         pub(crate) fn ffi_add_symbols(op_a: SymbolHandle, op_b: SymbolHandle, res: *mut SymbolHandle) -> eIcicleError;
 
-        #[link_name = concat!($field_prefix, "_sub_symbols")]
+        #[link_name = concat!($ring_prefix, "_sub_symbols")]
         pub(crate) fn ffi_sub_symbols(op_a: SymbolHandle, op_b: SymbolHandle, res: *mut SymbolHandle) -> eIcicleError;
 
-        #[link_name = concat!($field_prefix, "_multiply_symbols")]
+        #[link_name = concat!($ring_prefix, "_multiply_symbols")]
         pub(crate) fn ffi_multiply_symbols(op_a: SymbolHandle, op_b: SymbolHandle, res: *mut SymbolHandle) -> eIcicleError;
 
-        #[link_name = concat!($field_prefix, "_inverse_symbol")]
-        pub(crate) fn ffi_inverse_symbol(op_a: SymbolHandle, res: *mut SymbolHandle) -> eIcicleError;
       }
 
       // Implement Symbol UI
-      impl Symbol<$field> for FieldSymbol {
+      impl Symbol<$ring> for RingSymbol {
         fn new_input(in_idx: u32) -> Result<Self, IcicleError> {
           unsafe {
             let handle = ffi_input_symbol(in_idx);
@@ -98,9 +95,9 @@ macro_rules! impl_symbol_field {
           }
         }
 
-        fn from_constant(constant: $field) -> Result<Self, IcicleError> {
+        fn from_constant(constant: $ring) -> Result<Self, IcicleError> {
           unsafe {
-            let handle = ffi_symbol_from_const(&constant as *const $field);
+            let handle = ffi_symbol_from_const(&constant as *const $ring);
             if handle.is_null() {
               Err(IcicleError::new(eIcicleError::AllocationFailed, "Failed to create from constant"))
             } else {
@@ -108,24 +105,10 @@ macro_rules! impl_symbol_field {
             }
           }
         }
-
-        fn inverse(&self) -> Self{
-          unsafe {
-            let mut handle = std::ptr::null();
-            let ffi_status = ffi_inverse_symbol(self.m_handle, &mut handle);
-            if ffi_status != eIcicleError::Success {
-              panic!("Couldn't invert symbol, due to {:?}", ffi_status);
-            } else if handle.is_null() {
-              panic!("Inverse allocation failed!");
-            } else {
-              Self { m_handle: handle }
-            }
-          }
-        }
       }
 
       // Implement useful functions for the implementation of the above UI
-      impl FieldSymbol {
+      impl RingSymbol {
         fn add_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, IcicleError> {
           unsafe {
             let mut handle = std::ptr::null();
@@ -162,26 +145,26 @@ macro_rules! impl_symbol_field {
           }
         }
 
-        fn add_field(self, other: $field) -> Result<Self, IcicleError> {
+        fn add_ring(self, other: $ring) -> Result<Self, IcicleError> {
           let other_symbol = Self::from_constant(other)?;
           let res_handle = Self::add_handles(self.m_handle, other_symbol.m_handle)?;
           Ok(Self { m_handle: res_handle })
         }
 
-        fn sub_field(self, other: $field) -> Result<Self, IcicleError> {
+        fn sub_ring(self, other: $ring) -> Result<Self, IcicleError> {
           let other_symbol = Self::from_constant(other)?;
           let res_handle = Self::sub_handles(self.m_handle, other_symbol.m_handle)?;
           Ok(Self { m_handle: res_handle })
         }
 
-        fn mul_field(self, other: $field) -> Result<Self, IcicleError> {
+        fn mul_ring(self, other: $ring) -> Result<Self, IcicleError> {
           let other_symbol = Self::from_constant(other)?;
           let res_handle = Self::mul_handles(self.m_handle, other_symbol.m_handle)?;
           Ok(Self { m_handle: res_handle })
         }
       }
 
-      impl Handle for FieldSymbol {
+      impl Handle for RingSymbol {
         fn handle(&self) -> SymbolHandle { self.m_handle }
       }
 
@@ -189,101 +172,101 @@ macro_rules! impl_symbol_field {
       macro_rules! impl_op {
         ($op_token: tt, $op:ident, $assign_op:ident, $method:ident, $assign_method:ident, $handles_method:ident) => {
           // Owned op Owned
-          impl $op<FieldSymbol> for FieldSymbol
+          impl $op<RingSymbol> for RingSymbol
           {
-            type Output = FieldSymbol;
+            type Output = RingSymbol;
 
-            fn $method(self, other: FieldSymbol) -> FieldSymbol {
+            fn $method(self, other: RingSymbol) -> RingSymbol {
               let res_handle = Self::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              FieldSymbol { m_handle: res_handle }
+              RingSymbol { m_handle: res_handle }
             }
           }
 
           // Owned op &Reference
-          impl $op<&FieldSymbol> for FieldSymbol
+          impl $op<&RingSymbol> for RingSymbol
           {
-            type Output = FieldSymbol;
+            type Output = RingSymbol;
 
-            fn $method(self, other: &FieldSymbol) -> FieldSymbol {
+            fn $method(self, other: &RingSymbol) -> RingSymbol {
               let res_handle = Self::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              FieldSymbol { m_handle: res_handle }
+              RingSymbol { m_handle: res_handle }
             }
           }
 
           // &Reference op &Reference
-          impl $op<&FieldSymbol> for &FieldSymbol
+          impl $op<&RingSymbol> for &RingSymbol
           {
-            type Output = FieldSymbol;
+            type Output = RingSymbol;
 
-            fn $method(self, other: &FieldSymbol) -> FieldSymbol {
-              let res_handle = FieldSymbol::$handles_method(self.m_handle, other.m_handle)
+            fn $method(self, other: &RingSymbol) -> RingSymbol {
+              let res_handle = RingSymbol::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              FieldSymbol { m_handle: res_handle }
+              RingSymbol { m_handle: res_handle }
             }
           }
 
           // &Reference op Owned
-          impl $op<FieldSymbol> for &FieldSymbol
+          impl $op<RingSymbol> for &RingSymbol
           {
-            type Output = FieldSymbol;
+            type Output = RingSymbol;
 
-            fn $method(self, other: FieldSymbol) -> FieldSymbol {
-              let res_handle = FieldSymbol::$handles_method(self.m_handle, other.m_handle)
+            fn $method(self, other: RingSymbol) -> RingSymbol {
+              let res_handle = RingSymbol::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              FieldSymbol { m_handle: res_handle }
+              RingSymbol { m_handle: res_handle }
             }
           }
 
           // Owned op Field
-          impl $op<$field> for FieldSymbol {
-            type Output = FieldSymbol;
+          impl $op<$ring> for RingSymbol {
+            type Output = RingSymbol;
 
-            fn $method(self, other: $field) -> Self {
-              let other_symbol = FieldSymbol::from_constant(other)
+            fn $method(self, other: $ring) -> Self {
+              let other_symbol = RingSymbol::from_constant(other)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              let res_handle = FieldSymbol::$handles_method(self.m_handle, other_symbol.m_handle)
+              let res_handle = RingSymbol::$handles_method(self.m_handle, other_symbol.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              FieldSymbol { m_handle: res_handle }
+              RingSymbol { m_handle: res_handle }
             }
           }
 
           // &Reference op Field
-          impl $op<$field> for &FieldSymbol {
-            type Output = FieldSymbol;
+          impl $op<$ring> for &RingSymbol {
+            type Output = RingSymbol;
 
-            fn $method(self, other: $field) -> FieldSymbol {
-              let other_symbol = FieldSymbol::from_constant(other)
+            fn $method(self, other: $ring) -> RingSymbol {
+              let other_symbol = RingSymbol::from_constant(other)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              let res_handle = FieldSymbol::$handles_method(self.m_handle, other_symbol.m_handle)
+              let res_handle = RingSymbol::$handles_method(self.m_handle, other_symbol.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              FieldSymbol { m_handle: res_handle }
+              RingSymbol { m_handle: res_handle }
             }
           }
 
           // Field op Owned
-          impl $op<FieldSymbol> for $field {
-            type Output = FieldSymbol;
+          impl $op<RingSymbol> for $ring {
+            type Output = RingSymbol;
 
-            fn $method(self, other: FieldSymbol) -> FieldSymbol {
+            fn $method(self, other: RingSymbol) -> RingSymbol {
               other $op_token self
             }
           }
 
           // Field op &Reference
-          impl $op<&FieldSymbol> for $field {
-            type Output = FieldSymbol;
+          impl $op<&RingSymbol> for $ring {
+            type Output = RingSymbol;
 
-            fn $method(self, other: &FieldSymbol) -> FieldSymbol {
+            fn $method(self, other: &RingSymbol) -> RingSymbol {
               other $op_token self
             }
           }
 
           // Owned opAssign Owned
-          impl $assign_op<FieldSymbol> for FieldSymbol
+          impl $assign_op<RingSymbol> for RingSymbol
           {
-            fn $assign_method(&mut self, other: FieldSymbol) {
+            fn $assign_method(&mut self, other: RingSymbol) {
               let res_handle = Self::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
               self.m_handle = res_handle;
@@ -291,9 +274,9 @@ macro_rules! impl_symbol_field {
           }
 
           // Owned opAssign &Reference
-          impl $assign_op<&FieldSymbol> for FieldSymbol
+          impl $assign_op<&RingSymbol> for RingSymbol
           {
-            fn $assign_method(&mut self, other: &FieldSymbol) {
+            fn $assign_method(&mut self, other: &RingSymbol) {
               let res_handle = Self::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
               self.m_handle = res_handle;
@@ -301,10 +284,10 @@ macro_rules! impl_symbol_field {
           }
 
           // Owned opAssign Field
-          impl $assign_op<$field> for FieldSymbol
+          impl $assign_op<$ring> for RingSymbol
           {
-            fn $assign_method(&mut self, other: $field) {
-              let other_symbol = FieldSymbol::from_constant(other)
+            fn $assign_method(&mut self, other: $ring) {
+              let other_symbol = RingSymbol::from_constant(other)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
               let res_handle = Self::$handles_method(self.m_handle, other_symbol.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
@@ -318,7 +301,7 @@ macro_rules! impl_symbol_field {
       impl_op!(-, Sub, SubAssign, sub, sub_assign, sub_handles);
       impl_op!(*, Mul, MulAssign, mul, mul_assign, mul_handles);
 
-      impl Clone for FieldSymbol where FieldSymbol: Symbol<$field> {
+      impl Clone for RingSymbol where RingSymbol: Symbol<$ring> {
         fn clone(&self) -> Self {
           unsafe {
             let handle = ffi_copy_symbol(self.m_handle);
@@ -330,18 +313,14 @@ macro_rules! impl_symbol_field {
         }
       }
 
-      // Implement Arithmetic trait for FieldSymbol
-      impl Arithmetic for FieldSymbol {
+      // Implement Arithmetic trait for RingSymbol
+      impl Arithmetic for RingSymbol {
         fn sqr(&self) -> Self {
           self * self
         }
 
-        fn inv(&self) -> Self {
-          self.inverse()
-        }
-
         fn pow(&self, exp: usize) -> Self {
-          let mut result = Self::from_constant($field::one()).expect("Failed to create constant one");
+          let mut result = Self::from_constant($ring::one()).expect("Failed to create constant one");
           let mut base = *self;
           let mut exp_val = exp;
 
@@ -358,4 +337,34 @@ macro_rules! impl_symbol_field {
       }
     }
   };
+}
+
+#[macro_export]
+macro_rules! impl_invertible_symbol_ring {
+    ($ring_prefix:literal, $ring_prefix_ident:ident, $ring:ident) => {
+        icicle_core::impl_symbol_ring!($ring_prefix, $ring_prefix_ident, $ring);
+
+        impl icicle_core::traits::Invertible for $ring_prefix_ident::RingSymbol {
+            fn inv(&self) -> Self {
+                extern "C" {
+                    #[link_name = concat!($ring_prefix, "_inverse_symbol")]
+                    pub(crate) fn ffi_inverse_symbol(
+                        op_a: icicle_core::symbol::SymbolHandle,
+                        res: *mut icicle_core::symbol::SymbolHandle,
+                    ) -> icicle_runtime::errors::eIcicleError;
+                }
+                unsafe {
+                    let mut handle = std::ptr::null();
+                    let ffi_status = ffi_inverse_symbol(self.m_handle, &mut handle);
+                    if ffi_status != icicle_runtime::errors::eIcicleError::Success {
+                        panic!("Couldn't invert symbol, due to {:?}", ffi_status);
+                    } else if handle.is_null() {
+                        panic!("Inverse allocation failed!");
+                    } else {
+                        Self { m_handle: handle }
+                    }
+                }
+            }
+        }
+    };
 }

@@ -1,6 +1,7 @@
-use crate::field::PrimeField;
+use crate::bignum::BigNum;
 use crate::hash::Hasher;
-use crate::program::{PreDefinedProgram, ReturningValueProgram};
+use crate::program::{PreDefinedProgram, ReturningValueProgramImpl};
+use crate::ring::IntegerRing;
 use crate::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
 use crate::traits::GenerateRandom;
 use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
@@ -8,7 +9,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 /// Tests the `SumcheckTranscriptConfig` struct with different constructors.
-pub fn check_sumcheck_transcript_config<F: PrimeField>(hash: &Hasher)
+pub fn check_sumcheck_transcript_config<F: IntegerRing>(hash: &Hasher)
 where
     F: GenerateRandom,
 {
@@ -63,7 +64,7 @@ pub fn check_sumcheck_simple<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
     SW::Field: GenerateRandom,
-    P: ReturningValueProgram,
+    P: ReturningValueProgramImpl,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
@@ -87,7 +88,7 @@ where
         mle_polys.push(mle_poly_random);
     }
 
-    let mut claimed_sum = <<SW as Sumcheck>::Field as PrimeField>::zero();
+    let mut claimed_sum = SW::Field::zero();
     for i in 0..mle_poly_size {
         let a = mle_polys[0][i];
         let b = mle_polys[1][i];
@@ -145,7 +146,7 @@ pub fn check_sumcheck_simple_device<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
     SW::Field: GenerateRandom,
-    P: ReturningValueProgram,
+    P: ReturningValueProgramImpl,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
@@ -159,7 +160,7 @@ where
         mle_polys.push(mle_poly_random);
     }
 
-    let mut claimed_sum = <<SW as Sumcheck>::Field as PrimeField>::zero();
+    let mut claimed_sum = SW::Field::zero();
     for i in 0..mle_poly_size {
         let a = mle_polys[0][i];
         let b = mle_polys[1][i];
@@ -241,7 +242,7 @@ pub fn check_sumcheck_user_defined_combine<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
     SW::Field: GenerateRandom,
-    P: ReturningValueProgram,
+    P: ReturningValueProgramImpl,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
@@ -271,7 +272,7 @@ where
         let b = mle_polys[1][i];
         let c = mle_polys[2][i];
         let d = mle_polys[3][i];
-        claimed_sum = claimed_sum + a * b - c * SW::Field::from_u32(2) + d;
+        claimed_sum = claimed_sum + a * b - c * SW::Field::from(2) + d;
     }
 
     let user_combine = |vars: &mut Vec<P::ProgSymbol>| -> P::ProgSymbol {
@@ -279,7 +280,7 @@ where
         let b = vars[1];
         let c = vars[2];
         let d = vars[3];
-        a * b + d - c * P::Field::from_u32(2)
+        a * b + d - c * P::Ring::from(2)
     };
 
     /****** Begin CPU Proof ******/
@@ -330,7 +331,7 @@ pub fn check_sumcheck_proof_serialization<SW, P, S, D, T>(hash: &Hasher, seriali
 where
     SW: Sumcheck,
     SW::Field: GenerateRandom,
-    P: ReturningValueProgram,
+    P: ReturningValueProgramImpl,
     SW::Proof: Serialize + DeserializeOwned,
     S: Fn(&SW::Proof) -> T,
     D: Fn(&T) -> SW::Proof,
@@ -363,7 +364,7 @@ where
         let b = mle_polys[1][i];
         let c = mle_polys[2][i];
         let d = mle_polys[3][i];
-        claimed_sum = claimed_sum + a * b - c * SW::Field::from_u32(2) + d;
+        claimed_sum = claimed_sum + a * b - c * SW::Field::from(2) + d;
     }
 
     let user_combine = |vars: &mut Vec<P::ProgSymbol>| -> P::ProgSymbol {
@@ -371,7 +372,7 @@ where
         let b = vars[1];
         let c = vars[2];
         let d = vars[3];
-        a * b + d - c * P::Field::from_u32(2)
+        a * b + d - c * P::Ring::from(2)
     };
 
     /****** Begin CPU Proof ******/
@@ -430,7 +431,7 @@ pub fn check_sumcheck_challenge_vector<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
     SW::Field: GenerateRandom,
-    P: ReturningValueProgram,
+    P: ReturningValueProgramImpl,
 {
     // Create a simple sumcheck instance
     let sumcheck = SW::new().unwrap();

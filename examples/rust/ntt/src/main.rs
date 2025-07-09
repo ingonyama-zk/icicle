@@ -1,6 +1,6 @@
 use icicle_bls12_377::curve::ScalarField as BLS12377ScalarField;
 use icicle_bn254::curve::ScalarField;
-use icicle_core::field::PrimeField;
+use icicle_core::bignum::BigNum;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 
 use clap::Parser;
@@ -61,7 +61,8 @@ fn main() {
         ntt::get_root_of_unity::<ScalarField>(
             size.try_into()
                 .unwrap(),
-        ),
+        )
+        .unwrap(),
         &ntt::NTTInitDomainConfig::default(),
     )
     .unwrap();
@@ -74,7 +75,8 @@ fn main() {
         ntt::get_root_of_unity::<BLS12377ScalarField>(
             size.try_into()
                 .unwrap(),
-        ),
+        )
+        .unwrap(),
         &ntt::NTTInitDomainConfig::default(),
     )
     .unwrap();

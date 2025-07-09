@@ -1,8 +1,8 @@
 use crate::ring::ScalarRing;
-use icicle_core::field::PrimeField;
+use icicle_core::bignum::BigNum;
 use icicle_core::polynomial_ring::PolynomialRing;
 use icicle_core::traits::GenerateRandom;
-use icicle_runtime::{eIcicleError, IcicleError};
+use icicle_runtime::errors::{eIcicleError, IcicleError};
 
 // Define the Polynomial Ring Zq[X]/X^d+1
 #[derive(Clone, Copy, Debug, PartialEq)]

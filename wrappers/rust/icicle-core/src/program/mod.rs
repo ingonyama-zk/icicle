@@ -1,4 +1,4 @@
-use crate::field::PrimeField;
+use crate::ring::IntegerRing;
 use crate::symbol::Symbol;
 use crate::traits::Handle;
 use crate::vec_ops::VecOpsConfig;
@@ -14,11 +14,11 @@ pub enum PreDefinedProgram {
     EQtimesABminusC,
 }
 
-pub trait Program<F>: Sized + Handle
+pub trait ProgramImpl<T>: Sized + Handle
 where
-    F: PrimeField,
+    T: IntegerRing,
 {
-    type ProgSymbol: Symbol<F>;
+    type ProgSymbol: Symbol<T>;
 
     fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>), nof_parameters: u32) -> Result<Self, IcicleError>;
 
@@ -26,13 +26,13 @@ where
 
     fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), IcicleError>
     where
-        F: PrimeField,
-        Data: HostOrDeviceSlice<F> + ?Sized;
+        T: IntegerRing,
+        Data: HostOrDeviceSlice<T> + ?Sized;
 }
 
-pub trait ReturningValueProgram: Sized + Handle {
-    type Field: PrimeField;
-    type ProgSymbol: Symbol<Self::Field>;
+pub trait ReturningValueProgramImpl: Sized + Handle {
+    type Ring: IntegerRing;
+    type ProgSymbol: Symbol<Self::Ring>;
 
     fn new(
         program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>) -> Self::ProgSymbol,
@@ -44,17 +44,19 @@ pub trait ReturningValueProgram: Sized + Handle {
 
 #[macro_export]
 #[allow(clippy::crate_in_macro_def)]
-macro_rules! impl_program_field {
+macro_rules! impl_program_ring {
     (
-    $field_prefix:literal,
-    $field_prefix_ident:ident,
-    $field:ident
+    $ring_prefix:literal,
+    $ring_prefix_ident:ident,
+    $ring:ident
   ) => {
-        pub mod $field_prefix_ident {
-            use crate::program::$field;
-            use crate::symbol::$field_prefix_ident::FieldSymbol;
-            use icicle_core::field::PrimeField;
-            use icicle_core::program::{Instruction, PreDefinedProgram, Program, ProgramHandle, ReturningValueProgram};
+        pub mod $ring_prefix_ident {
+            use crate::program::$ring;
+            use crate::symbol::$ring_prefix_ident::RingSymbol;
+            use icicle_core::program::{
+                Instruction, PreDefinedProgram, ProgramHandle, ProgramImpl, ReturningValueProgramImpl,
+            };
+            use icicle_core::ring::IntegerRing;
             use icicle_core::symbol::{Symbol, SymbolHandle};
             use icicle_core::traits::Handle;
             use icicle_core::vec_ops::VecOpsConfig;
@@ -65,33 +67,33 @@ macro_rules! impl_program_field {
 
             // Programs structs
             #[repr(C)]
-            pub struct FieldProgram {
+            pub struct Program {
                 m_handle: ProgramHandle,
             }
 
             #[repr(C)]
-            pub struct FieldReturningValueProgram {
+            pub struct ReturningValueProgram {
                 m_handle: ProgramHandle,
             }
 
             // Program Operations
             extern "C" {
-                #[link_name = concat!($field_prefix, "_create_predefined_program")]
+                #[link_name = concat!($ring_prefix, "_create_predefined_program")]
                 pub(crate) fn ffi_create_predefined_program(pre_def: PreDefinedProgram) -> ProgramHandle;
 
-                #[link_name = concat!($field_prefix, "_create_predefined_returning_value_program")]
+                #[link_name = concat!($ring_prefix, "_create_predefined_returning_value_program")]
                 pub(crate) fn ffi_create_predefined_returning_value_program(
                     pre_def: PreDefinedProgram,
                 ) -> ProgramHandle;
 
-                #[link_name = concat!($field_prefix, "_generate_program")]
+                #[link_name = concat!($ring_prefix, "_generate_program")]
                 pub(crate) fn ffi_generate_program(
                     parameters_ptr: *const SymbolHandle,
                     nof_parameter: u32,
                     program: *mut ProgramHandle,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_generate_returning_value_program")]
+                #[link_name = concat!($ring_prefix, "_generate_returning_value_program")]
                 pub(crate) fn ffi_generate_returning_value_program(
                     parameters_ptr: *const SymbolHandle,
                     nof_parameter: u32,
@@ -101,9 +103,9 @@ macro_rules! impl_program_field {
                 #[link_name = "delete_program"]
                 pub(crate) fn ffi_delete_program(program: ProgramHandle) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_execute_program")]
+                #[link_name = concat!($ring_prefix, "_execute_program")]
                 pub(crate) fn execute_program_ffi(
-                    data_ptr: *const *const $field,
+                    data_ptr: *const *const $ring,
                     nof_params: u64,
                     program: ProgramHandle,
                     nof_iterations: u64,
@@ -112,16 +114,16 @@ macro_rules! impl_program_field {
             }
 
             // Program trait implementation
-            impl Program<$field> for FieldProgram {
-                type ProgSymbol = FieldSymbol;
+            impl ProgramImpl<$ring> for Program {
+                type ProgSymbol = RingSymbol;
 
                 fn new(
-                    program_func: impl FnOnce(&mut Vec<FieldSymbol>),
+                    program_func: impl FnOnce(&mut Vec<RingSymbol>),
                     nof_parameters: u32,
                 ) -> Result<Self, IcicleError> {
-                    let mut program_parameters: Vec<FieldSymbol> = (0..nof_parameters)
+                    let mut program_parameters: Vec<RingSymbol> = (0..nof_parameters)
                         .enumerate()
-                        .map(|(i, _)| FieldSymbol::new_input(i as u32).unwrap())
+                        .map(|(i, _)| RingSymbol::new_input(i as u32).unwrap())
                         .collect();
                     program_func(&mut program_parameters);
                     let handles: Vec<*const c_void> = program_parameters
@@ -169,11 +171,11 @@ macro_rules! impl_program_field {
 
                 fn execute_program<Data>(&self, data: &mut Vec<&Data>, cfg: &VecOpsConfig) -> Result<(), IcicleError>
                 where
-                    $field: PrimeField,
-                    Data: HostOrDeviceSlice<$field> + ?Sized,
+                    $ring: IntegerRing,
+                    Data: HostOrDeviceSlice<$ring> + ?Sized,
                 {
                     unsafe {
-                        let data_vec: Vec<*const $field> = data
+                        let data_vec: Vec<*const $ring> = data
                             .iter()
                             .map(|s| s.as_ptr())
                             .collect();
@@ -189,13 +191,13 @@ macro_rules! impl_program_field {
                 }
             }
 
-            impl Handle for FieldProgram {
+            impl Handle for Program {
                 fn handle(&self) -> ProgramHandle {
                     self.m_handle
                 }
             }
 
-            impl Drop for FieldProgram {
+            impl Drop for Program {
                 fn drop(&mut self) {
                     unsafe {
                         if !self
@@ -211,17 +213,17 @@ macro_rules! impl_program_field {
             }
 
             // Returning Value Program trait implementation
-            impl ReturningValueProgram for FieldReturningValueProgram {
-                type Field = $field;
-                type ProgSymbol = FieldSymbol;
+            impl ReturningValueProgramImpl for ReturningValueProgram {
+                type Ring = $ring;
+                type ProgSymbol = RingSymbol;
 
                 fn new(
-                    program_func: impl FnOnce(&mut Vec<FieldSymbol>) -> FieldSymbol,
+                    program_func: impl FnOnce(&mut Vec<RingSymbol>) -> RingSymbol,
                     nof_parameters: u32,
                 ) -> Result<Self, IcicleError> {
-                    let mut program_parameters: Vec<FieldSymbol> = (0..nof_parameters)
+                    let mut program_parameters: Vec<RingSymbol> = (0..nof_parameters)
                         .enumerate()
-                        .map(|(i, _)| FieldSymbol::new_input(i as u32).unwrap())
+                        .map(|(i, _)| RingSymbol::new_input(i as u32).unwrap())
                         .collect();
                     let res_symbol = program_func(&mut program_parameters);
                     program_parameters.push(res_symbol);
@@ -269,13 +271,13 @@ macro_rules! impl_program_field {
                 }
             }
 
-            impl Handle for FieldReturningValueProgram {
+            impl Handle for ReturningValueProgram {
                 fn handle(&self) -> ProgramHandle {
                     self.m_handle
                 }
             }
 
-            impl Drop for FieldReturningValueProgram {
+            impl Drop for ReturningValueProgram {
                 fn drop(&mut self) {
                     if !self
                         .m_handle
@@ -292,15 +294,14 @@ macro_rules! impl_program_field {
 }
 
 #[macro_export]
-#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_program_tests {
     (
-      $field_prefix_ident: ident,
-      $field:ident
+      $ring_prefix_ident: ident,
+      $ring:ident
     ) => {
         pub(crate) mod test_program {
             use super::*;
-            use crate::program::$field_prefix_ident::{FieldProgram, FieldReturningValueProgram};
+            use crate::program::$ring_prefix_ident::{Program, ReturningValueProgram};
             use icicle_runtime::test_utilities;
             use icicle_runtime::{device::Device, runtime};
             use std::sync::Once;
@@ -314,18 +315,18 @@ macro_rules! impl_program_tests {
             pub fn test_program() {
                 initialize();
                 test_utilities::test_set_main_device();
-                icicle_core::program::tests::check_program::<$field, FieldProgram>();
+                icicle_core::program::tests::check_program::<$ring, Program>();
                 test_utilities::test_set_ref_device();
-                icicle_core::program::tests::check_program::<$field, FieldProgram>()
+                icicle_core::program::tests::check_program::<$ring, Program>()
             }
 
             #[test]
             pub fn test_predefined_program() {
                 initialize();
                 test_utilities::test_set_main_device();
-                icicle_core::program::tests::check_predefined_program::<$field, FieldProgram>();
+                icicle_core::program::tests::check_predefined_program::<$ring, Program>();
                 test_utilities::test_set_ref_device();
-                icicle_core::program::tests::check_predefined_program::<$field, FieldProgram>()
+                icicle_core::program::tests::check_predefined_program::<$ring, Program>()
             }
         }
     };

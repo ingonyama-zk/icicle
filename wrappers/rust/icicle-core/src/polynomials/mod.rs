@@ -1,50 +1,48 @@
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-use crate::field::PrimeField;
+use crate::ring::IntegerRing;
 
-pub trait UnivariatePolynomial: Clone + Sized
-where
-    Self::Field: PrimeField,
-{
-    type Field;
+pub trait UnivariatePolynomial: Clone + Sized {
+    type Ring: IntegerRing;
 
-    fn from_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(coeffs: &S, size: usize) -> Self;
-    fn from_rou_evals<S: HostOrDeviceSlice<Self::Field> + ?Sized>(evals: &S, size: usize) -> Self;
+    fn from_coeffs<S: HostOrDeviceSlice<Self::Ring> + ?Sized>(coeffs: &S, size: usize) -> Self;
+    fn from_rou_evals<S: HostOrDeviceSlice<Self::Ring> + ?Sized>(evals: &S, size: usize) -> Self;
     fn divide(&self, denominator: &Self) -> (Self, Self)
     where
         Self: Sized;
     fn div_by_vanishing(&self, degree: u64) -> Self;
-    fn add_monomial_inplace(&mut self, monomial_coeff: &Self::Field, monomial: u64);
-    fn sub_monomial_inplace(&mut self, monomial_coeff: &Self::Field, monomial: u64);
+    fn add_monomial_inplace(&mut self, monomial_coeff: &Self::Ring, monomial: u64);
+    fn sub_monomial_inplace(&mut self, monomial_coeff: &Self::Ring, monomial: u64);
     fn slice(&self, offset: u64, stride: u64, size: u64) -> Self;
     fn even(&self) -> Self;
     fn odd(&self) -> Self;
-    fn eval(&self, x: &Self::Field) -> Self::Field;
+    fn eval(&self, x: &Self::Ring) -> Self::Ring;
     fn degree(&self) -> i64;
-    fn eval_on_domain<D: HostOrDeviceSlice<Self::Field> + ?Sized, E: HostOrDeviceSlice<Self::Field> + ?Sized>(
+    fn eval_on_domain<D: HostOrDeviceSlice<Self::Ring> + ?Sized, E: HostOrDeviceSlice<Self::Ring> + ?Sized>(
         &self,
         domain: &D,
         evals: &mut E,
     );
-    fn eval_on_rou_domain<E: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, domain_log_size: u64, evals: &mut E);
+    fn eval_on_rou_domain<E: HostOrDeviceSlice<Self::Ring> + ?Sized>(&self, domain_log_size: u64, evals: &mut E);
     fn get_nof_coeffs(&self) -> u64;
-    fn get_coeff(&self, idx: u64) -> Self::Field;
-    fn copy_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, start_idx: u64, coeffs: &mut S);
+    fn get_coeff(&self, idx: u64) -> Self::Ring;
+    fn copy_coeffs<S: HostOrDeviceSlice<Self::Ring> + ?Sized>(&self, start_idx: u64, coeffs: &mut S);
     fn add(&self, rhs: &Self) -> Self;
     fn add_assign(&mut self, rhs: &Self);
     fn sub(&self, rhs: &Self) -> Self;
     fn mul(&self, rhs: &Self) -> Self;
-    fn mul_by_scalar(&self, rhs: &Self::Field) -> Self;
+    fn mul_by_scalar(&self, rhs: &Self::Ring) -> Self;
 }
 
 #[macro_export]
 macro_rules! impl_univariate_polynomial_api {
     (
-        $field_prefix:literal,
-        $field_prefix_ident:ident,
-        $field:ident
+        $ring_prefix:literal,
+        $ring_prefix_ident:ident,
+        $ring:ident
     ) => {
-        use icicle_core::{field::PrimeField, polynomials::UnivariatePolynomial};
+        use icicle_core::bignum::BigNum;
+        use icicle_core::{polynomials::UnivariatePolynomial, ring::IntegerRing};
         use icicle_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
         use std::{
             clone, cmp,
@@ -56,77 +54,77 @@ macro_rules! impl_univariate_polynomial_api {
         type PolynomialHandle = *const c_void;
 
         extern "C" {
-            #[link_name = concat!($field_prefix, "_polynomial_create_from_coefficients")]
-            fn create_from_coeffs(coeffs: *const $field, size: usize) -> PolynomialHandle;
+            #[link_name = concat!($ring_prefix, "_polynomial_create_from_coefficients")]
+            fn create_from_coeffs(coeffs: *const $ring, size: usize) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "_polynomial_create_from_rou_evaluations")]
-            fn create_from_rou_evals(coeffs: *const $field, size: usize) -> PolynomialHandle;
+            #[link_name = concat!($ring_prefix, "_polynomial_create_from_rou_evaluations")]
+            fn create_from_rou_evals(coeffs: *const $ring, size: usize) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "_polynomial_clone")]
+            #[link_name = concat!($ring_prefix, "_polynomial_clone")]
             fn clone(p: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "_polynomial_delete")]
+            #[link_name = concat!($ring_prefix, "_polynomial_delete")]
             fn delete(ptr: PolynomialHandle);
 
-            #[link_name = concat!($field_prefix, "_polynomial_print")]
+            #[link_name = concat!($ring_prefix, "_polynomial_print")]
             fn print(ptr: PolynomialHandle);
 
-            #[link_name = concat!($field_prefix, "_polynomial_add")]
+            #[link_name = concat!($ring_prefix, "_polynomial_add")]
             fn add(a: PolynomialHandle, b: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "_polynomial_add_inplace")]
+            #[link_name = concat!($ring_prefix, "_polynomial_add_inplace")]
             fn add_inplace(a: PolynomialHandle, b: PolynomialHandle) -> c_void;
 
-            #[link_name = concat!($field_prefix, "_polynomial_subtract")]
+            #[link_name = concat!($ring_prefix, "_polynomial_subtract")]
             fn subtract(a: PolynomialHandle, b: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "_polynomial_multiply")]
+            #[link_name = concat!($ring_prefix, "_polynomial_multiply")]
             fn multiply(a: PolynomialHandle, b: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "_polynomial_multiply_by_scalar")]
-            fn multiply_by_scalar(a: PolynomialHandle, b: &$field) -> PolynomialHandle;
+            #[link_name = concat!($ring_prefix, "_polynomial_multiply_by_scalar")]
+            fn multiply_by_scalar(a: PolynomialHandle, b: &$ring) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "_polynomial_quotient")]
+            #[link_name = concat!($ring_prefix, "_polynomial_quotient")]
             fn quotient(a: PolynomialHandle, b: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "_polynomial_remainder")]
+            #[link_name = concat!($ring_prefix, "_polynomial_remainder")]
             fn remainder(a: PolynomialHandle, b: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "_polynomial_division")]
+            #[link_name = concat!($ring_prefix, "_polynomial_division")]
             fn divide(a: PolynomialHandle, b: PolynomialHandle, q: *mut PolynomialHandle, r: *mut PolynomialHandle);
 
-            #[link_name = concat!($field_prefix, "_polynomial_divide_by_vanishing")]
+            #[link_name = concat!($ring_prefix, "_polynomial_divide_by_vanishing")]
             fn div_by_vanishing(a: PolynomialHandle, deg: u64) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "_polynomial_add_monomial_inplace")]
-            fn add_monomial_inplace(a: PolynomialHandle, monomial_coeff: &$field, monomial: u64) -> c_void;
+            #[link_name = concat!($ring_prefix, "_polynomial_add_monomial_inplace")]
+            fn add_monomial_inplace(a: PolynomialHandle, monomial_coeff: &$ring, monomial: u64) -> c_void;
 
-            #[link_name = concat!($field_prefix, "_polynomial_sub_monomial_inplace")]
-            fn sub_monomial_inplace(a: PolynomialHandle, monomial_coeff: &$field, monomial: u64) -> c_void;
+            #[link_name = concat!($ring_prefix, "_polynomial_sub_monomial_inplace")]
+            fn sub_monomial_inplace(a: PolynomialHandle, monomial_coeff: &$ring, monomial: u64) -> c_void;
 
-            #[link_name = concat!($field_prefix, "_polynomial_slice")]
+            #[link_name = concat!($ring_prefix, "_polynomial_slice")]
             fn slice(a: PolynomialHandle, offset: u64, stride: u64, size: u64) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "_polynomial_even")]
+            #[link_name = concat!($ring_prefix, "_polynomial_even")]
             fn even(a: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "_polynomial_odd")]
+            #[link_name = concat!($ring_prefix, "_polynomial_odd")]
             fn odd(a: PolynomialHandle) -> PolynomialHandle;
 
-            #[link_name = concat!($field_prefix, "_polynomial_evaluate_on_domain")]
-            fn eval_on_domain(a: PolynomialHandle, domain: *const $field, domain_size: u64, evals: *mut $field);
+            #[link_name = concat!($ring_prefix, "_polynomial_evaluate_on_domain")]
+            fn eval_on_domain(a: PolynomialHandle, domain: *const $ring, domain_size: u64, evals: *mut $ring);
 
-            #[link_name = concat!($field_prefix, "_polynomial_evaluate_on_rou_domain")]
-            fn eval_on_rou_domain(a: PolynomialHandle, domain_log_size: u64, evals: *mut $field);
+            #[link_name = concat!($ring_prefix, "_polynomial_evaluate_on_rou_domain")]
+            fn eval_on_rou_domain(a: PolynomialHandle, domain_log_size: u64, evals: *mut $ring);
 
-            #[link_name = concat!($field_prefix, "_polynomial_degree")]
+            #[link_name = concat!($ring_prefix, "_polynomial_degree")]
             fn degree(a: PolynomialHandle) -> i64;
 
-            #[link_name = concat!($field_prefix, "_polynomial_copy_coeffs_range")]
-            fn copy_coeffs(a: PolynomialHandle, host_coeffs: *mut $field, start_idx: u64, end_idx: u64) -> u64;
+            #[link_name = concat!($ring_prefix, "_polynomial_copy_coeffs_range")]
+            fn copy_coeffs(a: PolynomialHandle, host_coeffs: *mut $ring, start_idx: u64, end_idx: u64) -> u64;
 
-            #[link_name = concat!($field_prefix, "_polynomial_get_coeffs_raw_ptr")]
-            fn get_coeffs_ptr(a: PolynomialHandle, len: *mut u64) -> *mut $field;
+            #[link_name = concat!($ring_prefix, "_polynomial_get_coeffs_raw_ptr")]
+            fn get_coeffs_ptr(a: PolynomialHandle, len: *mut u64) -> *mut $ring;
         }
 
         pub struct DensePolynomial {
@@ -141,7 +139,7 @@ macro_rules! impl_univariate_polynomial_api {
                 }
             }
 
-            pub fn coeffs_mut_slice(&mut self) -> &mut DeviceSlice<$field> {
+            pub fn coeffs_mut_slice(&mut self) -> &mut DeviceSlice<$ring> {
                 unsafe {
                     let mut len: u64 = 0;
                     let mut coeffs_mut = get_coeffs_ptr(self.handle, &mut len);
@@ -152,9 +150,9 @@ macro_rules! impl_univariate_polynomial_api {
         }
 
         impl UnivariatePolynomial for DensePolynomial {
-            type Field = $field;
+            type Ring = $ring;
 
-            fn from_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(coeffs: &S, size: usize) -> Self {
+            fn from_coeffs<S: HostOrDeviceSlice<Self::Ring> + ?Sized>(coeffs: &S, size: usize) -> Self {
                 unsafe {
                     DensePolynomial {
                         handle: create_from_coeffs(coeffs.as_ptr(), size),
@@ -162,7 +160,7 @@ macro_rules! impl_univariate_polynomial_api {
                 }
             }
 
-            fn from_rou_evals<S: HostOrDeviceSlice<Self::Field> + ?Sized>(evals: &S, size: usize) -> Self {
+            fn from_rou_evals<S: HostOrDeviceSlice<Self::Ring> + ?Sized>(evals: &S, size: usize) -> Self {
                 unsafe {
                     Self {
                         handle: create_from_rou_evals(evals.as_ptr(), size),
@@ -187,13 +185,13 @@ macro_rules! impl_univariate_polynomial_api {
                 }
             }
 
-            fn add_monomial_inplace(&mut self, monomial_coeff: &Self::Field, monomial: u64) {
+            fn add_monomial_inplace(&mut self, monomial_coeff: &Self::Ring, monomial: u64) {
                 unsafe {
                     add_monomial_inplace(self.handle, monomial_coeff, monomial);
                 }
             }
 
-            fn sub_monomial_inplace(&mut self, monomial_coeff: &Self::Field, monomial: u64) {
+            fn sub_monomial_inplace(&mut self, monomial_coeff: &Self::Ring, monomial: u64) {
                 unsafe {
                     sub_monomial_inplace(self.handle, monomial_coeff, monomial);
                 }
@@ -223,18 +221,15 @@ macro_rules! impl_univariate_polynomial_api {
                 }
             }
 
-            fn eval(&self, x: &Self::Field) -> Self::Field {
-                let mut eval = Self::Field::zero();
+            fn eval(&self, x: &Self::Ring) -> Self::Ring {
+                let mut eval = Self::Ring::zero();
                 unsafe {
                     eval_on_domain(self.handle, x, 1, &mut eval);
                 }
                 eval
             }
 
-            fn eval_on_domain<
-                D: HostOrDeviceSlice<Self::Field> + ?Sized,
-                E: HostOrDeviceSlice<Self::Field> + ?Sized,
-            >(
+            fn eval_on_domain<D: HostOrDeviceSlice<Self::Ring> + ?Sized, E: HostOrDeviceSlice<Self::Ring> + ?Sized>(
                 &self,
                 domain: &D,
                 evals: &mut E,
@@ -253,7 +248,7 @@ macro_rules! impl_univariate_polynomial_api {
                 }
             }
 
-            fn eval_on_rou_domain<E: HostOrDeviceSlice<Self::Field> + ?Sized>(
+            fn eval_on_rou_domain<E: HostOrDeviceSlice<Self::Ring> + ?Sized>(
                 &self,
                 domain_log_size: u64,
                 evals: &mut E,
@@ -275,13 +270,13 @@ macro_rules! impl_univariate_polynomial_api {
                 }
             }
 
-            fn get_coeff(&self, idx: u64) -> Self::Field {
-                let mut coeff: Self::Field = Self::Field::zero();
+            fn get_coeff(&self, idx: u64) -> Self::Ring {
+                let mut coeff: Self::Ring = Self::Ring::zero();
                 unsafe { copy_coeffs(self.handle, &mut coeff, idx, idx) };
                 coeff
             }
 
-            fn copy_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, start_idx: u64, coeffs: &mut S) {
+            fn copy_coeffs<S: HostOrDeviceSlice<Self::Ring> + ?Sized>(&self, start_idx: u64, coeffs: &mut S) {
                 let coeffs_len = coeffs.len() as u64;
                 let nof_coeffs = self.get_nof_coeffs();
                 let end_idx = cmp::min(nof_coeffs - 1, start_idx + coeffs_len - 1);
@@ -324,7 +319,7 @@ macro_rules! impl_univariate_polynomial_api {
             }
 
             //poly * scalar
-            fn mul_by_scalar(&self, rhs: &Self::Field) -> Self {
+            fn mul_by_scalar(&self, rhs: &Self::Ring) -> Self {
                 unsafe {
                     Self {
                         handle: multiply_by_scalar(self.handle, rhs),
@@ -394,10 +389,10 @@ macro_rules! impl_univariate_polynomial_api {
         }
 
         // poly * scalar
-        impl Mul<&$field> for &DensePolynomial {
+        impl Mul<&$ring> for &DensePolynomial {
             type Output = DensePolynomial;
 
-            fn mul(self: Self, rhs: &$field) -> Self::Output {
+            fn mul(self: Self, rhs: &$ring) -> Self::Output {
                 unsafe {
                     DensePolynomial {
                         handle: multiply_by_scalar(self.handle, rhs),
@@ -407,7 +402,7 @@ macro_rules! impl_univariate_polynomial_api {
         }
 
         // scalar * poly
-        impl Mul<&DensePolynomial> for &$field {
+        impl Mul<&DensePolynomial> for &$ring {
             type Output = DensePolynomial;
 
             fn mul(self, rhs: &DensePolynomial) -> Self::Output {
@@ -461,14 +456,15 @@ macro_rules! impl_polynomial_tests {
         use icicle_runtime::test_utilities;
         use std::sync::Once;
 
-        use icicle_core::field::PrimeField;
+        use icicle_core::bignum::BigNum;
+        use icicle_core::ring::IntegerRing;
         use icicle_core::traits::GenerateRandom;
 
         type Poly = DensePolynomial;
 
-        pub fn init_domain<F: PrimeField>(max_size: u64, fast_twiddles_mode: bool)
+        pub fn init_domain<F: IntegerRing>(max_size: u64, fast_twiddles_mode: bool)
         where
-            F: NTTDomain,
+            F: NTTDomain<F>,
         {
             let config = NTTInitDomainConfig::default();
             config
@@ -478,7 +474,7 @@ macro_rules! impl_polynomial_tests {
             initialize_domain(rou, &config).unwrap();
         }
 
-        fn randomize_coeffs<F: PrimeField>(size: usize) -> Vec<F>
+        fn randomize_coeffs<F: IntegerRing>(size: usize) -> Vec<F>
         where
             F: GenerateRandom,
         {
@@ -563,11 +559,11 @@ macro_rules! impl_polynomial_tests {
             setup();
 
             // testing correct evaluation of f(8) for f(x)=4x^2+2x+5
-            let coeffs = [$field::from_u32(5), $field::from_u32(2), $field::from_u32(4)];
+            let coeffs = [$field::from(5), $field::from(2), $field::from(4)];
             let f = Poly::from_coeffs(HostSlice::from_slice(&coeffs), coeffs.len());
-            let x = $field::from_u32(8);
+            let x = $field::from(8);
             let f_x = f.eval(&x);
-            assert_eq!(f_x, $field::from_u32(277));
+            assert_eq!(f_x, $field::from(277));
         }
 
         #[test]
@@ -628,10 +624,10 @@ macro_rules! impl_polynomial_tests {
             setup();
 
             // testing add/sub monomials inplace
-            let zero = $field::from_u32(0);
-            let one = $field::from_u32(1);
-            let two = $field::from_u32(2);
-            let three = $field::from_u32(3);
+            let zero = $field::from(0);
+            let one = $field::from(1);
+            let two = $field::from(2);
+            let three = $field::from(3);
 
             // f(x) = 1+2x^2
             let coeffs = [one, zero, two];
@@ -652,11 +648,11 @@ macro_rules! impl_polynomial_tests {
         fn phase3_test_poly_read_coeffs() {
             setup();
 
-            let zero = $field::from_u32(0);
-            let one = $field::from_u32(1);
-            let two = $field::from_u32(2);
-            let three = $field::from_u32(3);
-            let four = $field::from_u32(4);
+            let zero = $field::from(0);
+            let one = $field::from(1);
+            let two = $field::from(2);
+            let three = $field::from(3);
+            let four = $field::from(4);
 
             let coeffs = [one, two, three, four];
             let mut f = Poly::from_coeffs(HostSlice::from_slice(&coeffs), coeffs.len());
@@ -709,8 +705,8 @@ macro_rules! impl_polynomial_tests {
         fn phase3_test_poly_divide_by_vanishing() {
             setup();
 
-            let zero = $field::from_u32(0);
-            let one = $field::from_u32(1);
+            let zero = $field::from(0);
+            let one = $field::from(1);
             let minus_one = sub(&zero, &one);
             // compute random f(x) and compute f(x)*v(x) for v(x) vanishing poly
             // divide by vanishing and check that f(x) is reconstructed
@@ -735,9 +731,9 @@ macro_rules! impl_polynomial_tests {
         fn phase3_test_poly_eval_on_domain() {
             setup();
 
-            let one = $field::from_u32(1);
-            let two = $field::from_u32(2);
-            let three = $field::from_u32(3);
+            let one = $field::from(1);
+            let two = $field::from(2);
+            let three = $field::from(3);
 
             let f = randomize_poly(1 << 12);
             let domain = [one, two, three];

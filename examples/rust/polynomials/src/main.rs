@@ -2,10 +2,11 @@ use icicle_babybear::field::ScalarField;
 use icicle_babybear::polynomials::DensePolynomial as PolynomialBabyBear;
 use icicle_bn254::curve::ScalarField as Bn254ScalarField;
 use icicle_bn254::polynomials::DensePolynomial as PolynomialBn254;
+use icicle_core::bignum::BigNum;
 
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 
-use icicle_core::field::PrimeField;
+use icicle_core::field::Field;
 use icicle_core::{
     ntt::{get_root_of_unity, initialize_domain, NTTInitDomainConfig},
     polynomials::UnivariatePolynomial,
@@ -44,20 +45,20 @@ fn init_ntt_domain(max_ntt_size: u64) {
         "Initializing NTT domain for max size 2^{}",
         max_ntt_size.trailing_zeros()
     );
-    let rou_bn254: Bn254ScalarField = get_root_of_unity(max_ntt_size);
+    let rou_bn254: Bn254ScalarField = get_root_of_unity(max_ntt_size).unwrap();
     initialize_domain(rou_bn254, &NTTInitDomainConfig::default()).unwrap();
 
-    let rou_babybear: ScalarField = get_root_of_unity(max_ntt_size);
+    let rou_babybear: ScalarField = get_root_of_unity(max_ntt_size).unwrap();
     initialize_domain(rou_babybear, &NTTInitDomainConfig::default()).unwrap();
 }
 
 fn randomize_poly<P>(size: usize, from_coeffs: bool) -> P
 where
     P: UnivariatePolynomial,
-    P::Field: PrimeField + GenerateRandom,
+    P::Ring: Field + GenerateRandom,
 {
     println!("Randomizing polynomial of size {} (from_coeffs: {})", size, from_coeffs);
-    let coeffs_or_evals = P::Field::generate_random(size);
+    let coeffs_or_evals = P::Ring::generate_random(size);
     let p = if from_coeffs {
         P::from_coeffs(HostSlice::from_slice(&coeffs_or_evals), size)
     } else {
@@ -67,7 +68,7 @@ where
 }
 //use UnivariatePolynomial trait to perform polynomial operations on arbitrary fields
 //fold_poly takes a polynomial and a scalar as input and returns a polynomial
-fn fold_poly<P: UnivariatePolynomial>(poly: P, beta: P::Field) -> P {
+fn fold_poly<P: UnivariatePolynomial>(poly: P, beta: P::Ring) -> P {
     let o = poly.odd(); // Get the odd terms (in coeff form)
     let e = poly.even(); // Get the even terms (in coeff form)
                          // Perform the fold operation: e + (o * beta)

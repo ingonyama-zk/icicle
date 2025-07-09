@@ -1,9 +1,9 @@
 use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
-pub use crate::curve::Projective;
+pub use crate::projective::Projective;
 use crate::{
     curve::Curve,
-    field::PrimeField,
+    field::Field,
     ntt::{NTTConfig, NTTDir},
 };
 
@@ -11,33 +11,33 @@ use crate::{
 pub mod tests;
 
 #[doc(hidden)]
-pub trait ECNTT<T>: PrimeField {
+pub trait ECNTT<Point: Projective, Scalar: Field> {
     fn ntt_unchecked(
-        input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        input: &(impl HostOrDeviceSlice<Point> + ?Sized),
         dir: NTTDir,
-        cfg: &NTTConfig<Self>,
-        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        cfg: &NTTConfig<Scalar>,
+        output: &mut (impl HostOrDeviceSlice<Point> + ?Sized),
     ) -> Result<(), IcicleError>;
 
     fn ntt_inplace_unchecked(
-        inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        inout: &mut (impl HostOrDeviceSlice<Point> + ?Sized),
         dir: NTTDir,
-        cfg: &NTTConfig<Self>,
+        cfg: &NTTConfig<Scalar>,
     ) -> Result<(), IcicleError>;
 
     fn ntt(
-        input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        input: &(impl HostOrDeviceSlice<Point> + ?Sized),
         dir: NTTDir,
-        cfg: &NTTConfig<Self>,
-        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        cfg: &NTTConfig<Scalar>,
+        output: &mut (impl HostOrDeviceSlice<Point> + ?Sized),
     ) -> Result<(), IcicleError> {
         Self::ntt_unchecked(input, dir, cfg, output)
     }
 
     fn ntt_inplace(
-        inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        inout: &mut (impl HostOrDeviceSlice<Point> + ?Sized),
         dir: NTTDir,
-        cfg: &NTTConfig<Self>,
+        cfg: &NTTConfig<Scalar>,
     ) -> Result<(), IcicleError> {
         Self::ntt_inplace_unchecked(inout, dir, cfg)
     }
@@ -55,15 +55,15 @@ pub trait ECNTT<T>: PrimeField {
 ///
 /// * `output` - buffer to write the ECNTT outputs into. Must be of the same size as `input`.
 pub fn ecntt<C: Curve>(
-    input: &(impl HostOrDeviceSlice<Projective<C>> + ?Sized),
+    input: &(impl HostOrDeviceSlice<C::Projective> + ?Sized),
     dir: NTTDir,
     cfg: &NTTConfig<C::ScalarField>,
-    output: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
+    output: &mut (impl HostOrDeviceSlice<C::Projective> + ?Sized),
 ) -> Result<(), IcicleError>
 where
-    C::ScalarField: PrimeField + ECNTT<Projective<C>>,
+    C::ScalarField: ECNTT<C::Projective, C::ScalarField>,
 {
-    <C::ScalarField as ECNTT<Projective<C>>>::ntt(input, dir, cfg, output)
+    <C::ScalarField as ECNTT<C::Projective, C::ScalarField>>::ntt(input, dir, cfg, output)
 }
 
 /// Computes the ECNTT, or a batch of several ECNTTs inplace.
@@ -76,14 +76,14 @@ where
 ///
 /// * `cfg` - config used to specify extra arguments of the ECNTT.
 pub fn ecntt_inplace<C: Curve>(
-    inout: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
+    inout: &mut (impl HostOrDeviceSlice<C::Projective> + ?Sized),
     dir: NTTDir,
     cfg: &NTTConfig<C::ScalarField>,
 ) -> Result<(), IcicleError>
 where
-    C::ScalarField: PrimeField + ECNTT<Projective<C>>,
+    C::ScalarField: ECNTT<C::Projective, C::ScalarField>,
 {
-    <C::ScalarField as ECNTT<Projective<C>>>::ntt_inplace(inout, dir, cfg)
+    <C::ScalarField as ECNTT<C::Projective, C::ScalarField>>::ntt_inplace(inout, dir, &cfg)
 }
 
 #[macro_export]
@@ -96,15 +96,14 @@ macro_rules! impl_ecntt {
         $curve:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::curve;
-            use crate::ecntt::Projective;
             use crate::ecntt::{$curve, $field};
+            use icicle_core::curve::Curve;
             use icicle_core::ecntt::ECNTT;
             use icicle_core::impl_ntt_without_domain;
             use icicle_core::ntt::{NTTConfig, NTTDir, NTTInitDomainConfig, NTT};
             use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, IcicleError};
 
-            type ProjectiveType = Projective<$curve>;
+            type ProjectiveType = <$curve as Curve>::Projective;
             impl_ntt_without_domain!($field_prefix, $field, ECNTT, "_ecntt", ProjectiveType);
         }
     };
@@ -113,7 +112,6 @@ macro_rules! impl_ecntt {
 #[macro_export]
 macro_rules! impl_ecntt_tests {
     (
-      $field:ident,
       $curve:ident
     ) => {
         pub mod test_ecntt {
@@ -130,10 +128,10 @@ macro_rules! impl_ecntt_tests {
                     test_utilities::test_load_and_init_devices();
                     // init domain for both devices
                     test_utilities::test_set_ref_device();
-                    init_domain::<$field>(MAX_SIZE, false);
+                    init_domain::<<$curve as icicle_core::curve::Curve>::ScalarField>(MAX_SIZE, false);
 
                     test_utilities::test_set_main_device();
-                    init_domain::<$field>(MAX_SIZE, false);
+                    init_domain::<<$curve as icicle_core::curve::Curve>::ScalarField>(MAX_SIZE, false);
                 });
                 test_utilities::test_set_main_device();
             }
@@ -161,10 +159,10 @@ macro_rules! impl_ecntt_bench {
       $curve:ident
     ) => {
         use criterion::{black_box, criterion_group, criterion_main, Criterion};
+        use icicle_core::projective::Projective;
         use icicle_core::{
-            curve::{Affine, Curve, Projective},
+            curve::Curve,
             ecntt::{ecntt, ECNTT},
-            field::PrimeField,
             ntt::{ntt, NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NttAlgorithm, Ordering, NTT},
             traits::GenerateRandom,
             vec_ops::VecOps,
@@ -203,7 +201,7 @@ macro_rules! impl_ecntt_bench {
 
         fn benchmark_ecntt<C: Curve>(c: &mut Criterion)
         where
-            C::ScalarField: ECNTT<Projective<C>> + NTTDomain,
+            C::ScalarField: ECNTT<C::Projective, C::ScalarField>,
         {
             use criterion::SamplingMode;
             use icicle_core::ntt::tests::init_domain;
@@ -239,15 +237,15 @@ macro_rules! impl_ecntt_bench {
 
                     let points = C::generate_random_projective_points(test_size);
                     let points = HostSlice::from_slice(&points);
-                    let mut batch_ntt_result = vec![Projective::<C>::zero(); full_size];
+                    let mut batch_ntt_result = vec![C::Projective::zero(); full_size];
                     let batch_ntt_result = HostSlice::from_mut_slice(&mut batch_ntt_result);
-                    let mut config = NTTConfig::default();
+                    let mut config = NTTConfig::<C::ScalarField>::default();
                     config.ordering = Ordering::kNN;
                     config.batch_size = batch_size as i32;
                     for dir in [NTTDir::kForward, NTTDir::kInverse] {
                         let bench_descr = format!("{:?} {:?} {} x {}", config.ordering, dir, test_size, batch_size);
                         group.bench_function(&bench_descr, |b| {
-                            b.iter(|| ecntt(points, dir, &mut config, batch_ntt_result))
+                            b.iter(|| ecntt::<C>(points, dir, &mut config, batch_ntt_result))
                         });
                     }
                 }

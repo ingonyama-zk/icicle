@@ -1,3 +1,4 @@
+use icicle_core::projective::Projective;
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
     stream::IcicleStream,
@@ -5,9 +6,9 @@ use icicle_runtime::{
 
 // Using both bn254 and bls12-377 curves
 use icicle_bls12_377::curve::{
-    ScalarField as BLS12377ScalarField, CurveCfg as BLS12377CurveCfg, G1Projective as BLS12377G1Projective,
+    CurveCfg as BLS12377CurveCfg, G1Projective as BLS12377G1Projective, ScalarField as BLS12377ScalarField,
 };
-use icicle_bn254::curve::{ScalarField, CurveCfg, G1Projective, G2CurveCfg, G2Projective};
+use icicle_bn254::curve::{CurveCfg, G1Projective, G2CurveCfg, G2Projective, ScalarField};
 
 use clap::Parser;
 use icicle_core::{curve::Curve, msm, traits::GenerateRandom};
@@ -94,11 +95,11 @@ fn main() {
         cfg_bls12377.is_async = true;
 
         println!("Executing bn254 MSM on device...");
-        msm::msm(scalars, points, &cfg, &mut msm_results[..]).unwrap();
-        msm::msm(scalars, g2_points, &g2_cfg, &mut g2_msm_results[..]).unwrap();
+        msm::msm::<CurveCfg>(scalars, points, &cfg, &mut msm_results[..]).unwrap();
+        msm::msm::<G2CurveCfg>(scalars, g2_points, &g2_cfg, &mut g2_msm_results[..]).unwrap();
 
         println!("Executing bls12377 MSM on device...");
-        msm::msm(
+        msm::msm::<BLS12377CurveCfg>(
             scalars_bls12377,
             points_bls12377,
             &cfg_bls12377,

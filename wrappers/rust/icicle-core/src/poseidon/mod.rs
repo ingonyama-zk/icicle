@@ -1,12 +1,12 @@
 #[doc(hidden)]
 pub mod tests;
 
-use crate::{field::PrimeField, hash::Hasher};
-use icicle_runtime::errors::IcicleError;
+use crate::{field::Field, hash::Hasher};
+use icicle_runtime::IcicleError;
 
 /// Trait to define the behavior of a Poseidon hasher for different field types.
-/// This allows the implementation of Poseidon hashing for various field types that implement `PrimeField`.
-pub trait PoseidonHasher: PrimeField {
+/// This allows the implementation of Poseidon hashing for various field types that implement `Field`.
+pub trait PoseidonHasher: Field {
     /// Creates a Poseidon hasher with an explicit `input_size` (rate). This is the
     /// low-level constructor that all implementations must provide.
     fn new_with_input_size(t: u32, domain_tag: Option<&Self>, input_size: u32) -> Result<Hasher, IcicleError>;
@@ -22,7 +22,7 @@ pub trait PoseidonHasher: PrimeField {
 /// Delegates the creation to the `new` method of the `PoseidonHasher` trait.
 pub fn create_poseidon_hasher<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, IcicleError>
 where
-    F: PrimeField + PoseidonHasher,
+    F: Field + PoseidonHasher,
 {
     <F as PoseidonHasher>::new(t, domain_tag)
 }
@@ -32,14 +32,14 @@ pub struct Poseidon;
 impl Poseidon {
     pub fn new<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, IcicleError>
     where
-        F: PrimeField + PoseidonHasher, // F must implement the PrimeField trait
+        F: Field + PoseidonHasher, // F must implement the Field trait
     {
         create_poseidon_hasher::<F>(t, domain_tag)
     }
 
     pub fn new_with_input_size<F>(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, IcicleError>
     where
-        F: PrimeField,
+        F: Field,
         F: PoseidonHasher,
     {
         <F as PoseidonHasher>::new_with_input_size(t, domain_tag, input_size)
@@ -57,7 +57,7 @@ macro_rules! impl_poseidon {
         mod $field_prefix_ident {
             use crate::poseidon::$field;
             use icicle_core::{
-                field::PrimeField,
+                field::Field,
                 hash::{Hasher, HasherHandle},
                 poseidon::PoseidonHasher,
             };

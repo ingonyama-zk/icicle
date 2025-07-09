@@ -16,7 +16,7 @@ pub(crate) mod tests {
     impl_ntt_tests!(ScalarField);
 
     use icicle_core::{
-        field::PrimeField,
+        bignum::BigNum,
         ntt::{initialize_domain, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTInitDomainConfig},
     };
     use icicle_runtime::memory::HostSlice;

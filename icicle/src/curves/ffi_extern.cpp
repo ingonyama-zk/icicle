@@ -1,5 +1,6 @@
 #include "icicle/utils/utils.h"
 #include "icicle/curves/curve_config.h"
+#include "icicle/fields/externs.h"
 
 using namespace curve_config;
 
@@ -53,10 +54,7 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, generate_affine_points)(affine_
   projective_t::rand_host_many(points, size);
 }
 
-extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, base_field_from_u32)(uint32_t val, point_field_t* result)
-{
-  *result = point_field_t::from(val);
-}
+ICICLE_DEFINE_FIELD_FFI_FUNCS(_base_field, point_field_t);
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, generator)(projective_t* result)
 {
@@ -114,10 +112,7 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_generate_affine_points)(g2_a
   g2_projective_t::rand_host_many(points, size);
 }
 
-extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_base_field_from_u32)(uint32_t val, g2_point_field_t* result)
-{
-  *result = g2_point_field_t::from(val);
-}
+ICICLE_DEFINE_FIELD_FFI_FUNCS(_g2_base_field, g2_point_field_t);
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_generator)(g2_projective_t* result)
 {

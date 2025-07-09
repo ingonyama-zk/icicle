@@ -1,12 +1,9 @@
 use icicle_runtime::IcicleError;
 
-use crate::{field::PrimeField, merkle::MerkleProofData, traits::Handle};
+use crate::{field::Field, merkle::MerkleProofData, traits::Handle};
 use serde::{de::DeserializeOwned, Serialize};
 
-pub trait FriProofOps<F: PrimeField>: Sized + Handle + Serialize + DeserializeOwned
-where
-    F: PrimeField,
-{
+pub trait FriProofOps<F: Field>: Sized + Handle + Serialize + DeserializeOwned {
     /// Constructs a new instance of the `FriProof`.
     fn new() -> Result<Self, IcicleError>;
 

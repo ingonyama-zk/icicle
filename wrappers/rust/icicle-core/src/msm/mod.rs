@@ -1,4 +1,4 @@
-use crate::curve::{Affine, Curve, Projective};
+use crate::curve::Curve;
 use icicle_runtime::{
     config::ConfigExtension,
     errors::{eIcicleError, IcicleError},
@@ -76,22 +76,22 @@ impl Default for MSMConfig {
 pub trait MSM<C: Curve> {
     fn msm_unchecked(
         scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
-        bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+        bases: &(impl HostOrDeviceSlice<C::Affine> + ?Sized),
         cfg: &MSMConfig,
-        results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
+        results: &mut (impl HostOrDeviceSlice<C::Projective> + ?Sized),
     ) -> Result<(), IcicleError>;
 
     fn precompute_bases_unchecked(
-        bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+        bases: &(impl HostOrDeviceSlice<C::Affine> + ?Sized),
         cfg: &MSMConfig,
-        output_bases: &mut DeviceSlice<Affine<C>>,
+        output_bases: &mut DeviceSlice<C::Affine>,
     ) -> Result<(), IcicleError>;
 
     fn msm(
         scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
-        bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+        bases: &(impl HostOrDeviceSlice<C::Affine> + ?Sized),
         cfg: &MSMConfig,
-        results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
+        results: &mut (impl HostOrDeviceSlice<C::Projective> + ?Sized),
     ) -> Result<(), IcicleError> {
         if bases.len() % (cfg.precompute_factor as usize) != 0 {
             return Err(IcicleError::new(
@@ -156,9 +156,9 @@ pub trait MSM<C: Curve> {
     }
 
     fn precompute_bases(
-        points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+        points: &(impl HostOrDeviceSlice<C::Affine> + ?Sized),
         config: &MSMConfig,
-        output_bases: &mut DeviceSlice<Affine<C>>,
+        output_bases: &mut DeviceSlice<C::Affine>,
     ) -> Result<(), IcicleError> {
         if output_bases.len() != points.len() * (config.precompute_factor as usize) {
             return Err(IcicleError::new(
@@ -199,9 +199,9 @@ pub trait MSM<C: Curve> {
 /// Returns `Ok(())` if no errors occurred or an `IcicleError` otherwise.
 pub fn msm<C: Curve + MSM<C>>(
     scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
-    bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+    bases: &(impl HostOrDeviceSlice<C::Affine> + ?Sized),
     cfg: &MSMConfig,
-    results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
+    results: &mut (impl HostOrDeviceSlice<C::Projective> + ?Sized),
 ) -> Result<(), IcicleError> {
     C::msm(scalars, bases, cfg, results)
 }
@@ -226,9 +226,9 @@ pub fn msm<C: Curve + MSM<C>>(
 ///
 /// Returns `Ok(())` if no errors occurred or an `IcicleError` otherwise.
 pub fn precompute_bases<C: Curve + MSM<C>>(
-    points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+    points: &(impl HostOrDeviceSlice<C::Affine> + ?Sized),
     config: &MSMConfig,
-    output_bases: &mut DeviceSlice<Affine<C>>,
+    output_bases: &mut DeviceSlice<C::Affine>,
 ) -> Result<(), IcicleError> {
     C::precompute_bases(points, config, output_bases)
 }
@@ -241,25 +241,26 @@ macro_rules! impl_msm {
       $curve:ident
     ) => {
         mod $curve_prefix_ident {
-            use super::{$curve, Affine, Curve, MSMConfig, Projective};
+            use crate::msm::$curve;
+            use icicle_core::{curve::Curve, msm::MSMConfig};
             use icicle_runtime::errors::eIcicleError;
 
             extern "C" {
                 #[link_name = concat!($curve_prefix, "_msm")]
                 pub(crate) fn msm_ffi(
                     scalars: *const <$curve as Curve>::ScalarField,
-                    points: *const Affine<$curve>,
+                    points: *const <$curve as Curve>::Affine,
                     count: i32,
                     config: &MSMConfig,
-                    out: *mut Projective<$curve>,
+                    out: *mut <$curve as Curve>::Projective,
                 ) -> eIcicleError;
 
                 #[link_name = concat!($curve_prefix, "_msm_precompute_bases")]
                 pub(crate) fn precompute_bases_ffi(
-                    points: *const Affine<$curve>,
+                    points: *const <$curve as Curve>::Affine,
                     bases_size: i32,
                     config: &MSMConfig,
-                    output_bases: *mut Affine<$curve>,
+                    output_bases: *mut <$curve as Curve>::Affine,
                 ) -> eIcicleError;
             }
         }
@@ -267,9 +268,9 @@ macro_rules! impl_msm {
         impl MSM<$curve> for $curve {
             fn msm_unchecked(
                 scalars: &(impl HostOrDeviceSlice<<$curve as Curve>::ScalarField> + ?Sized),
-                points: &(impl HostOrDeviceSlice<Affine<$curve>> + ?Sized),
+                points: &(impl HostOrDeviceSlice<<$curve as Curve>::Affine> + ?Sized),
                 cfg: &MSMConfig,
-                results: &mut (impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
+                results: &mut (impl HostOrDeviceSlice<<$curve as Curve>::Projective> + ?Sized),
             ) -> Result<(), IcicleError> {
                 unsafe {
                     $curve_prefix_ident::msm_ffi(
@@ -284,9 +285,9 @@ macro_rules! impl_msm {
             }
 
             fn precompute_bases_unchecked(
-                points: &(impl HostOrDeviceSlice<Affine<$curve>> + ?Sized),
+                points: &(impl HostOrDeviceSlice<<$curve as Curve>::Affine> + ?Sized),
                 config: &MSMConfig,
-                output_bases: &mut DeviceSlice<Affine<$curve>>,
+                output_bases: &mut DeviceSlice<<$curve as Curve>::Affine>,
             ) -> Result<(), IcicleError> {
                 unsafe {
                     $curve_prefix_ident::precompute_bases_ffi(
@@ -346,7 +347,7 @@ macro_rules! impl_msm_bench {
       $curve:ident
     ) => {
         use criterion::{criterion_group, criterion_main, Criterion};
-        use icicle_core::curve::{Affine, Curve, Projective};
+        use icicle_core::curve::Curve;
         use icicle_core::msm::{msm, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR, MSM};
         use icicle_core::traits::GenerateRandom;
         use icicle_runtime::{
@@ -422,11 +423,12 @@ macro_rules! impl_msm_bench {
             for test_size_log2 in (min_log2..=max_log2) {
                 let test_size = 1 << test_size_log2;
 
-                let points = generate_random_affine_points_with_zeroes(test_size, 10);
+                let points = generate_random_affine_points_with_zeroes::<C>(test_size, 10);
                 for precompute_factor in [1, 4, 8] {
-                    let mut precomputed_points_d = DeviceVec::device_malloc(precompute_factor * test_size).unwrap();
+                    let mut precomputed_points_d =
+                        DeviceVec::<C::Affine>::device_malloc(precompute_factor * test_size).unwrap();
                     cfg.precompute_factor = precompute_factor as i32;
-                    precompute_bases(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
+                    precompute_bases::<C>(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
                     for batch_size_log2 in [0, 4, 7] {
                         let batch_size = 1 << batch_size_log2;
                         let full_size = batch_size * test_size;
@@ -441,7 +443,7 @@ macro_rules! impl_msm_bench {
 
                         let scalars_h = HostSlice::from_slice(&scalars);
 
-                        let mut msm_results = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
+                        let mut msm_results = DeviceVec::<C::Projective>::device_malloc(batch_size).unwrap();
 
                         let bench_descr = format!(
                             " {} x {} with precomp = {:?}",
@@ -449,7 +451,7 @@ macro_rules! impl_msm_bench {
                         );
 
                         group.bench_function(&bench_descr, |b| {
-                            b.iter(|| msm(scalars_h, &precomputed_points_d[..], &cfg, &mut msm_results[..]))
+                            b.iter(|| msm::<C>(scalars_h, &precomputed_points_d[..], &cfg, &mut msm_results[..]))
                         });
 
                         stream

@@ -1,46 +1,30 @@
-use icicle_core::traits::{Arithmetic, GenerateRandom, MontgomeryConvertible};
-use icicle_core::{
-    curve::{Affine, Curve, Projective},
-    field::PrimeField,
-    impl_curve, impl_field, impl_field_arithmetic, impl_generate_random, impl_montgomery_convertible,
-    vec_ops::VecOpsConfig,
-};
-use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream, IcicleError};
-use std::fmt::{Debug, Display};
-use std::ops::{Add, Mul, Sub};
+use icicle_core::affine::Affine;
+use icicle_core::bignum::BigNum;
+use icicle_core::projective::Projective;
+use icicle_core::{impl_curve, impl_field, impl_montgomery_convertible};
+use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 
 pub(crate) const SCALAR_LIMBS: usize = 8;
 pub(crate) const BASE_LIMBS: usize = 8;
 #[cfg(feature = "g2")]
 pub(crate) const G2_BASE_LIMBS: usize = 16;
 
-impl_field!(ScalarField, "bn254", SCALAR_LIMBS, true);
-impl_field_arithmetic!(ScalarField, "bn254", bn254_sf);
-impl_montgomery_convertible!(ScalarField, bn254_scalar_convert_montgomery);
-impl_generate_random!(ScalarField, bn254_generate_scalars);
+impl_field!(ScalarField, "bn254", SCALAR_LIMBS);
+impl_montgomery_convertible!(ScalarField, "bn254_scalar_convert_montgomery");
 
-impl_field!(BaseField, "bn254_base_field", BASE_LIMBS, false);
-impl_curve!("bn254", bn254, CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);
+impl_field!(BaseField, "bn254_base_field", BASE_LIMBS);
+impl_curve!("bn254", CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);
 
 #[cfg(feature = "g2")]
-impl_field!(G2BaseField, "bn254_g2_base_field", G2_BASE_LIMBS, false);
+impl_field!(G2BaseField, "bn254_g2_base_field", G2_BASE_LIMBS);
 #[cfg(feature = "g2")]
-impl_curve!(
-    "bn254_g2",
-    bn254_g2,
-    G2CurveCfg,
-    ScalarField,
-    G2BaseField,
-    G2Affine,
-    G2Projective
-);
+impl_curve!("bn254_g2", G2CurveCfg, ScalarField, G2BaseField, G2Affine, G2Projective);
 
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "g2")]
     use super::G2CurveCfg;
     use super::{CurveCfg, ScalarField};
-    use icicle_core::curve::Curve;
     use icicle_core::tests::*;
     use icicle_core::{impl_curve_tests, impl_field_tests};
     use icicle_runtime::test_utilities;

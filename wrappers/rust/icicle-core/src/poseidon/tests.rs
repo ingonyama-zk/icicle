@@ -1,5 +1,5 @@
 use crate::{
-    field::PrimeField,
+    field::Field,
     hash::{HashConfig, Hasher},
     merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
     poseidon::{Poseidon, PoseidonHasher},
@@ -8,7 +8,7 @@ use crate::{
 use icicle_runtime::{errors::eIcicleError, memory::HostSlice, test_utilities};
 use std::mem;
 
-pub fn check_poseidon_hash<F: PrimeField>()
+pub fn check_poseidon_hash<F: Field>()
 where
     F: PoseidonHasher + GenerateRandom,
 {
@@ -51,7 +51,7 @@ where
     }
 }
 
-pub fn check_poseidon_hash_sponge<F: PrimeField>()
+pub fn check_poseidon_hash_sponge<F: Field>()
 where
     F: PoseidonHasher + GenerateRandom,
 {
@@ -90,7 +90,7 @@ where
     }
 }
 
-pub fn check_poseidon_hash_multi_device<F: PrimeField>()
+pub fn check_poseidon_hash_multi_device<F: Field>()
 where
     F: PoseidonHasher + GenerateRandom,
 {
@@ -139,7 +139,7 @@ where
     assert_eq!(outputs_ref, outputs_main_0);
 }
 
-pub fn check_poseidon_tree<F: PrimeField>()
+pub fn check_poseidon_tree<F: Field>()
 where
     F: PoseidonHasher,
 {
@@ -147,7 +147,7 @@ where
     let nof_layers = 4;
     let num_elements = 9_u32.pow(nof_layers);
     let mut leaves: Vec<F> = (0..num_elements)
-        .map(|i| F::from_u32(i))
+        .map(|i| F::from(i))
         .collect();
 
     let hasher = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();

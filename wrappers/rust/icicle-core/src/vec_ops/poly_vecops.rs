@@ -19,7 +19,7 @@
 //! This is enforced by the [`PolynomialRing`] trait and the `reinterpret_slice` utility.
 
 use super::{add_scalars, mul_scalars, scalar_mul, sub_scalars, sum_scalars, VecOps, VecOpsConfig};
-use crate::{field::PrimeField, polynomial_ring::PolynomialRing};
+use crate::polynomial_ring::PolynomialRing;
 use icicle_runtime::{
     memory::{
         reinterpret::{reinterpret_slice, reinterpret_slice_mut},
@@ -54,8 +54,7 @@ pub fn polyvec_mul_by_scalar<P>(
 ) -> Result<(), IcicleError>
 where
     P: PolynomialRing,
-    P::Base: PrimeField,
-    P::Base: VecOps,
+    P::Base: VecOps<P::Base>,
 {
     unsafe {
         let vec_flat = reinterpret_slice::<P, P::Base>(input_polyvec)?;
@@ -82,8 +81,7 @@ pub fn polyvec_mul<P>(
 ) -> Result<(), IcicleError>
 where
     P: PolynomialRing,
-    P::Base: PrimeField,
-    P::Base: VecOps,
+    P::Base: VecOps<P::Base>,
 {
     unsafe {
         let vec_a_flat = reinterpret_slice::<P, P::Base>(input_polyvec_a)?;
@@ -107,8 +105,7 @@ pub fn polyvec_add<P>(
 ) -> Result<(), IcicleError>
 where
     P: PolynomialRing,
-    P::Base: PrimeField,
-    P::Base: VecOps,
+    P::Base: VecOps<P::Base>,
 {
     unsafe {
         let vec_a_flat = reinterpret_slice::<P, P::Base>(input_polyvec_a)?;
@@ -132,8 +129,7 @@ pub fn polyvec_sub<P>(
 ) -> Result<(), IcicleError>
 where
     P: PolynomialRing,
-    P::Base: PrimeField,
-    P::Base: VecOps,
+    P::Base: VecOps<P::Base>,
 {
     unsafe {
         let vec_a_flat = reinterpret_slice::<P, P::Base>(input_polyvec_a)?;
@@ -162,8 +158,7 @@ pub fn polyvec_sum_reduce<P>(
 ) -> Result<(), IcicleError>
 where
     P: PolynomialRing,
-    P::Base: PrimeField,
-    P::Base: VecOps,
+    P::Base: VecOps<P::Base>,
 {
     unsafe {
         let input_flat = reinterpret_slice::<P, P::Base>(input_polyvec)?;
