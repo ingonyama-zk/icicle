@@ -1,7 +1,5 @@
-use crate::curve::CurveCfg;
-
+use crate::curve::G1Projective;
 use icicle_core::{
-    curve::Curve,
     impl_msm,
     msm::{MSMConfig, MSM},
 };
@@ -10,13 +8,14 @@ use icicle_runtime::{
     IcicleError,
 };
 
-impl_msm!("grumpkin", grumpkin, CurveCfg);
+impl_msm!("grumpkin", grumpkin, G1Projective);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::curve::CurveCfg;
     use icicle_core::impl_msm_tests;
     use icicle_core::msm::tests::*;
 
-    impl_msm_tests!(CurveCfg);
+    use crate::curve::G1Projective;
+
+    impl_msm_tests!(G1Projective);
 }

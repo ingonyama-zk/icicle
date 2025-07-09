@@ -2,7 +2,6 @@ use crate::bignum::BigNum;
 use crate::polynomial_ring::{flatten_polyring_slice, PolynomialRing};
 use crate::ring::IntegerRing;
 use crate::{
-    curve::Curve,
     field::Field,
     projective::Projective,
     traits::{GenerateRandom, MontgomeryConvertible},
@@ -55,25 +54,25 @@ where
     }
 }
 
-pub fn check_affine_projective_convert<C: Curve>() {
+pub fn check_affine_projective_convert<P: Projective>() {
     let size = 1 << 10;
-    let affine_points = C::Affine::generate_random(size);
-    let projective_points = C::Projective::generate_random(size);
+    let affine_points = P::Affine::generate_random(size);
+    let projective_points = P::generate_random(size);
     for affine_point in affine_points {
-        let projective_eqivalent: C::Projective = affine_point.into();
+        let projective_eqivalent: P = affine_point.into();
         assert_eq!(affine_point, projective_eqivalent.into());
     }
     for projective_point in projective_points {
         println!("{:?}", projective_point);
-        let affine_eqivalent: C::Affine = projective_point.into();
+        let affine_eqivalent: P::Affine = projective_point.into();
         assert_eq!(projective_point, affine_eqivalent.into());
     }
 }
 
-pub fn check_point_arithmetic<C: Curve>() {
+pub fn check_point_arithmetic<P: Projective>() {
     let size = 1 << 10;
-    let projective_points_a = C::Projective::generate_random(size);
-    let projective_points_b = C::Projective::generate_random(size);
+    let projective_points_a = P::generate_random(size);
+    let projective_points_b = P::generate_random(size);
 
     for i in 0..size {
         let result1 = projective_points_a[i] + projective_points_b[i];
@@ -82,29 +81,29 @@ pub fn check_point_arithmetic<C: Curve>() {
     }
 }
 
-pub fn check_point_equality<C: Curve>() {
-    let left = C::Projective::zero();
-    let right = C::Projective::zero();
+pub fn check_point_equality<P: Projective>() {
+    let left = P::zero();
+    let right = P::zero();
     assert_eq!(left, right);
 
-    let x = C::BaseField::zero();
-    let y = C::BaseField::from(2);
-    let z = C::BaseField::zero();
-    let right = C::Projective::from_limbs(*x.limbs(), *y.limbs(), *z.limbs());
+    let x = P::BaseField::zero();
+    let y = P::BaseField::from(2);
+    let z = P::BaseField::zero();
+    let right = P::from_limbs(*x.limbs(), *y.limbs(), *z.limbs());
     assert_eq!(left, right);
 
-    let z = C::BaseField::from(2);
-    let right = C::Projective::from_limbs(
-        *C::BaseField::zero().limbs(),
-        *C::BaseField::from(4).limbs(),
+    let z = P::BaseField::from(2);
+    let right = P::from_limbs(
+        *P::BaseField::zero().limbs(),
+        *P::BaseField::from(4).limbs(),
         *z.limbs(),
     );
     assert_ne!(left, right);
 
-    let left = C::Projective::from_limbs(
-        *C::BaseField::zero().limbs(),
-        *C::BaseField::from(2).limbs(),
-        *C::BaseField::one().limbs(),
+    let left = P::from_limbs(
+        *P::BaseField::zero().limbs(),
+        *P::BaseField::from(2).limbs(),
+        *P::BaseField::one().limbs(),
     );
     assert_eq!(left, right);
 }
@@ -154,11 +153,11 @@ where
     assert_eq!(elements_copy, elements);
 }
 
-pub fn check_generator<C: Curve>() {
-    let generator = C::get_generator();
-    let zero = C::Projective::zero();
+pub fn check_generator<P: Projective>() {
+    let generator = P::get_generator();
+    let zero = P::zero();
     assert_ne!(generator, zero);
-    assert!(C::Projective::is_on_curve(generator));
+    assert!(P::is_on_curve(generator));
 }
 
 pub fn check_zero_and_from_slice<P: PolynomialRing>() {

@@ -1,21 +1,21 @@
-use crate::{curve::Curve, field::Field};
+use crate::{field::Field, projective::Projective};
 use icicle_runtime::IcicleError;
 
 #[doc(hidden)]
 pub mod tests;
 
-pub trait Pairing<C1: Curve, C2: Curve, F: Field> {
-    fn pairing(p: &C1::Affine, q: &C2::Affine) -> Result<F, IcicleError>;
+pub trait Pairing<P1: Projective, P2: Projective, F: Field> {
+    fn pairing(p: &P1::Affine, q: &P2::Affine) -> Result<F, IcicleError>;
 }
 
-pub fn pairing<C1, C2, F>(p: &C1::Affine, q: &C2::Affine) -> Result<F, IcicleError>
+pub fn pairing<P1, P2, F>(p: &P1::Affine, q: &P2::Affine) -> Result<F, IcicleError>
 where
-    C1: Curve,
-    C2: Curve,
+    P1: Projective,
+    P2: Projective,
     F: Field,
-    C1: Pairing<C1, C2, F>,
+    P1: Pairing<P1, P2, F>,
 {
-    C1::pairing(p, q)
+    P1::pairing(p, q)
 }
 
 #[macro_export]
@@ -23,35 +23,35 @@ macro_rules! impl_pairing {
     (
       $curve_prefix:literal,
       $curve_prefix_ident:ident,
-      $curve:ident,
-      $curve_g2:ident,
+      $projective_type:ident,
+      $projective_type_g2:ident,
       $target_field:ident
     ) => {
         mod $curve_prefix_ident {
-            use super::{$curve, $curve_g2, $target_field};
-            use icicle_core::curve::Curve;
+            use super::{$projective_type, $projective_type_g2, $target_field};
+            use icicle_core::projective::Projective;
             use icicle_runtime::errors::eIcicleError;
 
             extern "C" {
                 #[link_name = concat!($curve_prefix, "_pairing")]
                 pub(crate) fn pairing_ffi(
-                    q: *const <$curve as Curve>::Affine,
-                    p: *const <$curve_g2 as Curve>::Affine,
+                    q: *const <$projective_type as Projective>::Affine,
+                    p: *const <$projective_type_g2 as Projective>::Affine,
                     out: *mut $target_field,
                 ) -> eIcicleError;
             }
         }
 
-        impl Pairing<$curve, $curve_g2, $target_field> for $curve {
+        impl Pairing<$projective_type, $projective_type_g2, $target_field> for $projective_type {
             fn pairing(
-                p: &<$curve as icicle_core::curve::Curve>::Affine,
-                q: &<$curve_g2 as icicle_core::curve::Curve>::Affine,
+                p: &<$projective_type as icicle_core::projective::Projective>::Affine,
+                q: &<$projective_type_g2 as icicle_core::projective::Projective>::Affine,
             ) -> Result<$target_field, IcicleError> {
                 let mut result = $target_field::zero();
                 unsafe {
                     $curve_prefix_ident::pairing_ffi(
-                        p as *const <$curve as icicle_core::curve::Curve>::Affine,
-                        q as *const <$curve_g2 as icicle_core::curve::Curve>::Affine,
+                        p as *const <$projective_type as icicle_core::projective::Projective>::Affine,
+                        q as *const <$projective_type_g2 as icicle_core::projective::Projective>::Affine,
                         &mut result as *mut $target_field,
                     )
                     .wrap()
@@ -65,13 +65,13 @@ macro_rules! impl_pairing {
 #[macro_export]
 macro_rules! impl_pairing_tests {
     (
-      $curve:ident,
-      $curve_g2:ident,
+      $projective_type:ident,
+      $projective_type_g2:ident,
       $target_field:ident
     ) => {
         #[test]
         fn test_pairing_bilinearity() {
-            check_pairing_bilinearity::<$curve, $curve_g2, $target_field>();
+            check_pairing_bilinearity::<$projective_type, $projective_type_g2, $target_field>();
         }
     };
 }

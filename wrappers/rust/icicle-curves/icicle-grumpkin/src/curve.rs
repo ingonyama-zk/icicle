@@ -11,15 +11,15 @@ impl_field!(ScalarField, "grumpkin", SCALAR_LIMBS);
 impl_montgomery_convertible!(ScalarField, "grumpkin_scalar_convert_montgomery");
 
 impl_field!(BaseField, "grumpkin_base_field", BASE_LIMBS);
-impl_curve!("grumpkin", CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);
+impl_curve!("grumpkin", ScalarField, BaseField, G1Affine, G1Projective);
 
 #[cfg(test)]
 mod tests {
-    use super::{CurveCfg, ScalarField};
+    use super::{G1Projective, ScalarField};
     use icicle_core::tests::*;
     use icicle_core::{impl_curve_tests, impl_field_tests};
     use icicle_runtime::test_utilities;
 
     impl_field_tests!(ScalarField);
-    impl_curve_tests!(BASE_LIMBS, CurveCfg);
+    impl_curve_tests!(BASE_LIMBS, G1Projective);
 }

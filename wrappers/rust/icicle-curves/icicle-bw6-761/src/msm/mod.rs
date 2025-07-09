@@ -1,7 +1,5 @@
-use crate::curve::CurveCfg;
-use crate::curve::G2CurveCfg;
+use crate::curve::{G1Projective, G2Projective};
 use icicle_core::{
-    curve::Curve,
     impl_msm,
     msm::{MSMConfig, MSM},
 };
@@ -10,20 +8,23 @@ use icicle_runtime::{
     IcicleError,
 };
 
-impl_msm!("bw6_761", bw6_761, CurveCfg);
-impl_msm!("bw6_761_g2", bw6_761_g2, G2CurveCfg);
+impl_msm!("bw6_761", bw6_761, G1Projective);
+#[cfg(feature = "g2")]
+impl_msm!("bw6_761_g2", bw6_761_g2, G2Projective);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::curve::CurveCfg;
-    use crate::curve::G2CurveCfg;
     use icicle_core::impl_msm_tests;
     use icicle_core::msm::tests::*;
 
-    impl_msm_tests!(CurveCfg);
+    use crate::curve::G1Projective;
 
+    impl_msm_tests!(G1Projective);
+
+    #[cfg(feature = "g2")]
     mod g2 {
         use super::*;
-        impl_msm_tests!(G2CurveCfg);
+        use crate::curve::G2Projective;
+        impl_msm_tests!(G2Projective);
     }
 }

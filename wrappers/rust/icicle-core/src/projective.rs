@@ -22,7 +22,7 @@ pub trait Projective:
     + From<Self::Affine>
     + Into<Self::Affine>
 {
-    type ScalarField: Field;
+    type ScalarField: Field + MontgomeryConvertible;
     type BaseField: Field;
     type Affine: Affine;
 
@@ -55,6 +55,8 @@ pub trait Projective:
     fn zero() -> Self {
         Self::from_xyz(Self::BaseField::zero(), Self::BaseField::one(), Self::BaseField::zero())
     }
+
+    fn get_generator() -> Self;
 }
 
 #[macro_export]
@@ -98,6 +100,19 @@ macro_rules! impl_projective {
                     pub(crate) fn is_on_curve(point: *const $projective) -> bool;
                 }
                 unsafe { is_on_curve(&self as *const Self) }
+            }
+
+            fn get_generator() -> Self {
+                extern "C" {
+                    #[link_name = concat!($curve_prefix, "_generator")]
+                    pub(crate) fn generator(result: *mut $projective);
+                }
+
+                unsafe {
+                    let mut result = Self::zero();
+                    generator(&mut result);
+                    result
+                }
             }
         }
 

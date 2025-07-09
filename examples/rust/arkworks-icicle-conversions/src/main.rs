@@ -6,7 +6,7 @@ use ark_bn254::{Fq, Fr, G1Affine as ArkAffine, G1Projective as ArkProjective};
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::{BigInteger, Field, PrimeField as ArkPrimeField};
 
-use icicle_bn254::curve::{CurveCfg, G1Affine as IcicleAffine, G1Projective as IcicleProjective, ScalarField};
+use icicle_bn254::curve::{G1Affine as IcicleAffine, G1Projective as IcicleProjective, ScalarField};
 use icicle_core::{
     field::Field as IcicleField,
     msm::{msm, MSMConfig},
@@ -280,7 +280,7 @@ fn main() {
 
     let mut icicle_msm_result = vec![IcicleProjective::zero()];
     let start = Instant::now();
-    msm::<CurveCfg>(
+    msm(
         &icicle_scalars_dev,
         HostSlice::from_slice(&icicle_affine_points),
         &MSMConfig::default(),
@@ -318,7 +318,7 @@ fn main() {
         .unwrap();
 
     let start = Instant::now();
-    msm::<CurveCfg>(
+    msm(
         &icicle_scalars_dev,
         &d_icicle_affine_points,
         &MSMConfig::default(),

@@ -6,12 +6,12 @@ use icicle_runtime::{
 
 // Using both bn254 and bls12-377 curves
 use icicle_bls12_377::curve::{
-    CurveCfg as BLS12377CurveCfg, G1Projective as BLS12377G1Projective, ScalarField as BLS12377ScalarField,
+    G1Projective as BLS12377G1Projective, ScalarField as BLS12377ScalarField,
 };
-use icicle_bn254::curve::{CurveCfg, G1Projective, G2CurveCfg, G2Projective, ScalarField};
+use icicle_bn254::curve::{G1Projective, G2Projective, ScalarField};
 
 use clap::Parser;
-use icicle_core::{curve::Curve, msm, traits::GenerateRandom};
+use icicle_core::{msm, traits::GenerateRandom};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -50,12 +50,12 @@ fn main() {
     let upper_size = 1 << upper_bound;
 
     println!("Generating random inputs on host for bn254...");
-    let upper_points = CurveCfg::generate_random_affine_points(upper_size);
-    let g2_upper_points = G2CurveCfg::generate_random_affine_points(upper_size);
+    let upper_points = <G1Projective as Projective>::Affine::generate_random(upper_size);
+    let g2_upper_points = <G2Projective as Projective>::Affine::generate_random(upper_size);
     let upper_scalars = ScalarField::generate_random(upper_size);
 
     println!("Generating random inputs on host for bls12377...");
-    let upper_points_bls12377 = BLS12377CurveCfg::generate_random_affine_points(upper_size);
+    let upper_points_bls12377 = <BLS12377G1Projective as Projective>::Affine::generate_random(upper_size);
     let upper_scalars_bls12377 = BLS12377ScalarField::generate_random(upper_size);
 
     for i in lower_bound..=upper_bound {
@@ -95,11 +95,11 @@ fn main() {
         cfg_bls12377.is_async = true;
 
         println!("Executing bn254 MSM on device...");
-        msm::msm::<CurveCfg>(scalars, points, &cfg, &mut msm_results[..]).unwrap();
-        msm::msm::<G2CurveCfg>(scalars, g2_points, &g2_cfg, &mut g2_msm_results[..]).unwrap();
+        msm::msm(scalars, points, &cfg, &mut msm_results[..]).unwrap();
+        msm::msm(scalars, g2_points, &g2_cfg, &mut g2_msm_results[..]).unwrap();
 
         println!("Executing bls12377 MSM on device...");
-        msm::msm::<BLS12377CurveCfg>(
+        msm::msm(
             scalars_bls12377,
             points_bls12377,
             &cfg_bls12377,
