@@ -34,9 +34,35 @@ fn main() {
         };
         config
             .define("CURVE", "bls12_381")
-            .define("FIELD", "bls12_381")
-            .define("HASH", "ON")
             .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
+
+        // Enable features based on Cargo.toml configuration
+        if cfg!(not(feature = "ecntt")) {
+            config.define("ECNTT", "OFF");
+        }
+        if cfg!(not(feature = "fri")) {
+            config.define("FRI", "OFF");
+        }
+        // NOTE: PAIRING is not a feature in icicle as it is enabled based on G2 being enabled
+        //       and the curve supporting pairing.
+        if cfg!(not(feature = "g2")) {
+            config.define("G2", "OFF");
+        }
+        if cfg!(not(feature = "msm")) {
+            config.define("MSM", "OFF");
+        }
+        if cfg!(not(feature = "ntt")) {
+            config.define("NTT", "OFF");
+        }
+        if cfg!(not(feature = "poseidon")) {
+            config.define("POSEIDON", "OFF");
+        }
+        if cfg!(not(feature = "poseidon2")) {
+            config.define("POSEIDON2", "OFF");
+        }
+        if cfg!(not(feature = "sumcheck")) {
+            config.define("SUMCHECK", "OFF");
+        }
 
         // build (or pull and build) cuda backend if feature enabled.
         // Note: this requires access to the repo
