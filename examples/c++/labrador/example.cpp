@@ -239,6 +239,7 @@ int main(int argc, char* argv[])
                   << ": " << e.what() << std::endl;
       }
     }
+    if (!results.empty()) { save_to_csv(results, "labrador_benchmark_results.csv"); }
   }
 
   // Print results
