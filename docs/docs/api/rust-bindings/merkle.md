@@ -16,12 +16,12 @@ struct MerkleTree{
     /// * `leaf_element_size` - Size of each leaf element.
     /// * `output_store_min_layer` - Minimum layer at which the output is stored.
     ///
-    /// # Returns a new `MerkleTree` instance or eIcicleError.
+    /// # Returns a new `MerkleTree` instance or IcicleError.
     pub fn new(
         layer_hashers: &[&Hasher],
         leaf_element_size: u64,
         output_store_min_layer: u64,
-    ) -> Result<Self, eIcicleError>;
+    ) -> Result<Self, IcicleError>;
 }
 ```
 
@@ -45,7 +45,7 @@ struct MerkleTree{
         &self,
         leaves: &(impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &MerkleTreeConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 ```
 
@@ -150,7 +150,7 @@ struct MerkleTree{
     ///
     /// # Returns
     /// A reference to the root hash.
-    pub fn get_root<T>(&self) -> Result<&[T], eIcicleError>;
+    pub fn get_root<T>(&self) -> Result<&[T], IcicleError>;
 }
 
 let commitment: &[u8] = merkle_tree
@@ -184,14 +184,14 @@ struct MerkleTree{
     /// * `pruned_path` - Whether the proof should be pruned.
     /// * `config` - Configuration for the Merkle tree.
     ///
-    /// # Returns a `MerkleProof` object or eIcicleError
+    /// # Returns a `MerkleProof` object or IcicleError
     pub fn get_proof<T>(
         &self,
         leaves: &(impl HostOrDeviceSlice<T> + ?Sized),
         leaf_idx: u64,
         pruned_path: bool,
         config: &MerkleTreeConfig,
-    ) -> Result<MerkleProof, eIcicleError>;
+    ) -> Result<MerkleProof, IcicleError>;
 }
 ```
 
@@ -223,7 +223,7 @@ struct MerkleTree{
     /// * `proof` - The Merkle proof to verify.
     ///
     /// # Returns a result indicating whether the proof is valid.
-    pub fn verify(&self, proof: &MerkleProof) -> Result<bool, eIcicleError>;
+    pub fn verify(&self, proof: &MerkleProof) -> Result<bool, IcicleError>;
 }
 ```
 

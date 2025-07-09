@@ -48,13 +48,13 @@ Defines the main API for SumCheck operations.
 - `Proof: SumcheckProofOps<Self::Field>` - Type representing the proof.
 
 ##### **Methods:**
-- **`new() -> Result<Self, eIcicleError>`**:
+- **`new() -> Result<Self, IcicleError>`**:
   Initializes a new instance.
 
 - **`prove(mle_polys, mle_poly_size, claimed_sum, combine_function, transcript_config, sumcheck_config) -> Self::Proof`**:
   Generates a proof for the polynomial sum over the Boolean hypercube.
 
-- **`verify(proof, claimed_sum, transcript_config) -> Result<bool, eIcicleError>`**:
+- **`verify(proof, claimed_sum, transcript_config) -> Result<bool, IcicleError>`**:
   Verifies the provided proof.
 
 
@@ -62,10 +62,10 @@ Defines the main API for SumCheck operations.
 Operations for handling SumCheck proofs.
 
 ##### **Methods:**
-- **`get_round_polys(&self) -> Result<Vec<Vec<F>>, eIcicleError>`**:
+- **`get_round_polys(&self) -> Result<Vec<Vec<F>>, IcicleError>`**:
   Retrieves the polynomials for each round.
 
-- **`print(&self) -> eIcicleError`**::
+- **`print(&self) -> IcicleError`**::
   Prints the proof.
 
 
@@ -150,9 +150,9 @@ pub trait ReturningValueProgram:
   type Field: FieldImpl;
   type ProgSymbol: Symbol<Self::Field>;
 
-  fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>) -> Self::ProgSymbol, nof_parameters: u32) -> Result<Self, eIcicleError>;
+  fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>) -> Self::ProgSymbol, nof_parameters: u32) -> Result<Self, IcicleError>;
 
-  fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
+  fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, IcicleError>;
 }
 
 ```

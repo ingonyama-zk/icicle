@@ -27,8 +27,8 @@ pub trait Symbol<F: FieldImpl>:
   for<'a> MulAssign<&'a Self> +
   Clone + Copy + Sized + Handle
 {
-  fn new_input(in_idx: u32) -> Result<Self, eIcicleError>;      // New input symbol for the execution function
-  fn from_constant(constant: F) -> Result<Self, eIcicleError>;  // New symbol from a field element
+  fn new_input(in_idx: u32) -> Result<Self, IcicleError>;      // New input symbol for the execution function
+  fn from_constant(constant: F) -> Result<Self, IcicleError>;  // New symbol from a field element
 
   fn inverse(&self) -> Self; // Field inverse of the symbol
 }
@@ -57,9 +57,9 @@ where
 {
   type ProgSymbol: Symbol<F>;
 
-  fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>) -> Self::ProgSymbol, nof_parameters: u32) -> Result<Self, eIcicleError>;
+  fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>) -> Self::ProgSymbol, nof_parameters: u32) -> Result<Self, IcicleError>;
 
-  fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
+  fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, IcicleError>;
 }
 ```
 ## `Program` Struct
@@ -109,7 +109,7 @@ pub fn execute_program<F, Prog, Parameter>(
     data: &mut Vec<&Parameter>,
     program: &Prog,
     cfg: &VecOpsConfig
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
