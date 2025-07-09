@@ -76,6 +76,7 @@ macro_rules! impl_polynomial_ring {
         use icicle_core::polynomial_ring::PolynomialRing;
         use icicle_core::traits::GenerateRandom;
         use icicle_runtime::{eIcicleError, IcicleError};
+        use icicle_core::bignum::BigNum;
 
         impl PolynomialRing for $polyring {
             type Base = $base;
@@ -115,7 +116,7 @@ macro_rules! impl_polynomial_ring {
                 use std::mem::{forget, ManuallyDrop};
                 use std::slice;
 
-                let flat_base_ring_vec: Vec<$base> = $base::generate_random(size * Self::DEGREE);
+                let flat_base_ring_vec: Vec<$base> = <$base>::generate_random(size * Self::DEGREE);
 
                 let ptr = flat_base_ring_vec.as_ptr() as *mut $polyring;
                 let len = size;
@@ -125,6 +126,12 @@ macro_rules! impl_polynomial_ring {
                 forget(flat_base_ring_vec);
 
                 unsafe { Vec::from_raw_parts(ptr, len, cap) }
+            }
+        }
+
+        impl Default for $polyring {
+            fn default() -> Self {
+                Self::zero()
             }
         }
     };
