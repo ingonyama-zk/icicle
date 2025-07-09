@@ -8,7 +8,6 @@ use ark_ff::{BigInteger, Field, PrimeField as ArkPrimeField};
 
 use icicle_bn254::curve::{CurveCfg, G1Affine as IcicleAffine, G1Projective as IcicleProjective, ScalarField};
 use icicle_core::{
-    bignum::BigNum,
     field::Field as IcicleField,
     msm::{msm, MSMConfig},
     projective::Projective,
@@ -73,7 +72,7 @@ fn incremental_ark_projective_points(size: usize) -> Vec<ArkProjective> {
 fn from_ark<T, I>(ark: &T) -> I
 where
     T: Field,
-    I: BigNum,
+    I: IcicleField,
 {
     let mut ark_bytes = vec![];
     for base_elem in ark.to_base_prime_field_elements() {
@@ -89,7 +88,7 @@ where
 fn to_ark<T, I>(icicle: &I) -> T
 where
     T: Field,
-    I: BigNum,
+    I: IcicleField,
 {
     T::from_random_bytes(&icicle.to_bytes_le()).unwrap()
 }
