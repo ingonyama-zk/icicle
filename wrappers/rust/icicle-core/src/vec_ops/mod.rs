@@ -35,7 +35,7 @@ impl VecOpsConfig {
 }
 
 #[doc(hidden)]
-pub trait VecOps<T: IntegerRing> {
+pub trait VecOps<T> {
     fn add(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
         b: &(impl HostOrDeviceSlice<T> + ?Sized),
