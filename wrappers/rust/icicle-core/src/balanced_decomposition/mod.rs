@@ -1,5 +1,5 @@
-use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
+use crate::{polynomial_ring::PolynomialRing, vec_ops::VecOpsConfig};
+use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
 pub mod tests;
 
@@ -18,13 +18,13 @@ pub mod tests;
 ///     - The next `n` entries are the **second digit** of all elements.
 ///     - And so on, until all `d` digits are emitted.
 ///
-/// This layout is consistent for both scalar fields (e.g. `Zq`) and polynomial rings (e.g. `Rq`),
+/// This layout is consistent for both scalar rings (e.g. `Zq`) and polynomial rings (e.g. `Rq`),
 /// where the digit decomposition is applied element-wise to the entire input slice.
 pub trait BalancedDecomposition<T> {
-    /// Computes the number of balanced base-b digits required to represent a field element.
+    /// Computes the number of balanced base-b digits required to represent a ring element.
     fn count_digits(base: u32) -> u32;
 
-    /// Decomposes field elements into balanced base-b digits.
+    /// Decomposes ring elements into balanced base-b digits.
     ///
     /// The output buffer must have length `input.len() * count_digits(base)`.
     fn decompose(
@@ -32,9 +32,9 @@ pub trait BalancedDecomposition<T> {
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         base: u32,
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
-    /// Recomposes field elements from balanced base-b digits.
+    /// Recomposes ring elements from balanced base-b digits.
     ///
     /// The input buffer must have length `output.len() * count_digits(base)`.
     fn recompose(
@@ -42,35 +42,32 @@ pub trait BalancedDecomposition<T> {
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         base: u32,
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 // Public floating functions around the trait
-pub fn count_digits<T>(base: u32) -> u32
-where
-    T: BalancedDecomposition<T>,
-{
+pub fn count_digits<T: PolynomialRing + BalancedDecomposition<T>>(base: u32) -> u32 {
     T::count_digits(base)
 }
 
-pub fn decompose<T>(
+pub fn decompose<T: BalancedDecomposition<T>>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     base: u32,
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     T: BalancedDecomposition<T>,
 {
     T::decompose(input, output, base, cfg)
 }
 
-pub fn recompose<T>(
+pub fn recompose<T: BalancedDecomposition<T>>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     base: u32,
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     T: BalancedDecomposition<T>,
 {
@@ -83,8 +80,6 @@ macro_rules! impl_balanced_decomposition {
         $prefix: literal,
         $ring_type: ident
     ) => {
-        use icicle_core::balanced_decomposition::BalancedDecomposition;
-
         extern "C" {
             #[link_name = concat!($prefix, "_balanced_decomposition_nof_digits")]
             fn balanced_decomposition_nof_digits(base: u32) -> u32;
@@ -114,15 +109,19 @@ macro_rules! impl_balanced_decomposition {
             input: &(impl HostOrDeviceSlice<$ring_type> + ?Sized),
             output: &mut (impl HostOrDeviceSlice<$ring_type> + ?Sized),
             cfg: &mut VecOpsConfig,
-        ) -> Result<(), eIcicleError> {
+        ) -> Result<(), IcicleError> {
             if input.is_on_device() && !input.is_on_active_device() {
-                eprintln!("Input is on an inactive device");
-                return Err(eIcicleError::InvalidArgument);
+                return Err(IcicleError::new(
+                    eIcicleError::InvalidArgument,
+                    "Input is on an inactive device",
+                ));
             }
 
             if output.is_on_device() && !output.is_on_active_device() {
-                eprintln!("Output is on an inactive device");
-                return Err(eIcicleError::InvalidArgument);
+                return Err(IcicleError::new(
+                    eIcicleError::InvalidArgument,
+                    "Output is on an inactive device",
+                ));
             }
 
             cfg.is_a_on_device = input.is_on_device();
@@ -141,7 +140,7 @@ macro_rules! impl_balanced_decomposition {
                 output: &mut (impl HostOrDeviceSlice<$ring_type> + ?Sized),
                 base: u32,
                 cfg: &VecOpsConfig,
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 let mut cfg = cfg.clone();
                 balanced_decomposition_check_args(input, output, &mut cfg)?;
 
@@ -163,7 +162,7 @@ macro_rules! impl_balanced_decomposition {
                 output: &mut (impl HostOrDeviceSlice<$ring_type> + ?Sized),
                 base: u32,
                 cfg: &VecOpsConfig,
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 let mut cfg = cfg.clone();
                 balanced_decomposition_check_args(input, output, &mut cfg)?;
 

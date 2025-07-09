@@ -5,7 +5,7 @@ use icicle_runtime::memory::{DeviceVec, HostSlice};
 
 pub fn check_balanced_decomposition<F>()
 where
-    F: PolynomialRing + balanced_decomposition::BalancedDecomposition<F> + GenerateRandom<F>,
+    F: PolynomialRing + balanced_decomposition::BalancedDecomposition<F> + GenerateRandom,
 {
     let batch = 5;
     let size = 1 << 10;
