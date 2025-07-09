@@ -6,14 +6,14 @@ use icicle_runtime::IcicleError;
 
 /// Trait to define the behavior of a Poseidon hasher for different field types.
 /// This allows the implementation of Poseidon hashing for various field types that implement `Field`.
-pub trait PoseidonHasher: Field {
+pub trait PoseidonHasher<F: Field> {
     /// Creates a Poseidon hasher with an explicit `input_size` (rate). This is the
     /// low-level constructor that all implementations must provide.
-    fn new_with_input_size(t: u32, domain_tag: Option<&Self>, input_size: u32) -> Result<Hasher, IcicleError>;
+    fn new_with_input_size(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, IcicleError>;
 
     /// Convenience constructor that forwards to `new_with_input_size` with
     /// `input_size = 0`, signalling the backend to use a default value.
-    fn new(t: u32, domain_tag: Option<&Self>) -> Result<Hasher, IcicleError> {
+    fn new(t: u32, domain_tag: Option<&F>) -> Result<Hasher, IcicleError> {
         Self::new_with_input_size(t, domain_tag, 0)
     }
 }
@@ -22,9 +22,9 @@ pub trait PoseidonHasher: Field {
 /// Delegates the creation to the `new` method of the `PoseidonHasher` trait.
 pub fn create_poseidon_hasher<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, IcicleError>
 where
-    F: Field + PoseidonHasher,
+    F: Field + PoseidonHasher<F>,
 {
-    <F as PoseidonHasher>::new(t, domain_tag)
+    <F as PoseidonHasher<F>>::new(t, domain_tag)
 }
 
 pub struct Poseidon;
@@ -32,7 +32,7 @@ pub struct Poseidon;
 impl Poseidon {
     pub fn new<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, IcicleError>
     where
-        F: Field + PoseidonHasher, // F must implement the Field trait
+        F: Field + PoseidonHasher<F>, // F must implement the Field trait
     {
         create_poseidon_hasher::<F>(t, domain_tag)
     }
@@ -40,9 +40,9 @@ impl Poseidon {
     pub fn new_with_input_size<F>(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, IcicleError>
     where
         F: Field,
-        F: PoseidonHasher,
+        F: PoseidonHasher<F>,
     {
-        <F as PoseidonHasher>::new_with_input_size(t, domain_tag, input_size)
+        <F as PoseidonHasher<F>>::new_with_input_size(t, domain_tag, input_size)
     }
 }
 
@@ -70,7 +70,7 @@ macro_rules! impl_poseidon {
             }
 
             // Implement the `PoseidonHasher` trait for the given field configuration.
-            impl PoseidonHasher for $field {
+            impl PoseidonHasher<$field> for $field {
                 fn new_with_input_size(
                     t: u32,
                     domain_tag: Option<&$field>,

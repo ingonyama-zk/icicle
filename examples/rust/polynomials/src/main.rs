@@ -55,10 +55,10 @@ fn init_ntt_domain(max_ntt_size: u64) {
 fn randomize_poly<P>(size: usize, from_coeffs: bool) -> P
 where
     P: UnivariatePolynomial,
-    P::Ring: Field + GenerateRandom,
+    P::Coeff: Field + GenerateRandom,
 {
     println!("Randomizing polynomial of size {} (from_coeffs: {})", size, from_coeffs);
-    let coeffs_or_evals = P::Ring::generate_random(size);
+    let coeffs_or_evals = P::Coeff::generate_random(size);
     let p = if from_coeffs {
         P::from_coeffs(HostSlice::from_slice(&coeffs_or_evals), size)
     } else {
@@ -68,7 +68,7 @@ where
 }
 //use UnivariatePolynomial trait to perform polynomial operations on arbitrary fields
 //fold_poly takes a polynomial and a scalar as input and returns a polynomial
-fn fold_poly<P: UnivariatePolynomial>(poly: P, beta: P::Ring) -> P {
+fn fold_poly<P: UnivariatePolynomial>(poly: P, beta: P::Coeff) -> P {
     let o = poly.odd(); // Get the odd terms (in coeff form)
     let e = poly.even(); // Get the even terms (in coeff form)
                          // Perform the fold operation: e + (o * beta)

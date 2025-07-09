@@ -10,7 +10,7 @@ use std::mem;
 
 pub fn check_poseidon2_hash<F: Field>()
 where
-    F: Poseidon2Hasher + GenerateRandom,
+    F: Poseidon2Hasher<F> + GenerateRandom,
 {
     let batch = 1 << 4;
     let domain_tag = F::generate_random(1)[0];
@@ -59,7 +59,7 @@ where
 // TODO uncomment once Poseidon2 sponge function is ready
 pub fn check_poseidon2_hash_sponge<F: Field>()
 where
-    F: Poseidon2Hasher + GenerateRandom,
+    F: Poseidon2Hasher<F> + GenerateRandom,
 {
     for t in [2, 3, 4, 8, 12, 16, 20, 24] {
         let large_field = mem::size_of::<F>() > 4;
@@ -99,7 +99,7 @@ where
 
 pub fn check_poseidon2_hash_multi_device<F: Field>()
 where
-    F: Poseidon2Hasher + GenerateRandom,
+    F: Poseidon2Hasher<F> + GenerateRandom,
 {
     let t = 4; // t=4 is for Poseidon hash (t is the paper's terminology)
     let inputs: Vec<F> = F::generate_random(t);
@@ -148,7 +148,7 @@ where
 
 pub fn check_poseidon2_tree<F: Field>()
 where
-    F: Poseidon2Hasher,
+    F: Poseidon2Hasher<F>,
 {
     let t = 4;
     let nof_layers = 4;
