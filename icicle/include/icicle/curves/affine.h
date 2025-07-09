@@ -7,14 +7,14 @@
 #include "icicle/utils/modifiers.h"
 #include <iostream>
 
-template <class FF>
+template <class BaseField>
 class Affine
 {
 public:
-  FF x;
-  FF y;
+  BaseField x;
+  BaseField y;
 
-  static HOST_DEVICE_INLINE Affine zero() { return {FF::zero(), FF::zero()}; }
+  static HOST_DEVICE_INLINE Affine zero() { return {BaseField::zero(), BaseField::zero()}; }
 
   HOST_DEVICE_INLINE Affine neg() const { return {x, y.neg()}; }
 
@@ -26,7 +26,7 @@ public:
 
   HOST_DEVICE_INLINE bool operator!=(const Affine& ys) const { return !(*this == ys); }
 
-  HOST_DEVICE_INLINE bool is_zero() const { return x == FF::zero() && y == FF::zero(); }
+  HOST_DEVICE_INLINE bool is_zero() const { return x == BaseField::zero() && y == BaseField::zero(); }
 
   friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Affine& point)
   {
@@ -36,11 +36,11 @@ public:
 };
 
 #ifdef __CUDACC__
-template <class FF>
-struct SharedMemory<Affine<FF>> {
-  __device__ Affine<FF>* getPointer()
+template <class BaseField>
+struct SharedMemory<Affine<BaseField>> {
+  __device__ Affine<BaseField>* getPointer()
   {
-    extern __shared__ Affine<FF> s_affine_[];
+    extern __shared__ Affine<BaseField> s_affine_[];
     return s_affine_;
   }
 };
