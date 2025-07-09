@@ -4,6 +4,7 @@ pub mod utils;
 use icicle_bn254::curve::ScalarField as Fr;
 use icicle_bn254::sumcheck::SumcheckProof;
 use icicle_core::bignum::BigNum;
+use icicle_core::traits::GenerateRandom;
 use icicle_core::program::{PreDefinedProgram, ReturningValueProgramImpl};
 use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckTranscriptConfig};
 use icicle_hash::blake3::Blake3;
@@ -68,10 +69,10 @@ pub fn main() {
     let mut prover_previous_transcript = Transcript::new(b"my_sumcheck");
 
     let gen_data_time = Instant::now();
-    let poly_a = generate_random_vector::<Fr>(SAMPLES);
-    let poly_b = generate_random_vector::<Fr>(SAMPLES);
-    let poly_c = generate_random_vector::<Fr>(SAMPLES);
-    let poly_e = generate_random_vector::<Fr>(SAMPLES);
+    let poly_a = Fr::generate_random(SAMPLES);
+    let poly_b = Fr::generate_random(SAMPLES);
+    let poly_c = Fr::generate_random(SAMPLES);
+    let poly_e = Fr::generate_random(SAMPLES);
 
     info!(
         "Generate e,A,B,C of log size {:?}, time {:?}",
