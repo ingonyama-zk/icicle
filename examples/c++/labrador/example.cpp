@@ -218,26 +218,25 @@ int main(int argc, char* argv[])
   try_load_and_set_backend_device(argc, argv);
 
   // Benchmark parameters from the original code
-  std::vector<size_t> arr_n{64};
-  std::vector<size_t> arr_r{8};
-  std::vector<std::tuple<size_t, size_t>> num_constraint{{1, 1}};
+  // std::vector<size_t> arr_n{64, 256};
+  // std::vector<size_t> arr_r{8};
+  std::vector<std::tuple<size_t, size_t>> arr_nr{{64, 8}, {256, 16}};
+  std::vector<std::tuple<size_t, size_t>> num_constraint{{1, 1}, {10, 10}, {10, 100}, {100, 100}};
   size_t NUM_REP = 10;
 
   std::vector<BenchmarkResult> results;
 
   // Run benchmarks for all parameter combinations
-  for (size_t n : arr_n) {
-    for (size_t r : arr_r) {
-      for (const auto& [num_eq, num_cz] : num_constraint) {
-        BenchmarkConfig config{n, r, num_eq, num_cz, NUM_REP};
+  for (const auto& [n, r] : arr_nr) {
+    for (const auto& [num_eq, num_cz] : num_constraint) {
+      BenchmarkConfig config{n, r, num_eq, num_cz, NUM_REP};
 
-        try {
-          BenchmarkResult result = run_benchmark(config);
-          results.push_back(result);
-        } catch (const std::exception& e) {
-          std::cerr << "Error running benchmark for n=" << n << ", r=" << r << ", eq=" << num_eq << ", cz=" << num_cz
-                    << ": " << e.what() << std::endl;
-        }
+      try {
+        BenchmarkResult result = run_benchmark(config);
+        results.push_back(result);
+      } catch (const std::exception& e) {
+        std::cerr << "Error running benchmark for n=" << n << ", r=" << r << ", eq=" << num_eq << ", cz=" << num_cz
+                  << ": " << e.what() << std::endl;
       }
     }
   }
