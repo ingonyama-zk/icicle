@@ -2,7 +2,7 @@
 pub mod tests;
 
 use crate::hash::Hasher;
-use crate::program::ReturningValueProgram;
+use crate::program::ReturningValueProgramImpl;
 use crate::ring::IntegerRing;
 use icicle_runtime::config::ConfigExtension;
 use icicle_runtime::stream::IcicleStreamHandle;
@@ -189,7 +189,7 @@ pub trait Sumcheck {
         mle_polys: &[&(impl HostOrDeviceSlice<Self::Field> + ?Sized)],
         mle_poly_size: u64,
         claimed_sum: Self::Field,
-        combine_function: impl ReturningValueProgram,
+        combine_function: impl ReturningValueProgramImpl,
         transcript_config: &SumcheckTranscriptConfig<Self::Field>,
         sumcheck_config: &SumcheckConfig,
     ) -> Result<Self::Proof, IcicleError>;
@@ -257,7 +257,7 @@ macro_rules! impl_sumcheck {
             use crate::sumcheck::$field;
             use crate::symbol::$field_prefix_ident::RingSymbol;
             use icicle_core::bignum::BigNum;
-            use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgram};
+            use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgramImpl};
             use icicle_core::ring::IntegerRing;
             use icicle_core::sumcheck::{
                 FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
@@ -382,7 +382,7 @@ macro_rules! impl_sumcheck {
                     mle_polys: &[&(impl HostOrDeviceSlice<$field> + ?Sized)],
                     mle_poly_size: u64,
                     claimed_sum: $field,
-                    combine_function: impl ReturningValueProgram,
+                    combine_function: impl ReturningValueProgramImpl,
                     transcript_config: &SumcheckTranscriptConfig<$field>,
                     sumcheck_config: &SumcheckConfig,
                 ) -> Result<Self::Proof, IcicleError> {
@@ -618,7 +618,7 @@ macro_rules! impl_sumcheck_tests {
         $field:ident
     ) => {
         use super::*;
-        use crate::program::$field_prefix_ident::RingReturningValueProgram as Program;
+        use crate::program::$field_prefix_ident::ReturningValueProgram as Program;
         use icicle_core::sumcheck::tests::*;
         use icicle_hash::keccak::Keccak256;
         use icicle_runtime::{device::Device, runtime, test_utilities};

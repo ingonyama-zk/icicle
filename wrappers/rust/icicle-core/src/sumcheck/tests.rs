@@ -1,6 +1,6 @@
 use crate::bignum::BigNum;
 use crate::hash::Hasher;
-use crate::program::{PreDefinedProgram, ReturningValueProgram};
+use crate::program::{PreDefinedProgram, ReturningValueProgramImpl};
 use crate::ring::IntegerRing;
 use crate::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
 use crate::traits::GenerateRandom;
@@ -64,7 +64,7 @@ pub fn check_sumcheck_simple<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
     SW::Field: GenerateRandom,
-    P: ReturningValueProgram,
+    P: ReturningValueProgramImpl,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
@@ -146,7 +146,7 @@ pub fn check_sumcheck_simple_device<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
     SW::Field: GenerateRandom,
-    P: ReturningValueProgram,
+    P: ReturningValueProgramImpl,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
@@ -242,7 +242,7 @@ pub fn check_sumcheck_user_defined_combine<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
     SW::Field: GenerateRandom,
-    P: ReturningValueProgram,
+    P: ReturningValueProgramImpl,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
@@ -331,7 +331,7 @@ pub fn check_sumcheck_proof_serialization<SW, P, S, D, T>(hash: &Hasher, seriali
 where
     SW: Sumcheck,
     SW::Field: GenerateRandom,
-    P: ReturningValueProgram,
+    P: ReturningValueProgramImpl,
     SW::Proof: Serialize + DeserializeOwned,
     S: Fn(&SW::Proof) -> T,
     D: Fn(&T) -> SW::Proof,
@@ -431,7 +431,7 @@ pub fn check_sumcheck_challenge_vector<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
     SW::Field: GenerateRandom,
-    P: ReturningValueProgram,
+    P: ReturningValueProgramImpl,
 {
     // Create a simple sumcheck instance
     let sumcheck = SW::new().unwrap();

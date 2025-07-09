@@ -4,7 +4,7 @@ pub mod utils;
 use icicle_bn254::curve::ScalarField as Fr;
 use icicle_bn254::sumcheck::SumcheckProof;
 use icicle_core::bignum::BigNum;
-use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
+use icicle_core::program::{PreDefinedProgram, ReturningValueProgramImpl};
 use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckTranscriptConfig};
 use icicle_hash::blake3::Blake3;
 use icicle_runtime::memory::HostSlice;
@@ -125,7 +125,7 @@ pub fn main() {
     );
     //try different combine functions!
     let combine_function =
-        <icicle_bn254::program::bn254::RingReturningValueProgram as ReturningValueProgram>::new_predefined(
+        <icicle_bn254::program::bn254::ReturningValueProgram as ReturningValueProgramImpl>::new_predefined(
             PreDefinedProgram::EQtimesABminusC,
         )
         .unwrap();

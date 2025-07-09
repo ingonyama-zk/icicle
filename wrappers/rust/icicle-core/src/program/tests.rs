@@ -1,4 +1,4 @@
-use crate::program::{PreDefinedProgram, Program};
+use crate::program::{PreDefinedProgram, ProgramImpl};
 use crate::ring::IntegerRing;
 use crate::symbol::Symbol;
 use crate::traits::{Arithmetic, GenerateRandom, Invertible};
@@ -9,7 +9,7 @@ pub fn check_program<F, Prog>()
 where
     F: IntegerRing + Invertible,
     F: VecOps<F> + GenerateRandom,
-    Prog: Program<F>,
+    Prog: ProgramImpl<F>,
     Prog::ProgSymbol: Symbol<F> + Arithmetic + Invertible,
 {
     let example_lambda = |vars: &mut Vec<Prog::ProgSymbol>| {
@@ -77,7 +77,7 @@ pub fn check_predefined_program<F, Prog>()
 where
     F: IntegerRing,
     F: VecOps<F> + GenerateRandom + Arithmetic,
-    Prog: Program<F>,
+    Prog: ProgramImpl<F>,
 {
     const TEST_SIZE: usize = 1 << 10;
     let a = F::generate_random(TEST_SIZE);

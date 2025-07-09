@@ -14,7 +14,7 @@ pub enum PreDefinedProgram {
     EQtimesABminusC,
 }
 
-pub trait Program<T>: Sized + Handle
+pub trait ProgramImpl<T>: Sized + Handle
 where
     T: IntegerRing,
 {
@@ -30,7 +30,7 @@ where
         Data: HostOrDeviceSlice<T> + ?Sized;
 }
 
-pub trait ReturningValueProgram: Sized + Handle {
+pub trait ReturningValueProgramImpl: Sized + Handle {
     type Ring: IntegerRing;
     type ProgSymbol: Symbol<Self::Ring>;
 
@@ -53,7 +53,9 @@ macro_rules! impl_program_ring {
         pub mod $ring_prefix_ident {
             use crate::program::$ring;
             use crate::symbol::$ring_prefix_ident::RingSymbol;
-            use icicle_core::program::{Instruction, PreDefinedProgram, Program, ProgramHandle, ReturningValueProgram};
+            use icicle_core::program::{
+                Instruction, PreDefinedProgram, ProgramHandle, ProgramImpl, ReturningValueProgramImpl,
+            };
             use icicle_core::ring::IntegerRing;
             use icicle_core::symbol::{Symbol, SymbolHandle};
             use icicle_core::traits::Handle;
@@ -65,12 +67,12 @@ macro_rules! impl_program_ring {
 
             // Programs structs
             #[repr(C)]
-            pub struct RingProgram {
+            pub struct Program {
                 m_handle: ProgramHandle,
             }
 
             #[repr(C)]
-            pub struct RingReturningValueProgram {
+            pub struct ReturningValueProgram {
                 m_handle: ProgramHandle,
             }
 
@@ -112,7 +114,7 @@ macro_rules! impl_program_ring {
             }
 
             // Program trait implementation
-            impl Program<$ring> for RingProgram {
+            impl ProgramImpl<$ring> for Program {
                 type ProgSymbol = RingSymbol;
 
                 fn new(
@@ -189,13 +191,13 @@ macro_rules! impl_program_ring {
                 }
             }
 
-            impl Handle for RingProgram {
+            impl Handle for Program {
                 fn handle(&self) -> ProgramHandle {
                     self.m_handle
                 }
             }
 
-            impl Drop for RingProgram {
+            impl Drop for Program {
                 fn drop(&mut self) {
                     unsafe {
                         if !self
@@ -211,7 +213,7 @@ macro_rules! impl_program_ring {
             }
 
             // Returning Value Program trait implementation
-            impl ReturningValueProgram for RingReturningValueProgram {
+            impl ReturningValueProgramImpl for ReturningValueProgram {
                 type Ring = $ring;
                 type ProgSymbol = RingSymbol;
 
@@ -269,13 +271,13 @@ macro_rules! impl_program_ring {
                 }
             }
 
-            impl Handle for RingReturningValueProgram {
+            impl Handle for ReturningValueProgram {
                 fn handle(&self) -> ProgramHandle {
                     self.m_handle
                 }
             }
 
-            impl Drop for RingReturningValueProgram {
+            impl Drop for ReturningValueProgram {
                 fn drop(&mut self) {
                     if !self
                         .m_handle
@@ -299,7 +301,7 @@ macro_rules! impl_program_tests {
     ) => {
         pub(crate) mod test_program {
             use super::*;
-            use crate::program::$ring_prefix_ident::{RingProgram, RingReturningValueProgram};
+            use crate::program::$ring_prefix_ident::{Program, ReturningValueProgram};
             use icicle_runtime::test_utilities;
             use icicle_runtime::{device::Device, runtime};
             use std::sync::Once;
@@ -313,18 +315,18 @@ macro_rules! impl_program_tests {
             pub fn test_program() {
                 initialize();
                 test_utilities::test_set_main_device();
-                icicle_core::program::tests::check_program::<$ring, RingProgram>();
+                icicle_core::program::tests::check_program::<$ring, Program>();
                 test_utilities::test_set_ref_device();
-                icicle_core::program::tests::check_program::<$ring, RingProgram>()
+                icicle_core::program::tests::check_program::<$ring, Program>()
             }
 
             #[test]
             pub fn test_predefined_program() {
                 initialize();
                 test_utilities::test_set_main_device();
-                icicle_core::program::tests::check_predefined_program::<$ring, RingProgram>();
+                icicle_core::program::tests::check_predefined_program::<$ring, Program>();
                 test_utilities::test_set_ref_device();
-                icicle_core::program::tests::check_predefined_program::<$ring, RingProgram>()
+                icicle_core::program::tests::check_predefined_program::<$ring, Program>()
             }
         }
     };
