@@ -121,26 +121,26 @@ jobs:
           #   initial-support: true
         curve:
           - name: bn254
-            rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
+            rust-supported-features: ["msm", "g2", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
             go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
             metal-skip-cpp-curve-specific: ""
             metal-skip-rust-curve-specific: ""
             metal-skip-golang-curve-specific: ""
           - name: bls12_381
-            rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
+            rust-supported-features: ["msm", "g2", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
             go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
             # metal-cpp-flaky-tests: "ModArithTest.ntt|PolynomialTest.multiplication|PolynomialTest.divideByVanishingPolynomial|PolynomialTest.QAP|FieldTest.vectorDivision|FieldTestBase.polynomialDivision"
             metal-skip-cpp-curve-specific: ""
             metal-skip-rust-curve-specific: ""
             metal-skip-golang-curve-specific: ""
           - name: bls12_377
-            rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
+            rust-supported-features: ["msm", "g2", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
             go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
             metal-skip-cpp-curve-specific: ""
             metal-skip-rust-curve-specific: ""
             metal-skip-golang-curve-specific: ""
           - name: bw6_761
-            rust-supported-features: ["msm", "ntt", "fri", "poseidon", "poseidon2"]
+            rust-supported-features: ["msm", "g2", "ntt", "fri", "poseidon", "poseidon2"]
             go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
             metal-skip-cpp-curve-specific: ""
             metal-skip-rust-curve-specific: ""
@@ -187,6 +187,9 @@ jobs:
           CPP_TEST_REGEX="$CPP_TEST_REGEX|msm"
           if [[ "${{ contains(matrix.curve.rust-supported-features, 'msm') }}" = "true" ]]; then
             RUST_TEST_FEATURES="$RUST_TEST_FEATURES,msm"
+            if [[ "${{ contains(matrix.curve.rust-supported-features, 'g2') }}" = "true" ]]; then
+              RUST_TEST_FEATURES="$RUST_TEST_FEATURES,g2"
+            fi
           fi
           if [[ "${{ contains(matrix.curve.go-supported-features, 'msm') }}" = "true" ]]; then
             GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,msm,g2"

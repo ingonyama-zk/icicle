@@ -7,6 +7,9 @@
 #include "icicle/negacyclic_ntt.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
+#include "icicle/operator_norm.h"
+#include <chrono>
+#include <map>
 
 using namespace field_config;
 using namespace icicle;
@@ -846,7 +849,7 @@ TEST_F(RingTestBase, NormBounded)
   ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
   auto square_root = static_cast<uint32_t>(std::sqrt(q));
 
-  const size_t size = 1 << 10;
+  const size_t size = 1 << 20;
   auto input = std::vector<field_t>(size);
 
   for (size_t i = 0; i < size; ++i) {
@@ -1362,4 +1365,97 @@ TEST_F(RingTestBase, RandomSampling)
   };
   test_random_sampling(true);
   test_random_sampling(false);
+}
+
+TEST_F(RingTestBase, ChallengePolynomialsSampling)
+{
+  size_t size = 1 << 20;
+  size_t seed_len = 32;
+  std::vector<std::byte> seed(seed_len);
+  for (size_t i = 0; i < seed_len; ++i) {
+    seed[i] = static_cast<std::byte>(i);
+  }
+
+  std::vector<std::vector<Rq>> outputs(s_registered_devices.size());
+  for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+    outputs[device_index] = std::vector<Rq>(size);
+  }
+
+  size_t ones = 31;
+  size_t twos = 10;
+  int64_t norm = 15;
+
+  for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
+    ICICLE_CHECK(icicle_set_device(s_registered_devices[device_index]));
+    ICICLE_CHECK(sample_challenge_space_polynomials(
+      seed.data(), seed_len, size, ones, twos, norm, VecOpsConfig{}, outputs[device_index].data()));
+  }
+
+  field_t two = field_t::one() + field_t::one();
+  field_t neg_two = field_t::neg(two);
+  field_t neg_one = field_t::neg(field_t::one());
+
+  for (size_t i = 0; i < size; ++i) {
+    const auto& poly = outputs[0][i];
+    std::unordered_map<field_t, size_t> coeff_counts;
+    for (int j = 0; j < Rq::d; ++j) {
+      coeff_counts[poly.values[j]]++;
+    }
+    // Check that the polynomial has the correct number of ones, twos, and zeros
+    ASSERT_EQ(coeff_counts[field_t::one()] + coeff_counts[neg_one], ones);
+    ASSERT_EQ(coeff_counts[two] + coeff_counts[neg_two], twos);
+    ASSERT_EQ(coeff_counts[field_t::zero()], Rq::d - ones - twos);
+
+    // Check that the polynomial has the correct norm
+    static const std::unordered_map<field_t, int64_t> balanced_table = {
+      {field_t::one(), 1}, {neg_one, -1}, {two, 2}, {neg_two, -2}, {field_t::zero(), 0},
+    };
+    opnorm::Poly poly_opnorm;
+    for (size_t j = 0; j < Rq::d; ++j) {
+      poly_opnorm[j] = balanced_table.at(poly.values[j]);
+    }
+    uint64_t opnorm = opnorm::operator_norm(poly_opnorm);
+    ASSERT_LT(opnorm, norm + 1);
+  }
+
+  // Check consistency across devices
+  for (size_t device_index = 1; device_index < s_registered_devices.size(); ++device_index) {
+    for (size_t i = 0; i < size; ++i) {
+      ASSERT_EQ(outputs[device_index][i], outputs[0][i]);
+    }
+  }
+}
+
+TEST_F(RingTestBase, ComplexFFT_Simple)
+{
+  using namespace opnorm;
+  Poly poly{};
+  for (size_t i = 0; i < N; ++i)
+    poly[i] = 2;
+
+  uint64_t opnorm = operator_norm(poly);
+  ASSERT_EQ(opnorm, 82); // Python computed 81.49551266892583 but losing precision with fixed point
+}
+
+TEST_F(RingTestBase, ComplexFFT_Alternating)
+{
+  using namespace opnorm;
+  Poly poly{};
+  for (size_t i = 0; i < N; ++i)
+    poly[i] = i % 2;
+
+  uint64_t opnorm = operator_norm(poly); // returns u64
+  ASSERT_EQ(opnorm, 21);                 // Python computed '20.38001624709613' but losing precision with fixed point
+}
+
+TEST_F(RingTestBase, ComplexFFT_QMinus2X)
+{
+  using namespace opnorm;
+  constexpr uint64_t q = (1ULL << 62) - 57;
+
+  Poly poly{};
+  poly[1] = balance<q>(q - 2); // Balanced as -2 in operator_norm()
+
+  uint64_t opnorm = operator_norm(poly);
+  ASSERT_EQ(opnorm, 2); // FFT of -2*X has magnitude 2 everywhere
 }
