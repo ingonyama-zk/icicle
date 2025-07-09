@@ -8,35 +8,35 @@
 #include "icicle/curves/affine.h"
 #include <array>
 
-template <typename FF, class SCALAR_FF, typename Gen>
+template <typename BaseField, class ScalarField, typename Gen>
 class Projective
 {
-  friend Affine<FF>;
+  friend Affine<BaseField>;
 
 public:
-  typedef Affine<FF> Aff;
-  typedef SCALAR_FF Scalar;
+  typedef Affine<BaseField> Aff;
+  typedef ScalarField Scalar;
 
-  static constexpr unsigned SCALAR_FF_NBITS = SCALAR_FF::NBITS;
-  static constexpr unsigned FF_NBITS = FF::NBITS;
+  static constexpr unsigned SCALAR_FIELD_NBITS = ScalarField::NBITS;
+  static constexpr unsigned BASE_FIELD_NBITS = BaseField::NBITS;
 
-  FF x;
-  FF y;
-  FF z;
-  static HOST_DEVICE_INLINE Projective zero() { return {FF::zero(), FF::one(), FF::zero()}; }
+  BaseField x;
+  BaseField y;
+  BaseField z;
+  static HOST_DEVICE_INLINE Projective zero() { return {BaseField::zero(), BaseField::one(), BaseField::zero()}; }
 
-  static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF>& point)
+  static HOST_DEVICE_INLINE Projective from_affine(const Affine<BaseField>& point)
   {
-    return point.is_zero() ? zero() : Projective{point.x, point.y, FF::one()};
+    return point.is_zero() ? zero() : Projective{point.x, point.y, BaseField::one()};
   }
 
-  static HOST_DEVICE_INLINE Projective generator() { return {Gen::gen_x, Gen::gen_y, FF::one()}; }
+  static HOST_DEVICE_INLINE Projective generator() { return {Gen::gen_x, Gen::gen_y, BaseField::one()}; }
 
-  static HOST_INLINE Affine<FF> rand_host_affine() { return rand_host().to_affine(); }
+  static HOST_INLINE Affine<BaseField> rand_host_affine() { return rand_host().to_affine(); }
 
   static Projective rand_host()
   {
-    SCALAR_FF rand_scalar = SCALAR_FF::rand_host();
+    ScalarField rand_scalar = ScalarField::rand_host();
     return rand_scalar * generator();
   }
 
@@ -46,15 +46,15 @@ public:
       out[i] = (i % size < 100) ? rand_host() : out[i - 100];
   }
 
-  static void rand_host_many(Affine<FF>* out, int size)
+  static void rand_host_many(Affine<BaseField>* out, int size)
   {
     for (int i = 0; i < size; i++)
       out[i] = (i % size < 100) ? rand_host().to_affine() : out[i - 100];
   }
 
-  HOST_DEVICE_INLINE Affine<FF> to_affine()
+  HOST_DEVICE_INLINE Affine<BaseField> to_affine()
   {
-    FF denom = z.inverse();
+    BaseField denom = z.inverse();
     return {x * denom, y * denom};
   }
 
@@ -72,124 +72,124 @@ public:
 
   HOST_DEVICE Projective dbl() const
   {
-    const FF X = x;
-    const FF Y = y;
-    const FF Z = z;
+    const BaseField X = x;
+    const BaseField Y = y;
+    const BaseField Z = z;
 
     // TODO: Change to efficient dbl once implemented for field.cuh
-    FF t0 = Y.sqr();                                    // 1. t0 ← Y · Y
-    FF Z3 = t0 + t0;                                    // 2. Z3 ← t0 + t0
-    Z3 = Z3 + Z3;                                       // 3. Z3 ← Z3 + Z3
-    Z3 = Z3 + Z3;                                       // 4. Z3 ← Z3 + Z3
-    FF t1 = Y * Z;                                      // 5. t1 ← Y · Z
-    FF t2 = Z.sqr();                                    // 6. t2 ← Z · Z
-    t2 = FF::template mul_weierstrass_b<Gen, true>(t2); // 7. t2 ← b3 · t2
-    FF X3 = t2 * Z3;                                    // 8. X3 ← t2 · Z3
-    FF Y3 = t0 + t2;                                    // 9. Y3 ← t0 + t2
-    Z3 = t1 * Z3;                                       // 10. Z3 ← t1 · Z3
-    t1 = t2 + t2;                                       // 11. t1 ← t2 + t2
-    t2 = t1 + t2;                                       // 12. t2 ← t1 + t2
-    t0 = t0 - t2;                                       // 13. t0 ← t0 − t2
-    Y3 = t0 * Y3;                                       // 14. Y3 ← t0 · Y3
-    Y3 = X3 + Y3;                                       // 15. Y3 ← X3 + Y3
-    t1 = X * Y;                                         // 16. t1 ← X · Y
-    X3 = t0 * t1;                                       // 17. X3 ← t0 · t1
-    X3 = X3 + X3;                                       // 18. X3 ← X3 + X3
+    BaseField t0 = Y.sqr();                                    // 1. t0 ← Y · Y
+    BaseField Z3 = t0 + t0;                                    // 2. Z3 ← t0 + t0
+    Z3 = Z3 + Z3;                                              // 3. Z3 ← Z3 + Z3
+    Z3 = Z3 + Z3;                                              // 4. Z3 ← Z3 + Z3
+    BaseField t1 = Y * Z;                                      // 5. t1 ← Y · Z
+    BaseField t2 = Z.sqr();                                    // 6. t2 ← Z · Z
+    t2 = BaseField::template mul_weierstrass_b<Gen, true>(t2); // 7. t2 ← b3 · t2
+    BaseField X3 = t2 * Z3;                                    // 8. X3 ← t2 · Z3
+    BaseField Y3 = t0 + t2;                                    // 9. Y3 ← t0 + t2
+    Z3 = t1 * Z3;                                              // 10. Z3 ← t1 · Z3
+    t1 = t2 + t2;                                              // 11. t1 ← t2 + t2
+    t2 = t1 + t2;                                              // 12. t2 ← t1 + t2
+    t0 = t0 - t2;                                              // 13. t0 ← t0 − t2
+    Y3 = t0 * Y3;                                              // 14. Y3 ← t0 · Y3
+    Y3 = X3 + Y3;                                              // 15. Y3 ← X3 + Y3
+    t1 = X * Y;                                                // 16. t1 ← X · Y
+    X3 = t0 * t1;                                              // 17. X3 ← t0 · t1
+    X3 = X3 + X3;                                              // 18. X3 ← X3 + X3
     return {X3, Y3, Z3};
   }
 
   HOST_DEVICE Projective operator+(const Projective& p2) const
   {
-    const FF X1 = x;                                               //                   < 2
-    const FF Y1 = y;                                               //                   < 2
-    const FF Z1 = z;                                               //                   < 2
-    const FF X2 = p2.x;                                            //                   < 2
-    const FF Y2 = p2.y;                                            //                   < 2
-    const FF Z2 = p2.z;                                            //                   < 2
-    const FF t00 = X1 * X2;                                        // t00 ← X1 · X2     < 2
-    const FF t01 = Y1 * Y2;                                        // t01 ← Y1 · Y2     < 2
-    const FF t02 = Z1 * Z2;                                        // t02 ← Z1 · Z2     < 2
-    const FF t03 = X1 + Y1;                                        // t03 ← X1 + Y1     < 4
-    const FF t04 = X2 + Y2;                                        // t04 ← X2 + Y2     < 4
-    const FF t05 = t03 * t04;                                      // t03 ← t03 · t04   < 3
-    const FF t06 = t00 + t01;                                      // t06 ← t00 + t01   < 4
-    const FF t07 = t05 - t06;                                      // t05 ← t05 − t06   < 2
-    const FF t08 = Y1 + Z1;                                        // t08 ← Y1 + Z1     < 4
-    const FF t09 = Y2 + Z2;                                        // t09 ← Y2 + Z2     < 4
-    const FF t10 = t08 * t09;                                      // t10 ← t08 · t09   < 3
-    const FF t11 = t01 + t02;                                      // t11 ← t01 + t02   < 4
-    const FF t12 = t10 - t11;                                      // t12 ← t10 − t11   < 2
-    const FF t13 = X1 + Z1;                                        // t13 ← X1 + Z1     < 4
-    const FF t14 = X2 + Z2;                                        // t14 ← X2 + Z2     < 4
-    const FF t15 = t13 * t14;                                      // t15 ← t13 · t14   < 3
-    const FF t16 = t00 + t02;                                      // t16 ← t00 + t02   < 4
-    const FF t17 = t15 - t16;                                      // t17 ← t15 − t16   < 2
-    const FF t18 = t00 + t00;                                      // t18 ← t00 + t00   < 2
-    const FF t19 = t18 + t00;                                      // t19 ← t18 + t00   < 2
-    const FF t20 = FF::template mul_weierstrass_b<Gen, true>(t02); // t20 ← b3 · t02    < 2
-    const FF t21 = t01 + t20;                                      // t21 ← t01 + t20   < 2
-    const FF t22 = t01 - t20;                                      // t22 ← t01 − t20   < 2
-    const FF t23 = FF::template mul_weierstrass_b<Gen, true>(t17); // t23 ← b3 · t17    < 2
-    const auto t24 = t12.mul_wide(t23);                            // t24 ← t12 · t23   < 2
-    const auto t25 = t07.mul_wide(t22);                            // t25 ← t07 · t22   < 2
-    const FF X3 = (t25 - t24).reduce();                            // X3 ← t25 − t24    < 2
-    const auto t27 = t23.mul_wide(t19);                            // t27 ← t23 · t19   < 2
-    const auto t28 = t22.mul_wide(t21);                            // t28 ← t22 · t21   < 2
-    const FF Y3 = (t28 + t27).reduce();                            // Y3 ← t28 + t27    < 2
-    const auto t30 = t19.mul_wide(t07);                            // t30 ← t19 · t07   < 2
-    const auto t31 = t21.mul_wide(t12);                            // t31 ← t21 · t12   < 2
-    const FF Z3 = (t31 + t30).reduce();                            // Z3 ← t31 + t30    < 2
+    const BaseField X1 = x;                                                      //                   < 2
+    const BaseField Y1 = y;                                                      //                   < 2
+    const BaseField Z1 = z;                                                      //                   < 2
+    const BaseField X2 = p2.x;                                                   //                   < 2
+    const BaseField Y2 = p2.y;                                                   //                   < 2
+    const BaseField Z2 = p2.z;                                                   //                   < 2
+    const BaseField t00 = X1 * X2;                                               // t00 ← X1 · X2     < 2
+    const BaseField t01 = Y1 * Y2;                                               // t01 ← Y1 · Y2     < 2
+    const BaseField t02 = Z1 * Z2;                                               // t02 ← Z1 · Z2     < 2
+    const BaseField t03 = X1 + Y1;                                               // t03 ← X1 + Y1     < 4
+    const BaseField t04 = X2 + Y2;                                               // t04 ← X2 + Y2     < 4
+    const BaseField t05 = t03 * t04;                                             // t03 ← t03 · t04   < 3
+    const BaseField t06 = t00 + t01;                                             // t06 ← t00 + t01   < 4
+    const BaseField t07 = t05 - t06;                                             // t05 ← t05 − t06   < 2
+    const BaseField t08 = Y1 + Z1;                                               // t08 ← Y1 + Z1     < 4
+    const BaseField t09 = Y2 + Z2;                                               // t09 ← Y2 + Z2     < 4
+    const BaseField t10 = t08 * t09;                                             // t10 ← t08 · t09   < 3
+    const BaseField t11 = t01 + t02;                                             // t11 ← t01 + t02   < 4
+    const BaseField t12 = t10 - t11;                                             // t12 ← t10 − t11   < 2
+    const BaseField t13 = X1 + Z1;                                               // t13 ← X1 + Z1     < 4
+    const BaseField t14 = X2 + Z2;                                               // t14 ← X2 + Z2     < 4
+    const BaseField t15 = t13 * t14;                                             // t15 ← t13 · t14   < 3
+    const BaseField t16 = t00 + t02;                                             // t16 ← t00 + t02   < 4
+    const BaseField t17 = t15 - t16;                                             // t17 ← t15 − t16   < 2
+    const BaseField t18 = t00 + t00;                                             // t18 ← t00 + t00   < 2
+    const BaseField t19 = t18 + t00;                                             // t19 ← t18 + t00   < 2
+    const BaseField t20 = BaseField::template mul_weierstrass_b<Gen, true>(t02); // t20 ← b3 · t02    < 2
+    const BaseField t21 = t01 + t20;                                             // t21 ← t01 + t20   < 2
+    const BaseField t22 = t01 - t20;                                             // t22 ← t01 − t20   < 2
+    const BaseField t23 = BaseField::template mul_weierstrass_b<Gen, true>(t17); // t23 ← b3 · t17    < 2
+    const auto t24 = t12.mul_wide(t23);                                          // t24 ← t12 · t23   < 2
+    const auto t25 = t07.mul_wide(t22);                                          // t25 ← t07 · t22   < 2
+    const BaseField X3 = (t25 - t24).reduce();                                   // X3 ← t25 − t24    < 2
+    const auto t27 = t23.mul_wide(t19);                                          // t27 ← t23 · t19   < 2
+    const auto t28 = t22.mul_wide(t21);                                          // t28 ← t22 · t21   < 2
+    const BaseField Y3 = (t28 + t27).reduce();                                   // Y3 ← t28 + t27    < 2
+    const auto t30 = t19.mul_wide(t07);                                          // t30 ← t19 · t07   < 2
+    const auto t31 = t21.mul_wide(t12);                                          // t31 ← t21 · t12   < 2
+    const BaseField Z3 = (t31 + t30).reduce();                                   // Z3 ← t31 + t30    < 2
     return {X3, Y3, Z3};
   }
 
   HOST_DEVICE_INLINE Projective operator-(const Projective& p2) const { return *this + p2.neg(); }
 
-  HOST_DEVICE Projective operator+(const Affine<FF>& p2) const
+  HOST_DEVICE Projective operator+(const Affine<BaseField>& p2) const
   {
-    const FF X1 = x;                                               //                   < 2
-    const FF Y1 = y;                                               //                   < 2
-    const FF Z1 = z;                                               //                   < 2
-    const FF X2 = p2.x;                                            //                   < 2
-    const FF Y2 = p2.y;                                            //                   < 2
-    const FF t00 = X1 * X2;                                        // t00 ← X1 · X2     < 2
-    const FF t01 = Y1 * Y2;                                        // t01 ← Y1 · Y2     < 2
-    const FF t02 = Z1;                                             // t02 ← Z1          < 2
-    const FF t03 = X1 + Y1;                                        // t03 ← X1 + Y1     < 4
-    const FF t04 = X2 + Y2;                                        // t04 ← X2 + Y2     < 4
-    const FF t05 = t03 * t04;                                      // t03 ← t03 · t04   < 3
-    const FF t06 = t00 + t01;                                      // t06 ← t00 + t01   < 4
-    const FF t07 = t05 - t06;                                      // t05 ← t05 − t06   < 2
-    const FF t08 = Y1 + Z1;                                        // t08 ← Y1 + Z1     < 4
-    const FF t09 = Y2 + FF::one();                                 // t09 ← Y2 + 1      < 4
-    const FF t10 = t08 * t09;                                      // t10 ← t08 · t09   < 3
-    const FF t11 = t01 + t02;                                      // t11 ← t01 + t02   < 4
-    const FF t12 = t10 - t11;                                      // t12 ← t10 − t11   < 2
-    const FF t13 = X1 + Z1;                                        // t13 ← X1 + Z1     < 4
-    const FF t14 = X2 + FF::one();                                 // t14 ← X2 + 1      < 4
-    const FF t15 = t13 * t14;                                      // t15 ← t13 · t14   < 3
-    const FF t16 = t00 + t02;                                      // t16 ← t00 + t02   < 4
-    const FF t17 = t15 - t16;                                      // t17 ← t15 − t16   < 2
-    const FF t18 = t00 + t00;                                      // t18 ← t00 + t00   < 2
-    const FF t19 = t18 + t00;                                      // t19 ← t18 + t00   < 2
-    const FF t20 = FF::template mul_weierstrass_b<Gen, true>(t02); // t20 ← b3 · t02    < 2
-    const FF t21 = t01 + t20;                                      // t21 ← t01 + t20   < 2
-    const FF t22 = t01 - t20;                                      // t22 ← t01 − t20   < 2
-    const FF t23 = FF::template mul_weierstrass_b<Gen, true>(t17); // t23 ← b3 · t17    < 2
-    const auto t24 = t12.mul_wide(t23);                            // t24 ← t12 · t23   < 2
-    const auto t25 = t07.mul_wide(t22);                            // t25 ← t07 · t22   < 2
-    const FF X3 = (t25 - t24).reduce();                            // X3 ← t25 − t24    < 2
-    const auto t27 = t23.mul_wide(t19);                            // t27 ← t23 · t19   < 2
-    const auto t28 = t22.mul_wide(t21);                            // t28 ← t22 · t21   < 2
-    const FF Y3 = (t28 + t27).reduce();                            // Y3 ← t28 + t27    < 2
-    const auto t30 = t19.mul_wide(t07);                            // t30 ← t19 · t07   < 2
-    const auto t31 = t21.mul_wide(t12);                            // t31 ← t21 · t12   < 2
-    const FF Z3 = (t31 + t30).reduce();                            // Z3 ← t31 + t30    < 2
+    const BaseField X1 = x;                                                      //                   < 2
+    const BaseField Y1 = y;                                                      //                   < 2
+    const BaseField Z1 = z;                                                      //                   < 2
+    const BaseField X2 = p2.x;                                                   //                   < 2
+    const BaseField Y2 = p2.y;                                                   //                   < 2
+    const BaseField t00 = X1 * X2;                                               // t00 ← X1 · X2     < 2
+    const BaseField t01 = Y1 * Y2;                                               // t01 ← Y1 · Y2     < 2
+    const BaseField t02 = Z1;                                                    // t02 ← Z1          < 2
+    const BaseField t03 = X1 + Y1;                                               // t03 ← X1 + Y1     < 4
+    const BaseField t04 = X2 + Y2;                                               // t04 ← X2 + Y2     < 4
+    const BaseField t05 = t03 * t04;                                             // t03 ← t03 · t04   < 3
+    const BaseField t06 = t00 + t01;                                             // t06 ← t00 + t01   < 4
+    const BaseField t07 = t05 - t06;                                             // t05 ← t05 − t06   < 2
+    const BaseField t08 = Y1 + Z1;                                               // t08 ← Y1 + Z1     < 4
+    const BaseField t09 = Y2 + BaseField::one();                                 // t09 ← Y2 + 1      < 4
+    const BaseField t10 = t08 * t09;                                             // t10 ← t08 · t09   < 3
+    const BaseField t11 = t01 + t02;                                             // t11 ← t01 + t02   < 4
+    const BaseField t12 = t10 - t11;                                             // t12 ← t10 − t11   < 2
+    const BaseField t13 = X1 + Z1;                                               // t13 ← X1 + Z1     < 4
+    const BaseField t14 = X2 + BaseField::one();                                 // t14 ← X2 + 1      < 4
+    const BaseField t15 = t13 * t14;                                             // t15 ← t13 · t14   < 3
+    const BaseField t16 = t00 + t02;                                             // t16 ← t00 + t02   < 4
+    const BaseField t17 = t15 - t16;                                             // t17 ← t15 − t16   < 2
+    const BaseField t18 = t00 + t00;                                             // t18 ← t00 + t00   < 2
+    const BaseField t19 = t18 + t00;                                             // t19 ← t18 + t00   < 2
+    const BaseField t20 = BaseField::template mul_weierstrass_b<Gen, true>(t02); // t20 ← b3 · t02    < 2
+    const BaseField t21 = t01 + t20;                                             // t21 ← t01 + t20   < 2
+    const BaseField t22 = t01 - t20;                                             // t22 ← t01 − t20   < 2
+    const BaseField t23 = BaseField::template mul_weierstrass_b<Gen, true>(t17); // t23 ← b3 · t17    < 2
+    const auto t24 = t12.mul_wide(t23);                                          // t24 ← t12 · t23   < 2
+    const auto t25 = t07.mul_wide(t22);                                          // t25 ← t07 · t22   < 2
+    const BaseField X3 = (t25 - t24).reduce();                                   // X3 ← t25 − t24    < 2
+    const auto t27 = t23.mul_wide(t19);                                          // t27 ← t23 · t19   < 2
+    const auto t28 = t22.mul_wide(t21);                                          // t28 ← t22 · t21   < 2
+    const BaseField Y3 = (t28 + t27).reduce();                                   // Y3 ← t28 + t27    < 2
+    const auto t30 = t19.mul_wide(t07);                                          // t30 ← t19 · t07   < 2
+    const auto t31 = t21.mul_wide(t12);                                          // t31 ← t21 · t12   < 2
+    const BaseField Z3 = (t31 + t30).reduce();                                   // Z3 ← t31 + t30    < 2
     return {X3, Y3, Z3};
   }
 
-  HOST_DEVICE_INLINE Projective operator-(const Affine<FF>& p2) const { return *this + p2.neg(); }
+  HOST_DEVICE_INLINE Projective operator-(const Affine<BaseField>& p2) const { return *this + p2.neg(); }
 
-  HOST_DEVICE_INLINE Projective operator*(SCALAR_FF scalar) const
+  HOST_DEVICE_INLINE Projective operator*(ScalarField scalar) const
   {
     // Precompute points: P, 2P, ..., (2^window_size - 1)P
     constexpr unsigned window_size =
@@ -203,7 +203,7 @@ public:
 
     Projective res = zero();
 
-    constexpr int nof_windows = (SCALAR_FF::NBITS + window_size - 1) / window_size;
+    constexpr int nof_windows = (ScalarField::NBITS + window_size - 1) / window_size;
     bool res_is_not_zero = false;
     for (int w = nof_windows - 1; w >= 0; w -= 1) {
       // Extract the next window_size bits from the scalar
@@ -223,7 +223,7 @@ public:
     return res;
   }
 
-  friend HOST_DEVICE Projective operator*(SCALAR_FF scalar, const Projective& point) { return point * scalar; }
+  friend HOST_DEVICE Projective operator*(ScalarField scalar, const Projective& point) { return point * scalar; }
 
   HOST_DEVICE_INLINE bool operator==(const Projective& p2) const
   {
@@ -238,22 +238,22 @@ public:
     return os;
   }
 
-  HOST_DEVICE_INLINE bool is_zero() const { return x == FF::zero() && y != FF::zero() && z == FF::zero(); }
+  HOST_DEVICE_INLINE bool is_zero() const { return x == BaseField::zero() && y != BaseField::zero() && z == BaseField::zero(); }
 
   HOST_DEVICE_INLINE bool is_on_curve() const
   {
     if (is_zero()) return true;
-    bool eq_holds = (FF::template mul_weierstrass_b<Gen>(z.sqr() * z) + x.sqr() * x == z * y.sqr());
-    return z != FF::zero() && eq_holds;
+    bool eq_holds = (BaseField::template mul_weierstrass_b<Gen>(z.sqr() * z) + x.sqr() * x == z * y.sqr());
+    return z != BaseField::zero() && eq_holds;
   }
 };
 
 #ifdef __CUDACC__
-template <typename FF, class SCALAR_FF, typename Gen>
-struct SharedMemory<Projective<FF, SCALAR_FF, Gen>> {
-  __device__ Projective<FF, SCALAR_FF, Gen>* getPointer()
+template <typename BaseField, class ScalarField, typename Gen>
+struct SharedMemory<Projective<BaseField, ScalarField, Gen>> {
+  __device__ Projective<BaseField, ScalarField, Gen>* getPointer()
   {
-    extern __shared__ Projective<FF, SCALAR_FF, Gen> s_projective_[];
+    extern __shared__ Projective<BaseField, ScalarField, Gen> s_projective_[];
     return s_projective_;
   }
 };
