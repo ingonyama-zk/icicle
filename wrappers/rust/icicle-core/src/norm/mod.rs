@@ -75,8 +75,7 @@ where
 macro_rules! impl_norm {
     (
         $field_prefix: literal,
-        $field_type: ident,
-        $field_cfg_type: ident
+        $field_type: ident
     ) => {
         use icicle_core::norm::Norm;
 
@@ -131,7 +130,7 @@ macro_rules! impl_norm {
             Ok(())
         }
 
-        impl Norm<$field_type> for $field_cfg_type {
+        impl Norm<$field_type> for $field_type {
             fn check_norm_bound(
                 input: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
                 norm_type: NormType,

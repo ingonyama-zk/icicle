@@ -163,7 +163,7 @@ where
 /// Implements JLProjection for a scalar ring type using FFI.
 #[macro_export]
 macro_rules! impl_jl_projection {
-    ($prefix:literal, $scalar_type:ty, $implement_for:ty) => {
+    ($prefix:literal, $scalar_type:ty) => {
         use icicle_core::jl_projection::JLProjection;
         use icicle_core::vec_ops::VecOpsConfig;
         use icicle_runtime::memory::HostOrDeviceSlice;
@@ -193,7 +193,7 @@ macro_rules! impl_jl_projection {
             ) -> eIcicleError;
         }
 
-        impl JLProjection<$scalar_type> for $implement_for {
+        impl JLProjection<$scalar_type> for $scalar_type {
             fn jl_projection(
                 input: &(impl HostOrDeviceSlice<$scalar_type> + ?Sized),
                 seed: &[u8],

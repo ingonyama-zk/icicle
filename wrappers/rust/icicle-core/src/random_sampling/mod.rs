@@ -33,7 +33,7 @@ where
 /// Implements RandomSampling for a scalar ring type using FFI.
 #[macro_export]
 macro_rules! impl_random_sampling {
-    ($prefix:literal, $scalar_type:ty, $implement_for:ty) => {
+    ($prefix:literal, $scalar_type:ty) => {
         use icicle_core::random_sampling::RandomSampling;
         use icicle_core::vec_ops::VecOpsConfig;
         use icicle_runtime::errors::{eIcicleError, IcicleError};
@@ -51,7 +51,7 @@ macro_rules! impl_random_sampling {
             ) -> eIcicleError;
         }
 
-        impl RandomSampling<$scalar_type> for $implement_for {
+        impl RandomSampling<$scalar_type> for $scalar_type {
             fn random_sampling(
                 size: usize,
                 fast_mode: bool,
