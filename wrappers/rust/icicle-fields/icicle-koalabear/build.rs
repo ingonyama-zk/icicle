@@ -36,7 +36,24 @@ fn main() {
             .define("HASH", "ON")
             .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
-        // build (or pull and build) cuda backend if feature enabled.
+        // Enable features based on Rust features
+        if cfg!(not(feature = "fri")) {
+            config.define("FRI", "OFF");
+        }
+        if cfg!(not(feature = "ntt")) {
+            config.define("NTT", "OFF");
+        }
+        if cfg!(not(feature = "poseidon")) {
+            config.define("POSEIDON", "OFF");
+        }
+        if cfg!(not(feature = "poseidon2")) {
+            config.define("POSEIDON2", "OFF");
+        }
+        if cfg!(not(feature = "sumcheck")) {
+            config.define("SUMCHECK", "OFF");
+        }
+
+        // build (or pull and build) backends if feature enabled.
         // Note: this requires access to the repo
         if cfg!(feature = "cuda_backend") {
             config.define("CUDA_BACKEND", "local");

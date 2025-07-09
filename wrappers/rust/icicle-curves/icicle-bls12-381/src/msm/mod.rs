@@ -1,4 +1,6 @@
-use crate::curve::{G1Projective, G2Projective};
+use crate::curve::G1Projective;
+#[cfg(feature = "g2")]
+use crate::curve::G2Projective;
 use icicle_core::{
     impl_msm,
     msm::{MSMConfig, MSM},
