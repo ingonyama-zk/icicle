@@ -238,8 +238,8 @@ eIcicleError cpu_challenge_space_polynomials_sampling(
   auto keccak512 = Keccak512::create();
 
   static const field_t two = field_t::one() + field_t::one();
-  static const field_t neg_two = field_t::neg(two);
-  static const field_t neg_one = field_t::neg(field_t::one());
+  static const field_t neg_two = two.neg();
+  static const field_t neg_one = field_t::one().neg();
 
   const size_t nof_workers = std::min((size_t)get_nof_workers(cfg), size);
   const size_t size_per_worker = (size + nof_workers - 1) / nof_workers;

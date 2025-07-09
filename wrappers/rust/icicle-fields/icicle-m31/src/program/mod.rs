@@ -1,9 +1,9 @@
 use crate::field::{ExtensionField, ScalarField};
 
-use icicle_core::impl_program_field;
+use icicle_core::impl_program_ring;
 
-impl_program_field!("m31", m31, ScalarField, ScalarCfg);
-impl_program_field!("m31_extension", m31_extension, ExtensionField, ExtensionCfg);
+impl_program_ring!("m31", m31, ScalarField);
+impl_program_ring!("m31_extension", m31_extension, ExtensionField);
 
 #[cfg(test)]
 pub(crate) mod tests {

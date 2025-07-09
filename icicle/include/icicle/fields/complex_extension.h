@@ -69,6 +69,11 @@ public:
     return ComplexExtensionField{FF::from(in, sizeof(FF)), FF::from(in + sizeof(FF), sizeof(FF))};
   }
 
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField reduce_from_bytes(const std::byte* in)
+  {
+    return ComplexExtensionField{FF::reduce_from_bytes(in), FF::reduce_from_bytes(in + sizeof(FF))};
+  }
+
   static HOST_INLINE ComplexExtensionField rand_host()
   {
     return ComplexExtensionField{FF::rand_host(), FF::rand_host()};

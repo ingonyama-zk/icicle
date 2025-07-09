@@ -1,12 +1,12 @@
-use crate::ring::{ScalarCfg, ScalarCfgRns, ScalarRing, ScalarRingRns};
+use crate::ring::{ScalarRing, ScalarRingRns};
 
 use icicle_core::impl_vec_ops_field;
 use icicle_core::vec_ops::{VecOps, VecOpsConfig};
-use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::errors::IcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-impl_vec_ops_field!("labrador", labrador, ScalarRing, ScalarCfg);
-impl_vec_ops_field!("labrador_rns", labrador_rns, ScalarRingRns, ScalarCfgRns);
+impl_vec_ops_field!("labrador", labrador, ScalarRing);
+impl_vec_ops_field!("labrador_rns", labrador_rns, ScalarRingRns);
 
 #[cfg(test)]
 pub(crate) mod tests {

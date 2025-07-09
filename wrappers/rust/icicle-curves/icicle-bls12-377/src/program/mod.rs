@@ -1,8 +1,8 @@
 use crate::curve::ScalarField;
 
-use icicle_core::impl_program_field;
+use icicle_core::impl_program_ring;
 
-impl_program_field!("bls12_377", bls12_377, ScalarField, ScalarCfg);
+impl_program_ring!("bls12_377", bls12_377, ScalarField);
 
 #[cfg(test)]
 use icicle_core::impl_program_tests;

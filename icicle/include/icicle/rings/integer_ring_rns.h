@@ -120,6 +120,13 @@ public:
     return apply_op_inplace(u32, [value](auto x) { return x.from(value); }, std::make_index_sequence<nof_fields>{});
   }
 
+  static constexpr HOST_DEVICE_INLINE IntegerRingRns reduce_from_bytes(const std::byte* in)
+  {
+    IntegerRingRns res;
+    return apply_op_inplace(
+      res, [in](auto x) { return x.reduce_from_bytes(in); }, std::make_index_sequence<nof_fields>{});
+  }
+
   template <typename T>
   static constexpr bool has_member_omegas_count()
   {

@@ -396,6 +396,11 @@ namespace goldilocks {
       return GoldilocksComplexExtensionField{FF::from(val), FF::zero()};
     }
 
+    static constexpr HOST_DEVICE_INLINE GoldilocksComplexExtensionField reduce_from_bytes(const std::byte* in)
+    {
+      return GoldilocksComplexExtensionField{FF::reduce_from_bytes(in), FF::reduce_from_bytes(in + sizeof(FF))};
+    }
+
     HOST_DEVICE_INLINE GoldilocksComplexExtensionField to_montgomery() const
     {
       return GoldilocksComplexExtensionField{c0.to_montgomery(), c1.to_montgomery()};

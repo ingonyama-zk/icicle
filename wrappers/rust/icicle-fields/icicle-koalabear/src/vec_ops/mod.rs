@@ -1,19 +1,13 @@
-use crate::field::{ExtensionCfg, ExtensionField, ScalarCfg, ScalarField};
+use crate::field::{ExtensionField, ScalarField};
 
 use icicle_core::vec_ops::{MixedVecOps, VecOps, VecOpsConfig};
 use icicle_core::{impl_vec_ops_field, impl_vec_ops_mixed_field};
-use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::errors::IcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-impl_vec_ops_field!("koalabear", koalabear, ScalarField, ScalarCfg);
-impl_vec_ops_field!("koalabear_extension", koalabear_extension, ExtensionField, ExtensionCfg);
-impl_vec_ops_mixed_field!(
-    "koalabear_extension",
-    koalabear_mixed,
-    ExtensionField,
-    ScalarField,
-    ExtensionCfg
-);
+impl_vec_ops_field!("koalabear", koalabear, ScalarField);
+impl_vec_ops_field!("koalabear_extension", koalabear_extension, ExtensionField);
+impl_vec_ops_mixed_field!("koalabear_extension", koalabear_mixed, ExtensionField, ScalarField);
 
 #[cfg(test)]
 pub(crate) mod tests {

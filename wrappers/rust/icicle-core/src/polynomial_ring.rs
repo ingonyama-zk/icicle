@@ -1,11 +1,13 @@
-use crate::traits::FieldImpl;
+use crate::ring::IntegerRing;
+use crate::traits::GenerateRandom;
 use icicle_runtime::memory::reinterpret::{reinterpret_slice, reinterpret_slice_mut};
 use icicle_runtime::memory::HostOrDeviceSlice;
+use icicle_runtime::IcicleError;
 
 /// Trait representing a polynomial ring: R = Base[X] / (X^DEGREE - MODULUS_COEFF)
-pub trait PolynomialRing: Sized + Clone + PartialEq + core::fmt::Debug {
-    /// Base field type
-    type Base: Copy;
+pub trait PolynomialRing: GenerateRandom + Sized + Clone + PartialEq + core::fmt::Debug {
+    /// Base ring type
+    type Base: IntegerRing;
 
     /// Number of terms in the polynomial (polynomials are degree < DEGREE)
     const DEGREE: usize;
@@ -22,11 +24,11 @@ pub trait PolynomialRing: Sized + Clone + PartialEq + core::fmt::Debug {
     /// Construct a zero polynomial (all values = 0)
     fn zero() -> Self;
 
-    /// Construct from a slice (should panic or assert if length ≠ DEGREE)
-    fn from_slice(values: &[Self::Base]) -> Self;
+    /// Construct from a slice (returns error if length ≠ DEGREE)
+    fn from_slice(values: &[Self::Base]) -> Result<Self, IcicleError>;
 }
 
-/// Reinterprets a slice of polynomials as a flat slice of their base field elements (read-only).
+/// Reinterprets a slice of polynomials as a flat slice of their base ring elements (read-only).
 ///
 /// This is useful for passing polynomial vectors to scalar vectorized operations.
 ///
@@ -39,13 +41,13 @@ pub fn flatten_polyring_slice<'a, P>(
 ) -> impl HostOrDeviceSlice<P::Base> + 'a
 where
     P: PolynomialRing,
-    P::Base: FieldImpl + 'a,
+    P::Base: IntegerRing + 'a,
 {
     // Note that this can never fail here for a valid P
     unsafe { reinterpret_slice::<P, P::Base>(input).expect("Internal error") }
 }
 
-/// Reinterprets a mutable slice of polynomials as a flat mutable slice of their base field elements.
+/// Reinterprets a mutable slice of polynomials as a flat mutable slice of their base ring elements.
 ///
 /// # Safety
 /// - The layout of each `P` must match `[P::Base; DEGREE]`
@@ -56,7 +58,7 @@ pub fn flatten_polyring_slice_mut<'a, P>(
 ) -> impl HostOrDeviceSlice<P::Base> + 'a
 where
     P: PolynomialRing,
-    P::Base: FieldImpl + 'a,
+    P::Base: IntegerRing + 'a,
 {
     // Note that this can never fail here for a valid P
     unsafe { reinterpret_slice_mut::<P, P::Base>(input).expect("Internal error") }
@@ -71,8 +73,10 @@ macro_rules! impl_polynomial_ring {
             values: [$base; $degree],
         }
 
+        use icicle_core::bignum::BigNum;
         use icicle_core::polynomial_ring::PolynomialRing;
         use icicle_core::traits::GenerateRandom;
+        use icicle_runtime::{eIcicleError, IcicleError};
 
         impl PolynomialRing for $polyring {
             type Base = $base;
@@ -94,37 +98,42 @@ macro_rules! impl_polynomial_ring {
                 }
             }
 
-            fn from_slice(input: &[Self::Base]) -> Self {
-                assert_eq!(input.len(), Self::DEGREE);
+            fn from_slice(input: &[Self::Base]) -> Result<Self, IcicleError> {
+                if input.len() != Self::DEGREE {
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Input slice has incorrect length",
+                    ));
+                }
                 let mut values = [<$base>::zero(); $degree];
                 values.copy_from_slice(input);
-                Self { values }
+                Ok(Self { values })
             }
         }
 
-impl GenerateRandom<$polyring> for $polyring {
-    fn generate_random(size: usize) -> Vec<$polyring> {
-        use std::mem::{forget, ManuallyDrop};
-        use std::slice;
+        impl GenerateRandom for $polyring {
+            fn generate_random(size: usize) -> Vec<$polyring> {
+                use std::mem::{forget, ManuallyDrop};
+                use std::slice;
 
-        let flat_base_field_vec: Vec<$base> = <<$base as icicle_core::traits::FieldImpl>::Config as icicle_core::traits::GenerateRandom<$base>>::generate_random(
-            size * Self::DEGREE,
-        );
+                let flat_base_ring_vec: Vec<$base> = <$base>::generate_random(size * Self::DEGREE);
 
-        let ptr = flat_base_field_vec.as_ptr() as *mut $polyring;
-        let len = size;
-        let cap = flat_base_field_vec.capacity() / Self::DEGREE;
+                let ptr = flat_base_ring_vec.as_ptr() as *mut $polyring;
+                let len = size;
+                let cap = flat_base_ring_vec.capacity() / Self::DEGREE;
 
-        // Avoid double-drop
-        forget(flat_base_field_vec);
+                // Avoid double-drop
+                forget(flat_base_ring_vec);
 
-        unsafe {
-            Vec::from_raw_parts(ptr, len, cap)
+                unsafe { Vec::from_raw_parts(ptr, len, cap) }
+            }
         }
-    }
-}
 
-
+        impl Default for $polyring {
+            fn default() -> Self {
+                Self::zero()
+            }
+        }
     };
 }
 

@@ -1,16 +1,16 @@
 use crate::vec_ops::VecOpsConfig;
-use crate::{polynomial_ring::PolynomialRing, traits::FieldImpl};
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+use crate::{polynomial_ring::PolynomialRing, ring::IntegerRing};
+use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
 pub mod tests;
 
 /// Trait for performing Johnson–Lindenstrauss (JL) projection operations
-/// on scalar field elements (e.g., Zq).
+/// on scalar elements (e.g., Zq).
 ///
 /// This trait defines two core methods:
 /// - `jl_projection` projects an input vector using a pseudo-random matrix
 /// - `get_jl_matrix_rows` generates the raw matrix rows deterministically
-pub trait JLProjection<T: FieldImpl> {
+pub trait JLProjection<T: IntegerRing> {
     /// Projects the input vector into a lower-dimensional space using a
     /// deterministic JL matrix with values in {-1, 0, 1}.
     fn jl_projection(
@@ -18,7 +18,7 @@ pub trait JLProjection<T: FieldImpl> {
         seed: &[u8],
         cfg: &VecOpsConfig,
         output_projection: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     /// Generates raw JL matrix rows over the scalar ring `T`.
     ///
@@ -30,7 +30,7 @@ pub trait JLProjection<T: FieldImpl> {
         num_rows: usize,
         cfg: &VecOpsConfig,
         output_rows: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 /// Trait for JL matrix generation in polynomial ring form (e.g., Rq),
@@ -49,18 +49,18 @@ pub trait JLProjectionPolyRing<P: PolynomialRing> {
         conjugate: bool,
         cfg: &VecOpsConfig,
         output_rows: &mut (impl HostOrDeviceSlice<P> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 /// Projects an input vector using a Johnson–Lindenstrauss (JL) random projection matrix.
 ///
 /// This is a generic wrapper over the `JLProjection` trait implemented for `T::Config`,
-/// where `T` is a `FieldImpl`. The input vector is projected into a lower-dimensional
+/// where `T` is a `IntegerRing`. The input vector is projected into a lower-dimensional
 /// space defined by the shape of `output_projection`. The projection matrix is derived
 /// deterministically from the given `seed`.
 ///
 /// # Type Parameters
-/// - `T`: The scalar field element type implementing `FieldImpl`.
+/// - `T`: The scalar element type implementing `IntegerRing`.
 ///
 /// # Parameters
 /// - `input`: The input vector to be projected. Must implement `HostOrDeviceSlice<T>`.
@@ -70,29 +70,29 @@ pub trait JLProjectionPolyRing<P: PolynomialRing> {
 ///
 /// # Returns
 /// - `Ok(())` if the projection succeeded.
-/// - `Err(eIcicleError)` if an error occurred (e.g., invalid dimensions or device mismatch).
+/// - `Err(IcicleError)` if an error occurred (e.g., invalid dimensions or device mismatch).
 pub fn jl_projection<T>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     seed: &[u8],
     cfg: &VecOpsConfig,
     output_projection: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
-    T: FieldImpl,
-    T::Config: JLProjection<T>,
+    T: IntegerRing,
+    T: JLProjection<T>,
 {
-    T::Config::jl_projection(input, seed, cfg, output_projection)
+    T::jl_projection(input, seed, cfg, output_projection)
 }
 
-/// Generates raw rows from a JL projection matrix over the field type `T`.
+/// Generates raw rows from a JL projection matrix over the type `T`.
 ///
-/// This function uses the `JLProjection` trait implemented by `T::Config`, where `T` is a scalar field.
+/// This function uses the `JLProjection` trait implemented by `T::Config`, where `T` is a scalar.
 /// The generated matrix rows are pseudo-random, derived from a cryptographic hash of the seed
 /// and row indices. Each row contains `row_size` entries, and `num_rows` rows are generated,
 /// starting from `start_row`.
 ///
 /// # Type Parameters
-/// - `T`: The scalar field type implementing `FieldImpl`.
+/// - `T`: The scalar type implementing `IntegerRing`.
 ///
 /// # Parameters
 /// - `seed`: Seed used to deterministically generate matrix content.
@@ -104,7 +104,7 @@ where
 ///
 /// # Returns
 /// - `Ok(())` if the rows were generated successfully.
-/// - `Err(eIcicleError)` if an error occurred (e.g., dimension mismatch or backend failure).
+/// - `Err(IcicleError)` if an error occurred (e.g., dimension mismatch or backend failure).
 pub fn get_jl_matrix_rows<T>(
     seed: &[u8],
     row_size: usize,
@@ -112,12 +112,12 @@ pub fn get_jl_matrix_rows<T>(
     num_rows: usize,
     cfg: &VecOpsConfig,
     output_rows: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
-    T: FieldImpl,
-    T::Config: JLProjection<T>,
+    T: IntegerRing,
+    T: JLProjection<T>,
 {
-    T::Config::get_jl_matrix_rows(seed, row_size, start_row, num_rows, cfg, output_rows)
+    T::get_jl_matrix_rows(seed, row_size, start_row, num_rows, cfg, output_rows)
 }
 
 /// Generates JL projection matrix rows in polynomial ring form.
@@ -144,7 +144,7 @@ where
 ///
 /// # Returns
 /// - `Ok(())` if successful.
-/// - `Err(eIcicleError)` if an error occurs during generation (e.g., backend/device issues).
+/// - `Err(IcicleError)` if an error occurs during generation (e.g., backend/device issues).
 pub fn get_jl_matrix_rows_as_polyring<P>(
     seed: &[u8],
     row_size: usize,
@@ -153,7 +153,7 @@ pub fn get_jl_matrix_rows_as_polyring<P>(
     conjugate: bool,
     cfg: &VecOpsConfig,
     output_rows: &mut (impl HostOrDeviceSlice<P> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     P: PolynomialRing + JLProjectionPolyRing<P>,
 {
@@ -163,11 +163,11 @@ where
 /// Implements JLProjection for a scalar ring type using FFI.
 #[macro_export]
 macro_rules! impl_jl_projection {
-    ($prefix:literal, $scalar_type:ty, $implement_for:ty) => {
+    ($prefix:literal, $scalar_type:ty) => {
         use icicle_core::jl_projection::JLProjection;
         use icicle_core::vec_ops::VecOpsConfig;
-        use icicle_runtime::eIcicleError;
         use icicle_runtime::memory::HostOrDeviceSlice;
+        use icicle_runtime::{eIcicleError, IcicleError};
 
         extern "C" {
             #[link_name = concat!($prefix, "_jl_projection")]
@@ -193,21 +193,25 @@ macro_rules! impl_jl_projection {
             ) -> eIcicleError;
         }
 
-        impl JLProjection<$scalar_type> for $implement_for {
+        impl JLProjection<$scalar_type> for $scalar_type {
             fn jl_projection(
                 input: &(impl HostOrDeviceSlice<$scalar_type> + ?Sized),
                 seed: &[u8],
                 cfg: &VecOpsConfig,
                 output: &mut (impl HostOrDeviceSlice<$scalar_type> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 if input.is_on_device() && !input.is_on_active_device() {
-                    eprintln!("Input is on an inactive device");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Input is on an inactive device",
+                    ));
                 }
 
                 if output.is_on_device() && !output.is_on_active_device() {
-                    eprintln!("Output is on an inactive device");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Output is on an inactive device",
+                    ));
                 }
 
                 let mut cfg_clone = cfg.clone();
@@ -235,10 +239,12 @@ macro_rules! impl_jl_projection {
                 num_rows: usize,
                 cfg: &VecOpsConfig,
                 output_rows: &mut (impl HostOrDeviceSlice<$scalar_type> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 if output_rows.is_on_device() && !output_rows.is_on_active_device() {
-                    eprintln!("Output is on an inactive device");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Output is on an inactive device",
+                    ));
                 }
 
                 let mut cfg_clone = cfg.clone();
@@ -290,10 +296,12 @@ macro_rules! impl_jl_projection_as_polyring {
                 conjugate: bool,
                 cfg: &VecOpsConfig,
                 output_rows: &mut (impl HostOrDeviceSlice<$poly_type> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 if output_rows.is_on_device() && !output_rows.is_on_active_device() {
-                    eprintln!("Output is on an inactive device");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Output is on an inactive device",
+                    ));
                 }
 
                 let mut cfg_clone = cfg.clone();

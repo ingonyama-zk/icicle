@@ -1392,8 +1392,8 @@ TEST_F(RingTestBase, ChallengePolynomialsSampling)
   }
 
   field_t two = field_t::one() + field_t::one();
-  field_t neg_two = field_t::neg(two);
-  field_t neg_one = field_t::neg(field_t::one());
+  field_t neg_two = two.neg();
+  field_t neg_one = field_t::one().neg();
 
   for (size_t i = 0; i < size; ++i) {
     const auto& poly = outputs[0][i];

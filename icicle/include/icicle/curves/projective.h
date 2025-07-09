@@ -58,6 +58,37 @@ public:
     return {x * denom, y * denom};
   }
 
+  HOST_DEVICE_INLINE Projective to_montgomery() const static HOST_DEVICE_INLINE Projective generator()
+  {
+    return {Gen::gen_x, Gen::gen_y, BaseField::one()};
+  }
+
+  static HOST_INLINE Affine<BaseField> rand_host_affine() { return rand_host().to_affine(); }
+
+  static Projective rand_host()
+  {
+    ScalarField rand_scalar = ScalarField::rand_host();
+    return rand_scalar * generator();
+  }
+
+  static void rand_host_many(Projective* out, int size)
+  {
+    for (int i = 0; i < size; i++)
+      out[i] = (i % size < 100) ? rand_host() : out[i - 100];
+  }
+
+  static void rand_host_many(Affine<BaseField>* out, int size)
+  {
+    for (int i = 0; i < size; i++)
+      out[i] = (i % size < 100) ? rand_host().to_affine() : out[i - 100];
+  }
+
+  HOST_DEVICE_INLINE Affine<BaseField> to_affine()
+  {
+    BaseField denom = z.inverse();
+    return {x * denom, y * denom};
+  }
+
   HOST_DEVICE_INLINE Projective to_montgomery() const
   {
     return {x.to_montgomery(), y.to_montgomery(), z.to_montgomery()};
@@ -260,4 +291,5 @@ struct SharedMemory<Projective<BaseField, ScalarField, Gen>> {
     return s_projective_;
   }
 };
+#endif // __CUDACC__
 #endif // __CUDACC__

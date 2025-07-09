@@ -1,8 +1,8 @@
 use crate::curve::ScalarField;
 
-use icicle_core::impl_program_field;
+use icicle_core::impl_program_ring;
 
-impl_program_field!("grumpkin", grumpkin, ScalarField, ScalarCfg);
+impl_program_ring!("grumpkin", grumpkin, ScalarField);
 
 #[cfg(test)]
 use icicle_core::impl_program_tests;
