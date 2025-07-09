@@ -73,10 +73,10 @@ macro_rules! impl_polynomial_ring {
             values: [$base; $degree],
         }
 
+        use icicle_core::bignum::BigNum;
         use icicle_core::polynomial_ring::PolynomialRing;
         use icicle_core::traits::GenerateRandom;
         use icicle_runtime::{eIcicleError, IcicleError};
-        use icicle_core::bignum::BigNum;
 
         impl PolynomialRing for $polyring {
             type Base = $base;
