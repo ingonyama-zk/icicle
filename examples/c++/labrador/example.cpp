@@ -220,7 +220,7 @@ int main(int argc, char* argv[])
   // Benchmark parameters from the original code
   // std::vector<size_t> arr_n{64, 256};
   // std::vector<size_t> arr_r{8};
-  std::vector<std::tuple<size_t, size_t>> arr_nr{{64, 8}, {256, 16}};
+  std::vector<std::tuple<size_t, size_t>> arr_nr{{64, 8}};
   std::vector<std::tuple<size_t, size_t>> num_constraint{{1, 1}, {10, 10}, {10, 100}, {100, 100}};
   size_t NUM_REP = 10;
 
