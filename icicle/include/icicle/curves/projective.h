@@ -238,7 +238,10 @@ public:
     return os;
   }
 
-  HOST_DEVICE_INLINE bool is_zero() const { return x == BaseField::zero() && y != BaseField::zero() && z == BaseField::zero(); }
+  HOST_DEVICE_INLINE bool is_zero() const
+  {
+    return x == BaseField::zero() && y != BaseField::zero() && z == BaseField::zero();
+  }
 
   HOST_DEVICE_INLINE bool is_on_curve() const
   {
