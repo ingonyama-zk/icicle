@@ -22,7 +22,7 @@ In ICICLE v4, static method calls on field types have been replaced with instanc
 | `FF::sub(a, b)` | `a - b` |
 | `FF::mul(a, b)` | `a * b` |
 | `FF::sqr(a)` | `a.sqr()` |
-| `FF::neg(a)` | `a.neg()` or `-a` |
+| `FF::neg(a)` | `a.neg()` |
 | `FF::inverse(a)` | `a.inverse()` |
 | `FF::pow(a, exp)` | `a.pow(exp)` |
 
