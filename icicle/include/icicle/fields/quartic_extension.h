@@ -72,7 +72,9 @@ public:
 
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField reduce_from_bytes(const std::byte* in)
   {
-    return QuarticExtensionField{FF::reduce_from_bytes(in), FF::reduce_from_bytes(in + sizeof(FF)), FF::reduce_from_bytes(in + 2 * sizeof(FF)), FF::reduce_from_bytes(in + 3 * sizeof(FF))};
+    return QuarticExtensionField{
+      FF::reduce_from_bytes(in), FF::reduce_from_bytes(in + sizeof(FF)), FF::reduce_from_bytes(in + 2 * sizeof(FF)),
+      FF::reduce_from_bytes(in + 3 * sizeof(FF))};
   }
 
   constexpr HOST_DEVICE_INLINE QuarticExtensionField to_montgomery() const

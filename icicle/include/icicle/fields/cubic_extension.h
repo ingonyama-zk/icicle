@@ -61,7 +61,9 @@ public:
 
   static constexpr HOST_DEVICE_INLINE CubicExtensionField reduce_from_bytes(const std::byte* in)
   {
-    return CubicExtensionField{BaseField::reduce_from_bytes(in), BaseField::reduce_from_bytes(in + sizeof(BaseField)), BaseField::reduce_from_bytes(in + 2 * sizeof(BaseField))};
+    return CubicExtensionField{
+      BaseField::reduce_from_bytes(in), BaseField::reduce_from_bytes(in + sizeof(BaseField)),
+      BaseField::reduce_from_bytes(in + 2 * sizeof(BaseField))};
   }
 
   constexpr HOST_DEVICE_INLINE CubicExtensionField to_montgomery() const
