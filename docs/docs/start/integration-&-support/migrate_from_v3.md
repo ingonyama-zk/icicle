@@ -133,13 +133,24 @@ If you still see `FieldImpl` in your codebase, replace it with the minimal set o
 
 In v4, the Program API has been moved from VecOps to a dedicated Program module for better organization and type safety.
 
-| Operation | v3 (VecOps) | v4 (Program) |
-|-----------|-------------|--------------|
-| Create program | `Fr::create_program(|symbols| { ... }, nof_params)?` | `FieldProgram::new(|symbols| { ... }, nof_params)?` |
-| Execute program | `Fr::execute_program(&program, &mut vec_data, &config)?` | `program.execute_program(&mut vec_data, &config)?` |
-| Create returning value program | Not available | `FieldReturningValueProgram::new(|symbols| -> symbol { ... }, nof_params)?` |
-| Create predefined program | `Fr::create_predefined_program(pre_def)?` | `FieldProgram::new_predefined(pre_def)?` |
-| Imports | `use icicle_core::vec_ops::{VecOps, VecOpsConfig};` | `use icicle_core::program::{Program, ReturningValueProgram};` |
+#### Create program
+- **v3 (VecOps):** `Fr::create_program(|symbols| { ... }, nof_params)?`
+- **v4 (Program):** `FieldProgram::new(|symbols| { ... }, nof_params)?`
+
+#### Execute program
+- **v3 (VecOps):** `Fr::execute_program(&program, &mut vec_data, &config)?`
+- **v4 (Program):** `program.execute_program(&mut vec_data, &config)?`
+
+#### Create returning value program
+- **v4:** `ReturningValueProgram::new(|symbols| -> symbol { ... }, nof_params)?`
+
+#### Create predefined program
+- **v3 (VecOps):** `Fr::create_predefined_program(pre_def)?`
+- **v4 (Program):** `FieldProgram::new_predefined(pre_def)?`
+
+#### Imports
+- **v3 (VecOps):** `use icicle_core::vec_ops::{VecOps, VecOpsConfig};`
+- **v4 (Program):** `use icicle_core::program::{Program, ReturningValueProgram};`
 
 ### Example Migration
 

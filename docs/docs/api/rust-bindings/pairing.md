@@ -48,19 +48,3 @@ println!("e(P, Q) = {:?}", gt);
 ```
 
 The return value `gt` lives in the **target field** (e.g. Fₚ¹² for BN254/BLS12 curves).  The exact name of the type depends on the curve crate – consult the module `pairing` inside each crate.
-
----
-## Testing bilinearity
-
-Most crates also export a helper in `icicle_core::pairing::tests` that you can reuse inside your own unit tests:
-
-```rust
-use icicle_core::pairing::tests::check_pairing_bilinearity;
-use icicle_bn254::curve::{G1Projective, G2Projective};
-use icicle_bn254::pairing::PairingTargetField;
-
-#[test]
-fn bn254_pairing_bilinearity() {
-    check_pairing_bilinearity::<G1Projective, G2Projective, PairingTargetField>();
-}
-``` 

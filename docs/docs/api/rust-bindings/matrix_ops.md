@@ -71,9 +71,8 @@ let cfg = VecOpsConfig::default();
 matmul(&a_dev[..], N as u32, N as u32,
        &b_dev[..], N as u32, N as u32,
        &cfg, &mut c_dev[..]).unwrap();
+// Result is stored in c_dev for this example
 // 5. Copy the result back if needed
-let mut c_host = vec![ScalarField::zero(); N * N];
-c_dev.copy_to_host(HostSlice::from_mut_slice(&mut c_host)).unwrap();
 ```
 
 ---
