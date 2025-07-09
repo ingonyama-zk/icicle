@@ -238,8 +238,8 @@ int main(int argc, char* argv[])
         std::cerr << "Error running benchmark for n=" << n << ", r=" << r << ", eq=" << num_eq << ", cz=" << num_cz
                   << ": " << e.what() << std::endl;
       }
+      if (!results.empty()) { save_to_csv(results, "labrador_benchmark_results.csv"); }
     }
-    if (!results.empty()) { save_to_csv(results, "labrador_benchmark_results.csv"); }
   }
 
   // Print results
