@@ -5,8 +5,8 @@ use icicle_core::vec_ops::{VecOps, VecOpsConfig};
 use icicle_runtime::errors::IcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-impl_vec_ops_field!("labrador", labrador, ScalarRing);
-impl_vec_ops_field!("labrador_rns", labrador_rns, ScalarRingRns);
+impl_vec_ops_field!("babykoala", babykoala, ScalarRing);
+impl_vec_ops_field!("babykoala_rns", babykoala_rns, ScalarRingRns);
 
 #[cfg(test)]
 pub(crate) mod tests {
@@ -15,10 +15,10 @@ pub(crate) mod tests {
     use icicle_core::vec_ops::tests::*;
     use icicle_core::{impl_poly_vecops_tests, impl_vec_ops_tests};
 
-    impl_vec_ops_tests!(labrador, ScalarRing);
+    impl_vec_ops_tests!(babykoala, ScalarRing);
     mod rns {
         use super::*;
-        impl_vec_ops_tests!(labrador_rns, ScalarRingRns);
+        impl_vec_ops_tests!(babykoala_rns, ScalarRingRns);
     }
 
     mod poly {

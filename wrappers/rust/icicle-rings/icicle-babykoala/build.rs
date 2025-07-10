@@ -5,7 +5,7 @@ fn main() {
     let icicle_frontend_install_dir = env::var("ICICLE_FRONTEND_INSTALL_DIR");
     if let Ok(path) = icicle_frontend_install_dir {
         println!("cargo:rustc-link-search={}", path);
-        println!("cargo:rustc-link-lib=icicle_ring_labrador");
+        println!("cargo:rustc-link-lib=icicle_ring_babykoala");
         println!("cargo:rustc-link-arg=-Wl,-rpath,{}", path);
     } else {
         // Construct the path to the deps directory
@@ -30,7 +30,7 @@ fn main() {
             PathBuf::from(format!("{}/icicle/", deps_dir.display()))
         };
         config
-            .define("RING", "labrador")
+            .define("RING", "babykoala")
             .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
         // build (or pull and build) backends if feature enabled.
@@ -57,7 +57,7 @@ fn main() {
             .build();
 
         println!("cargo:rustc-link-search={}/lib", icicle_install_dir.display());
-        println!("cargo:rustc-link-lib=icicle_ring_labrador");
+        println!("cargo:rustc-link-lib=icicle_ring_babykoala");
         println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", icicle_install_dir.display()); // Add RPATH linker arguments
 
         // default backends dir

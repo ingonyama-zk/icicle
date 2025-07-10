@@ -3,9 +3,9 @@
 
 ## Overview
 
-ICICLE provides a modular, high-performance Rust API for lattice-based SNARK constructions. Implemented across the `icicle-core` and `icicle-labrador` crates, the API supports efficient operations over integer and polynomial rings, with CPU and CUDA backends.
+ICICLE provides a modular, high-performance Rust API for lattice-based SNARK constructions. Implemented across the `icicle-core` and `icicle-babykoala` crates, the API supports efficient operations over integer and polynomial rings, with CPU and CUDA backends.
 
-The design is generic over ring constructions, enabling flexible use of different `Zq` and `Rq` instantiations for cryptographic protocols like **Labrador**.
+The design is generic over ring constructions, enabling flexible use of different `Zq` and `Rq` instantiations for cryptographic protocols like **babykoala**.
 
 ## Key Capabilities
 

@@ -3,7 +3,7 @@ use icicle_core::{impl_rns_conversions, vec_ops::VecOpsConfig};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-impl_rns_conversions!("labrador", ScalarRing, ScalarRingRns);
+impl_rns_conversions!("babykoala", ScalarRing, ScalarRingRns);
 
 #[cfg(test)]
 pub(crate) mod tests {

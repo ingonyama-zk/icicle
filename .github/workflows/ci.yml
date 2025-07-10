@@ -633,7 +633,7 @@ jobs:
         # not supported in Metal yet
         backend: [cuda]
         ring:
-          - name: labrador
+          - name: babykoala
             rust-supported-features: ["ntt"]
             go-supported-features: ["ntt"]
     steps:
