@@ -40,8 +40,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ssh-key: ${{ secrets.CUDA_PULL_KEY }}
           ref: main
-      - name: Run examples workflow
-        uses: ./.github/workflows/examples.yml
       - name: Setup Cache
         id: cache
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
