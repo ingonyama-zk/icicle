@@ -3,7 +3,9 @@ use rand::{Rng, RngCore};
 use std::time::Instant;
 
 use icicle_core::{
-    balanced_decomposition, jl_projection, matrix_ops, negacyclic_ntt, norm,
+    balanced_decomposition, jl_projection, matrix_ops,
+    matrix_ops::MatMulConfig,
+    negacyclic_ntt, norm,
     ntt::NTTDir,
     polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut, PolynomialRing},
     random_sampling,
@@ -103,7 +105,6 @@ where
         n, m, m, k, n, k
     );
 
-    let cfg = VecOpsConfig::default();
     let a_len = (n * m) as usize;
     let b_len = (m * k) as usize;
     let c_len = (n * k) as usize;
@@ -127,7 +128,17 @@ where
 
     // Perform matrix multiplication on device: C = A × B
     let start = std::time::Instant::now();
-    matrix_ops::matmul::<P>(&device_a, n, m, &device_b, m, k, &cfg, &mut device_c).expect("Matmul failed");
+    matrix_ops::matmul::<P>(
+        &device_a,
+        n,
+        m,
+        &device_b,
+        m,
+        k,
+        &MatMulConfig::default(),
+        &mut device_c,
+    )
+    .expect("Matmul failed");
     let elapsed = start.elapsed();
 
     println!("[Matmul] Completed in {:.2?}", elapsed);
