@@ -1,5 +1,5 @@
 use crate::curve::ScalarField;
 
-use icicle_core::impl_symbol_field;
+use icicle_core::impl_invertible_symbol_ring;
 
-impl_symbol_field!("bw6_761", bw6_761, ScalarField, ScalarCfg);
+impl_invertible_symbol_ring!("bw6_761", bw6_761, ScalarField);

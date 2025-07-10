@@ -1,14 +1,11 @@
-use crate::curve::{ScalarCfg, ScalarField};
+use crate::curve::ScalarField;
 use icicle_core::{
     impl_vec_ops_field,
     vec_ops::{/*BitReverseConfig,*/ VecOps, VecOpsConfig},
 };
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{errors::IcicleError, memory::HostOrDeviceSlice};
 
-use icicle_core::program::Program;
-use icicle_core::traits::FieldImpl;
-
-impl_vec_ops_field!("grumpkin", grumpkin, ScalarField, ScalarCfg);
+impl_vec_ops_field!("grumpkin", grumpkin, ScalarField);
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::curve::ScalarField;

@@ -1,18 +1,19 @@
+use crate::polynomial_ring::PolynomialRing;
+use crate::ring::IntegerRing;
 use crate::vec_ops::VecOpsConfig;
-use crate::{polynomial_ring::PolynomialRing, traits::FieldImpl};
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{errors::IcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
 /// Trait for random sampling operations on group elements.
-pub trait RandomSampling<T: FieldImpl> {
+pub trait RandomSampling<T: IntegerRing> {
     fn random_sampling(
         size: usize,
         fast_mode: bool,
         seed: &[u8],
         cfg: &VecOpsConfig,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 pub fn random_sampling<T>(
@@ -21,21 +22,21 @@ pub fn random_sampling<T>(
     seed: &[u8],
     cfg: &VecOpsConfig,
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
-    T: FieldImpl,
-    T::Config: RandomSampling<T>,
+    T: IntegerRing,
+    T: RandomSampling<T>,
 {
-    T::Config::random_sampling(size, fast_mode, seed, cfg, output)
+    T::random_sampling(size, fast_mode, seed, cfg, output)
 }
 
 /// Implements RandomSampling for a scalar ring type using FFI.
 #[macro_export]
 macro_rules! impl_random_sampling {
-    ($prefix:literal, $scalar_type:ty, $implement_for:ty) => {
+    ($prefix:literal, $scalar_type:ty) => {
         use icicle_core::random_sampling::RandomSampling;
         use icicle_core::vec_ops::VecOpsConfig;
-        use icicle_runtime::eIcicleError;
+        use icicle_runtime::errors::{eIcicleError, IcicleError};
         use icicle_runtime::memory::HostOrDeviceSlice;
 
         extern "C" {
@@ -50,17 +51,19 @@ macro_rules! impl_random_sampling {
             ) -> eIcicleError;
         }
 
-        impl RandomSampling<$scalar_type> for $implement_for {
+        impl RandomSampling<$scalar_type> for $scalar_type {
             fn random_sampling(
                 size: usize,
                 fast_mode: bool,
                 seed: &[u8],
                 cfg: &VecOpsConfig,
                 output: &mut (impl HostOrDeviceSlice<$scalar_type> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 if output.is_on_device() && !output.is_on_active_device() {
-                    eprintln!("Output is on an inactive device");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Output is on an inactive device",
+                    ));
                 }
 
                 let mut cfg_clone = cfg.clone();
@@ -113,7 +116,7 @@ pub trait ChallengeSpacePolynomialsSampling<T: PolynomialRing> {
         twos: usize,
         norm: usize,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 /// Samples Rq challenge polynomials with {0, 1, 2, -1, -2} coefficients.
@@ -143,10 +146,10 @@ pub fn challenge_space_polynomials_sampling<T>(
     twos: usize,
     norm: usize,
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
     T: PolynomialRing,
-    T::Base: FieldImpl,
+    T::Base: IntegerRing,
     T: ChallengeSpacePolynomialsSampling<T>,
 {
     T::challenge_space_polynomials_sampling(seed, cfg, ones, twos, norm, output)
@@ -180,10 +183,12 @@ macro_rules! impl_challenge_space_polynomials_sampling {
                 twos: usize,
                 norm: usize,
                 output: &mut (impl HostOrDeviceSlice<$poly_ring_type> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 if output.is_on_device() && !output.is_on_active_device() {
-                    eprintln!("Output is on an inactive device");
-                    return Err(eIcicleError::InvalidArgument);
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        "Output is on an inactive device",
+                    ));
                 }
 
                 let mut cfg_clone = cfg.clone();

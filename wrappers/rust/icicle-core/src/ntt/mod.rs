@@ -1,7 +1,11 @@
-use crate::traits::FieldImpl;
 use icicle_runtime::{
-    config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
+    config::ConfigExtension,
+    errors::{eIcicleError, IcicleError},
+    memory::HostOrDeviceSlice,
+    stream::IcicleStreamHandle,
 };
+
+use crate::ring::IntegerRing;
 
 pub mod tests;
 
@@ -72,7 +76,7 @@ pub const CUDA_NTT_ALGORITHM: &str = "ntt_algorithm";
 
 #[repr(C)]
 #[derive(Debug, Clone)]
-pub struct NTTConfig<S> {
+pub struct NTTConfig<S: IntegerRing> {
     pub stream_handle: IcicleStreamHandle,
     /// Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()` (corresponding to no coset being used).
     pub coset_gen: S,
@@ -90,7 +94,7 @@ pub struct NTTConfig<S> {
     pub ext: ConfigExtension,
 }
 
-impl<S: FieldImpl> NTTConfig<S> {
+impl<S: IntegerRing> NTTConfig<S> {
     pub fn default() -> Self {
         Self {
             stream_handle: std::ptr::null_mut(),
@@ -125,25 +129,76 @@ impl NTTInitDomainConfig {
 }
 
 #[doc(hidden)]
-pub trait NTTDomain<F: FieldImpl> {
-    fn get_root_of_unity(max_size: u64) -> F;
-    fn initialize_domain(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), eIcicleError>;
-    fn release_domain() -> Result<(), eIcicleError>;
+pub trait NTTDomain<T: IntegerRing> {
+    fn get_root_of_unity(max_size: u64) -> Result<T, IcicleError>;
+    fn initialize_domain(primitive_root: T, config: &NTTInitDomainConfig) -> Result<(), IcicleError>;
+    fn release_domain() -> Result<(), IcicleError>;
 }
 
 #[doc(hidden)]
-pub trait NTT<T, F: FieldImpl>: NTTDomain<F> {
+pub trait NTT<T, F: IntegerRing> {
     fn ntt_unchecked(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<F>,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
+
     fn ntt_inplace_unchecked(
         inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<F>,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
+
+    fn ntt(
+        input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        dir: NTTDir,
+        cfg: &NTTConfig<F>,
+        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+    ) -> Result<(), IcicleError> {
+        if input.len() != output.len() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "input and output lengths {}; {} do not match",
+                    input.len(),
+                    output.len()
+                ),
+            ));
+        }
+
+        // check device slices are on active device
+        if input.is_on_device() && !input.is_on_active_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "input not allocated on an inactive device",
+            ));
+        }
+        if output.is_on_device() && !output.is_on_active_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "output not allocated on an inactive device",
+            ));
+        }
+
+        let mut local_cfg = cfg.clone();
+        local_cfg.are_inputs_on_device = input.is_on_device();
+        local_cfg.are_outputs_on_device = output.is_on_device();
+
+        Self::ntt_unchecked(input, dir, &local_cfg, output)
+    }
+
+    fn ntt_inplace(
+        inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        dir: NTTDir,
+        cfg: &NTTConfig<F>,
+    ) -> Result<(), IcicleError> {
+        let mut local_cfg = cfg.clone();
+        local_cfg.are_inputs_on_device = inout.is_on_device();
+        local_cfg.are_outputs_on_device = inout.is_on_device();
+
+        Self::ntt_inplace_unchecked(inout, dir, &local_cfg)
+    }
 }
 
 /// Computes the NTT, or a batch of several NTTs.
@@ -162,32 +217,11 @@ pub fn ntt<T, F>(
     dir: NTTDir,
     cfg: &NTTConfig<F>,
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<T, F>,
+    F: IntegerRing + NTT<T, F>,
 {
-    if input.len() != output.len() {
-        panic!(
-            "input and output lengths {}; {} do not match",
-            input.len(),
-            output.len()
-        );
-    }
-
-    // check device slices are on active device
-    if input.is_on_device() && !input.is_on_active_device() {
-        panic!("input not allocated on an inactive device");
-    }
-    if output.is_on_device() && !output.is_on_active_device() {
-        panic!("output not allocated on an inactive device");
-    }
-
-    let mut local_cfg = cfg.clone();
-    local_cfg.are_inputs_on_device = input.is_on_device();
-    local_cfg.are_outputs_on_device = output.is_on_device();
-
-    <<F as FieldImpl>::Config as NTT<T, F>>::ntt_unchecked(input, dir, &local_cfg, output)
+    F::ntt(input, dir, cfg, output)
 }
 
 /// Computes the NTT, or a batch of several NTTs inplace.
@@ -203,16 +237,11 @@ pub fn ntt_inplace<T, F>(
     inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     dir: NTTDir,
     cfg: &NTTConfig<F>,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<T, F>,
+    F: IntegerRing + NTT<T, F>,
 {
-    let mut local_cfg = cfg.clone();
-    local_cfg.are_inputs_on_device = inout.is_on_device();
-    local_cfg.are_outputs_on_device = inout.is_on_device();
-
-    <<F as FieldImpl>::Config as NTT<T, F>>::ntt_inplace_unchecked(inout, dir, &local_cfg)
+    F::ntt_inplace(inout, dir, cfg)
 }
 
 /// Generates twiddle factors which will be used to compute NTTs.
@@ -221,30 +250,27 @@ where
 ///
 /// * `primitive_root` - primitive root to generate twiddles from. Should be of large enough order to cover all
 /// NTTs that you need. For example, if NTTs of sizes 2^17 and 2^18 are computed, use the primitive root of order 2^18.
-/// This function will panic if the order of `primitive_root` is not a power of two.
+/// This function will return an error if the order of `primitive_root` is not a power of two.
 ///
-pub fn initialize_domain<F>(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), eIcicleError>
+pub fn initialize_domain<F>(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), IcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTTDomain<F>,
+    F: IntegerRing + NTTDomain<F>,
 {
-    <<F as FieldImpl>::Config as NTTDomain<F>>::initialize_domain(primitive_root, config)
+    <F as NTTDomain<F>>::initialize_domain(primitive_root, config)
 }
 
-pub fn release_domain<F>() -> Result<(), eIcicleError>
+pub fn release_domain<F>() -> Result<(), IcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTTDomain<F>,
+    F: IntegerRing + NTTDomain<F>,
 {
-    <<F as FieldImpl>::Config as NTTDomain<F>>::release_domain()
+    <F as NTTDomain<F>>::release_domain()
 }
 
-pub fn get_root_of_unity<F>(max_size: u64) -> F
+pub fn get_root_of_unity<F>(max_size: u64) -> Result<F, IcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTTDomain<F>,
+    F: IntegerRing + NTTDomain<F>,
 {
-    <<F as FieldImpl>::Config as NTTDomain<F>>::get_root_of_unity(max_size)
+    <F as NTTDomain<F>>::get_root_of_unity(max_size)
 }
 
 #[macro_export]
@@ -252,7 +278,6 @@ macro_rules! impl_ntt_without_domain {
     (
       $field_prefix:literal,
       $domain_field:ident,
-      $domain_config:ident,
       $ntt_type:ident,
       $ntt_type_lit:literal,
       $inout:ident
@@ -268,13 +293,13 @@ macro_rules! impl_ntt_without_domain {
             ) -> eIcicleError;
         }
 
-        impl $ntt_type<$inout, $domain_field> for $domain_config {
+        impl $ntt_type<$inout, $domain_field> for $domain_field {
             fn ntt_unchecked(
                 input: &(impl HostOrDeviceSlice<$inout> + ?Sized),
                 dir: NTTDir,
                 cfg: &NTTConfig<$domain_field>,
                 output: &mut (impl HostOrDeviceSlice<$inout> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 unsafe {
                     ntt_ffi(
                         input.as_ptr(),
@@ -291,7 +316,7 @@ macro_rules! impl_ntt_without_domain {
                 inout: &mut (impl HostOrDeviceSlice<$inout> + ?Sized),
                 dir: NTTDir,
                 cfg: &NTTConfig<$domain_field>,
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 unsafe {
                     ntt_ffi(
                         inout.as_mut_ptr(),
@@ -308,12 +333,12 @@ macro_rules! impl_ntt_without_domain {
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_ntt {
     (
       $field_prefix:literal,
       $field_prefix_ident:ident,
-      $field:ident,
-      $field_config:ident
+      $field:ident
     ) => {
         mod $field_prefix_ident {
             use crate::ntt::*;
@@ -329,27 +354,25 @@ macro_rules! impl_ntt {
                 fn get_root_of_unity(max_size: u64, rou: *mut $field) -> eIcicleError;
             }
 
-            impl NTTDomain<$field> for $field_config {
-                fn initialize_domain(primitive_root: $field, config: &NTTInitDomainConfig) -> Result<(), eIcicleError> {
+            impl NTTDomain<$field> for $field {
+                fn initialize_domain(primitive_root: $field, config: &NTTInitDomainConfig) -> Result<(), IcicleError> {
                     unsafe { initialize_ntt_domain(&primitive_root, config).wrap() }
                 }
 
-                fn release_domain() -> Result<(), eIcicleError> {
+                fn release_domain() -> Result<(), IcicleError> {
                     unsafe { release_ntt_domain().wrap() }
                 }
 
-                fn get_root_of_unity(max_size: u64) -> $field {
+                fn get_root_of_unity(max_size: u64) -> Result<$field, IcicleError> {
                     let mut rou = std::mem::MaybeUninit::<$field>::uninit(); // Prepare uninitialized memory for rou
                     unsafe {
-                        get_root_of_unity(max_size, rou.as_mut_ptr())
-                            .wrap()
-                            .unwrap();
-                        return rou.assume_init();
+                        get_root_of_unity(max_size, rou.as_mut_ptr()).wrap()?;
+                        Ok(rou.assume_init())
                     }
                 }
             }
 
-            impl_ntt_without_domain!($field_prefix, $field, $field_config, NTT, "_ntt", $field);
+            impl_ntt_without_domain!($field_prefix, $field, NTT, "_ntt", $field);
         }
     };
 }
@@ -439,14 +462,21 @@ macro_rules! impl_ntt_bench {
       $field_prefix:literal,
       $field:ident
     ) => {
-        use std::{env, sync::OnceLock};
         use criterion::{black_box, criterion_group, criterion_main, Criterion};
-        use icicle_runtime::{memory::{HostSlice,HostOrDeviceSlice},device::Device,is_device_available,  get_active_device, set_device, runtime::load_backend_from_env_or_default};
+        use icicle_core::ring::IntegerRing;
         use icicle_core::{
-            ntt::{NTTConfig, NTTInitDomainConfig, NTTDir, NttAlgorithm, Ordering, NTTDomain, ntt, NTT},
-            traits::{GenerateRandom,FieldImpl},
+            ntt::{ntt, NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NttAlgorithm, Ordering, NTT},
+            traits::GenerateRandom,
             vec_ops::VecOps,
         };
+        use icicle_runtime::{
+            device::Device,
+            get_active_device, is_device_available,
+            memory::{HostOrDeviceSlice, HostSlice},
+            runtime::load_backend_from_env_or_default,
+            set_device,
+        };
+        use std::{env, sync::OnceLock};
 
         static INIT: OnceLock<()> = OnceLock::new();
 
@@ -471,10 +501,9 @@ macro_rules! impl_ntt_bench {
             println!("ICICLE benchmark with {:?}", device);
         }
 
-        fn benchmark_ntt<T, F: FieldImpl>(c: &mut Criterion)
+        fn benchmark_ntt<F: IntegerRing>(c: &mut Criterion)
         where
-        <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
-        <F as FieldImpl>::Config: VecOps<F>,
+            F: NTT<F, F> + GenerateRandom,
         {
             use criterion::SamplingMode;
             use icicle_core::ntt::tests::init_domain;
@@ -498,7 +527,7 @@ macro_rules! impl_ntt_bench {
 
             INIT.get_or_init(move || init_domain::<$field>(1 << max_log2, FAST_TWIDDLES_MODE));
 
-            let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
+            let coset_generators = [F::one(), F::generate_random(1)[0]];
             let mut config = NTTConfig::<F>::default();
 
             for test_size_log2 in (13u32..=max_log2) {
@@ -511,13 +540,13 @@ macro_rules! impl_ntt_bench {
                         continue;
                     }
 
-                    let scalars = F::Config::generate_random(full_size);
+                    let scalars = F::generate_random(full_size);
                     let input = HostSlice::from_slice(&scalars);
 
                     let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
                     let batch_ntt_result = HostSlice::from_mut_slice(&mut batch_ntt_result);
                     let mut config = NTTConfig::<F>::default();
-                    for dir in [NTTDir::kForward, NTTDir::kInverse ] {
+                    for dir in [NTTDir::kForward, NTTDir::kInverse] {
                         for ordering in [
                             Ordering::kNN,
                             Ordering::kNR,
@@ -528,19 +557,9 @@ macro_rules! impl_ntt_bench {
                         ] {
                             config.ordering = ordering;
                             config.batch_size = batch_size as i32;
-                            let bench_descr = format!(
-                                "{:?} {:?} {} x {}",
-                                ordering, dir, test_size, batch_size
-                            );
+                            let bench_descr = format!("{:?} {:?} {} x {}", ordering, dir, test_size, batch_size);
                             group.bench_function(&bench_descr, |b| {
-                                b.iter(|| {
-                                    ntt::<F, F>(
-                                        input,
-                                        dir,
-                                        &mut config,
-                                        batch_ntt_result
-                                    )
-                                })
+                                b.iter(|| ntt::<F, F>(input, dir, &mut config, batch_ntt_result))
                             });
                         }
                     }
@@ -550,7 +569,7 @@ macro_rules! impl_ntt_bench {
             group.finish();
         }
 
-        criterion_group!(benches, benchmark_ntt<$field, $field>);
+        criterion_group!(benches, benchmark_ntt::<$field>);
         criterion_main!(benches);
     };
 }

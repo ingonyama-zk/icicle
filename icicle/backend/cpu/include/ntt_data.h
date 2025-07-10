@@ -87,7 +87,7 @@ namespace ntt_cpu {
           arbitrary_coset = std::make_unique<S[]>(domain_max_size + 1);
           arbitrary_coset[0] = S::one();
           S coset_gen =
-            direction == NTTDir::kForward ? config.coset_gen : S::inverse(config.coset_gen); // inverse for INTT
+            direction == NTTDir::kForward ? config.coset_gen : config.coset_gen.inverse(); // inverse for INTT
           for (uint32_t i = 1; i <= CpuNttDomain<S>::s_ntt_domain.get_max_size(); i++) {
             arbitrary_coset[i] = arbitrary_coset[i - 1] * coset_gen;
           }

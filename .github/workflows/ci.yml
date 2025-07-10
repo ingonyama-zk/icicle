@@ -14,17 +14,19 @@ jobs:
     name: Check Conditional Testing
     runs-on: ubuntu-latest
     outputs:
-      conditional-testing: ${{ steps.check-conditional-testing.outputs.conditional-testing }}
+      conditional-testing: ${{ steps.conditional-testing.outputs.conditional-testing }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 5
-      - name: Check conditional testing
-        id: check-conditional-testing
+      - name: Calculate conditions
+        id: conditional-testing
         run: |
           COMMIT_MSG=$(git log ${{ github.event.pull_request.head.sha }} -1 --pretty=format:"%s")
+          echo "COMMIT_MSG: $COMMIT_MSG"
           COMMIT_MSG_LOWER=$(echo "$COMMIT_MSG" | tr '[:upper:]' '[:lower:]')
+          echo "COMMIT_MSG_LOWER: $COMMIT_MSG_LOWER"
           if [[ "$COMMIT_MSG_LOWER" == *"[full ci]"* ]]; then
             CONDITIONAL_TESTING=false
             echo "CONDITIONAL_TESTING=$CONDITIONAL_TESTING"
@@ -86,10 +88,8 @@ jobs:
 
   # extract-metal-backend-branch:
   #   uses: ./.github/workflows/extract-backend.yml
-  #   needs: calculate-conditions
-  #   if: needs.calculate-conditions.outputs.should-run == 'true'
   #   with:
-  #     pr-number: ${{ needs.calculate-conditions.outputs.pr-number }}
+  #     pr-number: ${{ github.event.pull_request.number }}
   #     backend-type: metal
   
   test-curve:
