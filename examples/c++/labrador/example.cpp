@@ -219,9 +219,12 @@ int main(int argc, char* argv[])
   // Benchmark parameters from the original code
   // std::vector<size_t> arr_n{64, 256};
   // std::vector<size_t> arr_r{8};
-  std::vector<std::tuple<size_t, size_t>> arr_nr{{64, 8}};
-  std::vector<std::tuple<size_t, size_t>> num_constraint{{1, 1}, {10, 10}, {10, 100}, {100, 100}};
-  size_t NUM_REP = 10;
+  std::vector<std::tuple<size_t, size_t>> arr_nr{{64,8}};
+  // this fails but {10,0} doesn't fail on CUDA
+  // num_agg =4 doesn't fail 3/5 fail
+  // AI thinks it's NTT problem- update to new commit
+  std::vector<std::tuple<size_t, size_t>> num_constraint{{0, 10}};
+  size_t NUM_REP = 5;
 
   std::vector<BenchmarkResult> results;
 
