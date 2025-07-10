@@ -32,7 +32,7 @@
   {                                                                                                                    \
     *result = base->pow(exp);                                                                                          \
   }                                                                                                                    \
-  extern "C" void ICICLE_FFI_EXPAND_AND_CONCAT3(ICICLE_FFI_PREFIX, PREFIX, _from_u32)(uint32_t val, TYPE * result)     \
+  extern "C" void ICICLE_FFI_EXPAND_AND_CONCAT3(ICICLE_FFI_PREFIX, PREFIX, _from_u32)(uint32_t val, TYPE* result)      \
   {                                                                                                                    \
     *result = TYPE::from(val);                                                                                         \
   }                                                                                                                    \
@@ -41,7 +41,7 @@
     *result = *a == *b;                                                                                                \
   }                                                                                                                    \
   extern "C" void ICICLE_FFI_EXPAND_AND_CONCAT3(ICICLE_FFI_PREFIX, PREFIX, _from_bytes_le)(                            \
-    uint8_t * bytes, TYPE * result)                                                                                    \
+    uint8_t* bytes, TYPE* result)                                                                                      \
   {                                                                                                                    \
     *result = TYPE::reduce_from_bytes((std::byte*)bytes);                                                              \
   }

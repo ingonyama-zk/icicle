@@ -116,5 +116,5 @@ namespace icicle {
         const std::byte* secret_keys, const std::byte* ciphertext, MlKemConfig config, std::byte* shared_secrets);
 
     } // namespace ml_kem
-  }   // namespace pqc
+  } // namespace pqc
 } // namespace icicle

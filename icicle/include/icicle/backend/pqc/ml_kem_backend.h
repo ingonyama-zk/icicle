@@ -70,5 +70,5 @@ namespace icicle {
     }();                                                                                                               \
   }
     } // namespace ml_kem
-  }   // namespace pqc
+  } // namespace pqc
 } // namespace icicle

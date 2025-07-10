@@ -147,7 +147,7 @@ namespace icicle {
         ICICLE_LOG_ERROR
           << "cpu_poseidon2_init_default_constants: t (width) must be one of [2, 3, 4, 8, 12, 16, 20, 24]";
         return eIcicleError::INVALID_ARGUMENT;
-      }                                              // switch (t) {
+      } // switch (t) {
       if (full_rounds == 0 && partial_rounds == 0) { // All arrays are empty in this case (true for wide fields (width >
                                                      // 32) & t > 8).
         return eIcicleError::SUCCESS;
@@ -445,7 +445,7 @@ namespace icicle {
 
         input += use_domain_tag ? T - 1 : T; // Move to the next hasher input.
         out += 1;                            // Move to the output of the next hasher.
-      }                                      // for (int batch_idx = 0; batch_idx < batch_size; batch_idx++) {
+      } // for (int batch_idx = 0; batch_idx < batch_size; batch_idx++) {
 
       return eIcicleError::SUCCESS;
     } // eIcicleError poseidon2_permutation()
@@ -512,7 +512,7 @@ namespace icicle {
 
         out[batch_idx] = states[1];
         input = input_shadow + input_size_in_scalars; // Move to the input of the next hasher.
-      }                                               // for (int batch_idx = 0; batch_idx < batch_size; batch_idx++) {
+      } // for (int batch_idx = 0; batch_idx < batch_size; batch_idx++) {
 
       return eIcicleError::SUCCESS;
     } // eIcicleError poseidon2_sponge_permutation(
