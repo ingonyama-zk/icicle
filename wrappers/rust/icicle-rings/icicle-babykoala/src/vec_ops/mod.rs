@@ -1,7 +1,7 @@
 use crate::ring::{ScalarRing, ScalarRingRns};
 
 use icicle_core::impl_vec_ops_field;
-use icicle_core::vec_ops::{VecOps, VecOpsConfig};
+use icicle_core::vec_ops::*;
 use icicle_runtime::errors::IcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
