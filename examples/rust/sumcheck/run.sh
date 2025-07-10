@@ -55,6 +55,6 @@ if [ "$DEVICE_TYPE" != "CPU" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ 
 else
   echo "Building icicle without backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
   export ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR}"
-  RUST_LOG=info cargo run -q --release --package sumcheck --bin sumcheck -- --device-type "${DEVICE_TYPE}" 
+  RUST_LOG=info cargo run --release --package sumcheck --bin sumcheck -- --device-type "${DEVICE_TYPE}" 
 fi
 
