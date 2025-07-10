@@ -43,15 +43,21 @@
 }
 
 /* ========== LOGO ABOVE SIDEBAR ========== */
+.navbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  padding: 0 1rem;
+  justify-content: flex-start; /* <--- this is the key change */
+}
+
 .navbar__brand {
-  position: absolute;
-  top: 0rem;
-  left: 1rem;
-  z-index: 1000;
+  position: relative; /* back in flex flow */
   display: flex;
   align-items: center;
   height: 100%;
 }
+
 .navbar__logo {
   display: flex;
   align-items: center;
@@ -59,9 +65,6 @@
 .navbar__logo img {
   height: 50px;
   display: block;
-}
-.navbar {
-  padding-left: 20rem; /* Adjust based on sidebar width */
 }
 
 /* ========== NAVBAR SPACING ADJUSTMENTS ========== */
@@ -460,4 +463,9 @@ table thead th {
 .markdown {
   overflow: visible !important;
   position: relative;
+}
+@media (max-width: 1100px) {
+  .navbar__item {
+    padding: 0 0.4rem; /* reduce padding for tighter layout */
+  }
 }
