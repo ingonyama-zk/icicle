@@ -3,9 +3,9 @@
 
 ## Overview
 
-ICICLE provides a modular, high-performance Rust API for lattice-based SNARK constructions. Implemented across the `icicle-core` and `icicle-labrador` crates, the API supports efficient operations over integer and polynomial rings, with CPU and CUDA backends.
+ICICLE provides a modular, high-performance Rust API for lattice-based SNARK constructions. Implemented across the `icicle-core` and `icicle-babykoala` crates, the API supports efficient operations over integer and polynomial rings, with CPU and CUDA backends.
 
-The design is generic over ring constructions, enabling flexible use of different `Zq` and `Rq` instantiations for cryptographic protocols like **Labrador**.
+The design is generic over ring constructions, enabling flexible use of different `Zq` and `Rq` instantiations for cryptographic protocols like **labrador**.
 
 ## Key Capabilities
 
@@ -36,7 +36,7 @@ The design is generic over ring constructions, enabling flexible use of differen
 - **Challenge Sampling**  
   Rejection sampling of polynomials satisfying operator norm bounds
 
-For example, the **Labrador** protocol builds on this foundation to implement a lattice-based zk-SNARK with modular components and device acceleration.
+For example, the **babykoala** protocol builds on this foundation to implement a lattice-based zk-SNARK with modular components and device acceleration.
 
 ## [See a full Rust example here.](https://github.com/ingonyama-zk/icicle/tree/main/examples/rust/lattice-snarks)
 
@@ -59,7 +59,7 @@ q = P_babybear × P_koalabear
 
 ```rust
 use icicle_core::{bignum::BigNum, traits::GenerateRandom};
-use icicle_labrador::ring::ScalarRing as Zq;
+use icicle_babykoala::ring::ScalarRing as Zq;
 
 // Generate random Zq elements
 let size = 100;
@@ -85,8 +85,8 @@ The polynomial ring `Rq = Zq[X]/(X^d + 1)` represents polynomials of degree less
 
 ```rust
 use icicle_core::{polynomial_ring::PolynomialRing, traits::GenerateRandom}; // traits
-use icicle_labrador::polynomial_ring::PolyRing as Rq; // concrete type
-use icicle_labrador::ring::ScalarRing as Zq; // concrete type
+use icicle_babykoala::polynomial_ring::PolyRing as Rq; // concrete type
+use icicle_babykoala::ring::ScalarRing as Zq; // concrete type
 use icicle_runtime::IcicleError;
 
 // Generate random polynomials
@@ -165,7 +165,7 @@ These helpers use the general **reinterpret_slice** utility, which reinterprets 
 ```rust
 use icicle_core::polynomial_ring::flatten_polyring_slice; // or flatten_polyring_slice_mut
 use icicle_core::traits::GenerateRandom;
-use icicle_labrador::polynomial_ring::PolyRing as Rq;
+use icicle_babykoala::polynomial_ring::PolyRing as Rq;
 use icicle_runtime::memory::HostSlice; // concrete type
 
 let polynomials = Rq::generate_random(5);
@@ -243,7 +243,7 @@ use icicle_core::negacyclic_ntt::{
     NegacyclicNttConfig, // Configuration for backend/device/async
 };
 use icicle_core::traits::GenerateRandom;
-use icicle_labrador::polynomial_ring::PolyRing;
+use icicle_babykoala::polynomial_ring::PolyRing;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 
 // Generate random input on the host
@@ -340,7 +340,7 @@ where
         matrix_ops::{matmul, matrix_transpose, MatMulConfig},
         vec_ops::VecOpsConfig,
     };
-    use icicle_labrador::polynomial_ring::PolyRing;
+    use icicle_babykoala::polynomial_ring::PolyRing;
     use icicle_runtime::memory::{DeviceVec, HostSlice};
 
     let n = 8;
@@ -485,8 +485,8 @@ use icicle_core::vec_ops::{
     poly_vecops::{polyvec_mul_by_scalar, polyvec_sum_reduce},
     VecOpsConfig,
 };
-use icicle_labrador::polynomial_ring::PolyRing as Rq;
-use icicle_labrador::ring::ScalarRing as Zq;
+use icicle_babykoala::polynomial_ring::PolyRing as Rq;
+use icicle_babykoala::ring::ScalarRing as Zq;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 
 let size = 10;
@@ -597,7 +597,7 @@ where
 use icicle_core::balanced_decomposition;
 use icicle_core::traits::GenerateRandom;
 use icicle_core::vec_ops::VecOpsConfig;
-use icicle_labrador::polynomial_ring::PolyRing as Rq;
+use icicle_babykoala::polynomial_ring::PolyRing as Rq;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 
 let base = 4; // Typically set to q^(1/t) for small t (e.g., t = 2, 4, 6)
@@ -680,7 +680,7 @@ where
 
 ```rust
 use icicle_core::{bignum::BigNum, norm, vec_ops::VecOpsConfig};
-use icicle_labrador::ring::ScalarRing as Zq;
+use icicle_babykoala::ring::ScalarRing as Zq;
 use icicle_runtime::memory::HostSlice;
 
 let size = 1024;
@@ -799,8 +799,8 @@ use icicle_core::{
     polynomial_ring::{flatten_polyring_slice, PolynomialRing},
     traits::GenerateRandom,
 };
-use icicle_labrador::polynomial_ring::PolyRing as Rq;
-use icicle_labrador::ring::ScalarRing as Zq;
+use icicle_babykoala::polynomial_ring::PolyRing as Rq;
+use icicle_babykoala::ring::ScalarRing as Zq;
 use icicle_runtime::memory::{HostOrDeviceSlice, HostSlice};
 use rand::Rng;
 
@@ -898,8 +898,8 @@ where
 
 ```rust
 use icicle_core::{polynomial_ring::flatten_polyring_slice_mut, random_sampling, vec_ops::VecOpsConfig};
-use icicle_labrador::polynomial_ring::PolyRing as Rq;
-use icicle_labrador::ring::ScalarRing as Zq;
+use icicle_babykoala::polynomial_ring::PolyRing as Rq;
+use icicle_babykoala::ring::ScalarRing as Zq;
 use icicle_runtime::memory::DeviceVec;
 use rand::RngCore;
 
@@ -926,7 +926,7 @@ let mut rq_output = DeviceVec::<Rq>::device_malloc(size).expect("Rq alloc failed
 
 ## Challenge Sampling with Operator Norm Rejection
 
-ICICLE provides a specialized API to sample challenge polynomials from a constrained subset of `Rq` that meet strict norm bounds. This is particularly relevant for lattice-based SNARK protocols like Labrador.
+ICICLE provides a specialized API to sample challenge polynomials from a constrained subset of `Rq` that meet strict norm bounds. This is particularly relevant for lattice-based SNARK protocols like **labrador**.
 
 The challenge space consists of Rq polynomials with:
 
@@ -980,11 +980,11 @@ where
 ```rust
 use icicle_core::random_sampling::challenge_space_polynomials_sampling;
 use icicle_core::vec_ops::VecOpsConfig;
-use icicle_labrador::polynomial_ring::PolyRing as Rq;
+use icicle_babykoala::polynomial_ring::PolyRing as Rq;
 use icicle_runtime::memory::DeviceVec;
 use rand::RngCore;
 
-// Parameters from the Labrador protocol
+// Parameters from the babykoala protocol
 let tau1 = 31;           // Number of ±1 coefficients
 let tau2 = 10;           // Number of ±2 coefficients
 let opnorm_bound = 15;   // Operator norm bound for rejection sampling
