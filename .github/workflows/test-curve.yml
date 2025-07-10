@@ -156,7 +156,7 @@ jobs:
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
     - name: Checkout ${{ inputs.backend_upper }} backend
-      if: ${{ inputs.changed_curve == 'true' }}
+      if: ${{ !inputs.enable_conditional_testing || inputs.changed_curve == 'true' }}
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
         repository: ingonyama-zk/icicle-${{ inputs.backend }}-backend
