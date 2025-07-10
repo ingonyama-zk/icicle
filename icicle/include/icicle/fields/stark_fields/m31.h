@@ -206,7 +206,7 @@ namespace m31 {
 
     HOST_DEVICE_INLINE MersenneField operator*(const MersenneField& ys) const
     {
-      uint64_t x = (uint64_t)(get_limb())*ys.get_limb();
+      uint64_t x = (uint64_t)(get_limb()) * ys.get_limb();
       uint32_t t = ((x >> 31) + (x & MersenneField::get_modulus().limbs[0]));
       uint32_t m = MersenneField::get_modulus().limbs[0];
       if (t > m) t = (t & m) + (t >> 31);
