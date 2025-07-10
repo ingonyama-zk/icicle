@@ -1,7 +1,4 @@
 
-// TODO: replace labrador with the final name that
-// TODO: update matmul after Lisa Merge
-
 # Lattice-Based SNARKs — Rust API Overview
 
 ## Overview
