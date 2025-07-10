@@ -22,7 +22,7 @@ namespace pairing_bls12_377 {
     {
       point_field_t t = f.c0;
       f.c0 = f.c1;
-      f.c0 = point_field_t::neg(f.c0);
+      f.c0 = f.c0.neg();
       f.c0 = f.c0 + f.c0 * point_field_t::from(4);
       f.c1 = t;
     }

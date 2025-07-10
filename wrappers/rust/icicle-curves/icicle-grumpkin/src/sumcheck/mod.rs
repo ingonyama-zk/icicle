@@ -1,7 +1,7 @@
-use crate::curve::{ScalarCfg, ScalarField};
+use crate::curve::ScalarField;
 use icicle_core::impl_sumcheck;
 
-impl_sumcheck!("grumpkin", grumpkin, ScalarField, ScalarCfg);
+impl_sumcheck!("grumpkin", grumpkin, ScalarField);
 
 // Re-export types from the grumpkin module
 pub use grumpkin::{SumcheckProof, SumcheckWrapper};

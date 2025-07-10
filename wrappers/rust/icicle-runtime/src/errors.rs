@@ -20,17 +20,33 @@ pub enum eIcicleError {
 }
 
 impl eIcicleError {
-    pub fn wrap(self) -> Result<(), eIcicleError> {
-        match self {
-            eIcicleError::Success => Ok(()),
-            _ => Err(self),
+    pub fn wrap(self) -> Result<(), IcicleError> {
+        let err = IcicleError::from_code(self);
+        match err {
+            Some(err) => Err(err),
+            None => Ok(()),
         }
     }
 
-    pub fn wrap_value<T>(self, val: T) -> Result<T, eIcicleError> {
+    pub fn wrap_err_msg(self, msg: impl Into<String>) -> Result<(), IcicleError> {
+        match self {
+            eIcicleError::Success => Ok(()),
+            _ => Err(IcicleError::new(self, msg)),
+        }
+    }
+
+    pub fn wrap_value<T>(self, val: T) -> Result<T, IcicleError> {
+        let err = IcicleError::from_code(self);
+        match err {
+            Some(err) => Err(err),
+            None => Ok(val),
+        }
+    }
+
+    pub fn wrap_value_err_msg<T>(self, val: T, msg: impl Into<String>) -> Result<T, IcicleError> {
         match self {
             eIcicleError::Success => Ok(val),
-            _ => Err(self),
+            _ => Err(IcicleError::new(self, msg)),
         }
     }
 }
@@ -51,6 +67,40 @@ impl Display for eIcicleError {
             eIcicleError::ApiNotImplemented => write!(f, "eIcicleError::API_NOT_IMPLEMENTED"),
             eIcicleError::InvalidArgument => write!(f, "eIcicleError::INVALID_ARGUMENT"),
             eIcicleError::UnknownError => write!(f, "eIcicleError::UNKNOWN_ERROR"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct IcicleError {
+    pub code: eIcicleError,
+    pub message: Option<String>,
+}
+
+impl fmt::Display for IcicleError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.message {
+            Some(msg) => write!(f, "{}: {}", self.code, msg),
+            None => write!(f, "{}", self.code),
+        }
+    }
+}
+
+impl std::error::Error for IcicleError {}
+
+impl IcicleError {
+    pub fn new(code: eIcicleError, message: impl Into<String>) -> Self {
+        IcicleError {
+            code,
+            message: Some(message.into()),
+        }
+    }
+
+    pub fn from_code(code: eIcicleError) -> Option<Self> {
+        if code == eIcicleError::Success {
+            None
+        } else {
+            Some(IcicleError { code, message: None })
         }
     }
 }

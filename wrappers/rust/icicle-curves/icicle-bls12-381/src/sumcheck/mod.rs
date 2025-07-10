@@ -1,7 +1,7 @@
-use crate::curve::{ScalarCfg, ScalarField};
+use crate::curve::ScalarField;
 use icicle_core::impl_sumcheck;
 
-impl_sumcheck!("bls12_381", bls12_381, ScalarField, ScalarCfg);
+impl_sumcheck!("bls12_381", bls12_381, ScalarField);
 
 // Re-export types from the bls12_381 module
 pub use bls12_381::{SumcheckProof, SumcheckWrapper};

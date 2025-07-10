@@ -1,13 +1,12 @@
 #[doc(hidden)]
 pub mod tests;
 
-use crate::field::FieldArithmetic;
 use crate::hash::Hasher;
-use crate::program::ReturningValueProgram;
-use crate::traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom};
+use crate::program::ReturningValueProgramImpl;
+use crate::ring::IntegerRing;
 use icicle_runtime::config::ConfigExtension;
 use icicle_runtime::stream::IcicleStreamHandle;
-use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 use serde::{de::DeserializeOwned, Serialize};
 use std::ffi::c_void;
 
@@ -93,7 +92,7 @@ pub struct FFISumcheckTranscriptConfig<F> {
 
 impl<'a, F> From<&SumcheckTranscriptConfig<'a, F>> for FFISumcheckTranscriptConfig<F>
 where
-    F: FieldImpl,
+    F: IntegerRing,
 {
     fn from(config: &SumcheckTranscriptConfig<'a, F>) -> Self {
         FFISumcheckTranscriptConfig {
@@ -168,15 +167,11 @@ impl Default for SumcheckConfig {
 /// including proof generation and verification. It is generic over the
 /// field type and configuration.
 pub trait Sumcheck {
-    /// The field type used in the protocol
-    type Field: FieldImpl + Arithmetic;
-    /// The field configuration type
-    type FieldConfig: FieldConfig + GenerateRandom<Self::Field> + FieldArithmetic<Self::Field>;
-    /// The proof type used in the protocol
+    type Field: IntegerRing;
     type Proof: SumcheckProofOps<Self::Field>;
 
     /// Creates a new instance of the Sumcheck protocol.
-    fn new() -> Result<Self, eIcicleError>
+    fn new() -> Result<Self, IcicleError>
     where
         Self: Sized;
 
@@ -194,10 +189,10 @@ pub trait Sumcheck {
         mle_polys: &[&(impl HostOrDeviceSlice<Self::Field> + ?Sized)],
         mle_poly_size: u64,
         claimed_sum: Self::Field,
-        combine_function: impl ReturningValueProgram,
+        combine_function: impl ReturningValueProgramImpl,
         transcript_config: &SumcheckTranscriptConfig<Self::Field>,
         sumcheck_config: &SumcheckConfig,
-    ) -> Self::Proof;
+    ) -> Result<Self::Proof, IcicleError>;
 
     /// Verifies a Sumcheck proof against a claimed sum.
     ///
@@ -215,7 +210,7 @@ pub trait Sumcheck {
         proof: &Self::Proof,
         claimed_sum: Self::Field,
         transcript_config: &SumcheckTranscriptConfig<Self::Field>,
-    ) -> Result<bool, eIcicleError>;
+    ) -> Result<bool, IcicleError>;
 
     /// Retrieves the challenge vector from the Sumcheck instance.
     ///
@@ -227,7 +222,7 @@ pub trait Sumcheck {
     /// # Returns
     /// * `Ok(Vec<Field>)` containing the challenge vector
     /// * `Err(e)` if an error occurs
-    fn get_challenge_vector(&self) -> Result<Vec<Self::Field>, eIcicleError>;
+    fn get_challenge_vector(&self) -> Result<Vec<Self::Field>, IcicleError>;
 }
 
 /// Trait for Sumcheck proof operations.
@@ -236,35 +231,39 @@ pub trait Sumcheck {
 /// including retrieving round polynomials and printing the proof.
 pub trait SumcheckProofOps<F>: From<Vec<Vec<F>>> + Serialize + DeserializeOwned
 where
-    F: FieldImpl,
+    F: IntegerRing,
 {
     /// Retrieves the round polynomials from the proof.
     ///
     /// # Returns
     /// * `Ok(Vec<Vec<F>>)` containing the round polynomials
     /// * `Err(e)` if an error occurs
-    fn get_round_polys(&self) -> Result<Vec<Vec<F>>, eIcicleError>;
+    fn get_round_polys(&self) -> Result<Vec<Vec<F>>, IcicleError>;
 
     /// Prints the proof for debugging purposes.
     ///
     /// # Returns
-    /// * `eIcicleError` indicating success or failure
-    fn print(&self) -> eIcicleError;
+    /// * `Ok(())` indicating success
+    /// * `Err(e)` if an error occurs
+    fn print(&self) -> Result<(), IcicleError>;
 }
 
 /// Macro to implement Sumcheck functionality for a specific field.
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_sumcheck {
-    ($field_prefix:literal, $field_prefix_ident:ident, $field:ident, $field_cfg:ident) => {
+    ($field_prefix:literal, $field_prefix_ident:ident, $field:ident) => {
         mod $field_prefix_ident {
-            use super::{$field, $field_cfg};
-            use crate::symbol::$field_prefix_ident::FieldSymbol;
-            use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgram};
+            use crate::sumcheck::$field;
+            use crate::symbol::$field_prefix_ident::RingSymbol;
+            use icicle_core::bignum::BigNum;
+            use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgramImpl};
+            use icicle_core::ring::IntegerRing;
             use icicle_core::sumcheck::{
                 FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
             };
-            use icicle_core::traits::{FieldImpl, Handle};
-            use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
+            use icicle_core::traits::Handle;
+            use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, IcicleError};
             use serde::de::{self, Visitor};
             use serde::{Deserialize, Deserializer, Serialize, Serializer};
             use std::ffi::c_void;
@@ -364,13 +363,15 @@ macro_rules! impl_sumcheck {
 
             impl Sumcheck for SumcheckWrapper {
                 type Field = $field;
-                type FieldConfig = $field_cfg;
                 type Proof = SumcheckProof;
 
-                fn new() -> Result<Self, eIcicleError> {
+                fn new() -> Result<Self, IcicleError> {
                     let handle = unsafe { icicle_sumcheck_create() };
                     if handle.is_null() {
-                        return Err(eIcicleError::UnknownError);
+                        return Err(IcicleError::new(
+                            eIcicleError::UnknownError,
+                            "Failed to create Sumcheck instance",
+                        ));
                     }
 
                     Ok(SumcheckWrapper { handle })
@@ -381,16 +382,21 @@ macro_rules! impl_sumcheck {
                     mle_polys: &[&(impl HostOrDeviceSlice<$field> + ?Sized)],
                     mle_poly_size: u64,
                     claimed_sum: $field,
-                    combine_function: impl ReturningValueProgram,
+                    combine_function: impl ReturningValueProgramImpl,
                     transcript_config: &SumcheckTranscriptConfig<$field>,
                     sumcheck_config: &SumcheckConfig,
-                ) -> Self::Proof {
+                ) -> Result<Self::Proof, IcicleError> {
                     let ffi_transcript_config = FFISumcheckTranscriptConfig::from(transcript_config);
 
                     let mut cfg = sumcheck_config.clone();
                     if mle_polys[0].is_on_device() {
                         for mle_poly in mle_polys {
-                            assert!(mle_poly.is_on_active_device());
+                            if !mle_poly.is_on_active_device() {
+                                return Err(IcicleError::new(
+                                    eIcicleError::InvalidArgument,
+                                    "MLE polynomial is not on an active device",
+                                ));
+                            }
                         }
                         cfg.are_inputs_on_device = true;
                     }
@@ -411,8 +417,13 @@ macro_rules! impl_sumcheck {
                             &ffi_transcript_config,
                             &cfg,
                         );
-
-                        Self::Proof { handle: proof_handle }
+                        if proof_handle.is_null() {
+                            return Err(IcicleError::new(
+                                eIcicleError::UnknownError,
+                                "Failed to create Sumcheck proof",
+                            ));
+                        }
+                        Ok(Self::Proof { handle: proof_handle })
                     }
                 }
 
@@ -421,10 +432,10 @@ macro_rules! impl_sumcheck {
                     proof: &Self::Proof,
                     claimed_sum: $field,
                     transcript_config: &SumcheckTranscriptConfig<$field>,
-                ) -> Result<bool, eIcicleError> {
+                ) -> Result<bool, IcicleError> {
                     let ffi_transcript_config = FFISumcheckTranscriptConfig::from(transcript_config);
                     let mut is_verified = false;
-                    let err = unsafe {
+                    unsafe {
                         icicle_sumcheck_verify(
                             self.handle,
                             proof.handle,
@@ -432,38 +443,25 @@ macro_rules! impl_sumcheck {
                             &ffi_transcript_config,
                             &mut is_verified,
                         )
-                    };
-
-                    if err != eIcicleError::Success {
-                        return Err(err);
+                        .wrap_value(is_verified)
                     }
-
-                    Ok(is_verified)
                 }
 
-                fn get_challenge_vector(&self) -> Result<Vec<$field>, eIcicleError> {
+                fn get_challenge_vector(&self) -> Result<Vec<$field>, IcicleError> {
                     let mut challenge_size = 0usize;
 
-                    let err = unsafe { icicle_sumcheck_get_challenge_size(self.handle, &mut challenge_size) };
+                    unsafe { icicle_sumcheck_get_challenge_size(self.handle, &mut challenge_size).wrap()? };
 
-                    if err != eIcicleError::Success {
-                        return Err(err);
-                    }
                     // Initialize the challenge vector with zeros; will be resized after getting the actual size from FFI
-                    let mut challenge_vector = vec![$field::zero(); challenge_size];
-                    let err = unsafe {
+                    let mut challenge_vector = vec![<$field>::zero(); challenge_size];
+                    unsafe {
                         icicle_sumcheck_get_challenge_vector(
                             self.handle,
                             challenge_vector.as_mut_ptr(),
                             &mut challenge_size,
                         )
-                    };
-
-                    if err != eIcicleError::Success {
-                        return Err(err);
+                        .wrap_value(challenge_vector)
                     }
-
-                    Ok(challenge_vector)
                 }
             }
 
@@ -488,21 +486,17 @@ macro_rules! impl_sumcheck {
 
             /***************** SumcheckProof *************************/
             type SumcheckProofHandle = *const c_void;
-
             pub struct SumcheckProof {
                 pub(crate) handle: SumcheckProofHandle,
             }
 
             impl SumcheckProofOps<$field> for SumcheckProof {
-                fn get_round_polys(&self) -> Result<Vec<Vec<$field>>, eIcicleError> {
+                fn get_round_polys(&self) -> Result<Vec<Vec<$field>>, IcicleError> {
                     let mut poly_size = 0u64;
                     let mut nof_polys = 0u64;
-                    let err =
-                        unsafe { icicle_sumcheck_proof_get_proof_sizes(self.handle, &mut poly_size, &mut nof_polys) };
-
-                    if err != eIcicleError::Success {
-                        return Err(err);
-                    }
+                    unsafe {
+                        icicle_sumcheck_proof_get_proof_sizes(self.handle, &mut poly_size, &mut nof_polys).wrap()?
+                    };
 
                     let mut rounds = Vec::with_capacity(nof_polys as usize);
                     for i in 0..nof_polys {
@@ -513,8 +507,8 @@ macro_rules! impl_sumcheck {
                     Ok(rounds)
                 }
 
-                fn print(&self) -> eIcicleError {
-                    unsafe { icicle_sumcheck_proof_print(self.handle) }
+                fn print(&self) -> Result<(), IcicleError> {
+                    unsafe { icicle_sumcheck_proof_print(self.handle).wrap() }
                 }
             }
 
@@ -617,13 +611,14 @@ macro_rules! impl_sumcheck {
 
 /// Macro to define tests for a specific field.
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_sumcheck_tests {
     (
         $field_prefix_ident: ident,
         $field:ident
     ) => {
         use super::*;
-        use crate::program::$field_prefix_ident::FieldReturningValueProgram as Program;
+        use crate::program::$field_prefix_ident::ReturningValueProgram as Program;
         use icicle_core::sumcheck::tests::*;
         use icicle_hash::keccak::Keccak256;
         use icicle_runtime::{device::Device, runtime, test_utilities};

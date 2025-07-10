@@ -36,6 +36,26 @@ fn main() {
             .define("CURVE", "bw6_761")
             .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
+        // Enable features based on Cargo.toml configuration
+        if cfg!(not(feature = "fri")) {
+            config.define("FRI", "OFF");
+        }
+        if cfg!(not(feature = "g2")) {
+            config.define("G2", "OFF");
+        }
+        if cfg!(not(feature = "msm")) {
+            config.define("MSM", "OFF");
+        }
+        if cfg!(not(feature = "ntt")) {
+            config.define("NTT", "OFF");
+        }
+        if cfg!(not(feature = "poseidon")) {
+            config.define("POSEIDON", "OFF");
+        }
+        if cfg!(not(feature = "poseidon2")) {
+            config.define("POSEIDON2", "OFF");
+        }
+
         // build (or pull and build) cuda backend if feature enabled.
         // Note: this requires access to the repo
         if cfg!(feature = "cuda_backend") {
