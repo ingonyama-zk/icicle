@@ -15,7 +15,7 @@ pub fn ecntt<P: Projective>(
 
 ## Parameters
 
-- **`input`**: The input data as a slice of `Projective`. This represents points on a specific elliptic curve `P`.
+- **`input`**: The input data as a slice of `Projective`. This represents points on a specific elliptic curve.
 - **`dir`**: The direction of the NTT. It can be `NTTDir::kForward` for forward NTT or `NTTDir::kInverse` for inverse NTT.
 - **`cfg`**: The NTT configuration object of type `NTTConfig<C::ScalarField>`. This object specifies parameters for the NTT computation, such as the batch size and algorithm to use.
 - **`output`**: The output buffer to write the results into. This should be a slice of `Projective` with the same size as the input.
