@@ -328,7 +328,7 @@ macro_rules! impl_matrix_ops_tests {
         }
 
         #[test]
-        fn test_matmul_a_transposed() {
+        fn test_matmul_transposed() {
             initialize();
             check_matmul_transposed::<$element_type>();
         }
