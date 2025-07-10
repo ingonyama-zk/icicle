@@ -32,7 +32,10 @@ namespace {
    * @brief Generic CPU matrix multiplication.
    *
    * Each logical matrix element is a vector of `degree` field elements (e.g., a polynomial in evaluation form).
-   * Computes: mat_out = mat_a × mat_b
+   * Computes: mat_out = mat_a × mat_b, with optional transpose flags:
+   *   - If a_transposed is true: mat_out = mat_a^T × mat_b
+   *   - If b_transposed is true: mat_out = mat_a × mat_b^T
+   *   - If both are true: mat_out = mat_a^T × mat_b^T
    *
    * Template Parameters:
    * - Zq: the base field type
@@ -59,8 +62,15 @@ namespace {
       return eIcicleError::INVALID_ARGUMENT;
     }
 
-    if (nof_cols_a != nof_rows_b) {
-      ICICLE_LOG_ERROR << "Matmul: inner dimensions do not match (cols_a != rows_b)";
+    // Handle transpose flags: if a_transposed is true, we compute A^T * B
+    // if b_transposed is true, we compute A * B^T (or A^T * B^T if both are true)
+    uint32_t effective_rows_a = config.a_transposed ? nof_cols_a : nof_rows_a;
+    uint32_t effective_cols_a = config.a_transposed ? nof_rows_a : nof_cols_a;
+    uint32_t effective_rows_b = config.b_transposed ? nof_cols_b : nof_rows_b;
+    uint32_t effective_cols_b = config.b_transposed ? nof_rows_b : nof_cols_b;
+
+    if (effective_cols_a != effective_rows_b) {
+      ICICLE_LOG_ERROR << "Matmul: inner dimensions do not match (effective_cols_a != effective_rows_b)";
       return eIcicleError::INVALID_ARGUMENT;
     }
 
@@ -70,22 +80,40 @@ namespace {
     tf::Executor executor(nof_workers);
 
     // One task per output row
-    for (uint32_t row = 0; row < nof_rows_a; ++row) {
+    for (uint32_t row = 0; row < effective_rows_a; ++row) {
       taskflow.emplace([=]() {
-        for (uint32_t col = 0; col < nof_cols_b; ++col) {
+        for (uint32_t col = 0; col < effective_cols_b; ++col) {
           T acc[degree];
           std::memset(acc, 0, sizeof(acc));
 
-          // Compute dot product of row from A and column from B
-          for (uint32_t k = 0; k < nof_cols_a; ++k) {
-            const scalar_t* a = mat_a + (row * nof_cols_a + k) * degree;
-            const scalar_t* b = mat_b + (k * nof_cols_b + col) * degree;
+          // Compute dot product of row from A (or A^T) and column from B (or B^T)
+          for (uint32_t k = 0; k < effective_cols_a; ++k) {
+            // Adjust indexing for transposed matrix A
+            const T* a;
+            if (config.a_transposed) {
+              // Access A^T: row `row` of A^T is column `row` of A
+              a = mat_a + (k * nof_cols_a + row) * degree;
+            } else {
+              // Access A normally: row `row` of A
+              a = mat_a + (row * nof_cols_a + k) * degree;
+            }
+            
+            // Adjust indexing for transposed matrix B
+            const T* b;
+            if (config.b_transposed) {
+              // Access B^T: column `col` of B^T is row `col` of B
+              b = mat_b + (col * nof_cols_b + k) * degree;
+            } else {
+              // Access B normally: column `col` of B
+              b = mat_b + (k * nof_cols_b + col) * degree;
+            }
+            
             for (uint32_t d = 0; d < degree; ++d) {
               acc[d] = acc[d] + a[d] * b[d];
             }
           }
 
-          scalar_t* out = mat_out + (row * nof_cols_b + col) * degree;
+          T* out = mat_out + (row * effective_cols_b + col) * degree;
           std::memcpy(out, acc, sizeof(T) * degree);
         }
       });
