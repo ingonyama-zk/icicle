@@ -1,8 +1,8 @@
 use crate::polynomial_ring::PolyRing;
-use crate::ring::{ScalarCfg, ScalarRing};
+use crate::ring::ScalarRing;
 use icicle_core::{impl_challenge_space_polynomials_sampling, impl_random_sampling};
 
-impl_random_sampling!("labrador", ScalarRing, ScalarCfg);
+impl_random_sampling!("labrador", ScalarRing);
 impl_challenge_space_polynomials_sampling!("labrador", PolyRing);
 
 #[cfg(test)]

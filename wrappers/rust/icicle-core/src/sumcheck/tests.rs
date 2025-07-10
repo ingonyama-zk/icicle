@@ -1,26 +1,20 @@
+use crate::bignum::BigNum;
 use crate::hash::Hasher;
-use crate::program::{PreDefinedProgram, ReturningValueProgram};
+use crate::program::{PreDefinedProgram, ReturningValueProgramImpl};
+use crate::ring::IntegerRing;
 use crate::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
-use crate::traits::{FieldImpl, GenerateRandom};
+use crate::traits::GenerateRandom;
 use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 /// Tests the `SumcheckTranscriptConfig` struct with different constructors.
-///
-/// This test verifies that both the `new` and `from_string_labels` constructors
-/// correctly initialize the transcript configuration with the provided parameters.
-/// It checks:
-/// - Field initialization
-/// - Label conversion
-/// - Endianness setting
-/// - RNG seed assignment
-pub fn check_sumcheck_transcript_config<F: FieldImpl>(hash: &Hasher)
+pub fn check_sumcheck_transcript_config<F: IntegerRing>(hash: &Hasher)
 where
-    <F as FieldImpl>::Config: GenerateRandom<F>,
+    F: GenerateRandom,
 {
     // Generate a random seed for the test.
-    let seed_rng = F::Config::generate_random(1)[0];
+    let seed_rng = F::generate_random(1)[0];
 
     // Test `new` constructor
     let config1 = SumcheckTranscriptConfig::new(
@@ -69,13 +63,14 @@ where
 pub fn check_sumcheck_simple<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
-    P: ReturningValueProgram,
+    SW::Field: GenerateRandom,
+    P: ReturningValueProgramImpl,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
     let nof_mle_poly = 4;
     // Generate a random seed for the test.
-    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+    let seed_rng = SW::Field::generate_random(1)[0];
 
     // Create a transcript configuration.
     let config = SumcheckTranscriptConfig::new(
@@ -89,11 +84,11 @@ where
 
     let mut mle_polys = Vec::with_capacity(nof_mle_poly);
     for _ in 0..nof_mle_poly {
-        let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+        let mle_poly_random = SW::Field::generate_random(mle_poly_size);
         mle_polys.push(mle_poly_random);
     }
 
-    let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+    let mut claimed_sum = SW::Field::zero();
     for i in 0..mle_poly_size {
         let a = mle_polys[0][i];
         let b = mle_polys[1][i];
@@ -112,14 +107,16 @@ where
     let combine_func = P::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
     let sumcheck_config = SumcheckConfig::default();
     // Generate a proof using the `prove` method.
-    let proof = sumcheck.prove(
-        mle_poly_hosts.as_slice(),
-        mle_poly_size as u64,
-        claimed_sum,
-        combine_func,
-        &config,
-        &sumcheck_config,
-    );
+    let proof = sumcheck
+        .prove(
+            mle_poly_hosts.as_slice(),
+            mle_poly_size as u64,
+            claimed_sum,
+            combine_func,
+            &config,
+            &sumcheck_config,
+        )
+        .unwrap();
     /****** End CPU Proof ******/
 
     /****** Obtain Proof Round Polys ******/
@@ -148,21 +145,22 @@ where
 pub fn check_sumcheck_simple_device<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
-    P: ReturningValueProgram,
+    SW::Field: GenerateRandom,
+    P: ReturningValueProgramImpl,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
     let nof_mle_poly = 4;
 
-    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+    let seed_rng = SW::Field::generate_random(1)[0];
 
     let mut mle_polys = Vec::with_capacity(nof_mle_poly);
     for _ in 0..nof_mle_poly {
-        let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+        let mle_poly_random = SW::Field::generate_random(mle_poly_size);
         mle_polys.push(mle_poly_random);
     }
 
-    let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+    let mut claimed_sum = SW::Field::zero();
     for i in 0..mle_poly_size {
         let a = mle_polys[0][i];
         let b = mle_polys[1][i];
@@ -205,14 +203,16 @@ where
     let combine_func = P::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
     let sumcheck_config = SumcheckConfig::default();
     // Generate a proof using the `prove` method.
-    let proof = sumcheck.prove(
-        device_mle_polys_slice,
-        mle_poly_size as u64,
-        claimed_sum,
-        combine_func,
-        &config,
-        &sumcheck_config,
-    );
+    let proof = sumcheck
+        .prove(
+            device_mle_polys_slice,
+            mle_poly_size as u64,
+            claimed_sum,
+            combine_func,
+            &config,
+            &sumcheck_config,
+        )
+        .unwrap();
     /****** End Device Proof ******/
 
     /****** Obtain Proof Round Polys ******/
@@ -241,13 +241,14 @@ where
 pub fn check_sumcheck_user_defined_combine<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
-    P: ReturningValueProgram,
+    SW::Field: GenerateRandom,
+    P: ReturningValueProgramImpl,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
     let nof_mle_poly = 4;
     // Generate a random seed for the test.
-    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+    let seed_rng = SW::Field::generate_random(1)[0];
 
     // Create a transcript configuration.
     let config = SumcheckTranscriptConfig::new(
@@ -261,17 +262,17 @@ where
 
     let mut mle_polys = Vec::with_capacity(nof_mle_poly);
     for _ in 0..nof_mle_poly {
-        let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+        let mle_poly_random = SW::Field::generate_random(mle_poly_size);
         mle_polys.push(mle_poly_random);
     }
 
-    let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+    let mut claimed_sum = SW::Field::zero();
     for i in 0..mle_poly_size {
         let a = mle_polys[0][i];
         let b = mle_polys[1][i];
         let c = mle_polys[2][i];
         let d = mle_polys[3][i];
-        claimed_sum = claimed_sum + a * b - c * SW::Field::from_u32(2) + d;
+        claimed_sum = claimed_sum + a * b - c * SW::Field::from(2) + d;
     }
 
     let user_combine = |vars: &mut Vec<P::ProgSymbol>| -> P::ProgSymbol {
@@ -279,7 +280,7 @@ where
         let b = vars[1];
         let c = vars[2];
         let d = vars[3];
-        return a * b + d - c * P::Field::from_u32(2);
+        a * b + d - c * P::Ring::from(2)
     };
 
     /****** Begin CPU Proof ******/
@@ -292,14 +293,16 @@ where
     let combine_func = P::new(user_combine, /* nof_parameters = */ 4).unwrap();
     let sumcheck_config = SumcheckConfig::default();
     // Generate a proof using the `prove` method.
-    let proof = sumcheck.prove(
-        mle_poly_hosts.as_slice(),
-        mle_poly_size as u64,
-        claimed_sum,
-        combine_func,
-        &config,
-        &sumcheck_config,
-    );
+    let proof = sumcheck
+        .prove(
+            mle_poly_hosts.as_slice(),
+            mle_poly_size as u64,
+            claimed_sum,
+            combine_func,
+            &config,
+            &sumcheck_config,
+        )
+        .unwrap();
     /****** End CPU Proof ******/
 
     /****** Obtain Proof Round Polys ******/
@@ -327,7 +330,8 @@ where
 pub fn check_sumcheck_proof_serialization<SW, P, S, D, T>(hash: &Hasher, serialize: S, deserialize: D)
 where
     SW: Sumcheck,
-    P: ReturningValueProgram,
+    SW::Field: GenerateRandom,
+    P: ReturningValueProgramImpl,
     SW::Proof: Serialize + DeserializeOwned,
     S: Fn(&SW::Proof) -> T,
     D: Fn(&T) -> SW::Proof,
@@ -336,7 +340,7 @@ where
     let mle_poly_size = 1 << log_mle_poly_size;
     let nof_mle_poly = 4;
     // Generate a random seed for the test.
-    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+    let seed_rng = SW::Field::generate_random(1)[0];
 
     // Create a transcript configuration.
     let config = SumcheckTranscriptConfig::new(
@@ -350,17 +354,17 @@ where
 
     let mut mle_polys = Vec::with_capacity(nof_mle_poly);
     for _ in 0..nof_mle_poly {
-        let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+        let mle_poly_random = SW::Field::generate_random(mle_poly_size);
         mle_polys.push(mle_poly_random);
     }
 
-    let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+    let mut claimed_sum = SW::Field::zero();
     for i in 0..mle_poly_size {
         let a = mle_polys[0][i];
         let b = mle_polys[1][i];
         let c = mle_polys[2][i];
         let d = mle_polys[3][i];
-        claimed_sum = claimed_sum + a * b - c * SW::Field::from_u32(2) + d;
+        claimed_sum = claimed_sum + a * b - c * SW::Field::from(2) + d;
     }
 
     let user_combine = |vars: &mut Vec<P::ProgSymbol>| -> P::ProgSymbol {
@@ -368,7 +372,7 @@ where
         let b = vars[1];
         let c = vars[2];
         let d = vars[3];
-        return a * b + d - c * P::Field::from_u32(2);
+        a * b + d - c * P::Ring::from(2)
     };
 
     /****** Begin CPU Proof ******/
@@ -381,14 +385,16 @@ where
     let combine_func = P::new(user_combine, /* nof_parameters = */ 4).unwrap();
     let sumcheck_config = SumcheckConfig::default();
     // Generate a proof using the `prove` method.
-    let proof = sumcheck.prove(
-        mle_poly_hosts.as_slice(),
-        mle_poly_size as u64,
-        claimed_sum,
-        combine_func,
-        &config,
-        &sumcheck_config,
-    );
+    let proof = sumcheck
+        .prove(
+            mle_poly_hosts.as_slice(),
+            mle_poly_size as u64,
+            claimed_sum,
+            combine_func,
+            &config,
+            &sumcheck_config,
+        )
+        .unwrap();
     /****** End CPU Proof ******/
 
     let proof_round_polys =
@@ -424,7 +430,8 @@ where
 pub fn check_sumcheck_challenge_vector<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
-    P: ReturningValueProgram,
+    SW::Field: GenerateRandom,
+    P: ReturningValueProgramImpl,
 {
     // Create a simple sumcheck instance
     let sumcheck = SW::new().unwrap();
@@ -441,7 +448,7 @@ where
     // Run a simple sumcheck proof to populate the challenge vector
     let log_mle_poly_size = 4u64;
     let mle_poly_size = 1 << log_mle_poly_size;
-    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+    let seed_rng = SW::Field::generate_random(1)[0];
 
     let config = SumcheckTranscriptConfig::new(
         hash,
@@ -453,9 +460,9 @@ where
     );
 
     // Generate three polynomials for A, B, and C
-    let mle_poly_a = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
-    let mle_poly_b = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
-    let mle_poly_c = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+    let mle_poly_a = SW::Field::generate_random(mle_poly_size);
+    let mle_poly_b = SW::Field::generate_random(mle_poly_size);
+    let mle_poly_c = SW::Field::generate_random(mle_poly_size);
 
     // Ensure the polynomials are not empty
     assert!(!mle_poly_a.is_empty(), "MLE polynomial A should not be empty");
@@ -474,9 +481,7 @@ where
         .iter()
         .zip(mle_poly_b.iter())
         .zip(mle_poly_c.iter())
-        .fold(<<SW as Sumcheck>::Field>::zero(), |acc, ((&a, &b), &c)| {
-            acc + (a * b - c)
-        });
+        .fold(<SW as Sumcheck>::Field::zero(), |acc, ((&a, &b), &c)| acc + (a * b - c));
 
     let combine_func = P::new_predefined(PreDefinedProgram::ABminusC).unwrap();
     let sumcheck_config = SumcheckConfig::default();
@@ -509,7 +514,7 @@ where
     // First challenge should be zero (as per sumcheck protocol)
     assert_eq!(
         challenge_vector[0],
-        <<SW as Sumcheck>::Field>::zero(),
+        <SW as Sumcheck>::Field::zero(),
         "First challenge should be zero"
     );
 
@@ -520,7 +525,7 @@ where
         .skip(1)
     {
         assert!(
-            challenge != <<SW as Sumcheck>::Field>::zero(),
+            challenge != <SW as Sumcheck>::Field::zero(),
             "Challenge at index {} should be non-zero",
             i
         );

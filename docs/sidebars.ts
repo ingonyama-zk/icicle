@@ -97,7 +97,11 @@ export default {
         {
           type: "doc",
           id: "start/integration-&-support/migrate_from_v2",
-        },                   
+        },
+        {
+          type: "doc",
+          id: "start/integration-&-support/migrate_from_v3",
+        },
         {
           type: "doc",
           id: "start/integration-&-support/benchmarks",
@@ -300,6 +304,11 @@ export default {
           type: "doc",
           label: "FRI",
           id: "api/rust-bindings/fri",
+        },
+        {
+          type: "doc",
+          label: "Lattice SNARKs",
+          id: "api/rust-bindings/lattice/lattice-snarks",
         },
         {
           type: "doc",

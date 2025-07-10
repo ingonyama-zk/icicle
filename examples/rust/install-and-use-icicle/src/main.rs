@@ -1,7 +1,9 @@
-use icicle_babybear::field::{ScalarCfg, ScalarField};
+use icicle_babybear::field::ScalarField;
 use icicle_core::{
     ntt::{self, get_root_of_unity, initialize_domain, ntt, NTTConfig},
-    traits::{FieldImpl, GenerateRandom},
+    traits::GenerateRandom,
+    field::Field,
+    bignum::BigNum,
 };
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 use icicle_runtime::{self, Device};
@@ -25,7 +27,7 @@ fn main() {
     // Example input (on host memory) for NTT
     let log_ntt_size = 2;
     let ntt_size = 1 << log_ntt_size;
-    let input_cpu = ScalarCfg::generate_random(ntt_size);
+    let input_cpu = ScalarField::generate_random(ntt_size);
 
     // Allocate output on host memory
     let mut output_cpu = vec![ScalarField::zero(); ntt_size];

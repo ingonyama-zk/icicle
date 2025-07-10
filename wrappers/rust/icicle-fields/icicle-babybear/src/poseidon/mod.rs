@@ -1,7 +1,7 @@
-use crate::field::{ScalarCfg, ScalarField};
+use crate::field::ScalarField;
 use icicle_core::impl_poseidon;
 
-impl_poseidon!("babybear", babybear, ScalarField, ScalarCfg);
+impl_poseidon!("babybear", babybear, ScalarField);
 
 #[cfg(test)]
 pub(crate) mod tests {

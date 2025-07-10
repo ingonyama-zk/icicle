@@ -1,16 +1,15 @@
 use crate::polynomial_ring::PolyRing;
-use crate::ring::{ScalarCfg, ScalarCfgRns, ScalarRing, ScalarRingRns};
+use crate::ring::{ScalarRing, ScalarRingRns};
 use icicle_core::ntt::{NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NTT};
 use icicle_core::{
     impl_negacyclic_ntt,
     negacyclic_ntt::{NegacyclicNtt, NegacyclicNttConfig},
 };
 use icicle_core::{impl_ntt, impl_ntt_without_domain};
-use icicle_runtime::errors::eIcicleError;
-use icicle_runtime::memory::HostOrDeviceSlice;
+use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, IcicleError};
 
-impl_ntt!("labrador", labrador, ScalarRing, ScalarCfg);
-impl_ntt!("labrador_rns", labrador_rns, ScalarRingRns, ScalarCfgRns);
+impl_ntt!("labrador", labrador, ScalarRing);
+impl_ntt!("labrador_rns", labrador_rns, ScalarRingRns);
 impl_negacyclic_ntt!("labrador", PolyRing);
 
 #[cfg(test)]

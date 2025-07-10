@@ -1,32 +1,33 @@
 use crate::{
     norm,
-    traits::{FieldImpl, GenerateRandom},
+    ring::IntegerRing,
+    traits::{Arithmetic, GenerateRandom},
     vec_ops::VecOpsConfig,
 };
 
 use icicle_runtime::memory::HostSlice;
 use rand::Rng;
 
-pub fn check_norm<F>()
+pub fn check_norm<T>()
 where
-    F: FieldImpl,
-    F::Config: norm::Norm<F> + GenerateRandom<F>,
+    T: IntegerRing,
+    T: norm::Norm<T> + GenerateRandom + Arithmetic,
 {
     let batch = 5;
     let size = 1 << 10;
     let total_size = batch * size;
 
-    let mut input = vec![F::zero(); total_size];
+    let mut input = vec![T::zero(); total_size];
     let mut input_u128 = vec![0; total_size];
     let mut cfg = VecOpsConfig::default();
     cfg.batch_size = batch as i32;
 
-    let q_mock = 4289678649214369793 as u64;
+    let q_mock = 4289678649214369793_u64;
     let sqrt_q_mock = (q_mock as f64).sqrt() as u32;
 
     for i in 0..total_size {
         let rand_u32 = rand::thread_rng().gen_range(0..=u32::MAX);
-        input[i] = F::from_u32(rand_u32 % sqrt_q_mock);
+        input[i] = T::from(rand_u32 % sqrt_q_mock);
         input_u128[i] = (rand_u32 % sqrt_q_mock) as u128;
     }
 
@@ -40,14 +41,7 @@ where
 
         let mut expected = vec![false; batch];
         let result = HostSlice::from_mut_slice(&mut expected);
-        norm::check_norm_bound(
-            HostSlice::from_slice(&input),
-            norm::NormType::L2,
-            bound.into(),
-            &cfg,
-            result,
-        )
-        .unwrap();
+        norm::check_norm_bound(HostSlice::from_slice(&input), norm::NormType::L2, bound, &cfg, result).unwrap();
 
         assert!(
             result
@@ -71,7 +65,7 @@ where
         norm::check_norm_bound(
             HostSlice::from_slice(&input),
             norm::NormType::LInfinity,
-            bound.into(),
+            bound,
             &cfg,
             result,
         )
