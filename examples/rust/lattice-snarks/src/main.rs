@@ -15,7 +15,7 @@ use icicle_core::{
     vec_ops,
     vec_ops::{poly_vecops, VecOpsConfig},
 };
-use icicle_labrador::{
+use icicle_babykoala::{
     polynomial_ring::PolyRing, // polynomial ring type Zq[X]/X^64+1
     ring::ScalarRing as Zq,    // the scalar integer ring Zq (q~64b)
 };
