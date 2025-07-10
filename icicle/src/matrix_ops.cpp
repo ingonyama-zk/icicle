@@ -1,4 +1,5 @@
 #include "icicle/backend/vec_ops_backend.h"
+#include "icicle/backend/mat_ops_backend.h"
 #include "icicle/dispatcher.h"
 
 namespace icicle {
@@ -13,7 +14,7 @@ namespace icicle {
     const scalar_t* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
-    const VecOpsConfig* config,
+    const MatMulConfig* config,
     scalar_t* mat_out)
   {
     return MatrixMultiplicationDispatcher::execute(
@@ -28,11 +29,11 @@ namespace icicle {
     const scalar_t* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
-    const VecOpsConfig& config,
+    const MatMulConfig& config,
     scalar_t* mat_out)
   {
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, matmul)(
-      mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
+    return MatrixMultiplicationDispatcher::execute(
+      mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, config, mat_out);
   }
 
 #ifdef RING
@@ -45,7 +46,7 @@ namespace icicle {
     const PolyRing* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
-    const VecOpsConfig* config,
+    const MatMulConfig* config,
     PolyRing* mat_out)
   {
     return PolyRingMatrixMultiplicationDispatcher::execute(
@@ -60,7 +61,7 @@ namespace icicle {
     const PolyRing* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
-    const VecOpsConfig& config,
+    const MatMulConfig& config,
     PolyRing* mat_out)
   {
     return CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matmul)(
