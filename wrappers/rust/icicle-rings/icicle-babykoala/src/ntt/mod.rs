@@ -8,9 +8,9 @@ use icicle_core::{
 use icicle_core::{impl_ntt, impl_ntt_without_domain};
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, IcicleError};
 
-impl_ntt!("labrador", labrador, ScalarRing);
-impl_ntt!("labrador_rns", labrador_rns, ScalarRingRns);
-impl_negacyclic_ntt!("labrador", PolyRing);
+impl_ntt!("babykoala", babykoala, ScalarRing);
+impl_ntt!("babykoala_rns", babykoala_rns, ScalarRingRns);
+impl_negacyclic_ntt!("babykoala", PolyRing);
 
 #[cfg(test)]
 pub(crate) mod tests {

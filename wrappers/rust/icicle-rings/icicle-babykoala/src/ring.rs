@@ -4,11 +4,11 @@ use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStre
 
 pub(crate) const SCALAR_LIMBS: usize = 2;
 
-impl_integer_ring!(ScalarRing, "labrador", SCALAR_LIMBS);
-impl_montgomery_convertible!(ScalarRing, "labrador_scalar_convert_montgomery");
+impl_integer_ring!(ScalarRing, "babykoala", SCALAR_LIMBS);
+impl_montgomery_convertible!(ScalarRing, "babykoala_scalar_convert_montgomery");
 
-impl_integer_ring!(ScalarRingRns, "labrador_rns", SCALAR_LIMBS);
-impl_montgomery_convertible!(ScalarRingRns, "labrador_rns_scalar_convert_montgomery");
+impl_integer_ring!(ScalarRingRns, "babykoala_rns", SCALAR_LIMBS);
+impl_montgomery_convertible!(ScalarRingRns, "babykoala_rns_scalar_convert_montgomery");
 
 #[cfg(test)]
 mod tests {
