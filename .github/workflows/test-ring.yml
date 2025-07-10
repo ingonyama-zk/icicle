@@ -97,7 +97,7 @@ jobs:
       matrix:
         include:
           - ring:
-              name: labrador
+              name: babykoala
               rust-supported-features: ["ntt"]
               go-supported-features: ["ntt"]
     steps:
