@@ -35,91 +35,169 @@ impl VecOpsConfig {
 }
 
 #[doc(hidden)]
-pub trait VecOps<T> {
+pub trait VecAdd<T> {
     fn add(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
         b: &(impl HostOrDeviceSlice<T> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecAdd::add not implemented for this type")
+    }
+}
 
+#[doc(hidden)]
+pub trait VecAccumulate<T> {
     fn accumulate(
         a: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         b: &(impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecAccumulate::accumulate not implemented for this type")
+    }
+}
 
+#[doc(hidden)]
+pub trait VecSub<T> {
     fn sub(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
         b: &(impl HostOrDeviceSlice<T> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecSub::sub not implemented for this type")
+    }
+}
 
+#[doc(hidden)]
+pub trait VecMul<T> {
     fn mul(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
         b: &(impl HostOrDeviceSlice<T> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecMul::mul not implemented for this type")
+    }
+}
 
+#[doc(hidden)]
+pub trait VecDiv<T> {
     fn div(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
         b: &(impl HostOrDeviceSlice<T> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecDiv::div not implemented for this type")
+    }
+}
 
+#[doc(hidden)]
+pub trait VecInv<T> {
     fn inv(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecInv::inv not implemented for this type")
+    }
+}
 
+#[doc(hidden)]
+pub trait VecSum<T> {
     fn sum(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecSum::sum not implemented for this type")
+    }
+}
 
+#[doc(hidden)]
+pub trait VecProduct<T> {
     fn product(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecProduct::product not implemented for this type")
+    }
+}
 
+#[doc(hidden)]
+pub trait VecScalarAdd<T> {
     fn scalar_add(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
         b: &(impl HostOrDeviceSlice<T> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecScalarAdd::scalar_add not implemented for this type")
+    }
+}
 
+#[doc(hidden)]
+pub trait VecScalarSub<T> {
     fn scalar_sub(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
         b: &(impl HostOrDeviceSlice<T> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecScalarSub::scalar_sub not implemented for this type")
+    }
+}
 
+#[doc(hidden)]
+pub trait VecScalarMul<T> {
     fn scalar_mul(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
         b: &(impl HostOrDeviceSlice<T> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecScalarMul::scalar_mul not implemented for this type")
+    }
+}
 
+#[doc(hidden)]
+pub trait VecScalar<T>: VecScalarAdd<T> + VecScalarSub<T> + VecScalarMul<T> {}
+
+#[doc(hidden)]
+pub trait VecBitReverse<T> {
     fn bit_reverse(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecBitReverse::bit_reverse not implemented for this type")
+    }
 
     fn bit_reverse_inplace(
         input: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecBitReverse::bit_reverse_inplace not implemented for this type")
+    }
+}
 
+#[doc(hidden)]
+pub trait VecSlice<T> {
     fn slice(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         offset: u64,
@@ -128,7 +206,26 @@ pub trait VecOps<T> {
         size_out: u64,
         cfg: &VecOpsConfig,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    ) -> Result<(), IcicleError>;
+    ) -> Result<(), IcicleError> {
+        // Default implementation - this should be overridden by specific implementations
+        unimplemented!("VecSlice::slice not implemented for this type")
+    }
+}
+
+#[doc(hidden)]
+pub trait VecOps<T>: 
+    VecAdd<T> + 
+    VecAccumulate<T> + 
+    VecSub<T> + 
+    VecMul<T> + 
+    VecDiv<T> + 
+    VecInv<T> + 
+    VecSum<T> + 
+    VecProduct<T> + 
+    VecScalar<T> + 
+    VecBitReverse<T> + 
+    VecSlice<T> 
+{
 }
 
 #[doc(hidden)]
@@ -272,49 +369,49 @@ fn setup_config<F, T>(
     Ok(res_cfg)
 }
 
-pub fn add_scalars<T: IntegerRing + VecOps<T>>(
+pub fn add_scalars<T: IntegerRing + VecAdd<T>>(
     a: &(impl HostOrDeviceSlice<T> + ?Sized),
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), IcicleError> {
     let cfg = check_vec_ops_args(a, b, result, cfg)?;
-    <T as VecOps<T>>::add(a, b, result, &cfg)
+    <T as VecAdd<T>>::add(a, b, result, &cfg)
 }
 
-pub fn accumulate_scalars<T: IntegerRing + VecOps<T>>(
+pub fn accumulate_scalars<T: IntegerRing + VecAccumulate<T>>(
     a: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), IcicleError> {
     let cfg = check_vec_ops_args(a, b, a, cfg)?;
-    <T as VecOps<T>>::accumulate(a, b, &cfg)
+    <T as VecAccumulate<T>>::accumulate(a, b, &cfg)
 }
 
-pub fn sub_scalars<T: IntegerRing + VecOps<T>>(
+pub fn sub_scalars<T: IntegerRing + VecSub<T>>(
     a: &(impl HostOrDeviceSlice<T> + ?Sized),
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), IcicleError>
 where
-    T: IntegerRing + VecOps<T>,
+    T: IntegerRing + VecSub<T>,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg)?;
-    <T as VecOps<T>>::sub(a, b, result, &cfg)
+    <T as VecSub<T>>::sub(a, b, result, &cfg)
 }
 
-pub fn mul_scalars<T: IntegerRing + VecOps<T>>(
+pub fn mul_scalars<T: IntegerRing + VecMul<T>>(
     a: &(impl HostOrDeviceSlice<T> + ?Sized),
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), IcicleError>
 where
-    T: IntegerRing + VecOps<T>,
+    T: IntegerRing + VecMul<T>,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg)?;
-    <T as VecOps<T>>::mul(a, b, result, &cfg)
+    <T as VecMul<T>>::mul(a, b, result, &cfg)
 }
 
 pub fn mixed_mul_scalars<F, T>(
@@ -331,94 +428,94 @@ where
     <F as MixedVecOps<T, F>>::mul(a, b, result, &cfg)
 }
 
-pub fn div_scalars<T: IntegerRing + VecOps<T>>(
+pub fn div_scalars<T: IntegerRing + VecDiv<T>>(
     a: &(impl HostOrDeviceSlice<T> + ?Sized),
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), IcicleError>
 where
-    T: IntegerRing + VecOps<T>,
+    T: IntegerRing + VecDiv<T>,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg)?;
-    <T as VecOps<T>>::div(a, b, result, &cfg)
+    <T as VecDiv<T>>::div(a, b, result, &cfg)
 }
 
-pub fn inv_scalars<T: IntegerRing + VecOps<T>>(
+pub fn inv_scalars<T: IntegerRing + VecInv<T>>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), IcicleError> {
     let cfg = check_vec_ops_args(input, input, output, cfg)?;
-    <T as VecOps<T>>::inv(input, output, &cfg)
+    <T as VecInv<T>>::inv(input, output, &cfg)
 }
 
-pub fn sum_scalars<T: IntegerRing + VecOps<T>>(
+pub fn sum_scalars<T: IntegerRing + VecSum<T>>(
     a: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), IcicleError> {
     let cfg = check_vec_ops_args_reduction_ops(a, result, cfg)?;
-    <T as VecOps<T>>::sum(a, result, &cfg)
+    <T as VecSum<T>>::sum(a, result, &cfg)
 }
 
-pub fn product_scalars<T: IntegerRing + VecOps<T>>(
+pub fn product_scalars<T: IntegerRing + VecProduct<T>>(
     a: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), IcicleError> {
     let cfg = check_vec_ops_args_reduction_ops(a, result, cfg)?;
-    <T as VecOps<T>>::product(a, result, &cfg)
+    <T as VecProduct<T>>::product(a, result, &cfg)
 }
 
-pub fn scalar_add<T: IntegerRing + VecOps<T>>(
+pub fn scalar_add<T: IntegerRing + VecScalarAdd<T>>(
     a: &(impl HostOrDeviceSlice<T> + ?Sized),
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), IcicleError> {
     let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg)?;
-    <T as VecOps<T>>::scalar_add(a, b, result, &cfg)
+    <T as VecScalarAdd<T>>::scalar_add(a, b, result, &cfg)
 }
 
-pub fn scalar_sub<T: IntegerRing + VecOps<T>>(
+pub fn scalar_sub<T: IntegerRing + VecScalarSub<T>>(
     a: &(impl HostOrDeviceSlice<T> + ?Sized),
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), IcicleError> {
     let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg)?;
-    <T as VecOps<T>>::scalar_sub(a, b, result, &cfg)
+    <T as VecScalarSub<T>>::scalar_sub(a, b, result, &cfg)
 }
 
-pub fn scalar_mul<T: IntegerRing + VecOps<T>>(
+pub fn scalar_mul<T: IntegerRing + VecScalarMul<T>>(
     a: &(impl HostOrDeviceSlice<T> + ?Sized),
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), IcicleError> {
     let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg)?;
-    <T as VecOps<T>>::scalar_mul(a, b, result, &cfg)
+    <T as VecScalarMul<T>>::scalar_mul(a, b, result, &cfg)
 }
 
-pub fn bit_reverse<T: IntegerRing + VecOps<T>>(
+pub fn bit_reverse<T: IntegerRing + VecBitReverse<T>>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), IcicleError> {
     let cfg = check_vec_ops_args(input, input /*dummy*/, output, cfg)?;
-    <T as VecOps<T>>::bit_reverse(input, &cfg, output)
+    <T as VecBitReverse<T>>::bit_reverse(input, &cfg, output)
 }
 
-pub fn bit_reverse_inplace<T: IntegerRing + VecOps<T>>(
+pub fn bit_reverse_inplace<T: IntegerRing + VecBitReverse<T>>(
     input: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), IcicleError> {
     let cfg = check_vec_ops_args(input, input /*dummy*/, input, cfg)?;
-    <T as VecOps<T>>::bit_reverse_inplace(input, &cfg)
+    <T as VecBitReverse<T>>::bit_reverse_inplace(input, &cfg)
 }
 
-pub fn slice<T: IntegerRing + VecOps<T>>(
+pub fn slice<T: IntegerRing + VecSlice<T>>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     offset: u64,
     stride: u64,
@@ -428,7 +525,7 @@ pub fn slice<T: IntegerRing + VecOps<T>>(
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), IcicleError> {
     let cfg = check_vec_ops_args_slice(input, offset, stride, size_in, size_out, output, cfg)?;
-    <T as VecOps<T>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
+    <T as VecSlice<T>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
 #[macro_export]
@@ -562,7 +659,7 @@ macro_rules! impl_vec_ops_field {
             }
         }
 
-        impl VecOps<$field> for $field {
+        impl VecAdd<$field> for $field {
             fn add(
                 a: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 b: &(impl HostOrDeviceSlice<Self> + ?Sized),
@@ -580,7 +677,9 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+        }
 
+        impl VecAccumulate<$field> for $field {
             fn accumulate(
                 a: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
                 b: &(impl HostOrDeviceSlice<Self> + ?Sized),
@@ -596,7 +695,9 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+        }
 
+        impl VecSub<$field> for $field {
             fn sub(
                 a: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 b: &(impl HostOrDeviceSlice<Self> + ?Sized),
@@ -614,7 +715,9 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+        }
 
+        impl VecMul<$field> for $field {
             fn mul(
                 a: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 b: &(impl HostOrDeviceSlice<Self> + ?Sized),
@@ -632,7 +735,9 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+        }
 
+        impl VecDiv<$field> for $field {
             fn div(
                 a: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 b: &(impl HostOrDeviceSlice<Self> + ?Sized),
@@ -650,7 +755,9 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+        }
 
+        impl VecInv<$field> for $field {
             fn inv(
                 input: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
@@ -666,7 +773,9 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+        }
 
+        impl VecSum<$field> for $field {
             fn sum(
                 a: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
@@ -682,7 +791,9 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+        }
 
+        impl VecProduct<$field> for $field {
             fn product(
                 a: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
@@ -698,7 +809,9 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+        }
 
+        impl VecScalarAdd<$field> for $field {
             fn scalar_add(
                 a: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 b: &(impl HostOrDeviceSlice<Self> + ?Sized),
@@ -716,7 +829,9 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+        }
 
+        impl VecScalarSub<$field> for $field {
             fn scalar_sub(
                 a: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 b: &(impl HostOrDeviceSlice<Self> + ?Sized),
@@ -734,7 +849,9 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+        }
 
+        impl VecScalarMul<$field> for $field {
             fn scalar_mul(
                 a: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 b: &(impl HostOrDeviceSlice<Self> + ?Sized),
@@ -752,7 +869,9 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+        }
 
+        impl VecBitReverse<$field> for $field {
             fn bit_reverse(
                 input: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 cfg: &VecOpsConfig,
@@ -783,7 +902,9 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+        }
 
+        impl VecSlice<$field> for $field {
             fn slice(
                 input: &(impl HostOrDeviceSlice<Self> + ?Sized),
                 offset: u64,
@@ -807,6 +928,13 @@ macro_rules! impl_vec_ops_field {
                 }
             }
         }
+
+        // Implement the combined VecScalar trait
+        impl VecScalar<$field> for $field {}
+
+        // Implement the combined VecOps trait
+        impl VecOps<$field> for $field {}
+
     };
 }
 
