@@ -199,10 +199,7 @@ macro_rules! impl_matrix_ops {
                             eIcicleError::InvalidArgument,
                             format!(
                                 "Matrix dimensions incompatible for multiplication: A is {} × {}, B is {} × {}",
-                                nof_rows_a,
-                                nof_cols_a,
-                                nof_rows_b,
-                                nof_cols_b
+                                nof_rows_a, nof_cols_a, nof_rows_b, nof_cols_b
                             ),
                         ));
                     }
@@ -245,7 +242,6 @@ macro_rules! impl_matrix_ops {
                     cfg_clone.is_a_on_device = a.is_on_device();
                     cfg_clone.is_b_on_device = b.is_on_device();
                     cfg_clone.is_result_on_device = result.is_on_device();
-
 
                     unsafe {
                         matmul_ffi(

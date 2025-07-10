@@ -1,5 +1,5 @@
 use crate::{
-    matrix_ops::{matmul, matrix_transpose, MatrixOps, MatMulConfig},
+    matrix_ops::{matmul, matrix_transpose, MatMulConfig, MatrixOps},
     traits::GenerateRandom,
     vec_ops::VecOpsConfig,
 };
@@ -8,8 +8,6 @@ use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
     test_utilities,
 };
-
-
 
 /// Ensure host memory and device memory behaviour matches.
 /// We test the following compibations
@@ -258,7 +256,7 @@ where
 }
 
 /// Validates that the `a_is_transposed` flag works correctly for the first input matrix.
-/// 
+///
 /// This test performs the following operations:
 /// 1. Creates matrices A and B
 /// 2. Computes A * B with `a_is_transposed = false`
@@ -281,17 +279,17 @@ where
     let n = 1 << 3; // 16 rows for A
     let m = 1 << 3; // 8 cols for A, 8 rows for B
     let k = 1 << 4; // 8 cols for B
-    
+
     let input_a = P::generate_random(n * m); // A is n x m
     let input_b = P::generate_random(m * k); // B is m x k
-    
+
     let test_single_device = |main_device: bool| {
         if main_device {
             test_utilities::test_set_main_device();
         } else {
             test_utilities::test_set_ref_device();
         }
-        
+
         // Case 1: Regular matmul A * B (n x m) * (m x k) = (n x k)
         let mut output_regular = vec![P::default(); n * k];
         matmul(
@@ -305,7 +303,7 @@ where
             HostSlice::from_mut_slice(&mut output_regular),
         )
         .unwrap();
-        
+
         // Case 2: Matmul with a_is_transposed = true
         // This should compute A^T * B where A^T is (m x n) * (m x k) = (n x k)
         // Note: when a_is_transposed is true, we need to swap the dimensions for A
@@ -321,7 +319,7 @@ where
             HostSlice::from_mut_slice(&mut output_transposed_flag),
         )
         .unwrap();
-        
+
         // Case 3: Manually transpose A and then do regular matmul
         let mut a_transposed = vec![P::default(); n * m];
         matrix_transpose(
@@ -332,7 +330,7 @@ where
             HostSlice::from_mut_slice(&mut a_transposed),
         )
         .unwrap();
-        
+
         let mut output_manual_transpose = vec![P::default(); n * k];
         matmul(
             HostSlice::from_slice(&a_transposed),
@@ -345,23 +343,27 @@ where
             HostSlice::from_mut_slice(&mut output_manual_transpose),
         )
         .unwrap();
-        
+
         // Verify that using the flag produces the same result as manual transpose
-        assert_eq!(output_transposed_flag, output_manual_transpose, 
-                   "Results should match between using a_is_transposed flag and manual transpose");
-        
+        assert_eq!(
+            output_transposed_flag, output_manual_transpose,
+            "Results should match between using a_is_transposed flag and manual transpose"
+        );
+
         // Verify that the results are different when transpose flag is used vs not used
         // (unless by coincidence, which is extremely unlikely with random data)
-        assert_ne!(output_regular, output_transposed_flag, 
-                   "Results should be different when a_is_transposed flag is set vs not set");
-                   
+        assert_ne!(
+            output_regular, output_transposed_flag,
+            "Results should be different when a_is_transposed flag is set vs not set"
+        );
+
         output_transposed_flag
     };
-    
+
     // Test on both main and reference devices
     let device_out = test_single_device(true);
     let ref_out = test_single_device(false);
-    
+
     // Results should be consistent across devices
     assert_eq!(device_out, ref_out);
 }
