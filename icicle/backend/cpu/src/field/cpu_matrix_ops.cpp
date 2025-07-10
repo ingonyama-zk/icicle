@@ -1,9 +1,11 @@
 #include "icicle/backend/vec_ops_backend.h"
+#include "icicle/backend/mat_ops_backend.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
 #include "icicle/utils/log.h"
 
 #include "icicle/fields/field_config.h"
+#include "icicle/mat_ops.h"
 #include "taskflow/taskflow.hpp"
 #include <cmath>
 #include <cstdint>
@@ -13,6 +15,14 @@
 
 // Extract number of threads to run from configuration
 int get_nof_workers(const VecOpsConfig& config); // defined in cpu_vec_ops.cpp
+
+// Extract number of threads to run from MatmulConfig
+int get_nof_workers(const MatMulConfig& config)
+{
+  if (config.ext && config.ext->has("n_threads")) { return config.ext->get<int>("n_threads"); }
+  const int hw_threads = std::thread::hardware_concurrency();
+  return std::max(1, hw_threads);
+}
 
 namespace {
   using namespace field_config;
@@ -36,7 +46,7 @@ namespace {
     const T* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
-    const VecOpsConfig& config,
+    const MatMulConfig& config,
     T* mat_out)
   {
     if (!mat_a || !mat_b || !mat_out || nof_rows_a == 0 || nof_cols_a == 0 || nof_rows_b == 0 || nof_cols_b == 0) {
@@ -101,7 +111,7 @@ namespace {
     const T* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
-    const VecOpsConfig& config,
+    const MatMulConfig& config,
     T* mat_out)
   {
     using Zq = typename T::Base;
@@ -124,7 +134,7 @@ namespace {
     const T* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
-    const VecOpsConfig& config,
+    const MatMulConfig& config,
     T* mat_out)
   {
     return cpu_matmul_internal<T, 1>(mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, config, mat_out);
@@ -325,13 +335,13 @@ namespace {
 } // namespace
 
 // === Registration with runtime ===
-REGISTER_MATMUL_BACKEND("CPU", cpu_matmul<scalar_t>);
-REGISTER_MATRIX_TRANSPOSE_BACKEND("CPU", cpu_matrix_transpose<scalar_t>);
+REGISTER_MATMUL_BACKEND("CPU", cpu_matmul<field_config::scalar_t>);
+REGISTER_MATRIX_TRANSPOSE_BACKEND("CPU", cpu_matrix_transpose<field_config::scalar_t>);
 #ifdef EXT_FIELD
-REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND("CPU", (cpu_matrix_transpose<extension_t>));
+REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND("CPU", (cpu_matrix_transpose<field_config::extension_t>));
 #endif
 #ifdef RING
-REGISTER_POLY_RING_MATMUL_BACKEND("CPU", (cpu_matmul_polynomial_ring<PolyRing>));
-REGISTER_MATRIX_TRANSPOSE_RING_RNS_BACKEND("CPU", cpu_matrix_transpose<scalar_rns_t>);
-REGISTER_MATRIX_TRANSPOSE_POLY_RING_BACKEND("CPU", cpu_matrix_transpose<PolyRing>);
+REGISTER_POLY_RING_MATMUL_BACKEND("CPU", (cpu_matmul_polynomial_ring<field_config::PolyRing>));
+REGISTER_MATRIX_TRANSPOSE_RING_RNS_BACKEND("CPU", cpu_matrix_transpose<field_config::scalar_rns_t>);
+REGISTER_MATRIX_TRANSPOSE_POLY_RING_BACKEND("CPU", cpu_matrix_transpose<field_config::PolyRing>);
 #endif
