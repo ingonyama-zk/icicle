@@ -1,5 +1,5 @@
 [package]
-name = "icicle-labrador"
+name = "icicle-babykoala"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

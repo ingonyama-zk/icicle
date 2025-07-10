@@ -2,8 +2,8 @@ use crate::polynomial_ring::PolyRing;
 use crate::ring::ScalarRing;
 use icicle_core::{impl_challenge_space_polynomials_sampling, impl_random_sampling};
 
-impl_random_sampling!("labrador", ScalarRing);
-impl_challenge_space_polynomials_sampling!("labrador", PolyRing);
+impl_random_sampling!("babykoala", ScalarRing);
+impl_challenge_space_polynomials_sampling!("babykoala", PolyRing);
 
 #[cfg(test)]
 pub(crate) mod tests {

@@ -2,8 +2,8 @@ use crate::{polynomial_ring::PolyRing, ring::ScalarRing};
 use icicle_core::impl_jl_projection;
 use icicle_core::impl_jl_projection_as_polyring;
 
-impl_jl_projection!("labrador", ScalarRing);
-impl_jl_projection_as_polyring!("labrador", PolyRing);
+impl_jl_projection!("babykoala", ScalarRing);
+impl_jl_projection_as_polyring!("babykoala", PolyRing);
 
 #[cfg(test)]
 pub(crate) mod tests {

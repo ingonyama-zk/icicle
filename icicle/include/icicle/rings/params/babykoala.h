@@ -12,7 +12,7 @@
 // Polynomial ring (Rq, Tq)
 #include "icicle/rings/polynomial_ring.h"
 
-namespace labrador {
+namespace babykoala {
 
   /**
    * @brief Configuration for the integer ring Z_q where q = P_bb * P_kb.
@@ -21,7 +21,6 @@ namespace labrador {
    *  - BabyBear: P_bb
    *  - KoalaBear: P_kb
    *
-   * This ring is used as the base ring for all polynomial and cryptographic operations in Labrador.
    */
   struct zq_config {
     static constexpr storage<2> modulus = {0xf7000001, 0x3b880000}; ///< q = Pbb * Pkb
@@ -77,4 +76,4 @@ namespace labrador {
 
   using Rq = PolyRing;
 
-} // namespace labrador
+} // namespace babykoala
