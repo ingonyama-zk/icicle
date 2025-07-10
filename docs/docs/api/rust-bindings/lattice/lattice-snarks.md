@@ -1,7 +1,6 @@
-// TODO: verify examples compile and work correctly before merging!
-//       They worked when this doc was written, but depend on V4 redesign
 
 // TODO: replace labrador with the final name that
+// TODO: update matmul after Lisa Merge
 
 # Lattice-Based SNARKs — Rust API Overview
 
@@ -62,7 +61,7 @@ q = P_babybear × P_koalabear
 #### Example
 
 ```rust
-use icicle_core::traits::{FieldImpl, GenerateRandom};
+use icicle_core::{bignum::BigNum, traits::GenerateRandom};
 use icicle_labrador::ring::ScalarRing as Zq;
 
 // Generate random Zq elements
@@ -70,7 +69,7 @@ let size = 100;
 let zq_random: Vec<Zq> = Zq::generate_random(size);
 
 // Generate zeros Zq elements
-let zq_zeros: Vec<Zq> = vec![Zq::zero(); size];
+let zq_zeros: Vec<Zq> = vec![Zq::default(); size];
 
 // Generate elements from arbitrary bytes
 let element_size = std::mem::size_of::<Zq>();
@@ -88,21 +87,23 @@ The polynomial ring `Rq = Zq[X]/(X^d + 1)` represents polynomials of degree less
 #### Example
 
 ```rust
-use icicle_core::polynomial_ring::PolynomialRing; // trait
-use icicle_core::traits::{FieldImpl, GenerateRandom};
+use icicle_core::{polynomial_ring::PolynomialRing, traits::GenerateRandom}; // traits
 use icicle_labrador::polynomial_ring::PolyRing as Rq; // concrete type
-use icicle_labrador::ring::ScalarRing as Zq;
+use icicle_labrador::ring::ScalarRing as Zq; // concrete type
+use icicle_runtime::IcicleError;
 
 // Generate random polynomials
 let size = 8;
 let rq_random: Vec<Rq> = Rq::generate_random(size);
-let rq_zeros: Vec<Rq> = vec![Rq::zero(); size];
+let rq_zeros: Vec<Rq> = vec![Rq::default(); size];
 
 // Convert Zq chunks to Rq polynomials
-let zq_zeros: Vec<Zq> = vec![Zq::zero(); size * Rq::DEGREE];
+let zq_zeros: Vec<Zq> = vec![Zq::default(); size * Rq::DEGREE];
+let unwrap = |result: Result<_, IcicleError>| result.unwrap();
 let rq_from_slice: Vec<Rq> = zq_zeros
     .chunks(Rq::DEGREE)
     .map(Rq::from_slice)
+    .map(unwrap)
     .collect();
 
 // Or from arbitrary bytes
@@ -152,7 +153,7 @@ pub fn flatten_polyring_slice_mut<'a, P>(
 ) -> impl HostOrDeviceSlice<P::Base> + 'a
 where
     P: PolynomialRing,
-    P::Base: FieldImpl + 'a,
+    P::Base: 'a,
 {
     unsafe { reinterpret_slice_mut::<P, P::Base>(input).expect("Invalid slice cast") }
 }
@@ -165,7 +166,7 @@ These helpers use the general **reinterpret_slice** utility, which reinterprets 
 #### Example
 
 ```rust
-use icicle_core::polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut};
+use icicle_core::polynomial_ring::flatten_polyring_slice; // or flatten_polyring_slice_mut
 use icicle_core::traits::GenerateRandom;
 use icicle_labrador::polynomial_ring::PolyRing as Rq;
 use icicle_runtime::memory::HostSlice; // concrete type
@@ -213,9 +214,7 @@ pub fn ntt<P: PolynomialRing + NegacyclicNtt<P>>(
     dir: NTTDir,
     cfg: &NegacyclicNttConfig,
     output: &mut (impl HostOrDeviceSlice<P> + ?Sized),
-) -> Result<(), eIcicleError> {
-    P::ntt(input, dir, cfg, output)
-}
+) -> Result<(), IcicleError>;
 ```
 
 ### Inplace NTT API
@@ -233,7 +232,7 @@ pub fn ntt_inplace<P: PolynomialRing + NegacyclicNtt<P>>(
     inout: &mut (impl HostOrDeviceSlice<P> + ?Sized),
     dir: NTTDir,
     cfg: &NegacyclicNttConfig,
-) -> Result<(), eIcicleError> {
+) -> Result<(), IcicleError> {
     P::ntt_inplace(inout, dir, cfg)
 }
 ```
@@ -307,7 +306,9 @@ pub fn matmul<T>(
     b_cols: u32,
     cfg: &VecOpsConfig,
     result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>
+where
+    T: MatrixOps<T>;
 ```
 
 ### Matrix transpose API
@@ -323,15 +324,20 @@ pub fn matrix_transpose<T>(
     nof_rows: u32,
     nof_cols: u32,
     cfg: &VecOpsConfig,
-    result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>;
+    output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+) -> Result<(), IcicleError>
+where
+    T: MatrixOps<T>;
 ```
 
 ### Example
 
 ```rust
-use icicle_core::matrix_ops::{matmul, matrix_transpose, VecOpsConfig};
 use icicle_core::traits::GenerateRandom;
+use icicle_core::{
+    matrix_ops::{matmul, matrix_transpose},
+    vec_ops::VecOpsConfig,
+};
 use icicle_labrador::polynomial_ring::PolyRing;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 
@@ -347,10 +353,7 @@ let mut device_a_transposed =
     DeviceVec::<PolyRing>::device_malloc((n * m) as usize).expect("Failed to allocate transpose output");
 
 // Transpose Aᵗ = transpose(A) (from host memory to device memory)
-matrix_transpose(
-    HostSlice::from_slice(&host_a), n, m,
-    &cfg,
-    &mut device_a_transposed).expect("Transpose failed");
+matrix_transpose(HostSlice::from_slice(&host_a), n, m, &cfg, &mut device_a_transposed).expect("Transpose failed");
 
 // Allocate output buffer for (Aᵗ)A ∈ [m × m]
 let mut device_a_transposed_a =
@@ -359,10 +362,16 @@ let mut device_a_transposed_a =
 // Compute (Aᵗ)A
 // Note that one matrix is on host memory and the other on device memory
 matmul(
-    &device_a_transposed, m, n,
-    HostSlice::from_slice(&host_a), n, m,
+    &device_a_transposed,
+    m,
+    n,
+    HostSlice::from_slice(&host_a),
+    n,
+    m,
     &cfg,
-    &mut device_a_transposed_a).expect("Matmul failed");
+    &mut device_a_transposed_a,
+)
+.expect("Matmul failed");
 ```
 
 ## Polynomial Ring Vector Operations
@@ -387,7 +396,10 @@ pub fn polyvec_mul_by_scalar<P>(
     input_scalarvec: &(impl HostOrDeviceSlice<P::Base> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>
+where
+    P: PolynomialRing,
+    P::Base: VecOps<P::Base>;
 ```
 
 ```rust
@@ -397,7 +409,10 @@ pub fn polyvec_mul<P>(
     input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>
+where
+    P: PolynomialRing,
+    P::Base: VecOps<P::Base>;
 ```
 
 ```rust
@@ -407,7 +422,10 @@ pub fn polyvec_add<P>(
     input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>
+where
+    P: PolynomialRing,
+    P::Base: VecOps<P::Base>;
 ```
 
 ```rust
@@ -417,7 +435,10 @@ pub fn polyvec_sub<P>(
     input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>
+where
+    P: PolynomialRing,
+    P::Base: VecOps<P::Base>;
 ```
 
 ```rust
@@ -426,15 +447,21 @@ pub fn polyvec_sum_reduce<P>(
     input_polyvec: &(impl HostOrDeviceSlice<P> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>
+where
+    P: PolynomialRing,
+    P::Base: VecOps<P::Base>;
 ```
 
 ### Example
 
 ```rust
 use icicle_core::polynomial_ring::PolynomialRing;
-use icicle_core::traits::{FieldImpl, GenerateRandom};
-use icicle_core::vec_ops::poly_vecops::{polyvec_mul_by_scalar, polyvec_sum_reduce, VecOpsConfig};
+use icicle_core::traits::GenerateRandom;
+use icicle_core::vec_ops::{
+    poly_vecops::{polyvec_mul_by_scalar, polyvec_sum_reduce},
+    VecOpsConfig,
+};
 use icicle_labrador::polynomial_ring::PolyRing as Rq;
 use icicle_labrador::ring::ScalarRing as Zq;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
@@ -442,7 +469,7 @@ use icicle_runtime::memory::{DeviceVec, HostSlice};
 let size = 10;
 
 // Generate a random vector of Zq scalars and a vector of Rq polynomials
-let scalars = <Zq as FieldImpl>::Config::generate_random(size);
+let scalars = Zq::generate_random(size);
 let polynomials = Rq::generate_random(size);
 
 // Allocate device memory for the output of scalar × polynomial multiplication
@@ -505,7 +532,7 @@ use icicle_core::balanced_decomposition::{
 /// Returns the number of digits required to represent a ring element in balanced base-`b` form.
 ///
 /// Each digit lies in the interval (-b/2, b/2], and the number of digits depends on the modulus.
-fn count_digits<T: BalancedDecomposition<T>>(base: u32) -> u32
+pub fn count_digits<T: BalancedDecomposition<T>>(base: u32) -> u32
 ```
 
 ```rust
@@ -515,12 +542,14 @@ fn count_digits<T: BalancedDecomposition<T>>(base: u32) -> u32
 /// - `output.len()` must be `input.len() × num_digits`, where `num_digits ∈ [1, count_digits(base)]`
 ///
 /// Digits are written in order of increasing significance, grouped by digit index.
-fn decompose<T: BalancedDecomposition<T>>(
+pub fn decompose<T: BalancedDecomposition<T>>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     base: u32,
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
+where
+    T: BalancedDecomposition<T>;
 ```
 
 ```rust
@@ -529,12 +558,14 @@ fn decompose<T: BalancedDecomposition<T>>(
 /// - `input.len()` must be `output.len() × num_digits`, where `num_digits ∈ [1, count_digits(base)]`
 ///
 /// Recomposition is exact only if all omitted higher-order digits were zero.
-fn recompose<T: BalancedDecomposition<T>>(
+pub fn recompose<T: BalancedDecomposition<T>>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     base: u32,
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
+where
+    T: BalancedDecomposition<T>;
 ```
 
 ### Examples
@@ -611,21 +642,21 @@ pub enum NormType {
 /// Interpretation:
 /// - If `output.len() == 1`, checks the full input vector
 /// - If `output.len() == B`, input is treated as `B` contiguous vectors (input.len() must be divisible by B)
-pub fn check_norm_bound<T: FieldImpl>(
+pub fn check_norm_bound<T: IntegerRing>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     norm_type: NormType,
     norm_bound: u64,
     cfg: &VecOpsConfig,
     output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>
+where
+    T: Norm<T>;
 ```
 
 ### Example
 
 ```rust
-use icicle_core::norm;
-use icicle_core::traits::FieldImpl;
-use icicle_core::vec_ops::VecOpsConfig;
+use icicle_core::{bignum::BigNum, norm, vec_ops::VecOpsConfig};
 use icicle_labrador::ring::ScalarRing as Zq;
 use icicle_runtime::memory::HostSlice;
 
@@ -687,12 +718,15 @@ use icicle_core::jl_projection::{
 /// - `input.len()` = original dimensionality
 /// - `output_projection.len()` = target dimensionality
 /// - Projection matrix is seeded deterministically from `seed`
-pub fn jl_projection<T: FieldImpl>(
+pub fn jl_projection<T>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     seed: &[u8],
     cfg: &VecOpsConfig,
     output_projection: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>
+where
+    T: IntegerRing,
+    T: JLProjection<T>;
 ```
 
 ```rust
@@ -700,14 +734,17 @@ pub fn jl_projection<T: FieldImpl>(
 ///
 /// - Output layout: row 0 | row 1 | ... | row `num_rows - 1`
 /// - Each row contains `row_size` scalar elements
-pub fn get_jl_matrix_rows<T: FieldImpl>(
+pub fn get_jl_matrix_rows<T>(
     seed: &[u8],
     row_size: usize,
     start_row: usize,
     num_rows: usize,
     cfg: &VecOpsConfig,
     output_rows: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>
+where
+    T: IntegerRing,
+    T: JLProjection<T>;
 ```
 
 ```rust
@@ -716,7 +753,7 @@ pub fn get_jl_matrix_rows<T: FieldImpl>(
 /// - Each row contains `row_size` polynomials of degree `P::DEGREE`
 /// - If `conjugate = true`, applies a(X) ↦ a(X⁻¹) mod Xⁿ + 1 to each polynomial
 /// - Output is laid out row-major: row 0 | row 1 | ...
-pub fn get_jl_matrix_rows_as_polyring<P: PolynomialRing>(
+pub fn get_jl_matrix_rows_as_polyring<P>(
     seed: &[u8],
     row_size: usize,
     start_row: usize,
@@ -724,78 +761,81 @@ pub fn get_jl_matrix_rows_as_polyring<P: PolynomialRing>(
     conjugate: bool,
     cfg: &VecOpsConfig,
     output_rows: &mut (impl HostOrDeviceSlice<P> + ?Sized),
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>
+where
+    P: PolynomialRing + JLProjectionPolyRing<P>;
 ```
 
 ### Example
 
 ```rust
+use icicle_core::vec_ops::VecOpsConfig;
+use icicle_core::{
+    bignum::BigNum,
+    jl_projection,
+    polynomial_ring::{flatten_polyring_slice, PolynomialRing},
+    traits::GenerateRandom,
+};
+use icicle_labrador::polynomial_ring::PolyRing as Rq;
+use icicle_labrador::ring::ScalarRing as Zq;
+use icicle_runtime::memory::{HostOrDeviceSlice, HostSlice};
+use rand::Rng;
 
-    use icicle_core::jl_projection;
-    use icicle_core::polynomial_ring::flatten_polyring_slice;
-    use icicle_core::polynomial_ring::PolynomialRing;
-    use icicle_core::traits::{FieldImpl, GenerateRandom};
-    use icicle_core::vec_ops::VecOpsConfig;
-    use icicle_labrador::polynomial_ring::PolyRing as Rq;
-    use icicle_labrador::ring::ScalarRing as Zq;
-    use icicle_runtime::memory::{HostOrDeviceSlice, HostSlice};
-    use rand::Rng;
+// Project a vector of Rq polyonmials
+// Projecting 128 Rq polynomials (each of degree 64) to a 256-element Zq vector
+let polynomials = Rq::generate_random(128);
+let mut projection = vec![Zq::zero(); 256];
 
-    // Project a vector of Rq polyonmials
-    // Projecting 128 Rq polynomials (each of degree 64) to a 256-element Zq vector
-    let polynomials = Rq::generate_random(128);
-    let mut projection = vec![Zq::zero(); 256];
+// Flatten the polynomials into a contiguous Zq slice (128 × 64 elements)
+let flat_polynomials_as_zq = flatten_polyring_slice(HostSlice::from_slice(&polynomials));
 
-    // Flatten the polynomials into a contiguous Zq slice (128 × 64 elements)
-    let flat_polynomials_as_zq = flatten_polyring_slice(HostSlice::from_slice(&polynomials));
+// Use a random seed (e.g., hash of transcript or Fiat–Shamir challenge)
+let mut seed = [0u8; 32];
+rand::thread_rng().fill(&mut seed);
 
-    // Use a random seed (e.g., hash of transcript or Fiat–Shamir challenge)
-    let mut seed = [0u8; 32];
-    rand::thread_rng().fill(&mut seed);
+// Perform JL projection
+jl_projection::jl_projection(
+    &flat_polynomials_as_zq,
+    &seed,
+    &VecOpsConfig::default(),
+    HostSlice::from_mut_slice(&mut projection),
+)
+.expect("JL projection failed");
 
-    // Perform JL projection
-    jl_projection::jl_projection(
-        &flat_polynomials_as_zq,
-        &seed,
-        &VecOpsConfig::default(),
-        HostSlice::from_mut_slice(&mut projection),
-    )
-    .expect("JL projection failed");
+// -----------------------------------------------------------------------------
+// 🔍 Matrix Inspection (Zq form)
+// -----------------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------------
-    // 🔍 Matrix Inspection (Zq form)
-    // -----------------------------------------------------------------------------
+// Retrieve the first row of the JL matrix as Zq elements
+let row_size = flat_polynomials_as_zq.len(); // same as input dimension
+let mut output_rows = vec![Zq::zero(); row_size]; // 1 row × row_size elements
 
-    // Retrieve the first row of the JL matrix as Zq elements
-    let row_size = flat_polynomials_as_zq.len(); // same as input dimension
-    let mut output_rows = vec![Zq::zero(); row_size]; // 1 row × row_size elements
+jl_projection::get_jl_matrix_rows(
+    &seed,
+    row_size, // row size (input dimension)
+    0,        // start_row
+    1,        // number of rows
+    &VecOpsConfig::default(),
+    HostSlice::from_mut_slice(&mut output_rows),
+)
+.expect("Failed to generate JL matrix rows as Zq");
 
-    jl_projection::get_jl_matrix_rows(
-        &seed,
-        row_size, // row size (input dimension)
-        0,        // start_row
-        1,        // number of rows
-        &VecOpsConfig::default(),
-        HostSlice::from_mut_slice(&mut output_rows),
-    )
-    .expect("Failed to generate JL matrix rows as Zq");
+// -----------------------------------------------------------------------------
+// 🔁 Matrix Inspection (Rq form, with conjugation)
+// -----------------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------------
-    // 🔁 Matrix Inspection (Rq form, with conjugation)
-    // -----------------------------------------------------------------------------
+let mut output_rows_as_poly = vec![Rq::zero(); polynomials.len()]; // 1 row of polynomials
 
-    let mut output_rows_as_poly = vec![Rq::zero(); polynomials.len()]; // 1 row of polynomials
-
-    jl_projection::get_jl_matrix_rows_as_polyring(
-        &seed,
-        polynomials.len(), // row size (number of polynomials per row)
-        0,                 // start_row
-        1,                 // number of rows
-        true,              // apply polynomial conjugation
-        &VecOpsConfig::default(),
-        HostSlice::from_mut_slice(&mut output_rows_as_poly),
-    )
-    .expect("Failed to generate JL matrix rows as Rq (conjugated)");
+jl_projection::get_jl_matrix_rows_as_polyring(
+    &seed,
+    polynomials.len(), // row size (number of polynomials per row)
+    0,                 // start_row
+    1,                 // number of rows
+    true,              // apply polynomial conjugation
+    &VecOpsConfig::default(),
+    HostSlice::from_mut_slice(&mut output_rows_as_poly),
+)
+.expect("Failed to generate JL matrix rows as Rq (conjugated)");
 ```
 
 ## Seeded Random Sampling
@@ -821,12 +861,14 @@ use icicle_core::random_sampling;
 /// - `seed`:  byte slice used to deterministically seed the pseudorandom generator.
 /// - `cfg`: execution configuration
 /// - `output`:  Output buffer to store sampled elements
-pub fn random_sampling<T: FieldImpl>(
+pub fn random_sampling<T>(
     fast_mode: bool,
     seed: &[u8],
     cfg: &VecOpsConfig,
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>
+where    
+    T: RandomSampling<T>;
 ```
 
 ### Example
@@ -904,7 +946,10 @@ pub fn challenge_space_polynomials_sampling<T>(
     twos: usize,
     norm: usize,
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>
+where
+    T: PolynomialRing,
+    T: ChallengeSpacePolynomialsSampling<T>;
 ```
 
 ### Example

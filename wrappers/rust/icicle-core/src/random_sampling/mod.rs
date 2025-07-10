@@ -1,12 +1,11 @@
 use crate::polynomial_ring::PolynomialRing;
-use crate::ring::IntegerRing;
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{errors::IcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
 /// Trait for random sampling operations on group elements.
-pub trait RandomSampling<T: IntegerRing> {
+pub trait RandomSampling<T> {
     fn random_sampling(
         fast_mode: bool,
         seed: &[u8],
@@ -22,7 +21,6 @@ pub fn random_sampling<T>(
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), IcicleError>
 where
-    T: IntegerRing,
     T: RandomSampling<T>,
 {
     T::random_sampling(fast_mode, seed, cfg, output)
@@ -146,7 +144,6 @@ pub fn challenge_space_polynomials_sampling<T>(
 ) -> Result<(), IcicleError>
 where
     T: PolynomialRing,
-    T::Base: IntegerRing,
     T: ChallengeSpacePolynomialsSampling<T>,
 {
     T::challenge_space_polynomials_sampling(seed, cfg, ones, twos, norm, output)

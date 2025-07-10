@@ -1,4 +1,4 @@
-use crate::{polynomial_ring::PolynomialRing, vec_ops::VecOpsConfig};
+use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
 pub mod tests;
@@ -46,7 +46,7 @@ pub trait BalancedDecomposition<T> {
 }
 
 // Public floating functions around the trait
-pub fn count_digits<T: PolynomialRing + BalancedDecomposition<T>>(base: u32) -> u32 {
+pub fn count_digits<T: BalancedDecomposition<T>>(base: u32) -> u32 {
     T::count_digits(base)
 }
 
