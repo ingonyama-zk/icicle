@@ -252,36 +252,34 @@ where
     let ref_out = test_single_device(false);
 
     // Final check: both devices should yield identical transpose results
-    //assert_eq!(device_out, ref_out);
+    assert_eq!(device_out, ref_out);
 }
 
-/// Validates that the `a_is_transposed` flag works correctly for the first input matrix.
+/// Verifies that `a_transposed` and `b_transposed` flags in matmul behave as expected.
 ///
-/// This test performs the following operations:
-/// 1. Creates matrices A and B
-/// 2. Computes A * B with `a_is_transposed = false`
-/// 3. Computes A * B with `a_is_transposed = true` (effectively A^T * B)
-/// 4. Manually transposes A and computes A^T * B with `a_is_transposed = false`
-/// 5. Verifies that cases 3 and 4 produce the same result
-/// 6. Ensures that cases 1 and 3 produce different results (validating the flag works)
-pub fn check_matmul_a_is_transposed<P>()
+/// Test procedure:
+/// 1. Compute A * B with no transpose.
+/// 2. Compute Aᵗ * Bᵗ using the matmul API with transpose flags.
+/// 3. Manually transpose A and B, then compute Aᵗ * Bᵗ using standard matmul.
+/// 4. Assert that (2) and (3) produce identical results.
+/// 5. Assert that (1) and (2) differ, confirming the transposition takes effect.
+pub fn check_matmul_transposed<P>()
 where
     P: GenerateRandom + MatrixOps<P> + Default + Clone + std::fmt::Debug + PartialEq,
 {
-    let cfg_default = MatMulConfig::default();
-    let cfg_transpose = MatMulConfig {
-        a_is_transposed: true,
+    let cfg_transposed = MatMulConfig {
+        a_transposed: true,
+        b_transposed: true,
         ..MatMulConfig::default()
     };
-    let transpose_cfg = VecOpsConfig::default();
 
-    // Create test matrices
-    let n = 1 << 3; // 16 rows for A
-    let m = 1 << 3; // 8 cols for A, 8 rows for B
-    let k = 1 << 4; // 8 cols for B
+    // Create test matrices A (n x m) and B (m x k)
+    let n = 1 << 3; // 8
+    let m = n;
+    let k = n;
 
-    let input_a = P::generate_random(n * m); // A is n x m
-    let input_b = P::generate_random(m * k); // B is m x k
+    let input_a = P::generate_random(n * m); // A: n x m
+    let input_b = P::generate_random(m * k); // B: m x k
 
     let test_single_device = |main_device: bool| {
         if main_device {
@@ -290,8 +288,8 @@ where
             test_utilities::test_set_ref_device();
         }
 
-        // Case 1: Regular matmul A * B (n x m) * (m x k) = (n x k)
-        let mut output_regular = vec![P::default(); n * k];
+        // Case 1: A * B (n×m) × (m×k) = n×k
+        let mut output_case_1 = vec![P::default(); n * k];
         matmul(
             HostSlice::from_slice(&input_a),
             n as u32,
@@ -299,71 +297,79 @@ where
             HostSlice::from_slice(&input_b),
             m as u32,
             k as u32,
-            &cfg_default,
-            HostSlice::from_mut_slice(&mut output_regular),
+            &MatMulConfig::default(),
+            HostSlice::from_mut_slice(&mut output_case_1),
         )
         .unwrap();
 
-        // Case 2: Matmul with a_is_transposed = true
-        // This should compute A^T * B where A^T is (m x n) * (m x k) = (n x k)
-        // Note: when a_is_transposed is true, we need to swap the dimensions for A
-        let mut output_transposed_flag = vec![P::default(); n * k];
+        // Case 2: Aᵗ * Bᵗ using transposed flags
+        // Aᵗ: m x n, Bᵗ: m x k
+        let mut output_case_2 = vec![P::default(); n * k];
         matmul(
             HostSlice::from_slice(&input_a),
-            m as u32, // A^T has m rows
-            n as u32, // A^T has n cols
+            m as u32,
+            n as u32,
             HostSlice::from_slice(&input_b),
             m as u32,
             k as u32,
-            &cfg_transpose,
-            HostSlice::from_mut_slice(&mut output_transposed_flag),
+            &cfg_transposed,
+            HostSlice::from_mut_slice(&mut output_case_2),
         )
         .unwrap();
 
-        // Case 3: Manually transpose A and then do regular matmul
+        // Case 3: Manually transpose A and B, then compute Aᵗ * Bᵗ
         let mut a_transposed = vec![P::default(); n * m];
         matrix_transpose(
             HostSlice::from_slice(&input_a),
             n as u32,
             m as u32,
-            &transpose_cfg,
+            &VecOpsConfig::default(),
             HostSlice::from_mut_slice(&mut a_transposed),
         )
         .unwrap();
 
-        let mut output_manual_transpose = vec![P::default(); n * k];
-        matmul(
-            HostSlice::from_slice(&a_transposed),
-            m as u32, // A^T is m x n
-            n as u32,
+        let mut b_transposed = vec![P::default(); n * m];
+        matrix_transpose(
             HostSlice::from_slice(&input_b),
+            n as u32,
             m as u32,
-            k as u32,
-            &cfg_default,
-            HostSlice::from_mut_slice(&mut output_manual_transpose),
+            &VecOpsConfig::default(),
+            HostSlice::from_mut_slice(&mut b_transposed),
         )
         .unwrap();
 
-        // Verify that using the flag produces the same result as manual transpose
+        let mut output_case_3 = vec![P::default(); n * k];
+        matmul(
+            HostSlice::from_slice(&a_transposed),
+            m as u32,
+            n as u32,
+            HostSlice::from_slice(&b_transposed),
+            m as u32,
+            k as u32,
+            &MatMulConfig::default(),
+            HostSlice::from_mut_slice(&mut output_case_3),
+        )
+        .unwrap();
+
+        // Case 2 and 3 should match
         assert_eq!(
-            output_transposed_flag, output_manual_transpose,
-            "Results should match between using a_is_transposed flag and manual transpose"
+            output_case_2, output_case_3,
+            "Results should match between using transposed flags and manual transposition"
         );
 
-        // Verify that the results are different when transpose flag is used vs not used
-        // (unless by coincidence, which is extremely unlikely with random data)
+        // Case 1 and 2 should differ (almost always, given random inputs)
         assert_ne!(
-            output_regular, output_transposed_flag,
-            "Results should be different when a_is_transposed flag is set vs not set"
+            output_case_1, output_case_2,
+            "Results should differ when transposition is applied"
         );
 
-        output_transposed_flag
+        output_case_2
     };
 
-    // Test on both main and reference devices
+    // Run test on both main and reference devices
     let device_out = test_single_device(true);
     let ref_out = test_single_device(false);
 
-    // Results should be consistent across devices
+    // Ensure consistent results across devices
     assert_eq!(device_out, ref_out);
 }

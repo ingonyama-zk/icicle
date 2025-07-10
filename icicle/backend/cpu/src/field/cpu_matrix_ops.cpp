@@ -57,8 +57,9 @@ namespace {
       return eIcicleError::INVALID_ARGUMENT;
     }
 
-    if (config.batch_size != 1) {
-      ICICLE_LOG_ERROR << "Matmul does not support batching (batch_size > 1)";
+    if (config.result_transposed) {
+      ICICLE_LOG_ERROR << "[CPU] Matmul with transposed output is not yet supported. This feature will be available in "
+                          "a future release.";
       return eIcicleError::INVALID_ARGUMENT;
     }
 

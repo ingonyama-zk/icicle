@@ -19,17 +19,15 @@ pub mod tests;
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct MatMulConfig {
-    pub stream_handle: IcicleStreamHandle,
-    pub is_a_on_device: bool,
-    pub is_b_on_device: bool,
-    pub is_result_on_device: bool,
-    pub is_async: bool,
-    pub batch_size: i32,
-    pub columns_batch: bool,
-    pub a_is_transposed: bool,
-    pub b_is_transposed: bool,
-    pub result_is_transposed: bool,
-    pub ext: ConfigExtension,
+    pub stream_handle: IcicleStreamHandle, // Execution stream (e.g., CUDA stream)
+    pub is_a_on_device: bool,              // True if `a` is on device memory
+    pub is_b_on_device: bool,              // True if `b` is on device memory
+    pub is_result_on_device: bool,         // True if result stays on device
+    pub a_transposed: bool,                // Transpose input `a`
+    pub b_transposed: bool,                // Transpose input `b`
+    pub result_transposed: bool,           // Transpose the output
+    pub is_async: bool,                    // Non-blocking execution if true
+    pub ext: ConfigExtension,              // Backend-specific config
 }
 
 impl MatMulConfig {
@@ -39,12 +37,10 @@ impl MatMulConfig {
             is_a_on_device: false,
             is_b_on_device: false,
             is_result_on_device: false,
+            a_transposed: false,
+            b_transposed: false,
+            result_transposed: false,
             is_async: false,
-            batch_size: 1,
-            columns_batch: false,
-            a_is_transposed: false,
-            b_is_transposed: false,
-            result_is_transposed: false,
             ext: ConfigExtension::new(),
         }
     }
@@ -332,9 +328,9 @@ macro_rules! impl_matrix_ops_tests {
         }
 
         #[test]
-        fn test_matmul_a_is_transposed() {
+        fn test_matmul_a_transposed() {
             initialize();
-            check_matmul_a_is_transposed::<$element_type>();
+            check_matmul_transposed::<$element_type>();
         }
 
         #[test]

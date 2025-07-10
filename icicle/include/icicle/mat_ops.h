@@ -18,26 +18,15 @@ namespace icicle {
    * @note APIs with a single input, ignore input b.
    */
   struct MatMulConfig {
-    icicleStreamHandle stream = nullptr; /** Stream for asynchronous execution. */
-    bool is_a_on_device = false;         /** True if `a` is on the device, false if it is not. Default value: false. */
-    bool is_b_on_device =
-      false; /** True if `b` is on the device, false if it is not. Default value: false. OPTIONAL. */
-    bool is_result_on_device = false; /** If true, the output is preserved on the device, otherwise on the host. Default
-                                    value: false. */
-    bool is_async = false;            /** Whether to run the matrix operations asynchronously.
-                                    If set to `true`, the function will be non-blocking and synchronization
-                                    must be explicitly managed using `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
-                                    If set to `false`, the function will block the current CPU thread. */
-    int batch_size = 1;               /** Number of matrices (or operations) to process in a batch.
-                                        Each matrix operation will be performed independently on each batch element.
-                                        Default value: 1. */
-    bool columns_batch = false;       /** True if the batched matrices are stored as separate matrices in a 3D array.
-                                   If false, the batched matrices are stored contiguously in memory.
-                                   Default value: false. */
-    bool a_transposed = false;      /** True if the matrix a is transposed, false if it is not. Default value: false. */
-    bool b_transposed = false;      /** True if the matrix b is transposed, false if it is not. Default value: false. */
-    bool result_transposed = false; /** True if the result is transposed, false if it is not. Default value: false. */
-    ConfigExtension* ext = nullptr; /** Backend-specific extension. */
+    icicleStreamHandle stream = nullptr; ///< stream for async execution.
+    bool is_a_on_device = false;         ///< True if `a` resides on device memory.
+    bool is_b_on_device = false;         ///< True if `b` resides on device memory.
+    bool is_result_on_device = false;    ///< True to keep result on device, else host.
+    bool a_transposed = false;           ///< True if `a` is pre-transposed.
+    bool b_transposed = false;           ///< True if `b` is pre-transposed.
+    bool result_transposed = false;      ///< True to transpose the output.
+    bool is_async = false;               ///< True for non-blocking call; user must sync stream.
+    ConfigExtension* ext = nullptr;      ///< Optional backend-specific settings.
   };
 
   /**
