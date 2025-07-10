@@ -43,18 +43,29 @@ done
 
 DEVICE_TYPE_LOWERCASE=$(echo "$DEVICE_TYPE" | tr '[:upper:]' '[:lower:]')
 
-ICILE_DIR=$(realpath "../../../icicle/")
-ICICLE_BACKEND_SOURCE_DIR="${ICILE_DIR}/backend/${DEVICE_TYPE_LOWERCASE}"
+# Create necessary directories
+mkdir -p build/icicle
+BUILD_DIR=$(realpath "build/icicle")
+ICICLE_DIR=$(realpath "../../../icicle/")
+ICICLE_BACKEND_SOURCE_DIR="${ICICLE_DIR}/backend/${DEVICE_TYPE_LOWERCASE}"
 
 # Build Icicle and the example app that links to it
 if [ "$DEVICE_TYPE" != "CPU" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_BACKEND_SOURCE_DIR}" ]; then
   echo "Building icicle and ${DEVICE_TYPE} backend"
-  cargo build --release --features="${DEVICE_TYPE_LOWERCASE}"
-  export ICICLE_BACKEND_INSTALL_DIR=$(realpath "../target/release/deps/icicle/lib/backend")
-  cargo run -q --release --features="${DEVICE_TYPE_LOWERCASE}" -- --device-type "${DEVICE_TYPE}"
+  cmake --fresh -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -DECNTT=OFF "-D${DEVICE_TYPE}_BACKEND"=local -S "${ICICLE_DIR}" -B "${BUILD_DIR}"
+  cmake --build "${BUILD_DIR}" -j
+  cmake --fresh -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DECNTT=OFF "-D${DEVICE_TYPE}_BACKEND"=local -S "${ICICLE_DIR}" -B "${BUILD_DIR}"
+  cmake --build "${BUILD_DIR}" -j
+  export ICICLE_BACKEND_INSTALL_DIR=$(realpath "${BUILD_DIR}/backend")
 else
   echo "Building icicle without backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
   export ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR}"
-  cargo run -q --release -- --device-type "${DEVICE_TYPE}"
+  cmake --fresh -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -S "${ICICLE_DIR}" -B "${BUILD_DIR}"
+  cmake --build "${BUILD_DIR}" -j
+  cmake --fresh -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -S "${ICICLE_DIR}" -B "${BUILD_DIR}"
+  cmake --build "${BUILD_DIR}" -j
 fi
 
+export CGO_LDFLAGS="-L${BUILD_DIR} -lstdc++ -Wl,-rpath,${BUILD_DIR}"
+
+go run main.go -device "${DEVICE_TYPE}"

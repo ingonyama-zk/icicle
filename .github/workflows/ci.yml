@@ -922,8 +922,9 @@ jobs:
       working-directory: ./wrappers/rust/icicle-pqc
       if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.rust == 'true')
       run: |
-        export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
-        cargo test --release --verbose
+        export ICICLE_INSTALL_DIR=$GITHUB_WORKSPACE/icicle/install
+        export LD_LIBRARY_PATH=$ICICLE_INSTALL_DIR/lib:$LD_LIBRARY_PATH
+        cargo test --release
 
     - name: Setup go
       if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || (needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.go == 'true')
