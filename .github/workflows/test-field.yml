@@ -242,7 +242,7 @@ jobs:
         mkdir -p build && rm -rf build/*
         EXTRA_FLAGS=""
         if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
-          EXTRA_FLAGS="-DINGO_CI_ENV=ON ${{ steps.feature_flags.outputs.FEATURE_FLAGS }}"
+          EXTRA_FLAGS="-DDISABLE_ALL_FEATURES=ON ${{ steps.feature_flags.outputs.FEATURE_FLAGS }}"
         fi
         cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} -D${{ inputs.backend_upper }}_BACKEND=local $EXTRA_FLAGS -S . -B build
         cmake --build build
