@@ -43,7 +43,7 @@ struct BenchmarkResult {
 };
 
 // Function to run a single benchmark configuration
-BenchmarkResult run_benchmark(const BenchmarkConfig& config)
+BenchmarkResult run_benchmark(const BenchmarkConfig& config, bool SKIP_VERIF)
 {
   std::cout << "Running benchmark: n=" << config.n << ", r=" << config.r << ", eq_const=" << config.num_eq_const
             << ", cz_const=" << config.num_cz_const << ", repetitions=" << config.num_repetitions << std::endl;
@@ -52,7 +52,6 @@ BenchmarkResult run_benchmark(const BenchmarkConfig& config)
   const size_t max_value = 2;
   std::vector<double> times;
   bool all_verified = true;
-  bool SKIP_VERIF = true;
 
   // Use current time as base for unique seeds
   auto base_time = std::chrono::system_clock::now();
@@ -232,7 +231,7 @@ int main(int argc, char* argv[])
       BenchmarkConfig config{n, r, num_eq, num_cz, NUM_REP};
 
       try {
-        BenchmarkResult result = run_benchmark(config);
+        BenchmarkResult result = run_benchmark(config, false);
         results.push_back(result);
       } catch (const std::exception& e) {
         std::cerr << "Error running benchmark for n=" << n << ", r=" << r << ", eq=" << num_eq << ", cz=" << num_cz
@@ -250,3 +249,5 @@ int main(int argc, char* argv[])
 
   return 0;
 }
+
+// TODO: change poly_vec_eq
