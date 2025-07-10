@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "icicle/vec_ops.h"
+#include "icicle/mat_ops.h"
 
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
@@ -88,7 +89,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationNonSquare)
   matmul_ref(direct_input_a, direct_input_b, direct_output, N, M, N);
 
   // Compute result using icicle device
-  auto cfg = VecOpsConfig{};
+  auto cfg = MatMulConfig{};
   cfg.is_a_on_device = false;
   cfg.is_b_on_device = false;
   cfg.is_result_on_device = false;
@@ -118,7 +119,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
   scalar_t::rand_host_many(random_matrix.data(), matrix_size * matrix_size);
 
   std::vector<scalar_t> result(matrix_size * matrix_size);
-  auto cfg = VecOpsConfig{};
+  auto cfg = MatMulConfig{};
   cfg.is_a_on_device = false;
   cfg.is_b_on_device = false;
   cfg.is_result_on_device = false;
@@ -231,7 +232,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
 TEST_F(MatrixTestBase, MatrixMultiplicationDimensionMismatch)
 {
   const size_t matrix_size = 4;
-  auto cfg = VecOpsConfig{};
+  auto cfg = MatMulConfig{};
   cfg.is_a_on_device = false;
   cfg.is_b_on_device = false;
   cfg.is_result_on_device = false;
@@ -253,43 +254,10 @@ TEST_F(MatrixTestBase, MatrixMultiplicationDimensionMismatch)
   }
 }
 
-TEST_F(MatrixTestBase, MatrixMultiplicationBatchedDimensionMismatch)
-{
-  const size_t matrix_size = 4;
-  const size_t batch_size = 4;
-  auto cfg = VecOpsConfig{};
-  cfg.is_a_on_device = false;
-  cfg.is_b_on_device = false;
-  cfg.is_result_on_device = false;
-  cfg.batch_size = batch_size;
-
-  std::vector<std::vector<scalar_t>> batch_a(batch_size, std::vector<scalar_t>(matrix_size * matrix_size));
-  std::vector<scalar_t> single_b((matrix_size + 1) * matrix_size); // Different size
-
-  for (size_t i = 0; i < batch_size; i++) {
-    scalar_t::rand_host_many(batch_a[i].data(), matrix_size * matrix_size);
-  }
-  scalar_t::rand_host_many(single_b.data(), (matrix_size + 1) * matrix_size);
-
-  std::vector<std::vector<scalar_t>> batch_result(batch_size, std::vector<scalar_t>(matrix_size * matrix_size));
-
-  for (const auto& device : s_registered_devices) {
-    ICICLE_CHECK(icicle_set_device(device));
-
-    // Should fail for each matrix in batch
-    for (size_t i = 0; i < batch_size; i++) {
-      auto error = matmul(
-        batch_a[i].data(), matrix_size, matrix_size, single_b.data(), matrix_size + 1, matrix_size, cfg,
-        batch_result[i].data());
-      ASSERT_NE(error, eIcicleError::SUCCESS);
-    }
-  }
-}
-
 TEST_F(MatrixTestBase, MatrixMultiplicationNullInputs)
 {
   const size_t matrix_size = 4;
-  auto cfg = VecOpsConfig{};
+  auto cfg = MatMulConfig{};
   cfg.is_a_on_device = false;
   cfg.is_b_on_device = false;
   cfg.is_result_on_device = false;
@@ -325,7 +293,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationNullInputs)
 TEST_F(MatrixTestBase, MatrixMultiplicationZeroDimensions)
 {
   const size_t matrix_size = 4;
-  auto cfg = VecOpsConfig{};
+  auto cfg = MatMulConfig{};
   cfg.is_a_on_device = false;
   cfg.is_b_on_device = false;
   cfg.is_result_on_device = false;
@@ -390,7 +358,7 @@ TEST_F(MatrixTestBase, VectorTimesMatrix)
 
   matmul_ref(vec, mat, expected, 1, M, N);
 
-  VecOpsConfig cfg{};
+  MatMulConfig cfg{};
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
     ICICLE_CHECK(matmul(vec.data(), 1, M, mat.data(), M, N, cfg, actual.data()));
@@ -410,7 +378,7 @@ TEST_F(MatrixTestBase, MatrixTimesVector)
 
   matmul_ref(mat, vec, expected, N, M, 1);
 
-  VecOpsConfig cfg{};
+  MatMulConfig cfg{};
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
     ICICLE_CHECK(matmul(mat.data(), N, M, vec.data(), M, 1, cfg, actual.data()));
@@ -429,7 +397,7 @@ TEST_F(MatrixTestBase, SquareMatrixTimesMatrix)
 
   matmul_ref(a, b, expected, N, N, N);
 
-  VecOpsConfig cfg{};
+  MatMulConfig cfg{};
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
     ICICLE_CHECK(matmul(a.data(), N, N, b.data(), N, N, cfg, actual.data()));
@@ -450,7 +418,7 @@ TEST_F(MatrixTestBase, NonSquareMatrixTimesMatrix)
 
   matmul_ref(a, b, expected, N, M, P);
 
-  VecOpsConfig cfg{};
+  MatMulConfig cfg{};
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
     ICICLE_CHECK(matmul(a.data(), N, M, b.data(), M, P, cfg, actual.data()));
@@ -469,7 +437,7 @@ TEST_F(MatrixTestBase, VectorTimesVector)
 
   matmul_ref(a, b, expected, 1, N, 1);
 
-  VecOpsConfig cfg{};
+  MatMulConfig cfg{};
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
     ICICLE_CHECK(matmul(a.data(), 1, N, b.data(), N, 1, cfg, actual.data()));

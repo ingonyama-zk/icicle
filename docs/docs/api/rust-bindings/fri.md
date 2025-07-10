@@ -32,19 +32,19 @@ FFI configuration structure for the FRI protocol's transcript.
 A structure representing the FRI proof, which includes methods for handling proof data.
 
 ##### **Methods:**
-- **`new() -> Result<Self, eIcicleError>`**:
+- **`new() -> Result<Self, IcicleError>`**:
   Constructs a new instance of the `FriProof`.
 
-- **`create_with_arguments(query_proofs_data, final_poly, pow_nonce) -> Result<Self, eIcicleError>`**:
+- **`create_with_arguments(query_proofs_data, final_poly, pow_nonce) -> Result<Self, IcicleError>`**:
   Creates a new instance of `FriProof` with the given proof data.
 
-- **`get_query_proofs(&self) -> Result<Vec<Vec<MerkleProofData<F>>>, eIcicleError>`**:
+- **`get_query_proofs(&self) -> Result<Vec<Vec<MerkleProofData<F>>>, IcicleError>`**:
   Returns the matrix of Merkle proofs, where each row corresponds to a query and each column corresponds to a round.
 
-- **`get_final_poly(&self) -> Result<Vec<F>, eIcicleError>`**:
+- **`get_final_poly(&self) -> Result<Vec<F>, IcicleError>`**:
   Returns the final polynomial values.
 
-- **`get_pow_nonce(&self) -> Result<u64, eIcicleError>`**:
+- **`get_pow_nonce(&self) -> Result<u64, IcicleError>`**:
   Returns the proof-of-work nonce.
 
 #### `FriConfig`
@@ -78,7 +78,7 @@ const SIZE: u64 = 1 << 10;
 init_domain::<ScalarField>(SIZE, false);
 
 let fri_config = FriConfig::default();
-let scalars = ScalarCfg::generate_random(SIZE as usize);
+let scalars = ScalarField::generate_random(SIZE as usize);
 let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, ScalarField::one());
 let merkle_tree_min_layer_to_store = 0;
 

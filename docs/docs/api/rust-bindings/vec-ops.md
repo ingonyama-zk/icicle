@@ -67,27 +67,27 @@ pub fn add_scalars<F>(
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>;
 
 pub fn accumulate_scalars<F>(
     a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>;
 
 pub fn sub_scalars<F>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>;
 
 pub fn mul_scalars<F>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>;
 
 pub fn transpose_matrix<F>(
     input: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -95,27 +95,16 @@ pub fn transpose_matrix<F>(
     nof_cols: u32,
     output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>;
 
 pub fn bit_reverse<F>(
     input: &(impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
     output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>;
 
 pub fn bit_reverse_inplace<F>(
     input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>;
-
-pub fn execute_program<F, Prog, Data>(
-    data: &mut Vec<&Data>,
-    program: &Prog,
-    cfg: &VecOpsConfig
-) -> Result<(), eIcicleError>
-where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
-    Data: HostOrDeviceSlice<F> + ?Sized,
-    Prog: Program<F>;
+) -> Result<(), IcicleError>;
 ```

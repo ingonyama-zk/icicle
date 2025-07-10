@@ -8,13 +8,13 @@ pub fn ntt<T, F>(
     dir: NTTDir,
     cfg: &NTTConfig<F>,
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>;
 
 pub fn ntt_inplace<T, F>(
     inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     dir: NTTDir,
     cfg: &NTTConfig<F>,
-) -> Result<(), eIcicleError>
+) -> Result<(), IcicleError>
 ```
 
 - **`input`** - buffer to read the inputs of the NTT from.
@@ -27,7 +27,7 @@ The `input` and `output` buffers can be on device or on host. Being on host mean
 ### NTT Config
 
 ```rust
-pub struct NTTConfig<S> {
+pub struct NTTConfig<S: IntegerRing> {
     pub stream_handle: IcicleStreamHandle,
     pub coset_gen: S,
     pub batch_size: i32,
@@ -66,12 +66,12 @@ The `NTTConfig` struct is a configuration object used to specify parameters for 
 ```rust
 // Setting Bn254 points and scalars
 println!("Generating random inputs on host for bn254...");
-let scalars = Bn254ScalarCfg::generate_random(size);
-let mut ntt_results = DeviceVec::<Bn254ScalarField>::device_malloc(size).unwrap();
+let scalars = ScalarField::generate_random(size);
+let mut ntt_results = DeviceVec::<ScalarField>::device_malloc(size).unwrap();
 
 // constructing NTT domain
 initialize_domain(
-    ntt::get_root_of_unity::<Bn254ScalarField>(
+    ntt::get_root_of_unity::<ScalarField>(
         size.try_into()
             .unwrap(),
     ),
@@ -80,7 +80,7 @@ initialize_domain(
 .unwrap();
 
 // Using default config
-let cfg = ntt::NTTConfig::<Bn254ScalarField>::default();
+let cfg = ntt::NTTConfig::<ScalarField>::default();
 
 // Computing NTT
 ntt::ntt(
@@ -99,8 +99,8 @@ In rust, we have the following functions to construct, destruct the domain and r
 
 ```rust
 pub trait NTTDomain<F: FieldImpl> {
-    pub fn initialize_domain<F>(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), eIcicleError>;
-    pub fn release_domain<F>() -> Result<(), eIcicleError>;
+    pub fn initialize_domain<F>(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), IcicleError>;
+    pub fn release_domain<F>() -> Result<(), IcicleError>;
     pub fn get_root_of_unity<F>(max_size: u64) -> F;
 }
 ```

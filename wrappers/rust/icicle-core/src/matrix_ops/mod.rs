@@ -12,10 +12,39 @@
 //! All functions are backend-agnostic and dispatched using [`VecOpsConfig`].
 
 use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
+use icicle_runtime::{config::ConfigExtension, memory::HostOrDeviceSlice, stream::IcicleStreamHandle, IcicleError};
 
 pub mod tests;
 
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct MatMulConfig {
+    pub stream_handle: IcicleStreamHandle, // Execution stream (e.g., CUDA stream)
+    pub is_a_on_device: bool,              // True if `a` is on device memory
+    pub is_b_on_device: bool,              // True if `b` is on device memory
+    pub is_result_on_device: bool,         // True if result stays on device
+    pub a_transposed: bool,                // Transpose input `a`
+    pub b_transposed: bool,                // Transpose input `b`
+    pub result_transposed: bool,           // Transpose the output
+    pub is_async: bool,                    // Non-blocking execution if true
+    pub ext: ConfigExtension,              // Backend-specific config
+}
+
+impl MatMulConfig {
+    pub fn default() -> Self {
+        Self {
+            stream_handle: std::ptr::null_mut(),
+            is_a_on_device: false,
+            is_b_on_device: false,
+            is_result_on_device: false,
+            a_transposed: false,
+            b_transposed: false,
+            result_transposed: false,
+            is_async: false,
+            ext: ConfigExtension::new(),
+        }
+    }
+}
 /// Trait defining matrix operations over row-major matrices stored in host or device memory.
 pub trait MatrixOps<T> {
     /// Performs matrix multiplication: `result = a × b`
@@ -35,7 +64,7 @@ pub trait MatrixOps<T> {
         b: &(impl HostOrDeviceSlice<T> + ?Sized),
         b_rows: u32,
         b_cols: u32,
-        cfg: &VecOpsConfig,
+        cfg: &MatMulConfig,
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> Result<(), IcicleError>;
 
@@ -64,7 +93,7 @@ pub fn matmul<T>(
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     b_rows: u32,
     b_cols: u32,
-    cfg: &VecOpsConfig,
+    cfg: &MatMulConfig,
     result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), IcicleError>
 where
@@ -95,6 +124,7 @@ macro_rules! impl_matrix_ops {
     ($prefix: literal, $prefix_ident:ident, $element_type: ty) => {
         mod $prefix_ident {
             use crate::matrix_ops::$prefix_ident;
+            use icicle_core::matrix_ops::MatMulConfig;
             use icicle_core::{matrix_ops::MatrixOps, vec_ops::VecOpsConfig};
             use icicle_runtime::memory::HostOrDeviceSlice;
             use icicle_runtime::{eIcicleError, IcicleError};
@@ -108,14 +138,14 @@ macro_rules! impl_matrix_ops {
                     b: *const $element_type,
                     b_rows: u32,
                     b_cols: u32,
-                    cfg: *const VecOpsConfig,
+                    cfg: *const MatMulConfig,
                     result: *mut $element_type,
                 ) -> eIcicleError;
 
                 #[link_name = concat!($prefix, "_matrix_transpose")]
                 pub(crate) fn matrix_transpose_ffi(
                     input: *const $element_type,
-                    nof_ows: u32,
+                    nof_rows: u32,
                     nof_cols: u32,
                     cfg: *const VecOpsConfig,
                     output: *mut $element_type,
@@ -131,7 +161,7 @@ macro_rules! impl_matrix_ops {
                     b: &(impl HostOrDeviceSlice<$element_type> + ?Sized),
                     nof_rows_b: u32,
                     nof_cols_b: u32,
-                    cfg: &VecOpsConfig,
+                    cfg: &MatMulConfig,
                     result: &mut (impl HostOrDeviceSlice<$element_type> + ?Sized),
                 ) -> Result<(), IcicleError> {
                     if a.len() as u32 != nof_rows_a * nof_cols_a {
@@ -160,15 +190,17 @@ macro_rules! impl_matrix_ops {
                         ));
                     }
 
-                    if result.len() as u32 != nof_rows_a * nof_cols_b {
+                    let output_rows = if cfg.a_transposed { nof_cols_a } else { nof_rows_a };
+                    let output_cols = if cfg.b_transposed { nof_rows_b } else { nof_cols_b };
+                    if result.len() as u32 != output_rows * output_cols {
                         return Err(IcicleError::new(
                             eIcicleError::InvalidArgument,
                             format!(
                                 "Result matrix has invalid size: got {}, expected {} ({} × {})",
                                 result.len(),
-                                nof_rows_a * nof_cols_b,
-                                nof_rows_a,
-                                nof_cols_b
+                                output_rows * output_cols,
+                                output_rows,
+                                output_cols
                             ),
                         ));
                     }
@@ -285,6 +317,12 @@ macro_rules! impl_matrix_ops_tests {
         pub fn initialize() {
             test_utilities::test_load_and_init_devices();
             test_utilities::test_set_main_device();
+        }
+
+        #[test]
+        fn test_matmul_transposed() {
+            initialize();
+            check_matmul_transposed::<$element_type>();
         }
 
         #[test]
