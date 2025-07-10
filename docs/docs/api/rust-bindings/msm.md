@@ -3,12 +3,12 @@
 ## MSM API Overview
 
 ```rust
-pub fn msm<C: Curve + MSM<C>>(
-    scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
-    bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+pub fn msm<P: Projective + MSM<P>>(
+    scalars: &(impl HostOrDeviceSlice<P::ScalarField> + ?Sized),
+    bases: &(impl HostOrDeviceSlice<P::Affine> + ?Sized),
     cfg: &MSMConfig,
-    results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
-) -> Result<(), eIcicleError>;
+    results: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+) -> Result<(), IcicleError> 
 ```
 
 ### Parameters
@@ -59,26 +59,31 @@ When performing MSM operations, it's crucial to match the size of the `scalars` 
 
 ```rust
 // Using bls12-377 curve
-use icicle_bls12_377::curve::{CurveCfg, G1Projective, ScalarCfg};
-use icicle_core::{curve::Curve, msm, msm::MSMConfig, traits::GenerateRandom};
-use icicle_runtime::{device::Device, memory::HostSlice};
+use icicle_bls12_377::curve::{G1Affine, G1Projective, ScalarField};
+use icicle_core::{
+    msm::{msm, MSMConfig},
+    traits::GenerateRandom,
+};
+use icicle_runtime::memory::HostSlice;
 
 fn main() {
     // Load backend and set device ...
 
     // Randomize inputs
     let size = 1024;
-    let points = CurveCfg::generate_random_affine_points(size);
-    let scalars = ScalarCfg::generate_random(size);
+    let scalars = ScalarField::generate_random(size);
+    let points = G1Affine::generate_random(size);
 
     let mut msm_results = vec![G1Projective::zero(); 1];
-    msm::msm(
+
+    msm(
         HostSlice::from_slice(&scalars),
         HostSlice::from_slice(&points),
         &MSMConfig::default(),
         HostSlice::from_mut_slice(&mut msm_results[..]),
     )
     .unwrap();
+
     println!("MSM result = {:?}", msm_results);
 }
 
@@ -93,12 +98,12 @@ For batch msm, simply allocate the results array with size corresponding to batc
 Precomputes bases for the multi-scalar multiplication (MSM) by extending each base point with its multiples, facilitating more efficient MSM calculations.
 
 ```rust
-/// Returns `Ok(())` if no errors occurred or a `eIcicleError` otherwise.
+/// Returns `Ok(())` if no errors occurred or a `IcicleError` otherwise.
 pub fn precompute_bases<C: Curve + MSM<C>>(
     points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
     config: &MSMConfig,
     output_bases: &mut DeviceSlice<Affine<C>>,
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>;
 ```
 
 ### Parameters
@@ -110,7 +115,7 @@ pub fn precompute_bases<C: Curve + MSM<C>>(
 
 #### Returns
 
-`Ok(())` if the operation is successful, or an `eIcicleError` error otherwise.
+`Ok(())` if the operation is successful, or an `IcicleError` error otherwise.
 
 ## Parameters for optimal performance
 

@@ -20,7 +20,7 @@ pub fn keygen<P: KyberParams>(
     config: &MlKemConfig,
     public_keys: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × PUBLIC_KEY_BYTES
     secret_keys: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × SECRET_KEY_BYTES
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>;
 ```
 
 ### Encapsulation
@@ -32,7 +32,7 @@ pub fn encapsulate<P: KyberParams>(
     config: &MlKemConfig,
     ciphertexts: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × CIPHERTEXT_BYTES
     shared_secrets: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × SHARED_SECRET_BYTES
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>;
 ```
 
 ### Decapsulation
@@ -43,7 +43,7 @@ pub fn decapsulate<P: KyberParams>(
     ciphertexts: &(impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × CIPHERTEXT_BYTES
     config: &MlKemConfig,
     shared_secrets: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × SHARED_SECRET_BYTES
-) -> Result<(), eIcicleError>;
+) -> Result<(), IcicleError>;
 ```
 
 All buffers may live either on the **host** or on the currently-active **device**.
@@ -140,7 +140,7 @@ The API works identically for Device buffers – allocate input/output `DeviceVe
 
 ## Error handling
 
-All functions return `Result<(), eIcicleError>`.  An error is raised for invalid buffer sizes, mismatched device selection, or when the selected backend is not available.
+All functions return `Result<(), IcicleError>`.  An error is raised for invalid buffer sizes, mismatched device selection, or when the selected backend is not available.
 
 ---
 
