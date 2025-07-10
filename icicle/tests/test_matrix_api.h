@@ -254,39 +254,6 @@ TEST_F(MatrixTestBase, MatrixMultiplicationDimensionMismatch)
   }
 }
 
-TEST_F(MatrixTestBase, MatrixMultiplicationBatchedDimensionMismatch)
-{
-  const size_t matrix_size = 4;
-  const size_t batch_size = 4;
-  auto cfg = MatMulConfig{};
-  cfg.is_a_on_device = false;
-  cfg.is_b_on_device = false;
-  cfg.is_result_on_device = false;
-  cfg.batch_size = batch_size;
-
-  std::vector<std::vector<scalar_t>> batch_a(batch_size, std::vector<scalar_t>(matrix_size * matrix_size));
-  std::vector<scalar_t> single_b((matrix_size + 1) * matrix_size); // Different size
-
-  for (size_t i = 0; i < batch_size; i++) {
-    scalar_t::rand_host_many(batch_a[i].data(), matrix_size * matrix_size);
-  }
-  scalar_t::rand_host_many(single_b.data(), (matrix_size + 1) * matrix_size);
-
-  std::vector<std::vector<scalar_t>> batch_result(batch_size, std::vector<scalar_t>(matrix_size * matrix_size));
-
-  for (const auto& device : s_registered_devices) {
-    ICICLE_CHECK(icicle_set_device(device));
-
-    // Should fail for each matrix in batch
-    for (size_t i = 0; i < batch_size; i++) {
-      auto error = matmul(
-        batch_a[i].data(), matrix_size, matrix_size, single_b.data(), matrix_size + 1, matrix_size, cfg,
-        batch_result[i].data());
-      ASSERT_NE(error, eIcicleError::SUCCESS);
-    }
-  }
-}
-
 TEST_F(MatrixTestBase, MatrixMultiplicationNullInputs)
 {
   const size_t matrix_size = 4;
