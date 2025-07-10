@@ -213,7 +213,7 @@ LabradorInstance prepare_recursion_instance(
 
   Zq _zero = Zq::zero();
   Zq two = Zq::from(2);
-  Zq two_inv = Zq::inverse(two);
+  Zq two_inv = two.inverse();
   size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base3);
 
   // Step 8: add the equality constraint u1=tB + gC to recursion_instance

@@ -7,6 +7,7 @@
 
 // TODO(Yuval): Move implementation to source file and reduce header dependencies
 #include "icicle/vec_ops.h"
+#include "icicle/mat_ops.h"
 #include "icicle/negacyclic_ntt.h"
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
@@ -51,7 +52,7 @@ namespace icicle {
       const Tq* B,
       uint32_t B_nof_rows,
       uint32_t B_nof_cols,
-      const VecOpsConfig& config,
+      const MatMulConfig& config,
       Tq* C)
     {
       return icicle::matmul(A, A_nof_rows, A_nof_cols, B, B_nof_rows, B_nof_cols, config, C);

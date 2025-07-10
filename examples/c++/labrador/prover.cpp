@@ -146,7 +146,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       if (TESTING) {
         ConstZeroInstance cz{r, n};
         cz.phi = Q_j_hat;
-        cz.b = Zq::neg(p[j]);
+        cz.b = p[j].neg();
         if (!witness_legit_const_zero_all_ntt(cz, S_hat)) {
           std::cout << "Q_j eqn error for j = " << j << "\n";
           exit(1);
@@ -168,7 +168,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
     ICICLE_CHECK(matmul(S_hat.data(), 1, r * n, new_constraint.phi.data(), r * n, 1, {}, &phi_S_inner_prod));
     // b = -(<G, a> + <S, phi>)
     ICICLE_CHECK(vector_add(G_A_inner_prod.values, phi_S_inner_prod.values, d, {}, new_constraint.b.values));
-    Zq minus_1 = Zq::neg(Zq::from(1));
+    Zq minus_1 = Zq::from(1).neg();
     ICICLE_CHECK(scalar_mul_vec(&minus_1, new_constraint.b.values, d, {}, new_constraint.b.values));
 
     // TODO: is this needed
@@ -460,7 +460,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   ICICLE_CHECK(matrix_transpose<Tq>(H.data(), r, r, {}, Phi_times_St_transposed.data()));
 
   // Compute H = 2^{-1}(LS + (LS)^T)
-  Zq two_inv = Zq::inverse(Zq::from(2)); // 2^{-1} in Z_q
+  Zq two_inv = Zq::from(2).inverse(); // 2^{-1} in Z_q
 
   // H = H + Phi_times_St_transposed = Phi@S^t + Phi_times_St_transposed
   ICICLE_CHECK(vector_add(H.data(), Phi_times_St_transposed.data(), r * r, {}, H.data()));
