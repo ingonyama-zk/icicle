@@ -42,7 +42,7 @@ std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value)
       uint64_t val = rand_uint_32b() % (max_value + 1);
       x.values[i] = Zq::from(val);
       // negate with 1/2 probability
-      if (rand_uint_32b() % 2 == 0) { x.values[i] = Zq::neg(x.values[i]); }
+      if (rand_uint_32b() % 2 == 0) { x.values[i] = x.values[i].neg(); }
     }
   }
   return vec;
@@ -74,7 +74,7 @@ EqualityInstance create_rand_eq_inst(size_t n, size_t r, const std::vector<Rq>& 
 
   // b = -(<G, a> + <S, phi>)
   ICICLE_CHECK(vector_add(G_A_inner_prod.values, phi_S_inner_prod.values, Rq::d, {}, eq_inst.b.values));
-  Zq minus_1 = Zq::neg(Zq::from(1));
+  Zq minus_1 = Zq::from(1).neg();
   ICICLE_CHECK(scalar_mul_vec(&minus_1, eq_inst.b.values, Rq::d, {}, eq_inst.b.values));
   // Now S is a witness for the equality constraint eq_inst
   return eq_inst;

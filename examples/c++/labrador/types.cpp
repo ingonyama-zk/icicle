@@ -13,7 +13,7 @@ void LabradorInstance::agg_equality_constraints(const std::vector<Tq>& alpha_hat
   const size_t d = Tq::d;
   EqualityInstance final_const(param.r, param.n);
 
-  VecOpsConfig async_config = default_vec_ops_config();
+  MatMulConfig async_config{};
   async_config.is_async = true;
 
   // a''_{ij} = ∑_{k=0}^{K-1} α_k * a_{ij}^{(k)}
