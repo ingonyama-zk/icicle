@@ -36,7 +36,7 @@ The design is generic over ring constructions, enabling flexible use of differen
 - **Challenge Sampling**  
   Rejection sampling of polynomials satisfying operator norm bounds
 
-For example, the **babykoala** protocol builds on this foundation to implement a lattice-based zk-SNARK with modular components and device acceleration.
+For example, the **labrador** protocol builds on this foundation to implement a lattice-based zk-SNARK with modular components and device acceleration.
 
 ## [See a full Rust example here.](https://github.com/ingonyama-zk/icicle/tree/main/examples/rust/lattice-snarks)
 
@@ -984,7 +984,7 @@ use icicle_babykoala::polynomial_ring::PolyRing as Rq;
 use icicle_runtime::memory::DeviceVec;
 use rand::RngCore;
 
-// Parameters from the babykoala protocol
+// Parameters from the labrador protocol
 let tau1 = 31;           // Number of ±1 coefficients
 let tau2 = 10;           // Number of ±2 coefficients
 let opnorm_bound = 15;   // Operator norm bound for rejection sampling
