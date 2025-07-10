@@ -25,7 +25,7 @@ where
     T: IntegerRing,
     T: RandomSampling<T>,
 {
-    T::random_sampling(size, fast_mode, seed, cfg, output)
+    T::random_sampling(fast_mode, seed, cfg, output)
 }
 
 /// Implements RandomSampling for a scalar ring type using FFI.

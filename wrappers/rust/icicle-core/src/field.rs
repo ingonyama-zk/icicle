@@ -2,34 +2,6 @@ use crate::{ring::IntegerRing, traits::Invertible};
 
 pub trait Field: IntegerRing + Invertible {}
 
-/// Returns the modulus of the field as a little-endian byte array.
-pub fn modulus<F>() -> Vec<u8>
-where
-    F: FieldImpl + Arithmetic,
-{
-    // Compute modulus - 1 using field arithmetic
-    let minus_one = F::zero() - F::one();
-    let mut bytes = minus_one.to_bytes_le();
-
-    // Add 1 to get the actual modulus (modulus = modulus - 1 + 1)
-    let mut carry = 1u8;
-    for byte in &mut bytes {
-        let (sum, new_carry) = byte.overflowing_add(carry);
-        *byte = sum;
-        carry = new_carry as u8;
-        if carry == 0 {
-            break;
-        }
-    }
-
-    // If there's still a carry, append it
-    if carry != 0 {
-        bytes.push(carry);
-    }
-
-    bytes
-}
-
 #[macro_export]
 macro_rules! impl_field {
     (

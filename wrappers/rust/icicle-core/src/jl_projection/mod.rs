@@ -248,14 +248,14 @@ macro_rules! impl_jl_projection {
                 }
 
                 if output_rows.len() != row_size * num_rows {
-                    eprintln!(
-                        "JL projection error: output_rows has length {}, but expected {} (row_size * num_rows = {} * {})",
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        format!("JL projection error: output_rows has length {}, but expected {} (row_size * num_rows = {} * {})",
                         output_rows.len(),
                         row_size * num_rows,
                         row_size,
-                        num_rows
-                    );
-                    return Err(eIcicleError::InvalidArgument);
+                        num_rows)
+                    ));
                 }
 
                 let mut cfg_clone = cfg.clone();
@@ -315,16 +315,16 @@ macro_rules! impl_jl_projection_as_polyring {
                     ));
                 }
 
-if output_rows.len() != row_size * num_rows {
-    eprintln!(
-        "JL projection error: output_rows has length {}, but expected {} (row_size * num_rows = {} * {})",
-        output_rows.len(),
-        row_size * num_rows,
-        row_size,
-        num_rows
-    );
-    return Err(eIcicleError::InvalidArgument);
-}
+                if output_rows.len() != row_size * num_rows {
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidArgument,
+                        format!("JL projection error: output_rows has length {}, but expected {} (row_size * num_rows = {} * {})",
+                        output_rows.len(),
+                        row_size * num_rows,
+                        row_size,
+                        num_rows)
+                    ));
+                }
 
                 let mut cfg_clone = cfg.clone();
                 cfg_clone.is_result_on_device = output_rows.is_on_device();

@@ -127,8 +127,10 @@ macro_rules! impl_norm {
             }
 
             if output.is_on_device() {
-                eprintln!("Output is expected to be on host, but it is on device");
-                return Err(eIcicleError::InvalidArgument);
+                return Err(IcicleError::new(
+                    eIcicleError::InvalidArgument,
+                    "Output is expected to be on host, but it is on device",
+                ));
             }
 
             cfg.is_a_on_device = input.is_on_device();

@@ -8,15 +8,19 @@ use icicle_core::{
     polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut, PolynomialRing},
     random_sampling,
     random_sampling::{challenge_space_polynomials_sampling, ChallengeSpacePolynomialsSampling},
-    traits::{Arithmetic, FieldImpl, GenerateRandom},
+    ring::IntegerRing,
+    traits::GenerateRandom,
     vec_ops,
     vec_ops::{poly_vecops, VecOpsConfig},
 };
 use icicle_labrador::{
-    polynomial_ring::PolyRing,                    // polynomial ring type Zq[X]/X^64+1
-    ring::{ScalarCfg as ZqCfg, ScalarRing as Zq}, // the scalar integer ring Zq (q~64b)
+    polynomial_ring::PolyRing, // polynomial ring type Zq[X]/X^64+1
+    ring::ScalarRing as Zq,    // the scalar integer ring Zq (q~64b)
 };
-use icicle_runtime::memory::{DeviceVec, HostSlice};
+use icicle_runtime::{
+    memory::{DeviceVec, HostSlice},
+    IcicleError,
+};
 
 /// Command-line args
 #[derive(Parser, Debug)]
@@ -39,8 +43,7 @@ fn try_load_and_set_backend_device(args: &Args) {
 /// Demonstrates in-place and out-of-place NTT for a polynomial ring.
 fn negacyclic_ntt_example<P>(size: usize)
 where
-    P: PolynomialRing + negacyclic_ntt::NegacyclicNtt<P> + GenerateRandom<P>,
-    P::Base: FieldImpl,
+    P: PolynomialRing + negacyclic_ntt::NegacyclicNtt<P>,
 {
     // Generate random input on the host
     let input = P::generate_random(size);
@@ -92,7 +95,7 @@ where
 /// Ajtai-style commitments, and other linear algebra primitives over polynomial rings.
 fn matmul_example<P>(n: u32, m: u32, k: u32)
 where
-    P: PolynomialRing + matrix_ops::MatrixOps<P> + GenerateRandom<P>,
+    P: PolynomialRing + matrix_ops::MatrixOps<P>,
 {
     println!("----------------------------------------------------------------------");
     println!(
@@ -139,7 +142,7 @@ where
 /// column-major operations.
 fn transpose_example<P>(rows: u32, cols: u32)
 where
-    P: PolynomialRing + matrix_ops::MatrixOps<P> + GenerateRandom<P>,
+    P: PolynomialRing + matrix_ops::MatrixOps<P>,
 {
     println!("----------------------------------------------------------------------");
     println!(
@@ -173,9 +176,9 @@ where
 /// Computes the modulus of a field element type `T` as `usize`.
 fn modulus<T>() -> usize
 where
-    T: FieldImpl + Arithmetic,
+    T: IntegerRing,
 {
-    let q_bytes = icicle_core::field::modulus::<T>();
+    let q_bytes = icicle_core::ring::modulus::<T>();
 
     assert!(
         q_bytes.len() <= std::mem::size_of::<usize>(),
@@ -197,8 +200,7 @@ where
 ///     - And so on, until all `d` digits are emitted.
 fn balanced_decomposition_example<P>(size: usize)
 where
-    P: PolynomialRing + balanced_decomposition::BalancedDecomposition<P> + GenerateRandom<P>,
-    P::Base: FieldImpl + Arithmetic,
+    P: PolynomialRing + balanced_decomposition::BalancedDecomposition<P>,
 {
     println!("----------------------------------------------------------------------");
     let q = modulus::<P::Base>();
@@ -278,9 +280,8 @@ where
 /// - Retrieves conjugated JL matrix rows as `PolyRing` polynomials
 fn jl_projection_example<P>(size: usize, projection_dim: usize)
 where
-    P: PolynomialRing + GenerateRandom<P>,
-    P::Base: FieldImpl,
-    <P::Base as FieldImpl>::Config: jl_projection::JLProjection<P::Base>,
+    P: PolynomialRing,
+    P::Base: jl_projection::JLProjection<P::Base>,
     P: jl_projection::JLProjectionPolyRing<P>,
 {
     println!("----------------------------------------------------------------------");
@@ -366,8 +367,7 @@ where
 /// - Times each norm check call individually
 fn norm_checking_example<T>(size: usize)
 where
-    T: FieldImpl,
-    <T as FieldImpl>::Config: norm::Norm<T> + GenerateRandom<T>,
+    T: IntegerRing + norm::Norm<T>,
 {
     use std::time::Instant;
 
@@ -475,8 +475,7 @@ where
 fn random_sampling_example<P>(size: usize)
 where
     P: PolynomialRing,
-    P::Base: FieldImpl,
-    <P::Base as FieldImpl>::Config: random_sampling::RandomSampling<P::Base>,
+    P::Base: random_sampling::RandomSampling<P::Base>,
 {
     println!("----------------------------------------------------------------------");
     println!(
@@ -519,7 +518,6 @@ where
 fn challenge_space_sampling_example<P>(size: usize)
 where
     P: PolynomialRing + ChallengeSpacePolynomialsSampling<P>,
-    P::Base: FieldImpl,
 {
     println!("----------------------------------------------------------------------");
     println!("[Challenge Space Sampling] Generating {} challenge polynomials", size);
@@ -567,8 +565,8 @@ where
 pub fn polynomial_vecops_example<P>(size: usize)
 where
     P: PolynomialRing,
-    P::Base: FieldImpl,
-    <P::Base as FieldImpl>::Config: vec_ops::VecOps<P::Base> + random_sampling::RandomSampling<P::Base>,
+    P::Base: IntegerRing,
+    P::Base: vec_ops::VecOps<P::Base> + random_sampling::RandomSampling<P::Base>,
 {
     use rand::RngCore;
     use std::time::Instant;
@@ -637,8 +635,8 @@ fn main() {
     // (1) Integer ring: Zq
     // ----------------------------------------------------------------------
     println!("----------------------------------------------------------------------");
-    let _zq_zeros: Vec<Zq> = vec![Zq::zero(); size];
-    let zq_random: Vec<Zq> = ZqCfg::generate_random(size);
+    let _zq_zeros: Vec<Zq> = vec![Zq::default(); size];
+    let zq_random: Vec<Zq> = Zq::generate_random(size);
     println!("[Integer ring Zq] Generated {} random Zq elements", zq_random.len());
 
     // ----------------------------------------------------------------------
@@ -650,9 +648,12 @@ fn main() {
     let _rq_zeros: Vec<PolyRing> = vec![PolyRing::zero(); size];
     let _rq_random: Vec<PolyRing> = PolyRing::generate_random(size);
 
+    let unwrap_poly_from_slice = |result: Result<PolyRing, IcicleError>| result.unwrap();
+
     let rq_from_slice: Vec<PolyRing> = zq_random
         .chunks(PolyRing::DEGREE)
         .map(PolyRing::from_slice)
+        .map(unwrap_poly_from_slice)
         .collect();
     println!(
         "[Polynomial Ring Rq] Converted {} Zq chunks into Rq polynomials",
