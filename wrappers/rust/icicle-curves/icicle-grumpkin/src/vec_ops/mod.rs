@@ -1,8 +1,5 @@
 use crate::curve::ScalarField;
-use icicle_core::{
-    impl_vec_ops_field,
-    vec_ops::*,
-};
+use icicle_core::{impl_vec_ops_field, vec_ops::*};
 use icicle_runtime::{errors::IcicleError, memory::HostOrDeviceSlice};
 
 impl_vec_ops_field!("grumpkin", grumpkin, ScalarField);

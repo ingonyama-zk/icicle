@@ -213,18 +213,18 @@ pub trait VecSlice<T> {
 }
 
 #[doc(hidden)]
-pub trait VecOps<T>: 
-    VecAdd<T> + 
-    VecAccumulate<T> + 
-    VecSub<T> + 
-    VecMul<T> + 
-    VecDiv<T> + 
-    VecInv<T> + 
-    VecSum<T> + 
-    VecProduct<T> + 
-    VecScalar<T> + 
-    VecBitReverse<T> + 
-    VecSlice<T> 
+pub trait VecOps<T>:
+    VecAdd<T>
+    + VecAccumulate<T>
+    + VecSub<T>
+    + VecMul<T>
+    + VecDiv<T>
+    + VecInv<T>
+    + VecSum<T>
+    + VecProduct<T>
+    + VecScalar<T>
+    + VecBitReverse<T>
+    + VecSlice<T>
 {
 }
 
@@ -934,7 +934,6 @@ macro_rules! impl_vec_ops_field {
 
         // Implement the combined VecOps trait
         impl VecOps<$field> for $field {}
-
     };
 }
 
