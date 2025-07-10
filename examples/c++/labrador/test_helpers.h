@@ -3,7 +3,7 @@
 #include "types.h"
 #include "utils.h"
 
-constexpr bool TESTING = false;
+constexpr bool TESTING = true;
 
 /// print a Zq vector
 void print_vec(const Zq* vec, size_t len, const std::string& name);

@@ -557,7 +557,7 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
   LabradorInstance lab_inst_i = lab_inst;
   std::vector<Rq> S_i = S;
   for (size_t i = 0; i < NUM_REC - 1; i++) {
-    std::cout << "Prover::Recursion iteration = " << i << "\n";
+    // std::cout << "Prover::Recursion iteration = " << i << "\n";
     LabradorBaseProver base_prover(lab_inst_i, S_i, oracle);
     std::tie(base_proof, part_trs) = base_prover.base_case_prover();
     trs.push_back(part_trs);
@@ -574,18 +574,18 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
 
     oracle = base_prover.oracle;
 
-    std::cout << "\tRecursion problem prepared\n";
-    std::cout << "\tn= " << lab_inst_i.param.n << ", r= " << lab_inst_i.param.r << "\n";
+    // std::cout << "\tRecursion problem prepared\n";
+    // std::cout << "\tn= " << lab_inst_i.param.n << ", r= " << lab_inst_i.param.r << "\n";
 
     if (TESTING) {
       if (lab_witness_legit(lab_inst_i, S_i)) {
-        std::cout << "\tRecursion problem-witness valid\n";
+        // std::cout << "\tRecursion problem-witness valid\n";
       } else {
         throw std::runtime_error("\tRecursion problem-witness INVALID\n");
       }
     }
   }
-  std::cout << "Prover::Recursion iteration = " << NUM_REC - 1 << "\n";
+  // std::cout << "Prover::Recursion iteration = " << NUM_REC - 1 << "\n";
   LabradorBaseProver base_prover(lab_inst_i, S_i, oracle);
   std::tie(base_proof, part_trs) = base_prover.base_case_prover();
   trs.push_back(part_trs);

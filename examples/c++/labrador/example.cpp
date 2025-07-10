@@ -43,7 +43,7 @@ struct BenchmarkResult {
 };
 
 // Function to run a single benchmark configuration
-BenchmarkResult run_benchmark(const BenchmarkConfig& config)
+BenchmarkResult run_benchmark(const BenchmarkConfig& config, bool SKIP_VERIF)
 {
   std::cout << "Running benchmark: n=" << config.n << ", r=" << config.r << ", eq_const=" << config.num_eq_const
             << ", cz_const=" << config.num_cz_const << ", repetitions=" << config.num_repetitions << std::endl;
@@ -52,7 +52,6 @@ BenchmarkResult run_benchmark(const BenchmarkConfig& config)
   const size_t max_value = 2;
   std::vector<double> times;
   bool all_verified = true;
-  bool SKIP_VERIF = true;
 
   // Use current time as base for unique seeds
   auto base_time = std::chrono::system_clock::now();
@@ -220,9 +219,12 @@ int main(int argc, char* argv[])
   // Benchmark parameters from the original code
   // std::vector<size_t> arr_n{64, 256};
   // std::vector<size_t> arr_r{8};
-  std::vector<std::tuple<size_t, size_t>> arr_nr{{64, 8}};
-  std::vector<std::tuple<size_t, size_t>> num_constraint{{1, 1}, {10, 10}, {10, 100}, {100, 100}};
-  size_t NUM_REP = 10;
+  std::vector<std::tuple<size_t, size_t>> arr_nr{{64,8}};
+  // this fails but {10,0} doesn't fail on CUDA
+  // num_agg =4 doesn't fail 3/5 fail
+  // AI thinks it's NTT problem- update to new commit
+  std::vector<std::tuple<size_t, size_t>> num_constraint{{0, 10}};
+  size_t NUM_REP = 5;
 
   std::vector<BenchmarkResult> results;
 
@@ -232,14 +234,14 @@ int main(int argc, char* argv[])
       BenchmarkConfig config{n, r, num_eq, num_cz, NUM_REP};
 
       try {
-        BenchmarkResult result = run_benchmark(config);
+        BenchmarkResult result = run_benchmark(config, false);
         results.push_back(result);
       } catch (const std::exception& e) {
         std::cerr << "Error running benchmark for n=" << n << ", r=" << r << ", eq=" << num_eq << ", cz=" << num_cz
                   << ": " << e.what() << std::endl;
       }
+      if (!results.empty()) { save_to_csv(results, "labrador_benchmark_results.csv"); }
     }
-    if (!results.empty()) { save_to_csv(results, "labrador_benchmark_results.csv"); }
   }
 
   // Print results
