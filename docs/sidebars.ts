@@ -186,6 +186,11 @@ export default {
           label: "Serialization",
           id: "api/cpp/serialization",
         },
+        {
+          type: "doc",
+          label: "Matrix Operations",
+          id: "api/cpp/matrix_ops",
+        },
       ],
     },
     {
