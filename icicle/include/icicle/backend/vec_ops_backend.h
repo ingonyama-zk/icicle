@@ -504,7 +504,7 @@ namespace icicle {
   // for Zq type
 
   // This should be the same for all the devices to get a deterministic result
-  const uint64_t RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS = 256;
+  const size_t RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS = 256;
 
   using ringZqRandomSamplingImpl = std::function<eIcicleError(
     const Device& device,
