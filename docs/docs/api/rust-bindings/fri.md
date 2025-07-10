@@ -44,7 +44,7 @@ A structure representing the FRI proof, which includes methods for handling proo
 - **`get_final_poly(&self) -> Result<Vec<F>, IcicleError>`**:
   Returns the final polynomial values.
 
-- **`get_pow_nonce(&self) -> Result<u64, eIcicleError>`**:
+- **`get_pow_nonce(&self) -> Result<u64, IcicleError>`**:
   Returns the proof-of-work nonce.
 
 #### `FriConfig`
