@@ -41,7 +41,7 @@ pub fn flatten_polyring_slice<'a, P>(
 ) -> impl HostOrDeviceSlice<P::Base> + 'a
 where
     P: PolynomialRing,
-    P::Base: IntegerRing + 'a,
+    P::Base: 'a,
 {
     // Note that this can never fail here for a valid P
     unsafe { reinterpret_slice::<P, P::Base>(input).expect("Internal error") }
@@ -58,7 +58,7 @@ pub fn flatten_polyring_slice_mut<'a, P>(
 ) -> impl HostOrDeviceSlice<P::Base> + 'a
 where
     P: PolynomialRing,
-    P::Base: IntegerRing + 'a,
+    P::Base: 'a,
 {
     // Note that this can never fail here for a valid P
     unsafe { reinterpret_slice_mut::<P, P::Base>(input).expect("Internal error") }

@@ -104,8 +104,10 @@ macro_rules! impl_norm {
 
         fn norm_check_args(
             input: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+            output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
             cfg: &mut VecOpsConfig,
         ) -> Result<(), IcicleError> {
+            cfg.batch_size = output.len() as i32;
             if input.len() % (cfg.batch_size as usize) != 0 {
                 return Err(IcicleError::new(
                     eIcicleError::InvalidArgument,
@@ -124,6 +126,13 @@ macro_rules! impl_norm {
                 ));
             }
 
+            if output.is_on_device() {
+                return Err(IcicleError::new(
+                    eIcicleError::InvalidArgument,
+                    "Output is expected to be on host, but it is on device",
+                ));
+            }
+
             cfg.is_a_on_device = input.is_on_device();
             cfg.is_result_on_device = false; // Output is always on host
 
@@ -139,7 +148,7 @@ macro_rules! impl_norm {
                 output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
             ) -> Result<(), IcicleError> {
                 let mut cfg = cfg.clone();
-                norm_check_args(input, &mut cfg)?;
+                norm_check_args(input, output, &mut cfg)?;
 
                 unsafe {
                     check_norm_bound(
@@ -164,8 +173,8 @@ macro_rules! impl_norm {
                 output: &mut (impl HostOrDeviceSlice<bool> + ?Sized),
             ) -> Result<(), IcicleError> {
                 let mut cfg = cfg.clone();
-                norm_check_args(input_a, &mut cfg)?;
-                norm_check_args(input_b, &mut cfg)?;
+                norm_check_args(input_a, output, &mut cfg)?;
+                norm_check_args(input_b, output, &mut cfg)?;
 
                 if input_a.len() != input_b.len() {
                     return Err(IcicleError::new(

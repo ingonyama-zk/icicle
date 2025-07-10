@@ -1,14 +1,12 @@
 use crate::polynomial_ring::PolynomialRing;
-use crate::ring::IntegerRing;
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{errors::IcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
 /// Trait for random sampling operations on group elements.
-pub trait RandomSampling<T: IntegerRing> {
+pub trait RandomSampling<T> {
     fn random_sampling(
-        size: usize,
         fast_mode: bool,
         seed: &[u8],
         cfg: &VecOpsConfig,
@@ -17,17 +15,15 @@ pub trait RandomSampling<T: IntegerRing> {
 }
 
 pub fn random_sampling<T>(
-    size: usize,
     fast_mode: bool,
     seed: &[u8],
     cfg: &VecOpsConfig,
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), IcicleError>
 where
-    T: IntegerRing,
     T: RandomSampling<T>,
 {
-    T::random_sampling(size, fast_mode, seed, cfg, output)
+    T::random_sampling(fast_mode, seed, cfg, output)
 }
 
 /// Implements RandomSampling for a scalar ring type using FFI.
@@ -53,7 +49,6 @@ macro_rules! impl_random_sampling {
 
         impl RandomSampling<$scalar_type> for $scalar_type {
             fn random_sampling(
-                size: usize,
                 fast_mode: bool,
                 seed: &[u8],
                 cfg: &VecOpsConfig,
@@ -71,7 +66,7 @@ macro_rules! impl_random_sampling {
 
                 unsafe {
                     random_sampling_ffi(
-                        size,
+                        output.len(),
                         fast_mode,
                         seed.as_ptr(),
                         seed.len(),
@@ -149,7 +144,6 @@ pub fn challenge_space_polynomials_sampling<T>(
 ) -> Result<(), IcicleError>
 where
     T: PolynomialRing,
-    T::Base: IntegerRing,
     T: ChallengeSpacePolynomialsSampling<T>,
 {
     T::challenge_space_polynomials_sampling(seed, cfg, ones, twos, norm, output)

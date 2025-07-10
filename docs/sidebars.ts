@@ -307,6 +307,11 @@ export default {
         },
         {
           type: "doc",
+          label: "Lattice SNARKs",
+          id: "api/rust-bindings/lattice/lattice-snarks",
+        },
+        {
+          type: "doc",
           label: "PQC ML-KEM",
           id: "api/rust-bindings/lattice/pqc-ml-kem",
         },
