@@ -97,7 +97,7 @@ namespace {
               // Access A normally: row `row` of A
               a = mat_a + (row * nof_cols_a + k) * degree;
             }
-            
+
             // Adjust indexing for transposed matrix B
             const T* b;
             if (config.b_transposed) {
@@ -107,7 +107,7 @@ namespace {
               // Access B normally: column `col` of B
               b = mat_b + (k * nof_cols_b + col) * degree;
             }
-            
+
             for (uint32_t d = 0; d < degree; ++d) {
               acc[d] = acc[d] + a[d] * b[d];
             }
