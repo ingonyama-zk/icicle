@@ -45,7 +45,7 @@ void fast_mode_random_sampling(
         field_t prev_element = field_t::reduce_from_bytes(reinterpret_cast<std::byte*>(hash_output.data()));
         batch_output[t * size_per_task] = prev_element;
         for (int i = 1; i < size_per_task && (t * size_per_task + i) < size; i++) {
-          field_t next_element = field_t::sqr(prev_element);
+          field_t next_element = prev_element.sqr();
           prev_element = next_element;
           batch_output[t * size_per_task + i] = next_element;
         }
@@ -65,7 +65,7 @@ void slow_mode_random_sampling(
   const size_t elements_per_hash = size_t(std::max(keccak512.output_size() / element_size, uint64_t(1)));
   // To support elements that are larger than 32 bytes
   const size_t hashes_per_element = size_t(std::max(element_size / keccak512.output_size(), uint64_t(1)));
-  const size_t hashes_per_batch = size / elements_per_hash;
+  const size_t hashes_per_batch = std::max(size / elements_per_hash, size_t(1));
 
   const int nof_workers = std::min((int)(hashes_per_batch), get_nof_workers(cfg));
   const size_t hashes_per_worker = (hashes_per_batch + nof_workers - 1) / nof_workers;
@@ -93,7 +93,7 @@ void slow_mode_random_sampling(
               keccak512.output_size(), hash_cfg,
               reinterpret_cast<std::byte*>(hash_output.data()) + i * keccak512.output_size());
           }
-          for (int i = 0; i < elements_per_hash; i++) {
+          for (int i = 0; i < elements_per_hash && counter * elements_per_hash + i < size; i++) {
             batch_output[counter * elements_per_hash + i] =
               field_t::reduce_from_bytes(reinterpret_cast<std::byte*>(hash_output.data()) + i * element_size);
           }
@@ -238,8 +238,8 @@ eIcicleError cpu_challenge_space_polynomials_sampling(
   auto keccak512 = Keccak512::create();
 
   static const field_t two = field_t::one() + field_t::one();
-  static const field_t neg_two = field_t::neg(two);
-  static const field_t neg_one = field_t::neg(field_t::one());
+  static const field_t neg_two = two.neg();
+  static const field_t neg_one = field_t::one().neg();
 
   const size_t nof_workers = std::min((size_t)get_nof_workers(cfg), size);
   const size_t size_per_worker = (size + nof_workers - 1) / nof_workers;

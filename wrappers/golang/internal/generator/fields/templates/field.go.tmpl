@@ -111,7 +111,7 @@ func GenerateScalars(size int) core.HostSlice[{{.FieldPrefix}}Field] {
 
 	cScalars := (*C.scalar_t)(unsafe.Pointer(&scalarSlice[0]))
 	cSize := (C.int)(size)
-	C.{{.Field}}_generate_scalars(cScalars, cSize)
+	C.{{.Field}}_generate_random(cScalars, cSize)
 
 	return scalarSlice
 }

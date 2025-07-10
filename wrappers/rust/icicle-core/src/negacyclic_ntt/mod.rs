@@ -1,7 +1,7 @@
 pub use crate::ntt::NTTDir;
 use crate::polynomial_ring::PolynomialRing;
 use icicle_runtime::config::ConfigExtension;
-use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::errors::IcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStreamHandle;
 
@@ -44,14 +44,14 @@ pub trait NegacyclicNtt<P: PolynomialRing> {
         dir: NTTDir,
         cfg: &NegacyclicNttConfig,
         output: &mut (impl HostOrDeviceSlice<P> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 
     /// Executes an in-place negacyclic NTT (forward or inverse).
     fn ntt_inplace(
         inout: &mut (impl HostOrDeviceSlice<P> + ?Sized),
         dir: NTTDir,
         cfg: &NegacyclicNttConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), IcicleError>;
 }
 
 /// Floating wrapper functions
@@ -60,7 +60,7 @@ pub fn ntt<P: PolynomialRing + NegacyclicNtt<P>>(
     dir: NTTDir,
     cfg: &NegacyclicNttConfig,
     output: &mut (impl HostOrDeviceSlice<P> + ?Sized),
-) -> Result<(), eIcicleError> {
+) -> Result<(), IcicleError> {
     P::ntt(input, dir, cfg, output)
 }
 
@@ -68,7 +68,7 @@ pub fn ntt_inplace<P: PolynomialRing + NegacyclicNtt<P>>(
     inout: &mut (impl HostOrDeviceSlice<P> + ?Sized),
     dir: NTTDir,
     cfg: &NegacyclicNttConfig,
-) -> Result<(), eIcicleError> {
+) -> Result<(), IcicleError> {
     P::ntt_inplace(inout, dir, cfg)
 }
 
@@ -93,12 +93,18 @@ macro_rules! impl_negacyclic_ntt {
                 dir: NTTDir,
                 cfg: &NegacyclicNttConfig,
                 output: &mut (impl HostOrDeviceSlice<$poly> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 if input.is_on_device() && !input.is_on_active_device() {
-                    panic!("input not allocated on the active device");
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidPointer,
+                        "input not allocated on the active device",
+                    ));
                 }
                 if output.is_on_device() && !output.is_on_active_device() {
-                    panic!("output not allocated on the active device");
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidPointer,
+                        "output not allocated on the active device",
+                    ));
                 }
 
                 let mut local_cfg = cfg.clone();
@@ -121,9 +127,12 @@ macro_rules! impl_negacyclic_ntt {
                 inout: &mut (impl HostOrDeviceSlice<$poly> + ?Sized),
                 dir: NTTDir,
                 cfg: &NegacyclicNttConfig,
-            ) -> Result<(), eIcicleError> {
+            ) -> Result<(), IcicleError> {
                 if inout.is_on_device() && !inout.is_on_active_device() {
-                    panic!("inout not allocated on the active device");
+                    return Err(IcicleError::new(
+                        eIcicleError::InvalidPointer,
+                        "inout not allocated on the active device",
+                    ));
                 }
 
                 let mut local_cfg = cfg.clone();

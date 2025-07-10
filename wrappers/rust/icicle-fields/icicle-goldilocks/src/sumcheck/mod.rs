@@ -1,13 +1,8 @@
-use crate::field::{ExtensionCfg, ExtensionField, ScalarCfg, ScalarField};
+use crate::field::{ExtensionField, ScalarField};
 use icicle_core::impl_sumcheck;
 
-impl_sumcheck!("goldilocks", goldilocks, ScalarField, ScalarCfg);
-impl_sumcheck!(
-    "goldilocks_extension",
-    goldilocks_extension,
-    ExtensionField,
-    ExtensionCfg
-);
+impl_sumcheck!("goldilocks", goldilocks, ScalarField);
+impl_sumcheck!("goldilocks_extension", goldilocks_extension, ExtensionField);
 
 // Re-export types from the goldilocks module
 pub use goldilocks::{SumcheckProof as ScalarSumcheckProof, SumcheckWrapper as ScalarSumcheckWrapper};

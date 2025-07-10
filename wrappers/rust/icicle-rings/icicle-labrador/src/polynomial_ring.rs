@@ -1,6 +1,5 @@
 use crate::ring::ScalarRing;
 use icicle_core::impl_polynomial_ring;
-use icicle_core::traits::FieldImpl;
 
 // Define the Polynomial Ring Zq[X]/X^d+1
 impl_polynomial_ring!(PolyRing, ScalarRing, 64, -1);

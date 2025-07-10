@@ -97,7 +97,11 @@ export default {
         {
           type: "doc",
           id: "start/integration-&-support/migrate_from_v2",
-        },                   
+        },
+        {
+          type: "doc",
+          id: "start/integration-&-support/migrate_from_v3",
+        },
         {
           type: "doc",
           id: "start/integration-&-support/benchmarks",

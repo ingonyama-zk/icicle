@@ -2,15 +2,15 @@ use crate::polynomial_ring::PolynomialRing;
 use crate::random_sampling::{
     challenge_space_polynomials_sampling, random_sampling, ChallengeSpacePolynomialsSampling, RandomSampling,
 };
-use crate::traits::{Arithmetic, FieldImpl};
+use crate::ring::IntegerRing;
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::{memory::HostSlice, test_utilities};
 use rand::Rng;
 
 pub fn check_random_sampling<F>()
 where
-    F: FieldImpl + Arithmetic,
-    F::Config: RandomSampling<F>,
+    F: IntegerRing,
+    F: RandomSampling<F>,
 {
     let output_size = 1 << 10;
     let cfg = VecOpsConfig::default();
@@ -34,7 +34,7 @@ where
 pub fn check_challenge_space_polynomials_sampling<P>()
 where
     P: PolynomialRing,
-    P::Base: FieldImpl + Arithmetic,
+    P::Base: IntegerRing,
     P: ChallengeSpacePolynomialsSampling<P>,
 {
     let output_size = 1 << 10;

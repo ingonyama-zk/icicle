@@ -187,11 +187,11 @@ TYPED_TEST(ModArithTest, montgomeryConversion)
   if (!IcicleTestBase::is_main_device_available()) {
     if (is_to_montgomery) {
       for (int i = 0; i < total_size; i++) {
-        out_ref[i] = TypeParam::to_montgomery(in_a[i]);
+        out_ref[i] = in_a[i].to_montgomery();
       }
     } else {
       for (int i = 0; i < total_size; i++) {
-        out_ref[i] = TypeParam::from_montgomery(in_a[i]);
+        out_ref[i] = in_a[i].from_montgomery();
       }
     }
   } else {
@@ -737,7 +737,7 @@ TEST_F(ModArithTestBase, CpuProgramExecutorMultiRes)
   scalar_t expected_res_0 = eq * (a * b - c) + scalar_t::from(9);
   ASSERT_EQ(res_0, expected_res_0);
 
-  scalar_t expected_res_1 = a * b - scalar_t::inverse(c);
+  scalar_t expected_res_1 = a * b - c.inverse();
   ASSERT_EQ(res_1, expected_res_1);
   ASSERT_EQ(res_2, res_1);
 }
