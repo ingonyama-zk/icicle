@@ -93,6 +93,9 @@ where
 ///     - B has shape `[m × k]`
 /// - The output C is also stored in row-major layout with shape `[n × k]`
 ///
+/// - A and/or B can be logically transposed using configuration flags (`a_transposed`, `b_transposed`).
+///   This allows computing `Aᵗ × B`, `A × Bᵗ`, or `Aᵗ × Bᵗ` without modifying the data in memory.
+///
 /// This API is useful for matrix-matrix multiplication, vector dot products,
 /// Ajtai-style commitments, and other linear algebra primitives over polynomial rings.
 fn matmul_example<P>(n: u32, m: u32, k: u32)
@@ -135,7 +138,7 @@ where
         &device_b,
         m,
         k,
-        &MatMulConfig::default(),
+        &MatMulConfig::default(), // Can define Aᵗ or Bᵗ here assuming dims match
         &mut device_c,
     )
     .expect("Matmul failed");

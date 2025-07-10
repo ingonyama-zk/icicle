@@ -190,25 +190,17 @@ macro_rules! impl_matrix_ops {
                         ));
                     }
 
-                    if nof_cols_a != nof_rows_b {
-                        return Err(IcicleError::new(
-                            eIcicleError::InvalidArgument,
-                            format!(
-                                "Matrix dimensions incompatible for multiplication: A is {} × {}, B is {} × {}",
-                                nof_rows_a, nof_cols_a, nof_rows_b, nof_cols_b
-                            ),
-                        ));
-                    }
-
-                    if result.len() as u32 != nof_rows_a * nof_cols_b {
+                    let output_rows = if cfg.a_transposed { nof_cols_a } else { nof_rows_a };
+                    let output_cols = if cfg.b_transposed { nof_rows_b } else { nof_cols_b };
+                    if result.len() as u32 != output_rows * output_cols {
                         return Err(IcicleError::new(
                             eIcicleError::InvalidArgument,
                             format!(
                                 "Result matrix has invalid size: got {}, expected {} ({} × {})",
                                 result.len(),
-                                nof_rows_a * nof_cols_b,
-                                nof_rows_a,
-                                nof_cols_b
+                                output_rows * output_cols,
+                                output_rows,
+                                output_cols
                             ),
                         ));
                     }

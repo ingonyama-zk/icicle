@@ -283,20 +283,25 @@ These are useful for vector dot-products, Ajtai-style commitments, and other alg
 use icicle_core::matrix_ops::{
     matmul,                 // Matrix multiplication
     matrix_transpose,       // Matrix transpose
-    VecOpsConfig,           // Backend and execution configuration
+    MatMulConfig,           // Backend and execution configuration
     MatrixOps,              // Trait for matmul    
 };
+use icicle_core::vec_ops::VecOpsConfig;
 ```
 
 ### Matrix multiplication API
 
 ```rust
-/// Computes C = A × B for two row-major matrices.
+/// Computes C = A × B for two row-major matrices, with optional transposition of A and/or B.
 ///
-/// - `a`: Matrix A, shape (a_rows × a_cols)
-/// - `b`: Matrix B, shape (b_rows × b_cols)
-/// - `cfg`: Execution configuration
-/// - `result`: Output buffer, shape (a_rows × b_cols)
+/// - `a`: Input matrix A, shape (a_rows × a_cols). Treated as Aᵗ if `cfg.a_transposed` is true.
+/// - `b`: Input matrix B, shape (b_rows × b_cols). Treated as Bᵗ if `cfg.b_transposed` is true.
+/// - `cfg`: Execution configuration (e.g., transposition flags, memory location, async mode).
+/// - `result`: Output buffer for matrix C, with shape:
+///     - `(a_rows × b_cols)` if `cfg.result_transposed == false`
+///     - `(b_cols × a_rows)` if `cfg.result_transposed == true`
+///
+/// Returns an error if the matrix dimensions are incompatible or the configuration is invalid.
 pub fn matmul<T>(
     a: &(impl HostOrDeviceSlice<T> + ?Sized),
     a_rows: u32,
@@ -304,7 +309,7 @@ pub fn matmul<T>(
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     b_rows: u32,
     b_cols: u32,
-    cfg: &VecOpsConfig,
+    cfg: &MatMulConfig,
     result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), IcicleError>
 where
@@ -333,45 +338,66 @@ where
 ### Example
 
 ```rust
-use icicle_core::traits::GenerateRandom;
-use icicle_core::{
-    matrix_ops::{matmul, matrix_transpose},
-    vec_ops::VecOpsConfig,
-};
-use icicle_labrador::polynomial_ring::PolyRing;
-use icicle_runtime::memory::{DeviceVec, HostSlice};
+    use icicle_core::traits::GenerateRandom;
+    use icicle_core::{
+        matrix_ops::{matmul, matrix_transpose, MatMulConfig},
+        vec_ops::VecOpsConfig,
+    };
+    use icicle_labrador::polynomial_ring::PolyRing;
+    use icicle_runtime::memory::{DeviceVec, HostSlice};
 
-let n = 8;
-let m = 64;
-let cfg = VecOpsConfig::default();
+    let n = 8;
+    let m = 64;
 
-// Generate a random matrix A ∈ [n × m] on the host (row-major layout)
-let host_a = PolyRing::generate_random((n * m) as usize);
+    // Generate a random matrix A ∈ [n × m] on the host (row-major layout)
+    let host_a = PolyRing::generate_random((n * m) as usize);
 
-// Allocate device buffer for Aᵗ ∈ [m × n]
-let mut device_a_transposed =
-    DeviceVec::<PolyRing>::device_malloc((n * m) as usize).expect("Failed to allocate transpose output");
+    // Allocate device buffer for Aᵗ ∈ [m × n]
+    let mut device_a_transposed =
+        DeviceVec::<PolyRing>::device_malloc((n * m) as usize).expect("Failed to allocate transpose output");
 
-// Transpose Aᵗ = transpose(A) (from host memory to device memory)
-matrix_transpose(HostSlice::from_slice(&host_a), n, m, &cfg, &mut device_a_transposed).expect("Transpose failed");
+    // Transpose Aᵗ = transpose(A) (from host memory to device memory)
+    matrix_transpose(
+        HostSlice::from_slice(&host_a),
+        n,
+        m,
+        &VecOpsConfig::default(),
+        &mut device_a_transposed,
+    )
+    .expect("Transpose failed");
 
-// Allocate output buffer for (Aᵗ)A ∈ [m × m]
-let mut device_a_transposed_a =
-    DeviceVec::<PolyRing>::device_malloc((m * m) as usize).expect("Failed to allocate output matrix");
+    // Allocate output buffer for (Aᵗ)A ∈ [m × m]
+    let mut device_a_transposed_a =
+        DeviceVec::<PolyRing>::device_malloc((m * m) as usize).expect("Failed to allocate output matrix");
 
-// Compute (Aᵗ)A
-// Note that one matrix is on host memory and the other on device memory
-matmul(
-    &device_a_transposed,
-    m,
-    n,
-    HostSlice::from_slice(&host_a),
-    n,
-    m,
-    &cfg,
-    &mut device_a_transposed_a,
-)
-.expect("Matmul failed");
+    // Compute (Aᵗ)A
+    // Note that one matrix is on host memory and the other on device memory
+    matmul(
+        &device_a_transposed,
+        m,
+        n,
+        HostSlice::from_slice(&host_a),
+        n,
+        m,
+        &MatMulConfig::default(),
+        &mut device_a_transposed_a,
+    )
+    .expect("Matmul failed");
+
+    // Compute (Aᵗ)A fused (transpose fused to matmul)
+    let mut cfg = MatMulConfig::default();
+    cfg.a_transposed = true;
+    matmul(
+        HostSlice::from_slice(&host_a),
+        n,
+        m,
+        HostSlice::from_slice(&host_a),
+        n,
+        m,
+        &cfg,
+        &mut device_a_transposed_a,
+    )
+    .expect("Matmul failed");
 ```
 
 ## Polynomial Ring Vector Operations
