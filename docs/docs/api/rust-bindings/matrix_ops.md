@@ -1,17 +1,59 @@
 # Matrix Operations (Rust bindings)
 
-`icicle-core` exposes a small but very useful set of **matrix primitives** that work on data located either in host-memory or on the GPU.  They are implemented on top of – and share the same configuration structure as – the generic vector-operations backend (`VecOps`).
+`icicle-core` exposes a set of **matrix primitives** that operate on data located either in host memory or on the GPU. These are implemented on top of – and share the same configuration structure as – the generic vector-operations backend (`VecOps`).
+
+---
+## Configuration: `MatMulConfig`
+
+Matrix multiplication uses a dedicated configuration struct, `MatMulConfig`, which controls device placement, batching, transposition, and more:
+
+```rust
+use icicle_runtime::stream::IcicleStreamHandle;
+use icicle_runtime::config::ConfigExtension;
+
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct MatMulConfig {
+    pub stream_handle: IcicleStreamHandle, // CUDA/stream for async execution
+    pub is_a_on_device: bool,
+    pub is_b_on_device: bool,
+    pub is_result_on_device: bool,
+    pub is_async: bool,
+    pub batch_size: i32,
+    pub columns_batch: bool,
+    pub a_is_transposed: bool,
+    pub b_is_transposed: bool,
+    pub result_is_transposed: bool,
+    pub ext: ConfigExtension, // Backend-specific extensions
+}
+
+impl MatMulConfig {
+    pub fn default() -> Self { /* ... */ }
+}
+```
+
+- Use `MatMulConfig::default()` for standard single-matrix multiplication on the main device.
+- For matrix transpose, use `VecOpsConfig` as before.
 
 ---
 ## Trait: `MatrixOps`
 
 ```rust
 use icicle_runtime::memory::HostOrDeviceSlice;
+use icicle_core::matrix_ops::MatMulConfig;
 use icicle_core::vec_ops::VecOpsConfig;
 use icicle_runtime::errors::IcicleError;
 
 pub trait MatrixOps<T> {
-    /// Matrix multiplication:  `result = a × b` (row-major inputs / outputs)
+    /// Performs matrix multiplication: `result = a × b`
+    ///
+    /// - `a`: shape `(a_rows × a_cols)` (row-major)
+    /// - `b`: shape `(b_rows × b_cols)` (row-major)
+    /// - `result`: shape `(a_rows × b_cols)` (row-major, must be preallocated)
+    ///
+    /// Requirements:
+    /// - `a_cols == b_rows`
+    /// - All buffers may reside in host or device memory
     fn matmul(
         a: &(impl HostOrDeviceSlice<T> + ?Sized),
         a_rows: u32,
@@ -19,11 +61,16 @@ pub trait MatrixOps<T> {
         b: &(impl HostOrDeviceSlice<T> + ?Sized),
         b_rows: u32,
         b_cols: u32,
-        cfg: &VecOpsConfig,
+        cfg: &MatMulConfig,
         result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> Result<(), IcicleError>;
 
-    /// Out-of-place matrix transpose (row-major)
+    /// Computes the transpose of a matrix in row-major order.
+    ///
+    /// - `input`: shape `(nof_rows × nof_cols)`
+    /// - `output`: shape `(nof_cols × nof_rows)` (must be preallocated)
+    ///
+    /// Both input and output can reside on host or device memory.
     fn matrix_transpose(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         nof_rows: u32,
@@ -39,22 +86,23 @@ All concrete field / ring crates (for example `icicle_bn254`, `icicle_babybear`,
 ---
 ## Convenience free functions
 
-Instead of calling the trait manually you can use the thin wrappers defined in `icicle_core::matrix_ops`:
+Instead of calling the trait manually, you can use the thin wrappers defined in `icicle_core::matrix_ops`:
 
 ```rust
 use icicle_core::matrix_ops::{matmul, matrix_transpose};
 ```
 
-They perform the exact same checks and dispatch to the trait implementation.
+- `matmul` uses `MatMulConfig` for configuration.
+- `matrix_transpose` uses `VecOpsConfig` for configuration.
 
 ---
 ## Example
 
-Multiply two random BN254 matrices entirely on the GPU and read the result back to the host.
+Multiply two random BN254 matrices entirely on the GPU and read the result back to the host. (All buffers can be on host or device; you can mix and match as needed.)
 
 ```rust
 use icicle_bn254::field::ScalarField;
-use icicle_core::matrix_ops::{matmul};
+use icicle_core::matrix_ops::{matmul, MatMulConfig};
 use icicle_core::vec_ops::VecOpsConfig;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 use icicle_core::traits::GenerateRandom;
@@ -67,7 +115,7 @@ let b_host = ScalarField::generate_random(N * N);
 // 2. Move the data to device memory
 // 3. Allocate the result buffer on the device
 // 4. Perform matmul
-let cfg = VecOpsConfig::default();
+let cfg = MatMulConfig::default();
 matmul(&a_dev[..], N as u32, N as u32,
        &b_dev[..], N as u32, N as u32,
        &cfg, &mut c_dev[..]).unwrap();
@@ -77,4 +125,19 @@ matmul(&a_dev[..], N as u32, N as u32,
 
 ---
 ## Error handling
-All functions return `IcicleError`.  The helpers do validity checks (dimension mismatches, device/host placement, …) before dispatching to the backend, guaranteeing early and descriptive error messages. 
+All functions return `IcicleError`. The helpers perform validity checks (dimension mismatches, device/host placement, etc.) before dispatching to the backend, guaranteeing early and descriptive error messages. Checks include:
+- Input and output buffer sizes must match the specified matrix dimensions.
+- All buffers must be allocated on the correct device (if using device memory).
+- For `matmul`, the inner dimensions must match (`a_cols == b_rows`).
+- Output buffer must be preallocated to the correct size.
+
+---
+## Memory placement
+- All buffers (`a`, `b`, `result`, `input`, `output`) can be on host or device memory.
+- You can mix host and device buffers as needed; the API will handle transfers as required.
+- Use `DeviceVec` for device memory and `HostSlice` for host memory.
+- The `MatMulConfig` and `VecOpsConfig` structs control backend selection and options.
+
+---
+## No fused/batched matrix APIs
+As of the current branch, there are **no fused or batched matrix operations** exposed in the Rust bindings. Only `matmul` and `matrix_transpose` are available. 
