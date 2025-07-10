@@ -336,6 +336,12 @@ macro_rules! impl_matrix_ops_tests {
         }
 
         #[test]
+        fn test_matmul_a_is_transposed() {
+            initialize();
+            check_matmul_a_is_transposed::<$element_type>();
+        }
+
+        #[test]
         fn test_matmul_device_memory() {
             initialize();
             check_matmul_device_memory::<$element_type>();
