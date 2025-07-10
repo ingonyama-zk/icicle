@@ -9,18 +9,16 @@ All matrix operations are controlled via the `MatMulConfig` struct, which allows
 
 ```cpp
 struct MatMulConfig {
-    icicleStreamHandle stream = nullptr; // Stream for asynchronous execution (e.g., CUDA stream)
-    bool is_a_on_device = false;         // True if input A is on device (GPU), false for host
-    bool is_b_on_device = false;         // True if input B is on device (GPU), false for host
-    bool is_result_on_device = false;    // True if output should be on device, false for host
-    bool is_async = false;               // If true, operation is non-blocking (async)
-    int batch_size = 1;                  // Number of matrices to process in a batch
-    bool columns_batch = false;          // If true, batched matrices are stored as separate 3D arrays
-    bool a_transposed = false;           // If true, input A is transposed
-    bool b_transposed = false;           // If true, input B is transposed
-    bool result_transposed = false;      // If true, output is transposed
-    ConfigExtension* ext = nullptr;      // Backend-specific extension (optional)
-};
+    icicleStreamHandle stream = nullptr; // stream for async execution.
+    bool is_a_on_device = false;         // True if `a` resides on device memory.
+    bool is_b_on_device = false;         // True if `b` resides on device memory.
+    bool is_result_on_device = false;    // True to keep result on device, else host.
+    bool a_transposed = false;           // True if `a` is pre-transposed.
+    bool b_transposed = false;           // True if `b` is pre-transposed.
+    bool result_transposed = false;      // True to transpose the output.
+    bool is_async = false;               // True for non-blocking call; user must sync stream.
+    ConfigExtension* ext = nullptr;      // Optional backend-specific settings.
+  };
 ```
 
 - Use `default_mat_mul_config()` to get a default config for standard (single, synchronous, host) operation.
@@ -91,27 +89,6 @@ int main() {
     // ... check err, copy c_dev back to host if needed ...
 }
 ```
-
----
-## Backend Registration (Advanced)
-
-ICICLE allows you to register custom matrix multiplication backends for new devices or types:
-
-```cpp
-using scalarBinaryMatrixOpImpl = std::function<eIcicleError(
-    const Device& device,
-    const scalar_t* mat_a, uint32_t nof_rows_a, uint32_t nof_cols_a,
-    const scalar_t* mat_b, uint32_t nof_rows_b, uint32_t nof_cols_b,
-    const MatMulConfig& config,
-    scalar_t* mat_out)>;
-
-void register_matmul(const std::string& deviceType, scalarBinaryMatrixOpImpl impl);
-
-#define REGISTER_MATMUL_BACKEND(DEVICE_TYPE, FUNC) /* ... */
-```
-
-- Use `register_matmul` or the macro to add new device-specific implementations.
-- See `mat_ops_backend.h` for details.
 
 ---
 ## Notes

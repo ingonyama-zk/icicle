@@ -14,17 +14,15 @@ use icicle_runtime::config::ConfigExtension;
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct MatMulConfig {
-    pub stream_handle: IcicleStreamHandle, // CUDA/stream for async execution
-    pub is_a_on_device: bool,
-    pub is_b_on_device: bool,
-    pub is_result_on_device: bool,
-    pub is_async: bool,
-    pub batch_size: i32,
-    pub columns_batch: bool,
-    pub a_is_transposed: bool,
-    pub b_is_transposed: bool,
-    pub result_is_transposed: bool,
-    pub ext: ConfigExtension, // Backend-specific extensions
+    pub stream_handle: IcicleStreamHandle, // Execution stream (e.g., CUDA stream)
+    pub is_a_on_device: bool,              // True if `a` is on device memory
+    pub is_b_on_device: bool,              // True if `b` is on device memory
+    pub is_result_on_device: bool,         // True if result stays on device
+    pub a_transposed: bool,                // Transpose input `a`
+    pub b_transposed: bool,                // Transpose input `b`
+    pub result_transposed: bool,           // Transpose the output
+    pub is_async: bool,                    // Non-blocking execution if true
+    pub ext: ConfigExtension,              // Backend-specific config
 }
 
 impl MatMulConfig {
@@ -139,5 +137,4 @@ All functions return `IcicleError`. The helpers perform validity checks (dimensi
 - The `MatMulConfig` and `VecOpsConfig` structs control backend selection and options.
 
 ---
-## No fused/batched matrix APIs
-As of the current branch, there are **no fused or batched matrix operations** exposed in the Rust bindings. Only `matmul` and `matrix_transpose` are available. 
+As of the current branch, there are **no batched matrix operations** exposed in the Rust bindings. Only `matmul` and `matrix_transpose` are available. 
