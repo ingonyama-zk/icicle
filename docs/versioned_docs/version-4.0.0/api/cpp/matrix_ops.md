@@ -100,5 +100,5 @@ int main() {
 ---
 ## See Also
 - [Vector Operations (vec_ops.md)](./vec_ops.md)
-- [NTT, MSM, and other primitives](./)
+- [NTT, MSM, and other primitives](/api/overview.md)
 - [Backend registration and extension (for advanced users)] 
