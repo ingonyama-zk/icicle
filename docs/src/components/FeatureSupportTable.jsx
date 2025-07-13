@@ -16,7 +16,7 @@ const iconStatus = {
 };
 
 const table = [
-  ['Operation', 'bn254', 'bls377', 'bls381', 'bw6', 'grumpkin', 'babybear', 'koalabear', 'stark252', 'm31', 'goldilocks', 'labrador (babybear x koalabear)'],
+  ['Operation', 'bn254', 'bls377', 'bls381', 'bw6', 'grumpkin', 'babybear', 'koalabear', 'stark252', 'm31', 'goldilocks', 'babykoala (babybear x koalabear)'],
   ['Field Ops', 'cppy rsty goly cpuy gpuy appp', 'cppy rsty goly cpuy gpuy appp', 'cppy rsty goly cpuy gpuy appp', 'cppy rsty goly cpuy gpuy appp', 'cppy rsty goly cpuy gpuy appp', 'cppy rsty goly cpuy gpuy appp', 'cppy rsty goly cpuy gpuy appp', 'cppy rsty goly cpuy gpuy appp', 'cppy rsty goly cpuy gpuy appp', 'cppy rsty goly cpuy gpuy appp', 'cppy rsty cpuy gpuy appp'],
   ['Extension Field Ops', '', '', '', '', '', 'cppy rsty goly cpuy gpuy appp', 'cppy rsty goly cpuy gpuy appp', '', 'cppy rsty goly cpuy gpuy appp', 'cppy rsty cpuy gpuy', ''],
   ['G1', 'cppy rsty golp cpuy gpuy appy', 'cppy rsty golp cpuy gpuy appy', 'cppy rsty golp cpuy gpuy appy', 'cppy rsty golp cpuy gpuy appy', 'cppy rsty golp cpuy gpuy appy', '', '', '', '', '', ''],
