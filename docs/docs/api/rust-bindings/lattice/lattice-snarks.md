@@ -1,5 +1,5 @@
 
-# Lattice-Based SNARKs — Rust API Overview
+# Lattices — Rust API Overview
 
 ## Overview
 
