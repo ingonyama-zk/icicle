@@ -1,0 +1,200 @@
+name: Test Ring
+
+on:
+  workflow_call:
+    inputs:
+      backend:
+        description: 'Backend to test (cuda, metal)'
+        required: true
+        type: string
+      backend_upper:
+        description: 'Backend name in uppercase'
+        required: true
+        type: string
+      runner:
+        description: 'Runner labels as JSON array'
+        required: true
+        type: string
+      skip-rust-all-rings:
+        description: 'Skip patterns for Rust tests'
+        required: false
+        type: string
+        default: ""
+      skip-cpp-all-rings:
+        description: 'Skip patterns for C++ tests'
+        required: false
+        type: string
+        default: ""
+      skip-golang-all-rings:
+        description: 'Skip Golang tests (true/false)'
+        required: false
+        type: string
+        default: "false"
+      initial-support:
+        description: 'Whether this is initial support (continue-on-error)'
+        required: false
+        type: boolean
+        default: false
+      backend_branch:
+        description: 'Backend branch to checkout'
+        required: false
+        type: string
+        default: "main"
+      # Feature flags for CI conditional testing
+      enable_conditional_testing:
+        description: 'Enable conditional testing based on changed files'
+        required: false
+        type: boolean
+        default: false
+      # Changed files flags (only used when enable_conditional_testing is true)
+      changed_ring:
+        description: 'Whether ring files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_cpp:
+        description: 'Whether C++ files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_rust:
+        description: 'Whether Rust files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_go:
+        description: 'Whether Go files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_cpu_backend:
+        description: 'Whether CPU backend files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_backend_api:
+        description: 'Whether backend API files changed'
+        required: false
+        type: string
+        default: "true"
+      # Feature change flags for conditional cmake builds
+      changed_ntt:
+        description: 'Whether NTT files changed'
+        required: false
+        type: string
+        default: "false"
+    secrets:
+      backend_ssh_key:
+        description: 'SSH key for backend repository'
+        required: true
+
+jobs:
+  test-ring:
+    name: Test ${{ matrix.ring.name }} on ${{ inputs.backend }}
+    runs-on: ${{ fromJson(inputs.runner) }}
+    continue-on-error: ${{ inputs.initial-support }}
+    strategy:
+      matrix:
+        include:
+          - ring:
+              name: babykoala
+              rust-supported-features: ["ntt"]
+              go-supported-features: ["ntt"]
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+    - name: Checkout ${{ inputs.backend_upper }} backend
+      if: ${{ !inputs.enable_conditional_testing || inputs.changed_ring == 'true' }}
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        repository: ingonyama-zk/icicle-${{ inputs.backend }}-backend
+        path: ./icicle/backend/${{ inputs.backend }}
+        ssh-key: ${{ secrets.backend_ssh_key }}
+        ref: ${{ inputs.backend_branch }}
+
+    - name: Set feature and build flags
+      id: feature_flags
+      if: ${{ inputs.enable_conditional_testing && inputs.changed_ring == 'true' }}
+      run: |
+        FEATURE_FLAGS="-DHASH=ON"
+        CPP_TEST_REGEX="RingTest|ModArith|MatrixTest|Symbol|Program"
+        RUST_TEST_FEATURES=""
+        GO_TEST_BUILD_TAGS="icicle_exclude_all"
+
+        # NTT module (includes polynomials)
+        if [[ "${{ inputs.changed_ntt }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DNTT=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|ntt"
+          if [[ "${{ contains(matrix.ring.rust-supported-features, 'ntt') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ntt"
+          fi
+          if [[ "${{ contains(matrix.ring.go-supported-features, 'ntt') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,ntt"
+          fi
+        fi
+
+        echo "FEATURE_FLAGS: $FEATURE_FLAGS"
+        echo "FEATURE_FLAGS=$FEATURE_FLAGS" >> $GITHUB_OUTPUT
+
+        echo "CPP_TEST_REGEX: $CPP_TEST_REGEX"
+        echo "CPP_TEST_REGEX=$CPP_TEST_REGEX" >> $GITHUB_OUTPUT
+
+        echo "RUST_TEST_FEATURES: $RUST_TEST_FEATURES"
+        echo "RUST_TEST_FEATURES=$RUST_TEST_FEATURES" >> $GITHUB_OUTPUT
+
+        echo "GO_TEST_BUILD_TAGS: $GO_TEST_BUILD_TAGS"
+        echo "GO_TEST_BUILD_TAGS=$GO_TEST_BUILD_TAGS" >> $GITHUB_OUTPUT
+
+    - name: Build ring
+      working-directory: ./icicle
+      if: ${{ !inputs.enable_conditional_testing || inputs.changed_ring == 'true' }}
+      run: |
+        mkdir -p build && rm -rf build/*
+        EXTRA_FLAGS=""
+        if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
+          EXTRA_FLAGS="-DDISABLE_ALL_FEATURES=ON ${{ steps.feature_flags.outputs.FEATURE_FLAGS }}"
+        fi
+        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DRING=${{ matrix.ring.name }} -D${{ inputs.backend_upper }}_BACKEND=local $EXTRA_FLAGS -S . -B build
+        cmake --build build
+
+    - name: Run C++ ring tests
+      working-directory: ./icicle/build/tests
+      if: ${{ !inputs.enable_conditional_testing || (inputs.changed_ring == 'true' && (inputs.changed_cpp == 'true' || inputs.changed_cpu_backend == 'true' || inputs.changed_backend_api == 'true')) }}
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
+        export SKIP_TESTS="${{ inputs.skip-cpp-all-rings }}"
+        echo "SKIP_TESTS: $SKIP_TESTS"
+
+        if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
+          ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}" -E "$SKIP_TESTS"
+        else
+          ctest --output-on-failure -E "$SKIP_TESTS"
+        fi
+
+    - name: Run Rust ring tests
+      working-directory: ./wrappers/rust/icicle-rings
+      if: ${{ !inputs.enable_conditional_testing || (inputs.changed_ring == 'true' && inputs.changed_rust == 'true') }}
+      run: |
+        RING=${{ matrix.ring.name }}
+        RING_DIR=icicle-${RING//_/-}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
+        export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
+        cd ./$RING_DIR
+
+        export SKIP_RUST_TESTS="${{ inputs.skip-rust-all-rings }}"
+
+        FEATURES=""
+        if [[ "${{ inputs.enable_conditional_testing }}" == "true" ]]; then
+          if [[ -z "${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}" ]]; then
+            FEATURES="--no-default-features"
+          else
+            FEATURES="--no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}"
+          fi
+        fi
+
+        rustup override set nightly
+        cargo test --release $FEATURES -- --skip phase2 $SKIP_RUST_TESTS
+        cargo test phase2 --release $FEATURES -- $SKIP_RUST_TESTS
+
+    # TODO: Go tests

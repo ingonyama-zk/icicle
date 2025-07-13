@@ -1,0 +1,142 @@
+name: Test Hash
+
+on:
+  workflow_call:
+    inputs:
+      backend:
+        description: 'Backend to test (cuda, metal)'
+        required: true
+        type: string
+      backend_upper:
+        description: 'Backend name in uppercase'
+        required: true
+        type: string
+      runner:
+        description: 'Runner labels as JSON array'
+        required: true
+        type: string
+      skip-rust:
+        description: 'Skip patterns for Rust tests'
+        required: false
+        type: string
+        default: ""
+      skip-cpp:
+        description: 'Skip patterns for C++ tests'
+        required: false
+        type: string
+        default: ""
+      skip-golang:
+        description: 'Skip Golang tests (true/false)'
+        required: false
+        type: string
+        default: "false"
+      initial-support:
+        description: 'Whether this is initial support (continue-on-error)'
+        required: false
+        type: boolean
+        default: false
+      backend_branch:
+        description: 'Backend branch to checkout'
+        required: false
+        type: string
+        default: "main"
+      # Feature flags for CI conditional testing
+      enable_conditional_testing:
+        description: 'Enable conditional testing based on changed files'
+        required: false
+        type: boolean
+        default: false
+      # Changed files flags (only used when enable_conditional_testing is true)
+      changed_hash:
+        description: 'Whether hash files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_cpp:
+        description: 'Whether C++ files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_rust:
+        description: 'Whether Rust files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_go:
+        description: 'Whether Go files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_cpu_backend:
+        description: 'Whether CPU backend files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_backend_api:
+        description: 'Whether backend API files changed'
+        required: false
+        type: string
+        default: "true"
+    secrets:
+      backend_ssh_key:
+        description: 'SSH key for backend repository'
+        required: true
+
+jobs:
+  test-hash:
+    name: Test hash on ${{ inputs.backend }}
+    runs-on: ${{ fromJson(inputs.runner) }}
+    continue-on-error: ${{ inputs.initial-support }}
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+    - name: Checkout ${{ inputs.backend_upper }} backend
+      if: ${{ !inputs.enable_conditional_testing || inputs.changed_hash == 'true' }}
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        repository: ingonyama-zk/icicle-${{ inputs.backend }}-backend
+        path: ./icicle/backend/${{ inputs.backend }}
+        ssh-key: ${{ secrets.backend_ssh_key }}
+        ref: ${{ inputs.backend_branch }}
+
+    - name: Build
+      working-directory: ./icicle
+      if: ${{ !inputs.enable_conditional_testing || inputs.changed_hash == 'true' }}
+      run: |
+        mkdir -p build && rm -rf build/*
+        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DHASH=ON -D${{ inputs.backend_upper }}_BACKEND=local -S . -B build
+        cmake --build build
+
+    - name: Run C++ hash tests
+      working-directory: ./icicle/build/tests
+      if: ${{ !inputs.enable_conditional_testing || (inputs.changed_hash == 'true' && (inputs.changed_cpp == 'true' || inputs.changed_cpu_backend == 'true' || inputs.changed_backend_api == 'true')) }}
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
+        ctest --output-on-failure -R "HashApiTest" -E "${{ inputs.skip-cpp }}"
+
+    - name: Run Rust hash tests
+      working-directory: ./wrappers/rust/icicle-hash
+      if: ${{ !inputs.enable_conditional_testing || (inputs.changed_hash == 'true' && inputs.changed_rust == 'true') }}
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
+        export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
+
+        rustup override set nightly
+        cargo test --release --verbose -- ${{ inputs.skip-rust }}
+
+    - name: Setup go
+      if: ${{ (!inputs.enable_conditional_testing || (inputs.changed_hash == 'true' && inputs.changed_go == 'true')) }}
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+      with:
+        go-version: '1.22.0'
+        cache: false
+
+    - name: Run Go hash and merkle tree tests
+      working-directory: ./wrappers/golang
+      if: ${{ (!inputs.enable_conditional_testing || (inputs.changed_hash == 'true' && inputs.changed_go == 'true')) }}
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ inputs.backend }}
+        export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_hash -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
+        go test ./hash/tests -count=1 -failfast -p 2 -timeout 10m -v
+        go test ./merkle-tree/tests -count=1 -failfast -p 2 -timeout 10m -v 
