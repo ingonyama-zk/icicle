@@ -109,7 +109,7 @@ If the field element is zero, the function will return zero.
 
 ### Renaming of the `FieldImpl` Trait
 
-`FieldImpl` was renamed into `Field`
+`FieldImpl` was renamed into `BigNum`
 
 ### Refactor Program from Vecops to Program module
 
@@ -138,7 +138,7 @@ In v4, the Program API has been moved from VecOps to a dedicated Program module 
 
 **v3 (Old API):**
 ```rust
-use icicle_fields::bn254::Fr;
+use icicle_bn254::curve::Fr;
 use icicle_core::traits::FieldImpl;
 use icicle_core::field::FieldArithmetic;
 
@@ -152,7 +152,7 @@ let f = Fr::inv(e);
 
 **v4 (Current API):**
 ```rust
-use icicle_fields::bn254::ScalarField;
+use icicle_bn254::curve::ScalarField;
 use icicle_core::traits::Arithmetic;
 
 let a = ScalarField::from(5);
@@ -179,21 +179,21 @@ let result = ScalarField::from(5)
 
 **v3 (VecOps API):**
 ```rust
-use icicle_fields::bn254::Fr;
+use icicle_bn254::curve::ScalarField;
 use icicle_core::vec_ops::{VecOps, VecOpsConfig};
 
 // Create program
-let program = Fr::create_program(|symbols| {
+let program = ScalarField::create_program(|symbols| {
     // Program logic here
 }, nof_params)?;
 
 // Execute program
-Fr::execute_program(&program, &mut vec_data, &config)?;
+ScalarField::execute_program(&program, &mut vec_data, &config)?;
 ```
 
 **v4 (Program API):**
 ```rust
-use icicle_fields::bn254::ScalarField;
+use icicle_bn254::curve::ScalarField;
 use icicle_core::program::{Program, ReturningValueProgram};
 use icicle_bn254::program::stark252::{FieldProgram, FieldReturningValueProgram};
 
@@ -216,7 +216,7 @@ let returning_program = FieldReturningValueProgram::new(|symbols| -> symbol {
 
 **v3:**
 ```rust
-use icicle_fields::bn254::ScalarField;
+use icicle_bn254::curve::ScalarField;
 use icicle_core::traits::FieldCfg;
 
 let random_values = ScalarField::generate_random(size);
@@ -224,7 +224,7 @@ let random_values = ScalarField::generate_random(size);
 
 **v4:**
 ```rust
-use icicle_fields::bn254::ScalarField;
+use icicle_bn254::curve::ScalarField;
 use icicle_core::traits::GenerateRandom;
 
 let random_values = ScalarField::generate_random(size);
@@ -232,7 +232,7 @@ let random_values = ScalarField::generate_random(size);
 
 ### Removal of the `FieldCfg` Trait
 
-`FieldCfg` previously exposed compile-time field parameters (modulus, root, etc.) **and** helper functions like `generate_random`.  In v4 these responsibilities are split:
+`FieldCfg` previously exposed compile-time field parameters (modulus, root, etc.) **and** helper functions like `generate_random`. `FieldCfg` was implemented for a separate struct in each field. In v4 there is now a `Field: IntegerRing + Invertible` trait that is implemented for the concrete field types. `IntegerRing: BigNum + GenerateRandom + Arithmetic + TryInverse`
 
 * Concrete field types now publish constants directly (e.g., `ScalarField::MODULUS`).
 * Random sampling moved to the standalone `GenerateRandom` trait.

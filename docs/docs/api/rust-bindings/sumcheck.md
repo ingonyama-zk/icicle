@@ -151,7 +151,7 @@ A variant of [Program](./program.md) tailored for Sumcheck's combine function. I
 pub trait ReturningValueProgram:
   Sized + Handle
 {
-  type Ring: Field;
+  type Ring: IntegerRing;
   type ProgSymbol: Symbol<Self::Field>;
 
   fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>) -> Self::ProgSymbol, nof_parameters: u32) -> Result<Self, IcicleError>;

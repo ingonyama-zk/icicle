@@ -129,6 +129,7 @@ pub fn flatten_polyring_slice<'a, P>(
 ) -> impl HostOrDeviceSlice<P::Base> + 'a
 where
     P: PolynomialRing,
+    P::Base: 'a,
 {
     unsafe { reinterpret_slice::<P, P::Base>(input).expect("Invalid slice cast") }
 }
