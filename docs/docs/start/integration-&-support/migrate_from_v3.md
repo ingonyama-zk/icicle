@@ -89,45 +89,27 @@ The `Arithmetic` trait in ICICLE v4 is defined as follows:
 ```rust
 pub trait Arithmetic: Sized + Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> {
     fn sqr(&self) -> Self;
-    fn inv(&self) -> Self;
     fn pow(&self, exp: usize) -> Self;
 }
 ```
 
 This trait extends the standard Rust operators (`Add`, `Sub`, `Mul`) and adds specialized field operations like square, inverse, and exponentiation.
 
-### Deprecation of the `FieldImpl` Trait
+#### The Invertible Trait
 
-In ICICLE v3, generic code typically bounded field types by the heavyweight `FieldImpl` super-trait.  It lumped together arithmetic, random generation, Montgomery helpers, device handles, and more.  While convenient, that design made API signatures noisy and hid which capabilities a function truly needed.
-
-With **v4**, `FieldImpl` is gone.  Its functionality has been split across smaller, focused traits inside `icicle_core::traits`:
-
-| New trait | What it covers | Typical import |
-|-----------|----------------|-----------------|
-| `Arithmetic` | Core math + operator overloads (`+`, `-`, `*`, `sqr`, `inv`, `pow`) | `use icicle_core::traits::Arithmetic;` |
-| `GenerateRandom` | Host-side sampling (`generate_random`) | `use icicle_core::traits::GenerateRandom;` |
-| `MontgomeryConvertible` | Batch Montgomery ⇄ canonical conversion for host/device slices | `use icicle_core::traits::MontgomeryConvertible;` |
-| `Handle` | Low-level FFI pointer access | `use icicle_core::traits::Handle;` |
-
-Because these traits are orthogonal you can now declare **precise** bounds.  For example:
+Field inversion is now provided by the `Invertible` trait. This trait defines a single method, `inv`, which returns the multiplicative inverse of a field element.
 
 ```rust
-// v3 – required the full FieldImpl bundle
-fn scale_in_place<T: FieldImpl>(v: &mut [T], k: &T) {
-    for x in v.iter_mut() {
-        *x = *x * *k;
-    }
-}
-
-// v4 – only Arithmetic is needed
-fn scale_in_place<T: Arithmetic>(v: &mut [T], k: &T) {
-    for x in v.iter_mut() {
-        *x = *x * *k;
-    }
+pub trait Invertible: Sized {
+    fn inv(&self) -> Self;
 }
 ```
 
-If you still see `FieldImpl` in your codebase, replace it with the minimal set of new traits your algorithm actually requires (most commonly `Arithmetic` and perhaps `GenerateRandom`).
+If the field element is zero, the function will return zero.
+
+### Renaming of the `FieldImpl` Trait
+
+`FieldImpl` was renamed into `Field`
 
 ### Refactor Program from Vecops to Program module
 
@@ -234,10 +216,10 @@ let returning_program = FieldReturningValueProgram::new(|symbols| -> symbol {
 
 **v3:**
 ```rust
-use icicle_fields::bn254::Fr;
+use icicle_fields::bn254::ScalarField;
 use icicle_core::traits::FieldCfg;
 
-let random_values = Fr::generate_random(size);
+let random_values = ScalarField::generate_random(size);
 ```
 
 **v4:**
