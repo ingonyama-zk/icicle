@@ -49,6 +49,7 @@ option(SUMCHECK "Build sumcheck" ${ENABLE_ALL_FEATURES})
 option(FRI "Build fri" ${ENABLE_ALL_FEATURES})
 option(PQC "Build pqc" ${CUDA_PQC_BACKEND}) # Post-Quantum Cryptography. TODO: default to ON? do we care about CPU too?
 option(SANITIZE "Enable memory address sanitizer" OFF)
+option(ICICLE_STATIC_LINK        "Build icicle_device as a STATIC library" OFF)
 
 # address sanitizer
 if(SANITIZE)
@@ -57,11 +58,22 @@ if(SANITIZE)
 endif()
 
 # device API library
-add_library(icicle_device SHARED
-  src/device_api.cpp
-  src/runtime.cpp
-  src/config_extension.cpp
-)
+# add_library(icicle_device SHARED
+#   src/device_api.cpp
+#   src/runtime.cpp
+#   src/config_extension.cpp
+# )
+if (ICICLE_STATIC_LINK)
+    add_library(icicle_device STATIC
+        src/device_api.cpp
+        src/runtime.cpp
+        src/config_extension.cpp)
+else()
+    add_library(icicle_device SHARED
+        src/device_api.cpp
+        src/runtime.cpp
+        src/config_extension.cpp)
+endif()
 include_directories(include)
 
 # Define the install directory (default is /usr/local)
