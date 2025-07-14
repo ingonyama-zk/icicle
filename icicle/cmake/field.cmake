@@ -40,7 +40,11 @@ function(check_field FIELD FIELD_INDEX_OUT FEATURES_STRING_OUT)
 endfunction()
 
 function(setup_field_target FIELD FIELD_INDEX FEATURES_STRING)
-  add_library(icicle_field SHARED)
+  if(ICICLE_STATIC_LINK)
+    add_library(icicle_field STATIC)
+  else()
+    add_library(icicle_field SHARED)
+  endif()
 
   # Split FEATURES_STRING into a list using "," as the separator
   string(REPLACE "," ";" FEATURES_LIST ${FEATURES_STRING})

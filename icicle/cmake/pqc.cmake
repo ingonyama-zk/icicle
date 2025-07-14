@@ -1,7 +1,11 @@
 
 
 function(setup_pqc_target)
-  add_library(icicle_pqc SHARED)
+  if(ICICLE_STATIC_LINK)
+    add_library(icicle_pqc STATIC)
+  else()
+    add_library(icicle_pqc SHARED)
+  endif()
   target_sources(icicle_pqc PRIVATE 
    src/pqc/ml_kem/ml_kem.cpp
    src/pqc/ml_kem/ml_kem_c_api.cpp
