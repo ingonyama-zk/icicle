@@ -219,12 +219,13 @@ int main(int argc, char* argv[])
   // Benchmark parameters from the original code
   // std::vector<size_t> arr_n{64, 256};
   // std::vector<size_t> arr_r{8};
-  std::vector<std::tuple<size_t, size_t>> arr_nr{{64,8}};
+  std::vector<std::tuple<size_t, size_t>> arr_nr{{64, 8}};
   // this fails but {10,0} doesn't fail on CUDA
   // num_agg =4 doesn't fail 3/5 fail
   // AI thinks it's NTT problem- update to new commit
-  std::vector<std::tuple<size_t, size_t>> num_constraint{{0, 10}};
-  size_t NUM_REP = 5;
+  // also doesn't fail for just 1 const-zero constraint
+  std::vector<std::tuple<size_t, size_t>> num_constraint{{10, 10}};
+  size_t NUM_REP = 2;
 
   std::vector<BenchmarkResult> results;
 
@@ -234,7 +235,7 @@ int main(int argc, char* argv[])
       BenchmarkConfig config{n, r, num_eq, num_cz, NUM_REP};
 
       try {
-        BenchmarkResult result = run_benchmark(config, false);
+        BenchmarkResult result = run_benchmark(config, true);
         results.push_back(result);
       } catch (const std::exception& e) {
         std::cerr << "Error running benchmark for n=" << n << ", r=" << r << ", eq=" << num_eq << ", cz=" << num_cz
