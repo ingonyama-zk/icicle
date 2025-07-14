@@ -63,6 +63,11 @@ public:
     return QuarticExtensionField{FF::one(), FF::zero(), FF::zero(), FF::zero()};
   }
 
+  static constexpr HOST_DEVICE_INLINE QuarticExtensionField one_montgomery()
+  {
+    return QuarticExtensionField{FF::one_montgomery(), FF::zero(), FF::zero(), FF::zero()};
+  }
+
   // Converts a uint32_t value to a QuarticExtensionField element.
   // If `val` ≥ p, it wraps around modulo p, affecting only the first coefficient.
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField from(uint32_t val)

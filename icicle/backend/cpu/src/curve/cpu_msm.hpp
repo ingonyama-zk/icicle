@@ -294,13 +294,17 @@ private:
             int bkt_idx = carry ? m_bm_size * bm_i + ((-curr_coeff) & coeff_bit_mask_no_sign_bit)
                                 : m_bm_size * bm_i + (curr_coeff & coeff_bit_mask_no_sign_bit);
             // Check for collision in that bucket and either dispatch an addition or store the P accordingly.
-            if (buckets_busy[bkt_idx]) {
+            if (buckets_busy[bkt_idx]) { // TBD: inplace
               buckets[bkt_idx].point =
-                buckets[bkt_idx].point + ((negate_p_and_s ^ (carry > 0)) ? base_neg : base); // TBD: inplace
+                m_config.are_points_montgomery_form
+                  ? buckets[bkt_idx].point + P::from_montgomery_affine((negate_p_and_s ^ (carry > 0) ? base_neg : base))
+                  : buckets[bkt_idx].point + (negate_p_and_s ^ (carry > 0) ? base_neg : base); // TBD: inplace
             } else {
               buckets_busy[bkt_idx] = true;
               buckets[bkt_idx].point =
-                P::from_affine(((negate_p_and_s ^ (carry > 0)) ? base_neg : base)); // TBD: inplace
+                m_config.are_points_montgomery_form
+                  ? P::from_montgomery_affine(negate_p_and_s ^ (carry > 0) ? base_neg : base)
+                  : P::from_affine(negate_p_and_s ^ (carry > 0) ? base_neg : base); // TBD: inplace
             }
           } else {
             // Handle edge case where coeff = 1 << c due to carry overflow which means:

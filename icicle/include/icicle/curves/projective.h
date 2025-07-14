@@ -30,6 +30,11 @@ public:
     return point.is_zero() ? zero() : Projective{point.x, point.y, BaseField::one()};
   }
 
+  static HOST_DEVICE_INLINE Projective from_montgomery_affine(const Affine<BaseField>& point)
+  {
+    return point == Affine<BaseField>::zero() ? zero() : Projective{point.x, point.y, BaseField::one_montgomery()};
+  }
+
   static HOST_DEVICE_INLINE Projective generator() { return {Gen::gen_x, Gen::gen_y, BaseField::one()}; }
 
   static HOST_INLINE Affine<BaseField> rand_host_affine() { return rand_host().to_affine(); }
