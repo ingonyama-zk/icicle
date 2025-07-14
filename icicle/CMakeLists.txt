@@ -137,6 +137,37 @@ endif()
 # Include and configure (for build) backends based on the backend options
 include(cmake/backend_include.cmake)
 
+# Add PQC backend if enabled
+if(CUDA_PQC_BACKEND)
+  # add_subdirectory(backend/cuda_pqc)
+  
+  # When using static linking, we need to link the PQC backend to icicle_pqc
+  if(ICICLE_STATIC_LINK)
+    # On Linux/GCC/Clang, use --whole-archive
+    if(UNIX AND NOT APPLE)
+      target_link_options(icicle_pqc PRIVATE 
+        "LINKER:--whole-archive" 
+        "$<TARGET_FILE:icicle_backend_cuda_pqc>" 
+        "LINKER:--no-whole-archive"
+      )
+    # On macOS, use -force_load
+    elseif(APPLE)
+      target_link_options(icicle_pqc PRIVATE 
+        "LINKER:-force_load" 
+        "$<TARGET_FILE:icicle_backend_cuda_pqc>"
+      )
+    # On Windows, use /WHOLEARCHIVE
+    elseif(WIN32)
+      target_link_options(icicle_pqc PRIVATE 
+        "/WHOLEARCHIVE:$<TARGET_FILE:icicle_backend_cuda_pqc>"
+      )
+    endif()
+  else()
+    # For shared libraries, just link normally
+    target_link_libraries(icicle_pqc PRIVATE icicle_backend_cuda_pqc)
+  endif()
+endif()
+
 if (BUILD_TESTS)
   add_subdirectory(tests)
 endif()

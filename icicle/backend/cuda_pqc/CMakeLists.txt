@@ -11,19 +11,50 @@ set_gpu_env()
 
 find_package(CUDAToolkit REQUIRED)
 
-# Build CUDA backend as a static lib and wrap it with whole-archive in an INTERFACE target
-# Note: whole-archive is used to ensure all symbols are included in the final binary, otherwise registration is skipped
+# Build CUDA backend as a static lib
 add_library(icicle_backend_cuda_pqc STATIC src/cuda_pqc_device_api.cu src/ml_kem/cuda_pqc_ml_kem.cu)
 target_link_libraries(icicle_backend_cuda_pqc PRIVATE CUDA::cudart)
 target_include_directories(icicle_backend_cuda_pqc PRIVATE include)
-add_library(icicle_backend_cuda_pqc_whole INTERFACE)
-target_link_libraries(icicle_backend_cuda_pqc_whole INTERFACE
-"-Wl,--whole-archive" icicle_backend_cuda_pqc "-Wl,--no-whole-archive")
 
-# Link into icicle-pqc
-target_link_libraries(icicle_pqc PRIVATE icicle_backend_cuda_pqc_whole)
+# Create an interface library that properly handles static linking
+add_library(icicle_backend_cuda_pqc_interface INTERFACE)
 
+# When using static linking, we need to use whole-archive to ensure registration works
+if(ICICLE_STATIC_LINK)
+  # On Linux/GCC/Clang, use --whole-archive
+  if(UNIX AND NOT APPLE)
+    target_link_options(icicle_backend_cuda_pqc_interface INTERFACE 
+      "LINKER:--whole-archive" 
+      "$<TARGET_FILE:icicle_backend_cuda_pqc>" 
+      "LINKER:--no-whole-archive"
+    )
+  # On macOS, use -force_load
+  elseif(APPLE)
+    target_link_options(icicle_backend_cuda_pqc_interface INTERFACE 
+      "LINKER:-force_load" 
+      "$<TARGET_FILE:icicle_backend_cuda_pqc>"
+    )
+  # On Windows, use /WHOLEARCHIVE
+  elseif(WIN32)
+    target_link_options(icicle_backend_cuda_pqc_interface INTERFACE 
+      "/WHOLEARCHIVE:$<TARGET_FILE:icicle_backend_cuda_pqc>"
+    )
+  endif()
+else()
+  # For shared libraries, just link normally
+  target_link_libraries(icicle_backend_cuda_pqc_interface INTERFACE icicle_backend_cuda_pqc)
+endif()
+
+# Install targets
+install(TARGETS icicle_backend_cuda_pqc
+  RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
+  LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/")
+
+# Install headers
+install(DIRECTORY include DESTINATION "${CMAKE_INSTALL_PREFIX}/include/")
+
+# Build tests if requested
 if(BUILD_TESTS)
-    set(PQC ON CACHE BOOL "Enable PQC tests" FORCE)
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
+  add_subdirectory(tests)
 endif()
