@@ -321,16 +321,16 @@ void LabradorBaseVerifier::agg_const_zero_constraints()
 
   ICICLE_CHECK(icicle::labrador::get_jl_matrix_rows(
     jl_seed.data(), jl_seed.size(),
-    r * n, // row_size
-    0,     // row_index
-    JL_out,     // num_rows
-    true,  // conjugate
-    {},    // config
+    r * n,  // row_size
+    0,      // row_index
+    JL_out, // num_rows
+    true,   // conjugate
+    {},     // config
     Q.data()));
 
-    std::vector<Tq> Q_hat(JL_out*r * n);
-    // Q_hat = NTT(Q)
-    ICICLE_CHECK(ntt(Q.data(), Q.size(), NTTDir::kForward, {}, Q_hat.data()));
+  std::vector<Tq> Q_hat(JL_out * r * n);
+  // Q_hat = NTT(Q)
+  ICICLE_CHECK(ntt(Q.data(), Q.size(), NTTDir::kForward, {}, Q_hat.data()));
 
   std::vector<Zq> test_b0(num_aggregation_rounds, Zq::zero());
 
@@ -381,45 +381,32 @@ void LabradorBaseVerifier::agg_const_zero_constraints()
 
     // For each j do:
     //    new_constraint.phi[:,:] += omega[k,j]* Q_hat[j, :, :]
-    
-    std::vector<Tq> omega_times_Q(JL_out*r*n);
 
-    // Configure for batched operations  
-    VecOpsConfig batch_config = default_vec_ops_config();  
-    batch_config.batch_size = JL_out;  
-    batch_config.columns_batch = false; 
-      
-    // Batch all scalar multiplications into a single call  
-    ICICLE_CHECK(scalar_mul_vec(  
-        &omega[k*JL_out],   
-        reinterpret_cast<const Zq*>(Q_hat.data()),       
-        r * n * d,            
-        batch_config,  
-        reinterpret_cast<Zq*>(omega_times_Q.data())  
-    ));
+    std::vector<Tq> omega_times_Q(JL_out * r * n);
+
+    // Configure for batched operations
+    VecOpsConfig batch_config = default_vec_ops_config();
+    batch_config.batch_size = JL_out;
+    batch_config.columns_batch = false;
+
+    // Batch all scalar multiplications into a single call
+    ICICLE_CHECK(scalar_mul_vec(
+      &omega[k * JL_out], reinterpret_cast<const Zq*>(Q_hat.data()), r * n * d, batch_config,
+      reinterpret_cast<Zq*>(omega_times_Q.data())));
 
     // new_constraint.phi[i,:] += \sum_j omega_times_Q[j, i, :]
 
-    VecOpsConfig sum_config = default_vec_ops_config();  
-    sum_config.batch_size = r * n*d;  // Number of reduction operations  
-    sum_config.columns_batch = true; // Elements to sum are strided across batches  
-    std::vector<Tq> reduction_result(r*n);
-    // This will compute the sum across all j for each (i, element) pair  
-    ICICLE_CHECK(vector_sum<Zq>(  
-      reinterpret_cast<const Zq*>(omega_times_Q.data()),           
-        JL_out,                  
-        sum_config,  
-        reinterpret_cast<Zq*>(reduction_result.data())       
-    ));  
-  
-    // Then add to new_constraint.phi  
-    ICICLE_CHECK(vector_add(  
-        new_constraint.phi.data(),  
-        reduction_result.data(),  
-        r * n,  
-        {},  
-        new_constraint.phi.data()  
-    ));
+    VecOpsConfig sum_config = default_vec_ops_config();
+    sum_config.batch_size = r * n * d; // Number of reduction operations
+    sum_config.columns_batch = true;   // Elements to sum are strided across batches
+    std::vector<Tq> reduction_result(r * n);
+    // This will compute the sum across all j for each (i, element) pair
+    ICICLE_CHECK(vector_sum<Zq>(
+      reinterpret_cast<const Zq*>(omega_times_Q.data()), JL_out, sum_config,
+      reinterpret_cast<Zq*>(reduction_result.data())));
+
+    // Then add to new_constraint.phi
+    ICICLE_CHECK(vector_add(new_constraint.phi.data(), reduction_result.data(), r * n, {}, new_constraint.phi.data()));
 
     new_constraint.b = trs.prover_msg.b_agg[k];
 

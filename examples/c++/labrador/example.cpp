@@ -1,4 +1,4 @@
-#include "labrador.h"           // For Zq, Rq, Tq, and the labrador APIs
+#include "labrador.h"           // For Zq, Rq, Tq, and the APIs
 #include "icicle/hash/keccak.h" // For Hash
 #include "examples_utils.h"
 #include "icicle/runtime.h"
@@ -9,8 +9,6 @@
 #include "verifier.h"
 #include "shared.h"
 #include "test_helpers.h"
-
-using namespace icicle::labrador;
 
 // === Main driver ===
 

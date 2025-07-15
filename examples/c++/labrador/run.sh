@@ -58,7 +58,7 @@ if [ "$DEVICE_TYPE" != "CPU" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ 
 else
   echo "Building icicle without backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
   export ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR}"
-  cmake -DCMAKE_BUILD_TYPE=Release -DRING=labrador -S "${ICILE_DIR}" -B build/icicle
+  cmake -DCMAKE_BUILD_TYPE=Release -DRING=babykoala -S "${ICILE_DIR}" -B build/icicle
 fi
 cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build/example
 
