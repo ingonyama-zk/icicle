@@ -1,8 +1,8 @@
 name: Run Examples
 
 on:
-  # schedule:
-  #   - cron: '00 23 * * 6'
+  schedule:
+    - cron: '00 23 * * 6'
   workflow_dispatch:
   workflow_call:
 
@@ -21,45 +21,19 @@ jobs:
           override: true
 
       - name: Run C++ Examples
-        working-directory: ./examples/c++
-        run: |
-          for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
-            if [ -d "$dir" ]; then
-              echo "Running command in $dir"
-              cd $dir
-              ./run.sh -d CPU
-              cd -
-            fi
-          done
+        working-directory: ./examples
+        run: ./run_examples.sh "c++"
 
       - name: Run Rust Examples
-        working-directory: ./examples/rust
-        run: |
-          for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
-            if [ -d "$dir" ]; then
-              echo "Running command in $dir"
-              cd $dir
-              ./run.sh -d CPU
-              cd -
-            fi
-          done
+        working-directory: ./examples
+        run: ./run_examples.sh "rust"
 
-      # TODO: Add Go examples
-      # - name: Setup Go
-      #   uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
-      #   with:
-      #     go-version: '1.22.0'
-      #     cache: false
+      - name: Setup Go
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+        with:
+          go-version: '1.22.0'
+          cache: false
 
-      # TODO: Add Golang examples
-      # - name: Run Golang Examples
-      #   run: |
-      #     # Run all Golang examples
-      #     cd examples/golang
-      #     for example_dir in */; do
-      #       echo "Running example: ${example_dir}"
-      #       cd "${example_dir}"
-      #       go build -o example
-      #       ./example
-      #       cd ..
-      #     done
+      - name: Run Golang Examples
+        working-directory: ./examples
+        run: ./run_examples.sh "golang"
