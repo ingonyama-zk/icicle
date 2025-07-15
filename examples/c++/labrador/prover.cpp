@@ -1,6 +1,6 @@
 #include "prover.h"
 #include <cassert>
-#include <chrono>          // ADDED – for timing
+#include <chrono>
 
 std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std::byte* seed, size_t seed_len) const
 {

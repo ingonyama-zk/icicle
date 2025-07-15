@@ -24,8 +24,8 @@ int main(int argc, char* argv[])
   // TODO: icicle_malloc()/ DeviceVector<T>
 
   // randomize the witness Si with low norm
-  const size_t n = 1 << 4;
-  const size_t r = 1 << 2;
+  const size_t n = 1 << 6;
+  const size_t r = 1 << 3;
   constexpr size_t d = Rq::d;
   const size_t max_value = 2;
 
