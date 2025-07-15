@@ -81,32 +81,32 @@ def to_32b_limbs_str(value):
 
 ######################################################
 
-def labrador():
+def babykoala():
     pbb = 0x78000001            # babybear
     pkb = 0x7f000001            # koalabear
     q = pbb*pkb
-    print(f"Labrador: {hex(q)}")
-    print(f"Labrador: {to_32b_limbs_str(q)}")
-    print(f"Labrador bitcount={q.bit_length()}")
+    print(f"babykoala: {hex(q)}")
+    print(f"babykoala: {to_32b_limbs_str(q)}")
+    print(f"babykoala bitcount={q.bit_length()}")
 
     bb_max_rou_order = largest_power_of_two_subgroup_in_prime_field(pbb)
     kb_max_rou_order = largest_power_of_two_subgroup_in_prime_field(pkb)
     print(f"Max order of 2 in koalabear: {kb_max_rou_order}")
     print(f"Max order of 2 in babybear: {bb_max_rou_order}")
-    max_order_in_labrador = min(bb_max_rou_order, kb_max_rou_order)
-    print(f"Max order of 2 in labrador: {max_order_in_labrador}")
+    max_order_in_babykoala = min(bb_max_rou_order, kb_max_rou_order)
+    print(f"Max order of 2 in babykoala: {max_order_in_babykoala}")
     
     # bb_rou_27 = 0x00000089 # Baby bear
     # bb_rou = pow(bb_rou_27, 8, pbb) #w^8 mod p1 for w or order logn=27
     # kb_rou = 0x6ac49f88 # Koala bear
     
-    bb_rou = find_primitive_root_of_unity(pbb, max_order_in_labrador)
-    kb_rou = find_primitive_root_of_unity(pkb, max_order_in_labrador)
+    bb_rou = find_primitive_root_of_unity(pbb, max_order_in_babykoala)
+    kb_rou = find_primitive_root_of_unity(pkb, max_order_in_babykoala)
     print(f"babybear rou: {hex(bb_rou)}")
     print(f"koalabear rou: {hex(kb_rou)}")
     q_rou = from_rns([pbb, pkb], [bb_rou, kb_rou])
     
-    print(f"(logn={max_order_in_labrador}) w^n mod q = {pow(q_rou, 1<<max_order_in_labrador, q)}")
+    print(f"(logn={max_order_in_babykoala}) w^n mod q = {pow(q_rou, 1<<max_order_in_babykoala, q)}")
     print(f"Rou in the ring q = {to_32b_limbs_str(q_rou)}")
     
     # precompute RNS Wi
@@ -148,5 +148,5 @@ def greyhound():
 ######################################################
 
 if __name__ == "__main__":
-    labrador()
+    babykoala()
     # greyhound()

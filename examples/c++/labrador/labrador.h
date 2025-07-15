@@ -3,7 +3,7 @@
 /// @file
 /// @brief High-level LaBRADOR APIs and types: NTT, vector ops, JL projection, norm checks, and sampling.
 
-#include "icicle/rings/params/labrador.h" // Zq, Rq, Tq, etc.
+#include "icicle/rings/params/babykoala.h" // Zq, Rq, Tq, etc.
 
 // TODO(Yuval): Move implementation to source file and reduce header dependencies
 #include "icicle/vec_ops.h"
@@ -23,8 +23,8 @@ namespace icicle {
     // Type Aliases
     //------------------------------------------------------------------------------
 
-    using Zq = ::labrador::Zq;
-    using PolyRing = ::labrador::PolyRing; // Flat arrays of Zq[d]; used as both Rq and Tq
+    using Zq = ::babykoala::Zq;
+    using PolyRing = ::babykoala::PolyRing; // Flat arrays of Zq[d]; used as both Rq and Tq
     using Rq = PolyRing;
     using Tq = PolyRing;
 

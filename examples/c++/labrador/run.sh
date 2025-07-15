@@ -53,12 +53,12 @@ ICICLE_BACKEND_SOURCE_DIR="${ICILE_DIR}/backend/${DEVICE_TYPE_LOWERCASE}"
 # Build Icicle and the example app that links to it
 if [ "$DEVICE_TYPE" != "CPU" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_BACKEND_SOURCE_DIR}" ]; then
   echo "Building icicle and ${DEVICE_TYPE} backend"
-  cmake -DCMAKE_BUILD_TYPE=Release -DRING=labrador "-D${DEVICE_TYPE}_BACKEND"=local -S "${ICILE_DIR}" -B build/icicle
+  cmake -DCMAKE_BUILD_TYPE=Release -DRING=babykoala "-D${DEVICE_TYPE}_BACKEND"=local -S "${ICILE_DIR}" -B build/icicle
   export ICICLE_BACKEND_INSTALL_DIR=$(realpath "build/icicle/backend")
 else
   echo "Building icicle without backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
   export ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR}"
-  cmake -DCMAKE_BUILD_TYPE=Release -DRING=labrador -S "${ICILE_DIR}" -B build/icicle
+  cmake -DCMAKE_BUILD_TYPE=Release -DRING=babykoala -S "${ICILE_DIR}" -B build/icicle
 fi
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B build/example
 

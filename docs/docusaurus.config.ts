@@ -13,7 +13,7 @@ const ingoPreset = {
   docs: {
     showLastUpdateAuthor: false,
     showLastUpdateTime: true,
-    includeCurrentVersion: false,
+    includeCurrentVersion: process.env.NODE_ENV !== 'production',
     routeBasePath: '/',
     remarkPlugins: [math],
     rehypePlugins: [katex],
