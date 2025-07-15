@@ -59,19 +59,16 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
   size_t JL_out = lab_inst.param.JL_out;
   const size_t L = lab_inst.const_zero_constraints.size();
 
-    /* ───────────────── TIMING HELPERS ───────────────── */
-    auto step_start = std::chrono::high_resolution_clock::now();
-    // Each call resets timer
-    auto log_step   = [&](const char* msg)
-    {
-      auto step_end = std::chrono::high_resolution_clock::now();
-      auto elapsed  =
-        std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
-      std::cout << msg << " (" << elapsed << " ms)" << std::endl;
-      step_start = std::chrono::high_resolution_clock::now();
-    };
-    /* ────────────────────────────────────────────────── */
-  
+  /* ───────────────── TIMING HELPERS ───────────────── */
+  auto step_start = std::chrono::high_resolution_clock::now();
+  // Each call resets timer
+  auto log_step = [&](const char* msg) {
+    auto step_end = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
+    std::cout << msg << " (" << elapsed << " ms)" << std::endl;
+    step_start = std::chrono::high_resolution_clock::now();
+  };
+  /* ────────────────────────────────────────────────── */
 
   // indexes into multidim arrays: psi[k][l] and omega[k][l]
   auto psi_index = [num_aggregation_rounds, L](size_t k, size_t l) {
@@ -93,15 +90,15 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
 
   ICICLE_CHECK(icicle::labrador::get_jl_matrix_rows(
     jl_seed.data(), jl_seed.size(),
-    r * n, // row_size
-    0,     // row_index
-    JL_out,     // num_rows
-    true,  // conjugate
-    {},    // config
+    r * n,  // row_size
+    0,      // row_index
+    JL_out, // num_rows
+    true,   // conjugate
+    {},     // config
     Q.data()));
   log_step("\t Create Q");
 
-  std::vector<Tq> Q_hat(JL_out*r * n);
+  std::vector<Tq> Q_hat(JL_out * r * n);
   // Q_hat = NTT(Q)
   ICICLE_CHECK(ntt(Q.data(), Q.size(), NTTDir::kForward, {}, Q_hat.data()));
   log_step("\t NTT(Q)");
@@ -139,7 +136,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
     for (size_t l = 0; l < L; l++) {
       ICICLE_CHECK(vector_add(new_constraint.a.data(), temp_const[l].a.data(), r * r, {}, new_constraint.a.data()));
     }
-        log_step("\t\t sum(a)");
+    log_step("\t\t sum(a)");
 
     // Compute varphi'_i^{(k)} = sum_{l=0}^{L-1} psi^{(k)}(l) * phi'_i^{(l)} + sum_{l=0}^{255} omega^{(k)}(l) * q_{il}
 
@@ -165,46 +162,33 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
 
     // For each j do:
     //    new_constraint.phi[:,:] += omega[k,j]* Q_hat[j, :, :]
-    
-    std::vector<Tq> omega_times_Q(JL_out*r*n);
 
-    // Configure for batched operations  
-    VecOpsConfig batch_config = default_vec_ops_config();  
-    batch_config.batch_size = JL_out;  
-    batch_config.columns_batch = false; 
-      
-    // Batch all scalar multiplications into a single call  
-    ICICLE_CHECK(scalar_mul_vec(  
-        &omega[k*JL_out],   
-        reinterpret_cast<const Zq*>(Q_hat.data()),       
-        r * n * d,            
-        batch_config,  
-        reinterpret_cast<Zq*>(omega_times_Q.data())  
-    ));
+    std::vector<Tq> omega_times_Q(JL_out * r * n);
+
+    // Configure for batched operations
+    VecOpsConfig batch_config = default_vec_ops_config();
+    batch_config.batch_size = JL_out;
+    batch_config.columns_batch = false;
+
+    // Batch all scalar multiplications into a single call
+    ICICLE_CHECK(scalar_mul_vec(
+      &omega[k * JL_out], reinterpret_cast<const Zq*>(Q_hat.data()), r * n * d, batch_config,
+      reinterpret_cast<Zq*>(omega_times_Q.data())));
     log_step("\t\t omega*Q");
 
     // new_constraint.phi[i,:] += \sum_j omega_times_Q[j, i, :]
 
-    VecOpsConfig sum_config = default_vec_ops_config();  
-    sum_config.batch_size = r * n*d;  // Number of reduction operations  
-    sum_config.columns_batch = true; // Elements to sum are strided across batches  
-    std::vector<Tq> reduction_result(r*n);
-    // This will compute the sum across all j for each (i, element) pair  
-    ICICLE_CHECK(vector_sum<Zq>(  
-      reinterpret_cast<const Zq*>(omega_times_Q.data()),           
-        JL_out,                  
-        sum_config,  
-        reinterpret_cast<Zq*>(reduction_result.data())       
-    ));  
-  
-    // Then add to new_constraint.phi  
-    ICICLE_CHECK(vector_add(  
-        new_constraint.phi.data(),  
-        reduction_result.data(),  
-        r * n,  
-        {},  
-        new_constraint.phi.data()  
-    ));
+    VecOpsConfig sum_config = default_vec_ops_config();
+    sum_config.batch_size = r * n * d; // Number of reduction operations
+    sum_config.columns_batch = true;   // Elements to sum are strided across batches
+    std::vector<Tq> reduction_result(r * n);
+    // This will compute the sum across all j for each (i, element) pair
+    ICICLE_CHECK(vector_sum<Zq>(
+      reinterpret_cast<const Zq*>(omega_times_Q.data()), JL_out, sum_config,
+      reinterpret_cast<Zq*>(reduction_result.data())));
+
+    // Then add to new_constraint.phi
+    ICICLE_CHECK(vector_add(new_constraint.phi.data(), reduction_result.data(), r * n, {}, new_constraint.phi.data()));
     log_step("\t\t add Q");
 
     // Compute B^{(k)} = sum_{ij} a''_{ij}^{(k)}  * g_{ij} + sum_i <phi'_i^{(k)}, s_i>
@@ -278,11 +262,9 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   /* ───────────────── TIMING HELPERS ───────────────── */
   auto step_start = std::chrono::high_resolution_clock::now();
-  auto log_step   = [&](const char* msg)
-  {
+  auto log_step = [&](const char* msg) {
     auto step_end = std::chrono::high_resolution_clock::now();
-    auto elapsed  =
-      std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
     std::cout << msg << " (" << elapsed << " ms)" << std::endl;
     step_start = std::chrono::high_resolution_clock::now();
   };
@@ -418,7 +400,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<std::byte> seed2 = oracle.generate(jl_buf.data(), jl_buf.size());
   trs.seed2 = seed2;
   log_step("Step 13 completed: Generated seed2");
-  
+
   // Step 14: removed
   // Step 15, 16: already done
 
@@ -566,7 +548,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   trs.seed4 = seed4;
   log_step("Step 27 completed: Generated seed4");
-  
+
   // Step 28: sampling low operator norm challenges
   std::vector<Rq> challenge = sample_low_norm_challenges(n, r, seed4.data(), seed4.size());
 
