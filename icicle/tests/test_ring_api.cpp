@@ -1317,7 +1317,7 @@ TEST_F(RingTestBase, NegacyclicNTT)
 
 TEST_F(RingTestBase, RandomSampling)
 {
-  size_t size = 1 << 20;
+  size_t size = (1 << 20) + 1;
   size_t seed_len = 32;
   std::vector<std::byte> seed(seed_len);
   for (size_t i = 0; i < seed_len; ++i) {
@@ -1356,9 +1356,10 @@ TEST_F(RingTestBase, RandomSampling)
           ASSERT_EQ(a[device_index][i], b[device_index][i]);
         }
       }
+      // compare devices
       for (int j = 0; j < size; ++j) {
-        for (size_t device_index = 0; device_index < s_registered_devices.size(); ++device_index) {
-          ASSERT_EQ(a[device_index][j], b[device_index][j]);
+        for (size_t device_index = 1; device_index < s_registered_devices.size(); ++device_index) {
+          ASSERT_EQ(a[0][j], a[device_index][j]); // compare first device to all others
         }
       }
     }
