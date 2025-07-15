@@ -64,10 +64,11 @@ fn main() {
         if is_simulator {
             config.define("IOS_SIMULATOR", "ON");
             config.define("IOS_DEVICE", "OFF");
+            config.define("LICENSE","OFF");
         } else {
             config.define("IOS_SIMULATOR", "OFF");
             config.define("IOS_DEVICE", "ON");
-            config.define("METAL_BACKEND","local");
+            config.define("LICENSE","OFF");
         }
     }
 
@@ -81,7 +82,7 @@ fn main() {
     if cfg!(feature = "metal_backend") {
         config.define("METAL_BACKEND", "local");
     } else if cfg!(feature = "pull_metal_backend") {
-        config.define("METAL_BACKEND", "main");
+        config.define("METAL_BACKEND", "stas/ios/port1");
     }
     if cfg!(feature = "vulkan_backend") {
         config.define("VULKAN_BACKEND", "local");
