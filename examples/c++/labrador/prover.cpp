@@ -168,33 +168,43 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
     
     std::vector<Tq> omega_times_Q(JL_out*r*n);
 
-    for (size_t j = 0; j < JL_out; j++) {
-      Zq omega_scalar = omega[omega_index(k, j)];
-
-      // jth row: has r*n length
-      const Tq *Q_j_hat = &Q_hat[j*r*n];
-
-      // Make sure that <Q_j_hat, S_hat> - p_j == 0
-      if (TESTING) {
-        ConstZeroInstance cz{r, n};
-        cz.phi = {Q_j_hat, Q_j_hat+r*n};
-        cz.b = p[j].neg();
-        if (!witness_legit_const_zero_all_ntt(cz, S_hat)) {
-          std::cout << "Q_j eqn error for j = " << j << "\n";
-          exit(1);
-        }
-      }
-
-      ICICLE_CHECK(scalar_mul_vec(
-        &omega_scalar, reinterpret_cast<const Zq*>(Q_j_hat), r * n * d, async_config,
-        reinterpret_cast<Zq*>(&omega_times_Q[j * r * n])));
-    }
-    ICICLE_CHECK(icicle_device_synchronize());
+    // Configure for batched operations  
+    VecOpsConfig batch_config = default_vec_ops_config();  
+    batch_config.batch_size = JL_out;  
+    batch_config.columns_batch = false; 
+      
+    // Batch all scalar multiplications into a single call  
+    ICICLE_CHECK(scalar_mul_vec(  
+        &omega[k*JL_out],   
+        reinterpret_cast<const Zq*>(Q_hat.data()),       
+        r * n * d,            
+        batch_config,  
+        reinterpret_cast<Zq*>(omega_times_Q.data())  
+    ));
     log_step("\t\t omega*Q");
+
     // new_constraint.phi[i,:] += \sum_j omega_times_Q[j, i, :]
-    for (size_t j = 0; j < JL_out; j++) {
-      ICICLE_CHECK(vector_add(new_constraint.phi.data(), &omega_times_Q[j * n * r], r * n, {}, new_constraint.phi.data()));
-    }
+
+    VecOpsConfig sum_config = default_vec_ops_config();  
+    sum_config.batch_size = r * n*d;  // Number of reduction operations  
+    sum_config.columns_batch = true; // Elements to sum are strided across batches  
+    std::vector<Tq> reduction_result(r*n);
+    // This will compute the sum across all j for each (i, element) pair  
+    ICICLE_CHECK(vector_sum<Zq>(  
+      reinterpret_cast<const Zq*>(omega_times_Q.data()),           
+        JL_out,                  
+        sum_config,  
+        reinterpret_cast<Zq*>(reduction_result.data())       
+    ));  
+  
+    // Then add to new_constraint.phi  
+    ICICLE_CHECK(vector_add(  
+        new_constraint.phi.data(),  
+        reduction_result.data(),  
+        r * n,  
+        {},  
+        new_constraint.phi.data()  
+    ));
     log_step("\t\t add Q");
 
     // Compute B^{(k)} = sum_{ij} a''_{ij}^{(k)}  * g_{ij} + sum_i <phi'_i^{(k)}, s_i>
@@ -365,13 +375,17 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // compute NTTs for T_tilde, g_tilde
   std::vector<Tq> T_tilde_hat(T_tilde.size()), g_tilde_hat(g_tilde.size());
+  log_step("\t memory alloc");
   ICICLE_CHECK(ntt(T_tilde.data(), T_tilde.size(), NTTDir::kForward, {}, T_tilde_hat.data()));
+  log_step("\t T_tilde NTT completed");
   ICICLE_CHECK(ntt(g_tilde.data(), g_tilde.size(), NTTDir::kForward, {}, g_tilde_hat.data()));
-
+  log_step("\t g_tilde NTT completed");
   // v1 = B @ T_tilde
   std::vector<Tq> v1 = ajtai_commitment(B, T_tilde_hat.size(), kappa1, T_tilde_hat.data(), T_tilde_hat.size());
+  log_step("\t Ajtai commit to T_tilde");
   // v2 = C @ g_tilde
   std::vector<Tq> v2 = ajtai_commitment(C, g_tilde_hat.size(), kappa1, g_tilde_hat.data(), g_tilde_hat.size());
+  log_step("\t Ajtai commit to g_tilde");
 
   std::vector<Tq> u1(kappa1);
   vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
