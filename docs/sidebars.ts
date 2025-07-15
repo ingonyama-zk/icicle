@@ -186,6 +186,11 @@ export default {
           label: "Serialization",
           id: "api/cpp/serialization",
         },
+        {
+          type: "doc",
+          label: "Matrix Operations",
+          id: "api/cpp/matrix_ops",
+        },
       ],
     },
     {
@@ -319,6 +324,16 @@ export default {
           type: "doc",
           label: "Serialization",
           id: "api/rust-bindings/serialization",
+        },
+        {
+          type: "doc",
+          label: "Pairings",
+          id: "api/rust-bindings/pairing",
+        },  
+        {
+          type: "doc",
+          label: "Matrix Operations",
+          id: "api/rust-bindings/matrix_ops",
         },
       ],
     },

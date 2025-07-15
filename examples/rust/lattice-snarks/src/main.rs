@@ -15,7 +15,7 @@ use icicle_core::{
     vec_ops,
     vec_ops::{poly_vecops, VecOpsConfig},
 };
-use icicle_labrador::{
+use icicle_babykoala::{
     polynomial_ring::PolyRing, // polynomial ring type Zq[X]/X^64+1
     ring::ScalarRing as Zq,    // the scalar integer ring Zq (q~64b)
 };
@@ -405,7 +405,18 @@ where
         })
         .collect();
 
-    let l2_norm: u64 = l2_squared.isqrt() as u64;
+    use std::convert::TryInto;
+    let isqrt = |n: u128| -> Result<u64, &'static str> {
+        let mut x = n;
+        let mut y = (x + 1) / 2;
+        while y < x {
+            x = y;
+            y = (x + n / x) / 2;
+        }
+        x.try_into()
+            .map_err(|_| "sqrt result does not fit in u64")
+    };
+    let l2_norm: u64 = isqrt(l2_squared).unwrap();
     println!("[Norm Bound check] Estimated ℓ₂ norm bound: {}", l2_norm);
     println!("[Norm Bound check] Computed ℓ∞ (max) norm: {}", l_infinity_norm);
 

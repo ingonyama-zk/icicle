@@ -121,7 +121,7 @@ static eIcicleError cpu_decompose_balanced_digits(
       // Temporary buffer to hold intermediate remainders during decomposition.
       int64_t remainder[task_size];
       const int64_t* input_data_i64 = reinterpret_cast<const int64_t*>(input + task_idx * task_size);
-      std::memcpy(remainder, input_data_i64, sizeof(remainder));
+      std::memcpy(remainder, input_data_i64, sizeof(int64_t) * nof_elements);
 
       for (int digit_idx = 0; digit_idx < digits_per_element; ++digit_idx) {
         int64_t digit_buf[task_size];

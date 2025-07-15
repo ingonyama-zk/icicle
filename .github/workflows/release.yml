@@ -19,8 +19,13 @@ on:
         default: true
 
 jobs:
+  run-examples:
+    name: Run Examples
+    uses: ./.github/workflows/examples.yml
+
   release:
     name: Release
+    needs: [run-examples]
     runs-on: [self-hosted, Linux, X64, icicle, release]  
     steps:
       - name: Checkout
@@ -58,7 +63,7 @@ jobs:
           cargo workspaces version ${{ inputs.releaseType }} -y --no-individual-tags --no-git-push -m "Bump rust crates' version"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: 18
+          node-version: 20
       - name: Bump docs version
         id: bump-docs-version
         if: ${{ inputs.releaseType != 'patch' && inputs.bump }}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <string>
 #include "icicle/runtime.h"
 
 // Timer
@@ -18,6 +19,8 @@ static void try_load_and_set_backend_device(int argc = 0, char** argv = nullptr)
     ICICLE_LOG_INFO << "Defaulting to CPU device";
     return;
   }
+
+  if (std::string(selected_device) == "CPU") { return; }
 
   icicle_load_backend_from_env_or_default();
 
