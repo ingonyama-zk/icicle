@@ -1,7 +1,11 @@
 
 
 function(setup_pqc_target)
-  add_library(icicle_pqc SHARED)
+  if(ICICLE_STATIC_LINK)
+    add_library(icicle_pqc STATIC)
+  else()
+    add_library(icicle_pqc SHARED)
+  endif()
   target_sources(icicle_pqc PRIVATE 
    src/pqc/ml_kem/ml_kem.cpp
    src/pqc/ml_kem/ml_kem_c_api.cpp
@@ -13,6 +17,16 @@ function(setup_pqc_target)
     RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
     LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/")
+  
+  # Add PQC backend if enabled
+  if(CUDA_PQC_BACKEND)
+    # Add dependency on the backend target
+    add_dependencies(icicle_pqc icicle_backend_cuda_pqc)
+    
+    # Use the interface library that handles whole-archive linking correctly
+    target_link_libraries(icicle_pqc PRIVATE icicle_backend_cuda_pqc_interface)
+  endif()
+
 endfunction()
 
 function(setup_pqc_package_target)
@@ -36,7 +50,14 @@ function(setup_pqc_package_target)
   )
   
   # Export the package and its dependencies for installation
-  install(TARGETS icicle_pqc_package icicle_device icicle_pqc
+  set(PACKAGE_TARGETS icicle_pqc_package icicle_device icicle_pqc)
+  
+  # Include CUDA-PQC backend if enabled
+  if(CUDA_PQC_BACKEND)
+    list(APPEND PACKAGE_TARGETS icicle_backend_cuda_pqc icicle_backend_cuda_pqc_interface)
+  endif()
+  
+  install(TARGETS ${PACKAGE_TARGETS}
     EXPORT icicle_pqc_package_targets
     INCLUDES DESTINATION "${CMAKE_INSTALL_PREFIX}/include"
     RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"

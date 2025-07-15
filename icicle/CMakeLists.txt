@@ -49,7 +49,13 @@ option(SUMCHECK "Build sumcheck" ${ENABLE_ALL_FEATURES})
 option(FRI "Build fri" ${ENABLE_ALL_FEATURES})
 option(PQC "Build pqc" ${CUDA_PQC_BACKEND}) # Post-Quantum Cryptography. TODO: default to ON? do we care about CPU too?
 option(SANITIZE "Enable memory address sanitizer" OFF)
+option(ICICLE_STATIC_LINK "Build icicle_device as a STATIC library" OFF)
 option(PQC_PACKAGE "build pqc package" OFF)
+
+# If CUDA_PQC_BACKEND is enabled, force static linking for all icicle libs
+if(CUDA_PQC_BACKEND)
+  set(ICICLE_STATIC_LINK ON CACHE BOOL "Build all icicle libs as static" FORCE)
+endif()
 
 # address sanitizer
 if(SANITIZE)
@@ -58,11 +64,22 @@ if(SANITIZE)
 endif()
 
 # device API library
-add_library(icicle_device SHARED
-  src/device_api.cpp
-  src/runtime.cpp
-  src/config_extension.cpp
-)
+# add_library(icicle_device SHARED
+#   src/device_api.cpp
+#   src/runtime.cpp
+#   src/config_extension.cpp
+# )
+if (ICICLE_STATIC_LINK)
+    add_library(icicle_device STATIC
+        src/device_api.cpp
+        src/runtime.cpp
+        src/config_extension.cpp)
+else()
+    add_library(icicle_device SHARED
+        src/device_api.cpp
+        src/runtime.cpp
+        src/config_extension.cpp)
+endif()
 include_directories(include)
 
 # Define the install directory (default is /usr/local)
@@ -110,16 +127,16 @@ if (HASH)
   setup_hash_target()
 endif()
 
-if (PQC)
-  setup_pqc_target()
-endif()
-
 if (CPU_BACKEND)
   add_subdirectory(backend/cpu)
 endif()
 
 # Include and configure (for build) backends based on the backend options
 include(cmake/backend_include.cmake)
+
+if (PQC)
+  setup_pqc_target()
+endif()
 
 if (BUILD_TESTS)
   add_subdirectory(tests)

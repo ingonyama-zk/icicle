@@ -23,6 +23,11 @@ set(ICICLE_PQC_PACKAGE_CUDA_FOUND ${CUDAToolkit_FOUND})
 function(icicle_pqc_package_link_libraries target)
     target_link_libraries(${target} PRIVATE icicle::icicle_pqc_package)
     target_include_directories(${target} PRIVATE ${ICICLE_PQC_PACKAGE_INCLUDE_DIRS})
+    
+    # Link CUDA runtime if CUDA is found and backend is enabled
+    if(ICICLE_PQC_PACKAGE_CUDA_FOUND)
+        target_link_libraries(${target} PRIVATE CUDA::cudart)
+    endif()
 endfunction()
 
 # Status summary
