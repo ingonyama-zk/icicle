@@ -1,5 +1,3 @@
-
-
 function(setup_pqc_target)
   if(ICICLE_STATIC_LINK)
     add_library(icicle_pqc STATIC)
@@ -36,11 +34,43 @@ function(setup_pqc_package_target)
   # Set up an alias for easier reference
   add_library(icicle::icicle_pqc_package ALIAS icicle_pqc_package)
   
-  # Link all the required components to the package
-  target_link_libraries(icicle_pqc_package INTERFACE
-    icicle_device
-    icicle_pqc
-  )
+  # Link all the required components to the package with proper whole-archive handling
+  if(CUDA_PQC_BACKEND AND ICICLE_STATIC_LINK)
+    # For static builds with CUDA backend, use --whole-archive for all libraries
+    if(UNIX AND NOT APPLE)
+      target_link_libraries(icicle_pqc_package INTERFACE
+        "-Wl,--whole-archive"
+        icicle_device
+        icicle_pqc  
+        icicle_backend_cuda_pqc
+        "-Wl,--no-whole-archive"
+      )
+    elseif(APPLE)
+      target_link_libraries(icicle_pqc_package INTERFACE
+        "-Wl,-force_load"
+        "$<TARGET_FILE:icicle_device>"
+        "-Wl,-force_load"
+        "$<TARGET_FILE:icicle_pqc>"
+        "-Wl,-force_load"
+        "$<TARGET_FILE:icicle_backend_cuda_pqc>"
+      )
+    elseif(WIN32)
+      target_link_libraries(icicle_pqc_package INTERFACE
+        "/WHOLEARCHIVE:icicle_device"
+        "/WHOLEARCHIVE:icicle_pqc"
+        "/WHOLEARCHIVE:icicle_backend_cuda_pqc"
+      )
+    endif()
+  else()
+    # For shared libraries or when CUDA backend is disabled, just link normally
+    target_link_libraries(icicle_pqc_package INTERFACE
+      icicle_device
+      icicle_pqc
+    )
+    if(CUDA_PQC_BACKEND)
+      target_link_libraries(icicle_pqc_package INTERFACE icicle_backend_cuda_pqc)
+    endif()
+  endif()
   
   # Set package properties
   set_target_properties(icicle_pqc_package PROPERTIES
