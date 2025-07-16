@@ -8,7 +8,7 @@ use icicle_runtime::{
 };
 
 /// Basic roundtrip test for NTT + inverse NTT
-pub fn test_negacyclic_ntt_roundtrip<P: PolynomialRing + NegacyclicNtt<P>>()
+pub fn test_negacyclic_ntt_roundtrip<P: PolynomialRing + NegacyclicNtt<P> + Default + Copy>()
 where
     P::Base: IntegerRing,
     P: GenerateRandom,
@@ -35,10 +35,7 @@ where
         ntt(input.into_slice(), NTTDir::kForward, &cfg, &mut device_mem).unwrap();
 
         // (3) compare (1) and (2)
-        let mut host_buffer = vec![P::zero(); size];
-        device_mem
-            .copy_to_host(host_buffer.into_slice_mut())
-            .unwrap();
+        let host_buffer = device_mem.to_host_vec();
         assert_eq!(output, host_buffer);
 
         // (4) intt device memory -> host memory
@@ -48,9 +45,7 @@ where
 
         // (5) intt inplace device memory and compare to input
         ntt_inplace(&mut device_mem, NTTDir::kInverse, &cfg).unwrap();
-        device_mem
-            .copy_to_host(host_buffer.into_slice_mut())
-            .unwrap();
+        let host_buffer = device_mem.to_host_vec();
         assert_eq!(input, host_buffer);
 
         output
