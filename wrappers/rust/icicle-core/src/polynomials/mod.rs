@@ -455,7 +455,7 @@ macro_rules! impl_polynomial_tests {
             CUDA_NTT_FAST_TWIDDLES_MODE,
         };
         use icicle_core::vec_ops::{add_scalars, mul_scalars, sub_scalars, VecOps, VecOpsConfig};
-        use icicle_runtime::memory::{DeviceVec, HostSlice};
+        use icicle_runtime::memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
         use icicle_runtime::test_utilities;
         use std::sync::Once;
 
@@ -495,13 +495,7 @@ macro_rules! impl_polynomial_tests {
             let mut result = [$field::zero()];
 
             let cfg = VecOpsConfig::default();
-            add_scalars(
-                HostSlice::from_slice(&a),
-                HostSlice::from_slice(&b),
-                HostSlice::from_mut_slice(&mut result),
-                &cfg,
-            )
-            .unwrap();
+            add_scalars(a.into_slice(), b.into_slice(), result.into_slice_mut(), &cfg).unwrap();
             result[0]
         }
 
@@ -511,13 +505,7 @@ macro_rules! impl_polynomial_tests {
             let mut result = [$field::zero()];
 
             let cfg = VecOpsConfig::default();
-            sub_scalars(
-                HostSlice::from_slice(&a),
-                HostSlice::from_slice(&b),
-                HostSlice::from_mut_slice(&mut result),
-                &cfg,
-            )
-            .unwrap();
+            sub_scalars(a.into_slice(), b.into_slice(), result.into_slice_mut(), &cfg).unwrap();
             result[0]
         }
 
@@ -527,19 +515,13 @@ macro_rules! impl_polynomial_tests {
             let mut result = [$field::zero()];
 
             let cfg = VecOpsConfig::default();
-            mul_scalars(
-                HostSlice::from_slice(&a),
-                HostSlice::from_slice(&b),
-                HostSlice::from_mut_slice(&mut result),
-                &cfg,
-            )
-            .unwrap();
+            mul_scalars(a.into_slice(), b.into_slice(), result.into_slice_mut(), &cfg).unwrap();
             result[0]
         }
 
         fn randomize_poly(size: usize) -> Poly {
             let coeffs = randomize_coeffs::<$field>(size);
-            Poly::from_coeffs(HostSlice::from_slice(&coeffs), size)
+            Poly::from_coeffs(coeffs.into_slice(), size)
         }
 
         static INIT: Once = Once::new();
@@ -634,7 +616,7 @@ macro_rules! impl_polynomial_tests {
 
             // f(x) = 1+2x^2
             let coeffs = [one, zero, two];
-            let mut f = Poly::from_coeffs(HostSlice::from_slice(&coeffs), coeffs.len());
+            let mut f = Poly::from_coeffs(coeffs.into_slice(), coeffs.len());
             let x = rand();
             let fx = f.eval(&x);
 
@@ -658,16 +640,16 @@ macro_rules! impl_polynomial_tests {
             let four = $field::from(4);
 
             let coeffs = [one, two, three, four];
-            let mut f = Poly::from_coeffs(HostSlice::from_slice(&coeffs), coeffs.len());
+            let mut f = Poly::from_coeffs(coeffs.into_slice(), coeffs.len());
 
             // read coeffs to host memory
             let mut host_mem = vec![$field::zero(); coeffs.len()];
-            f.copy_coeffs(0, HostSlice::from_mut_slice(&mut host_mem));
+            f.copy_coeffs(0, host_mem.into_slice_mut());
             assert_eq!(host_mem, coeffs);
 
             // read into larger buffer
             let mut host_mem_large = vec![$field::zero(); coeffs.len() + 10];
-            f.copy_coeffs(0, HostSlice::from_mut_slice(&mut host_mem_large));
+            f.copy_coeffs(0, host_mem_large.into_slice_mut());
             assert_eq!(host_mem_large[..coeffs.len()], coeffs);
 
             // read coeffs to device memory
@@ -716,7 +698,7 @@ macro_rules! impl_polynomial_tests {
 
             let f = randomize_poly(1 << 12);
             let v_coeffs = [minus_one, zero, zero, zero, one]; // x^4-1
-            let v = Poly::from_coeffs(HostSlice::from_slice(&v_coeffs), v_coeffs.len());
+            let v = Poly::from_coeffs(v_coeffs.into_slice(), v_coeffs.len());
 
             let fv = &f * &v;
             let deg_f = f.degree();
@@ -765,7 +747,7 @@ macro_rules! impl_polynomial_tests {
             assert_eq!(host_evals, host_evals_from_device);
 
             // use evals as domain (on device) and evaluate from device to host
-            f.eval_on_domain(&mut device_evals[..], HostSlice::from_mut_slice(&mut host_evals));
+            f.eval_on_domain(device_evals.into_slice(), host_evals.into_slice_mut());
             // check that the evaluations are correct
             assert_eq!(f.eval(&host_evals_from_device[0]), host_evals[0]);
             assert_eq!(f.eval(&host_evals_from_device[1]), host_evals[1]);
@@ -785,7 +767,7 @@ macro_rules! impl_polynomial_tests {
             f.eval_on_rou_domain(domain_log_size, &mut device_evals[..]);
 
             // construct g from f's evals and assert they are equal
-            let g = Poly::from_rou_evals(&device_evals[..], 1 << domain_log_size);
+            let g = Poly::from_rou_evals(device_evals.into_slice(), 1 << domain_log_size);
             let diff = &f - &g;
             assert_eq!(diff.degree(), -1); // diff is the zero poly
         }
@@ -833,7 +815,7 @@ macro_rules! impl_polynomial_tests {
 
             let size = 4;
             let coeffs = randomize_coeffs::<$field>(size);
-            let mut f = Poly::from_coeffs(HostSlice::from_slice(&coeffs), size);
+            let mut f = Poly::from_coeffs(coeffs.into_slice(), size);
 
             // take a mutable coeffs slice as a DeviceSlice
             let coeffs_slice_dev = f.coeffs_mut_slice();
@@ -856,7 +838,7 @@ macro_rules! impl_polynomial_tests {
                 coeffs_slice_dev,
                 NTTDir::kForward,
                 &config,
-                HostSlice::from_mut_slice(&mut ntt_result),
+                ntt_result.into_slice_mut(),
             )
             .unwrap();
             // ntt[0] is f(one) because it's the sum of coeffs

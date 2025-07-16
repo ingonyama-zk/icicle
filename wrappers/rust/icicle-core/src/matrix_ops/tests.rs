@@ -5,7 +5,7 @@ use crate::{
 };
 
 use icicle_runtime::{
-    memory::{DeviceVec, HostSlice},
+    memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut},
     test_utilities,
 };
 
@@ -19,7 +19,7 @@ use icicle_runtime::{
 /// Correctness is already ensured by the C++ tests.
 pub fn check_matmul_device_memory<P>()
 where
-    P: GenerateRandom + MatrixOps<P> + Default + Clone + std::fmt::Debug + PartialEq,
+    P: GenerateRandom + MatrixOps<P> + Default + Clone + Copy + std::fmt::Debug + PartialEq,
 {
     let cfg = MatMulConfig::default();
 
@@ -39,24 +39,24 @@ where
         // case (1) matmul host memory inputs -> host_memory outputs
         let mut output_host_case_1 = vec![P::default(); out_size];
         matmul(
-            HostSlice::from_slice(&input_a),
+            input_a.into_slice(),
             n as u32,
             m as u32,
-            HostSlice::from_slice(&input_b),
+            input_b.into_slice(),
             m as u32,
             k as u32,
             &cfg,
-            HostSlice::from_mut_slice(&mut output_host_case_1),
+            output_host_case_1.into_slice_mut(),
         )
         .unwrap();
 
         // case (2) matmul host memory inputs -> device memory output
-        let mut device_mem_output = DeviceVec::<P>::device_malloc(out_size).unwrap();
+        let mut device_mem_output = DeviceVec::<P>::malloc(out_size);
         matmul(
-            HostSlice::from_slice(&input_a),
+            input_a.into_slice(),
             n as u32,
             m as u32,
-            HostSlice::from_slice(&input_b),
+            input_b.into_slice(),
             m as u32,
             k as u32,
             &cfg,
@@ -65,22 +65,13 @@ where
         .unwrap();
 
         // compare (1) and (2)
-        let mut output_host_case_2 = vec![P::default(); out_size];
-        device_mem_output
-            .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_2))
-            .unwrap();
+        let output_host_case_2 = device_mem_output.to_host_vec();
         assert_eq!(output_host_case_1, output_host_case_2);
 
         // case (3) matmul device memory inputs, host memory outputs
         /* Allocate inputs on device, and copy from host */
-        let mut device_mem_a = DeviceVec::<P>::device_malloc(n * m).unwrap();
-        let mut device_mem_b = DeviceVec::<P>::device_malloc(m * k).unwrap();
-        device_mem_a
-            .copy_from_host(HostSlice::from_slice(&input_a))
-            .unwrap();
-        device_mem_b
-            .copy_from_host(HostSlice::from_slice(&input_b))
-            .unwrap();
+        let device_mem_a = DeviceVec::from_host_slice(input_a.as_slice());
+        let device_mem_b = DeviceVec::from_host_slice(input_b.as_slice());
 
         let mut output_host_case_3 = vec![P::default(); out_size];
         matmul(
@@ -91,7 +82,7 @@ where
             m as u32,
             k as u32,
             &cfg,
-            HostSlice::from_mut_slice(&mut output_host_case_3),
+            output_host_case_3.into_slice_mut(),
         )
         .unwrap();
 
@@ -115,7 +106,7 @@ where
         /* Zero out host_buffer, copy result of (4) to host_buffer */
         let mut output_host_case_4 = vec![P::default(); out_size];
         device_mem_output
-            .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_4))
+            .copy_to_host(output_host_case_4.into_slice_mut())
             .unwrap();
 
         assert_eq!(output_host_case_1, output_host_case_4);
@@ -126,11 +117,11 @@ where
             &device_mem_a,
             n as u32,
             m as u32,
-            HostSlice::from_slice(&input_b),
+            input_b.into_slice(),
             m as u32,
             k as u32,
             &cfg,
-            HostSlice::from_mut_slice(&mut output_host_case_5),
+            output_host_case_5.into_slice_mut(),
         )
         .unwrap();
 
@@ -162,7 +153,7 @@ where
 /// The test is repeated for both main and reference devices.
 pub fn check_matrix_transpose_device_memory<P: MatrixOps<P>>()
 where
-    P: Default + GenerateRandom + Clone + std::fmt::Debug + PartialEq,
+    P: Default + GenerateRandom + Copy + Clone + std::fmt::Debug + PartialEq,
 {
     let cfg = VecOpsConfig::default();
     let nof_rows = 1 << 5;
@@ -181,11 +172,11 @@ where
         // --- Case 1: Host → Host ---
         let mut output_host_case_1 = vec![P::default(); matrix_size];
         matrix_transpose(
-            HostSlice::from_slice(&input_matrix),
+            input_matrix.into_slice(),
             nof_rows as u32,
             nof_cols as u32,
             &cfg,
-            HostSlice::from_mut_slice(&mut output_host_case_1),
+            output_host_case_1.into_slice_mut(),
         )
         .unwrap();
         assert_ne!(input_matrix, output_host_case_1); // Transpose should modify data
@@ -193,7 +184,7 @@ where
         // --- Case 2: Host → Device ---
         let mut device_mem_output = DeviceVec::<P>::device_malloc(matrix_size).unwrap();
         matrix_transpose(
-            HostSlice::from_slice(&input_matrix),
+            input_matrix.into_slice(),
             nof_rows as u32,
             nof_cols as u32,
             &cfg,
@@ -202,16 +193,13 @@ where
         .unwrap();
 
         // Compare (1) and (2)
-        let mut output_host_case_2 = vec![P::default(); matrix_size];
-        device_mem_output
-            .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_2))
-            .unwrap();
+        let output_host_case_2 = device_mem_output.to_host_vec();
         assert_eq!(output_host_case_1, output_host_case_2);
 
         // --- Case 3: Device → Host ---
         let mut device_mem_input = DeviceVec::<P>::device_malloc(matrix_size).unwrap();
         device_mem_input
-            .copy_from_host(HostSlice::from_slice(&input_matrix))
+            .copy_from_host(input_matrix.into_slice())
             .unwrap();
 
         let mut output_host_case_3 = vec![P::default(); matrix_size];
@@ -220,7 +208,7 @@ where
             nof_rows as u32,
             nof_cols as u32,
             &cfg,
-            HostSlice::from_mut_slice(&mut output_host_case_3),
+            output_host_case_3.into_slice_mut(),
         )
         .unwrap();
         assert_eq!(output_host_case_1, output_host_case_3);
@@ -238,7 +226,7 @@ where
 
         let mut output_host_case_4_restored = vec![P::default(); matrix_size];
         device_mem_restored
-            .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_4_restored))
+            .copy_to_host(output_host_case_4_restored.into_slice_mut())
             .unwrap();
         assert_eq!(input_matrix, output_host_case_4_restored);
 
@@ -291,14 +279,14 @@ where
         // Case 1: A * B (n×m) × (m×k) = n×k
         let mut output_case_1 = vec![P::default(); n * k];
         matmul(
-            HostSlice::from_slice(&input_a),
+            input_a.into_slice(),
             n as u32,
             m as u32,
-            HostSlice::from_slice(&input_b),
+            input_b.into_slice(),
             m as u32,
             k as u32,
             &MatMulConfig::default(),
-            HostSlice::from_mut_slice(&mut output_case_1),
+            output_case_1.into_slice_mut(),
         )
         .unwrap();
 
@@ -306,48 +294,48 @@ where
         // Aᵗ: m x n, Bᵗ: m x k
         let mut output_case_2 = vec![P::default(); n * k];
         matmul(
-            HostSlice::from_slice(&input_a),
+            input_a.into_slice(),
             m as u32,
             n as u32,
-            HostSlice::from_slice(&input_b),
+            input_b.into_slice(),
             m as u32,
             k as u32,
             &cfg_transposed,
-            HostSlice::from_mut_slice(&mut output_case_2),
+            output_case_2.into_slice_mut(),
         )
         .unwrap();
 
         // Case 3: Manually transpose A and B, then compute Aᵗ * Bᵗ
         let mut a_transposed = vec![P::default(); n * m];
         matrix_transpose(
-            HostSlice::from_slice(&input_a),
+            input_a.into_slice(),
             n as u32,
             m as u32,
             &VecOpsConfig::default(),
-            HostSlice::from_mut_slice(&mut a_transposed),
+            a_transposed.into_slice_mut(),
         )
         .unwrap();
 
         let mut b_transposed = vec![P::default(); n * m];
         matrix_transpose(
-            HostSlice::from_slice(&input_b),
+            input_b.into_slice(),
             n as u32,
             m as u32,
             &VecOpsConfig::default(),
-            HostSlice::from_mut_slice(&mut b_transposed),
+            b_transposed.into_slice_mut(),
         )
         .unwrap();
 
         let mut output_case_3 = vec![P::default(); n * k];
         matmul(
-            HostSlice::from_slice(&a_transposed),
+            a_transposed.into_slice(),
             m as u32,
             n as u32,
-            HostSlice::from_slice(&b_transposed),
+            b_transposed.into_slice(),
             m as u32,
             k as u32,
             &MatMulConfig::default(),
-            HostSlice::from_mut_slice(&mut output_case_3),
+            output_case_3.into_slice_mut(),
         )
         .unwrap();
 

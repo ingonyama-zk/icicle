@@ -2,6 +2,7 @@ use crate::matrix_ops::{matrix_transpose, MatrixOps};
 use crate::ntt::{NttAlgorithm, Ordering, CUDA_NTT_ALGORITHM, CUDA_NTT_FAST_TWIDDLES_MODE};
 use crate::ring::IntegerRing;
 use crate::vec_ops::VecOpsConfig;
+use icicle_runtime::memory::{IntoIcicleSlice, IntoIcicleSliceMut};
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
     runtime,
@@ -57,19 +58,19 @@ where
             // compute NTT on main and reference devices and compare
             test_utilities::test_set_main_device();
             ntt(
-                HostSlice::from_slice(&scalars),
+                scalars.into_slice(),
                 NTTDir::kForward,
                 &config,
-                HostSlice::from_mut_slice(&mut ntt_result_main),
+                ntt_result_main.into_slice_mut(),
             )
             .unwrap();
 
             test_utilities::test_set_ref_device();
             ntt(
-                HostSlice::from_slice(&scalars),
+                scalars.into_slice(),
                 NTTDir::kForward,
                 &config,
-                HostSlice::from_mut_slice(&mut ntt_result_ref),
+                ntt_result_ref.into_slice_mut(),
             )
             .unwrap();
 
@@ -78,20 +79,10 @@ where
             // compute INTT on main and reference devices, inplace, and compare
 
             test_utilities::test_set_main_device();
-            ntt_inplace(
-                HostSlice::from_mut_slice(&mut ntt_result_main),
-                NTTDir::kInverse,
-                &config,
-            )
-            .unwrap();
+            ntt_inplace(ntt_result_main.into_slice_mut(), NTTDir::kInverse, &config).unwrap();
 
             test_utilities::test_set_ref_device();
-            ntt_inplace(
-                HostSlice::from_mut_slice(&mut ntt_result_ref),
-                NTTDir::kInverse,
-                &config,
-            )
-            .unwrap();
+            ntt_inplace(ntt_result_ref.into_slice_mut(), NTTDir::kInverse, &config).unwrap();
 
             assert_eq!(ntt_result_main, ntt_result_ref);
         }
@@ -120,10 +111,11 @@ where
             // compute 2 NTTs: (1) NR ntt of size N/2 (=small_size) and (2) NR coset ntt of size N/2
             // test this is equivalent to a size N ntt
             let mut ntt_result_half = vec![F::zero(); small_size];
-            let ntt_result_half = HostSlice::from_mut_slice(&mut ntt_result_half);
+            let ntt_result_half = ntt_result_half.into_slice_mut();
             let mut ntt_result_coset = vec![F::zero(); small_size];
-            let ntt_result_coset = HostSlice::from_mut_slice(&mut ntt_result_coset);
-            let scalars_h = HostSlice::from_slice(&scalars[..small_size]);
+            let ntt_result_coset = ntt_result_coset.into_slice_mut();
+            let scalars_h = &scalars[..small_size];
+            let scalars_h = scalars_h.into_slice();
 
             ntt(scalars_h, NTTDir::kForward, &config, ntt_result_half).unwrap();
             assert_ne!(*ntt_result_half.as_slice(), scalars);
@@ -133,7 +125,7 @@ where
             // compare coset ntt to ref-device
             test_utilities::test_set_ref_device();
             let mut ntt_coset_ref = vec![F::zero(); small_size];
-            let ntt_coset_ref = HostSlice::from_mut_slice(&mut ntt_coset_ref);
+            let ntt_coset_ref = ntt_coset_ref.into_slice_mut();
             ntt(scalars_h, NTTDir::kForward, &config, ntt_coset_ref).unwrap();
             assert_eq!(*ntt_result_coset.as_slice(), *ntt_coset_ref.as_slice());
 
@@ -143,10 +135,10 @@ where
             config.coset_gen = F::one();
             scalars.resize(test_size, F::zero());
             ntt(
-                HostSlice::from_slice(&scalars),
+                scalars.into_slice(),
                 NTTDir::kForward,
                 &config,
-                HostSlice::from_mut_slice(&mut ntt_large_result),
+                ntt_large_result.into_slice_mut(),
             )
             .unwrap();
             assert_eq!(*ntt_result_half.as_slice(), ntt_large_result.as_slice()[..small_size]);
@@ -160,7 +152,7 @@ where
                 ntt_result_coset,
                 NTTDir::kInverse,
                 &config,
-                HostSlice::from_mut_slice(&mut intt_result),
+                intt_result.into_slice_mut(),
             )
             .unwrap();
             assert_eq!(*intt_result.as_slice(), scalars[..small_size]);
@@ -189,32 +181,20 @@ where
 
             test_utilities::test_set_main_device();
             let mut intt_result = vec![F::zero(); test_size];
-            let intt_result = HostSlice::from_mut_slice(&mut intt_result);
-            ntt(HostSlice::from_slice(&scalars), NTTDir::kInverse, &config, intt_result).unwrap();
+            let intt_result = intt_result.into_slice_mut();
+            ntt(scalars.into_slice(), NTTDir::kInverse, &config, intt_result).unwrap();
 
             test_utilities::test_set_ref_device();
             let mut intt_result_ref = vec![F::zero(); test_size];
-            let intt_result_ref = HostSlice::from_mut_slice(&mut intt_result_ref);
-            ntt(
-                HostSlice::from_slice(&scalars),
-                NTTDir::kInverse,
-                &config,
-                intt_result_ref,
-            )
-            .unwrap();
+            let intt_result_ref = intt_result_ref.into_slice_mut();
+            ntt(scalars.into_slice(), NTTDir::kInverse, &config, intt_result_ref).unwrap();
 
             // (2) coset-ntt (compute coset evals)
             config.coset_gen = coset_gen;
             config.ordering = Ordering::kMN;
             test_utilities::test_set_main_device();
             let mut coset_evals = vec![F::zero(); test_size];
-            ntt(
-                intt_result,
-                NTTDir::kForward,
-                &config,
-                HostSlice::from_mut_slice(&mut coset_evals),
-            )
-            .unwrap();
+            ntt(intt_result, NTTDir::kForward, &config, coset_evals.into_slice_mut()).unwrap();
 
             test_utilities::test_set_ref_device();
             let mut coset_evals_ref = vec![F::zero(); test_size];
@@ -222,7 +202,7 @@ where
                 intt_result_ref,
                 NTTDir::kForward,
                 &config,
-                HostSlice::from_mut_slice(&mut coset_evals_ref),
+                coset_evals_ref.into_slice_mut(),
             )
             .unwrap();
 
@@ -245,8 +225,8 @@ where
         for coset_gen in coset_generators {
             let mut scalars = F::generate_random(test_size);
             let mut scalars_ref = scalars.clone();
-            let scalars = HostSlice::from_mut_slice(&mut scalars);
-            let scalars_ref = HostSlice::from_mut_slice(&mut scalars_ref);
+            let scalars = scalars.into_slice_mut();
+            let scalars_ref = scalars_ref.into_slice_mut();
 
             let mut config = NTTConfig::<F>::default();
             config.coset_gen = coset_gen;
@@ -309,13 +289,7 @@ where
                             config
                                 .ext
                                 .set_int(CUDA_NTT_ALGORITHM, alg as i32);
-                            ntt(
-                                scalars,
-                                is_inverse,
-                                &config,
-                                HostSlice::from_mut_slice(&mut batch_ntt_result),
-                            )
-                            .unwrap();
+                            ntt(scalars, is_inverse, &config, batch_ntt_result.into_slice_mut()).unwrap();
                             config.batch_size = 1;
                             let mut one_ntt_result = vec![F::one(); test_size];
                             for i in 0..batch_size {
@@ -323,7 +297,7 @@ where
                                     &scalars[i * test_size..(i + 1) * test_size],
                                     is_inverse,
                                     &config,
-                                    HostSlice::from_mut_slice(&mut one_ntt_result),
+                                    one_ntt_result.into_slice_mut(),
                                 )
                                 .unwrap();
                                 assert_eq!(
@@ -349,10 +323,10 @@ where
                         .unwrap();
                         let mut col_batch_ntt_result = vec![F::zero(); batch_size * test_size];
                         ntt(
-                            HostSlice::from_slice(&transposed_input),
+                            transposed_input.into_slice(),
                             is_inverse,
                             &config,
-                            HostSlice::from_mut_slice(&mut col_batch_ntt_result),
+                            col_batch_ntt_result.into_slice_mut(),
                         )
                         .unwrap();
                         matrix_transpose(
@@ -363,7 +337,7 @@ where
                             HostSlice::from_mut_slice(&mut transposed_input),
                         )
                         .unwrap();
-                        assert_eq!(batch_ntt_result[..], *transposed_input.as_slice());
+                        assert_eq!(batch_ntt_result, transposed_input);
                         config.columns_batch = false;
                     }
                 }
@@ -398,7 +372,7 @@ where
                     let scalars: Vec<F> = F::generate_random(test_size * batch_size);
                     let mut scalars_d = DeviceVec::<F>::device_malloc(test_size * batch_size).unwrap();
                     scalars_d
-                        .copy_from_host(HostSlice::from_slice(&scalars))
+                        .copy_from_host(scalars.into_slice())
                         .unwrap();
 
                     for coset_gen in coset_generators {
@@ -412,8 +386,7 @@ where
                             // compute the ntt on ref device
                             let mut scalars_clone = scalars.clone();
                             test_utilities::test_set_ref_device();
-                            ntt_inplace(HostSlice::from_mut_slice(&mut scalars_clone), NTTDir::kForward, &config)
-                                .unwrap();
+                            ntt_inplace(scalars_clone.into_slice_mut(), NTTDir::kForward, &config).unwrap();
 
                             test_utilities::test_set_main_device_with_id(device_id);
                             config.is_async = true;
@@ -432,7 +405,7 @@ where
                                 stream
                                     .synchronize()
                                     .unwrap();
-                                assert_eq!(&scalars_clone, ntt_result_slice.as_slice());
+                                assert_eq!(scalars_clone.as_slice(), ntt_result_slice.as_slice());
 
                                 ntt_inplace(&mut *scalars_d, NTTDir::kInverse, &config).unwrap();
                                 scalars_d

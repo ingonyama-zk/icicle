@@ -84,10 +84,10 @@ let cfg = ntt::NTTConfig::<ScalarField>::default();
 
 // Computing NTT
 ntt::ntt(
-    HostSlice::from_slice(&scalars),
+    scalars.into_slice(),
     ntt::NTTDir::kForward,
     &cfg,
-    &mut ntt_results[..],
+    ntt_results.into_slice_mut(),
 )
 .unwrap();
 ```

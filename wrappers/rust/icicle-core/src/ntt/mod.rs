@@ -383,7 +383,7 @@ macro_rules! impl_ntt_tests {
       $field:ident
     ) => {
         use icicle_runtime::test_utilities;
-        use icicle_runtime::{device::Device, runtime};
+        use icicle_runtime::{device::Device, runtime, memory::IntoIcicleSlice};
         use std::sync::Once;
 
         const MAX_SIZE: u64 = 1 << 18;
@@ -544,7 +544,7 @@ macro_rules! impl_ntt_bench {
                     let input = HostSlice::from_slice(&scalars);
 
                     let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
-                    let batch_ntt_result = HostSlice::from_mut_slice(&mut batch_ntt_result);
+                    let batch_ntt_result = batch_ntt_result.into_slice();
                     let mut config = NTTConfig::<F>::default();
                     for dir in [NTTDir::kForward, NTTDir::kInverse] {
                         for ordering in [

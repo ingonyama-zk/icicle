@@ -6,8 +6,9 @@ use crate::{
     projective::Projective,
     traits::{GenerateRandom, MontgomeryConvertible},
 };
+use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::{
-    memory::{DeviceVec, HostOrDeviceSlice, HostSlice},
+    memory::{DeviceVec, IntoIcicleSlice, HostSlice},
     stream::IcicleStream,
 };
 use std::fmt::Debug;
@@ -211,13 +212,9 @@ where
     // Generate a single random polynomial on host and copy to device
     let size = 7;
     let host_polys = P::generate_random(size);
-    let mut device_vec = DeviceVec::<P>::device_malloc(size).unwrap();
-    device_vec
-        .copy_from_host(HostSlice::from_slice(&host_polys))
-        .unwrap();
+    let device_slice = host_polys.into_slice();
 
     // Flatten the device polynomial slice
-    let device_slice = &device_vec;
     let scalar_slice = flatten_polyring_slice(device_slice);
 
     // Check length is DEGREE × num_polynomials

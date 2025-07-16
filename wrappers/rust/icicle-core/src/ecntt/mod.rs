@@ -167,7 +167,7 @@ macro_rules! impl_ecntt_bench {
         use icicle_runtime::{
             device::Device,
             get_active_device, is_device_available,
-            memory::{HostOrDeviceSlice, HostSlice},
+            memory::{HostOrDeviceSlice, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
             runtime::load_backend_from_env_or_default,
             set_device,
         };

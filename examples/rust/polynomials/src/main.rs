@@ -4,7 +4,7 @@ use icicle_bn254::curve::ScalarField as Bn254ScalarField;
 use icicle_bn254::polynomials::DensePolynomial as PolynomialBn254;
 use icicle_core::bignum::BigNum;
 
-use icicle_runtime::memory::{DeviceVec, HostSlice};
+use icicle_runtime::memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
 
 use icicle_core::field::Field;
 use icicle_core::{
@@ -60,9 +60,9 @@ where
     println!("Randomizing polynomial of size {} (from_coeffs: {})", size, from_coeffs);
     let coeffs_or_evals = P::Coeff::generate_random(size);
     let p = if from_coeffs {
-        P::from_coeffs(HostSlice::from_slice(&coeffs_or_evals), size)
+        P::from_coeffs(coeffs_or_evals.into_slice(), size)
     } else {
-        P::from_rou_evals(HostSlice::from_slice(&coeffs_or_evals), size)
+        P::from_rou_evals(coeffs_or_evals.into_slice(), size)
     };
     p
 }
@@ -119,7 +119,7 @@ fn main() {
     let host_domain = [five, Bn254ScalarField::from_u32(30)];
     let mut device_image = DeviceVec::<Bn254ScalarField>::device_malloc(host_domain.len()).unwrap();
     println!("Evaluating t1(x) on domain {:?}", host_domain);
-    t1.eval_on_domain(HostSlice::from_slice(&host_domain), &mut device_image[..]); // for NTT use eval_on_rou_domain()
+    t1.eval_on_domain(host_domain.into_slice(), device_image.into_slice_mut()); // for NTT use eval_on_rou_domain()
 
     // Slicing
     println!("Performing slicing operations on h");
