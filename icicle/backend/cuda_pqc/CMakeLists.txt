@@ -12,7 +12,12 @@ set_gpu_env()
 find_package(CUDAToolkit REQUIRED)
 
 # Build CUDA backend as a static lib
-add_library(icicle_backend_cuda_pqc STATIC src/cuda_pqc_device_api.cu src/ml_kem/cuda_pqc_ml_kem.cu)
+if(ICICLE_STATIC_LINK)
+  add_library(icicle_backend_cuda_pqc STATIC src/cuda_pqc_device_api.cu src/ml_kem/cuda_pqc_ml_kem.cu)
+else()
+  add_library(icicle_backend_cuda_pqc SHARED src/cuda_pqc_device_api.cu src/ml_kem/cuda_pqc_ml_kem.cu)
+endif()
+
 target_link_libraries(icicle_backend_cuda_pqc PRIVATE CUDA::cudart)
 target_include_directories(icicle_backend_cuda_pqc PRIVATE include)
 
