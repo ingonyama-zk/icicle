@@ -903,7 +903,7 @@ jobs:
       if: needs.check-conditional-testing.outputs.conditional-testing == 'false' || needs.check-changed-files.outputs.pqc == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -DCUDA_PQC_BACKEND=ON -DICICLE_STATIC_LINK=ON -S . -B build
+        cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DDISABLE_ALL_FEATURES=ON -DCUDA_PQC_BACKEND=ON -S . -B build
         cmake --build build -j
 
     - name: Run backend specific PQC Tests

@@ -52,11 +52,6 @@ option(SANITIZE "Enable memory address sanitizer" OFF)
 option(ICICLE_STATIC_LINK "Build icicle_device as a STATIC library" OFF)
 option(PQC_PACKAGE "build pqc package" OFF)
 
-# If CUDA_PQC_BACKEND is enabled, force static linking for all icicle libs
-if(CUDA_PQC_BACKEND)
-  set(ICICLE_STATIC_LINK ON CACHE BOOL "Build all icicle libs as static" FORCE)
-endif()
-
 # address sanitizer
 if(SANITIZE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
@@ -132,11 +127,10 @@ if (PQC)
   setup_pqc_target()
 endif()
 
-if (BUILD_TESTS)
-  add_subdirectory(tests)
-endif()
-
 if (PQC_PACKAGE)
   setup_pqc_package_target()
 endif()
 
+if (BUILD_TESTS)
+  add_subdirectory(tests)
+endif()

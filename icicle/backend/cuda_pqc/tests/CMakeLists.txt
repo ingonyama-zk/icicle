@@ -30,17 +30,17 @@ set(CUDA_TEST_INCLUDE_DIRS
 # Define a compile definition for tests to avoid multiple definitions
 add_definitions(-DICICLE_CUDA_TEST_ONLY)
 
-# Create a custom target to copy the static library to a known location
+# Create a custom target to copy the libraries to a known location
 add_custom_target(copy_pqc_libs ALL
     COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-        ${CMAKE_BINARY_DIR}/libicicle_pqc.a 
-        ${CMAKE_BINARY_DIR}/lib/libicicle_pqc.a
+        $<TARGET_FILE:icicle_pqc>
+        ${CMAKE_BINARY_DIR}/lib/$<TARGET_FILE_NAME:icicle_pqc>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-        ${CMAKE_BINARY_DIR}/libicicle_device.a 
-        ${CMAKE_BINARY_DIR}/lib/libicicle_device.a
+        $<TARGET_FILE:icicle_device>
+        ${CMAKE_BINARY_DIR}/lib/$<TARGET_FILE_NAME:icicle_device>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-        ${CMAKE_BINARY_DIR}/backend/cuda_pqc/libicicle_backend_cuda_pqc.a 
-        ${CMAKE_BINARY_DIR}/lib/libicicle_backend_cuda_pqc.a
+        $<TARGET_FILE:icicle_backend_cuda_pqc>
+        ${CMAKE_BINARY_DIR}/lib/$<TARGET_FILE_NAME:icicle_backend_cuda_pqc>
     DEPENDS icicle_pqc icicle_device icicle_backend_cuda_pqc
 )
 

@@ -52,9 +52,6 @@ install(TARGETS icicle_backend_cuda_pqc icicle_backend_cuda_pqc_interface
   LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
   ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/")
 
-# Install headers
-install(DIRECTORY include DESTINATION "${CMAKE_INSTALL_PREFIX}/include/")
-
 # Build tests if requested
 if(BUILD_TESTS)
   add_subdirectory(tests)
