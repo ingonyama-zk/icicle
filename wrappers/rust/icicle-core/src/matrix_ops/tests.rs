@@ -90,7 +90,7 @@ where
         assert_eq!(output_host_case_1, output_host_case_3);
 
         // case (4) matmul device memory inputs, device memory output
-        let mut device_mem_output = DeviceVec::<P>::device_malloc(out_size).unwrap();
+        let mut device_mem_output = DeviceVec::<P>::malloc(out_size);
         matmul(
             &device_mem_a,
             n as u32,
@@ -179,7 +179,7 @@ where
         assert_ne!(input_matrix, output_host_case_1); // Transpose should modify data
 
         // --- Case 2: Host → Device ---
-        let mut device_mem_output = DeviceVec::<P>::device_malloc(matrix_size).unwrap();
+        let mut device_mem_output = DeviceVec::<P>::malloc(matrix_size);
         matrix_transpose(
             input_matrix.into_slice(),
             nof_rows as u32,
@@ -208,7 +208,7 @@ where
         assert_eq!(output_host_case_1, output_host_case_3);
 
         // --- Case 4: Device → Device (Transpose back to original) ---
-        let mut device_mem_restored = DeviceVec::<P>::device_malloc(matrix_size).unwrap();
+        let mut device_mem_restored = DeviceVec::<P>::malloc(matrix_size);
         matrix_transpose(
             &device_mem_output,
             nof_cols as u32, // flipped dimensions

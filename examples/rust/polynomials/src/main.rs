@@ -117,7 +117,7 @@ fn main() {
 
     // Evaluate on domain
     let host_domain = [five, Bn254ScalarField::from_u32(30)];
-    let mut device_image = DeviceVec::<Bn254ScalarField>::device_malloc(host_domain.len()).unwrap();
+    let mut device_image = DeviceVec::<Bn254ScalarField>::malloc(host_domain.len());
     println!("Evaluating t1(x) on domain {:?}", host_domain);
     t1.eval_on_domain(host_domain.into_slice(), device_image.into_slice_mut()); // for NTT use eval_on_rou_domain()
 

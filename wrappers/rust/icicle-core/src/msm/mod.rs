@@ -427,7 +427,7 @@ macro_rules! impl_msm_bench {
                 let points = generate_random_affine_points_with_zeroes::<P::Affine>(test_size, 10);
                 for precompute_factor in [1, 4, 8] {
                     let mut precomputed_points_d =
-                        DeviceVec::<P::Affine>::device_malloc(precompute_factor * test_size).unwrap();
+                        DeviceVec::<P::Affine>::malloc(precompute_factor * test_size);
                     cfg.precompute_factor = precompute_factor as i32;
                     precompute_bases::<P>(points.into_slice(), &cfg, &mut precomputed_points_d).unwrap();
                     for batch_size_log2 in [0, 4, 7] {
@@ -444,7 +444,7 @@ macro_rules! impl_msm_bench {
 
                         let scalars_h = scalars.into_slice();
 
-                        let mut msm_results = DeviceVec::<P>::device_malloc(batch_size).unwrap();
+                        let mut msm_results = DeviceVec::<P>::malloc(batch_size);
 
                         let bench_descr = format!(
                             " {} x {} with precomp = {:?}",

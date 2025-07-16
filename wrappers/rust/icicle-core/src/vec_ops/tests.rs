@@ -398,7 +398,7 @@ where
     const TEST_SIZE: usize = 1 << LOG_SIZE;
     let input_vec = F::generate_random(TEST_SIZE);
     let input = input_vec.into_slice();
-    let mut intermediate = DeviceVec::<F>::device_malloc(TEST_SIZE).unwrap();
+    let mut intermediate = DeviceVec::<F>::malloc(TEST_SIZE);
     let cfg = VecOpsConfig::default();
     bit_reverse(input, &cfg, intermediate.into_slice_mut()).unwrap();
 
@@ -426,7 +426,7 @@ where
     const TEST_SIZE: usize = 1 << LOG_SIZE;
     let input_vec = F::generate_random(TEST_SIZE);
     let input = input_vec.into_slice();
-    let mut intermediate = DeviceVec::<F>::device_malloc(TEST_SIZE).unwrap();
+    let mut intermediate = DeviceVec::<F>::malloc(TEST_SIZE);
     intermediate
         .copy_from_host(input)
         .unwrap();

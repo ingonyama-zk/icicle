@@ -31,7 +31,7 @@ where
         assert_ne!(input, output);
 
         // (2) ntt host memory -> device memory
-        let mut device_mem = DeviceVec::<P>::device_malloc(size).unwrap();
+        let mut device_mem = DeviceVec::<P>::malloc(size);
         ntt(input.into_slice(), NTTDir::kForward, &cfg, &mut device_mem).unwrap();
 
         // (3) compare (1) and (2)

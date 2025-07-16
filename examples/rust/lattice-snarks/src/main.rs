@@ -308,7 +308,7 @@ where
     // Reinterpret `PolyRing` as a flat slice of base field elements (`Zq`),
     // since the projection operates on individual scalars rather than polynomials.
     let zq_device_slice = flatten_polyring_slice(&device_input);
-    let mut device_output = DeviceVec::<P::Base>::device_malloc(projection_dim).unwrap();
+    let mut device_output = DeviceVec::<P::Base>::malloc(projection_dim);
 
     let t_start = std::time::Instant::now();
     jl_projection::jl_projection(&zq_device_slice, &seed, &cfg, &mut device_output)
@@ -328,7 +328,7 @@ where
 
     let row_size = size; // number of input polynomials per row
     let num_rows = 1; // how many rows to extract (can be increased)
-    let mut jl_rows = DeviceVec::<P>::device_malloc(num_rows * row_size).unwrap();
+    let mut jl_rows = DeviceVec::<P>::malloc(num_rows * row_size);
 
     let t_start = std::time::Instant::now();
     jl_projection::get_jl_matrix_rows_as_polyring(

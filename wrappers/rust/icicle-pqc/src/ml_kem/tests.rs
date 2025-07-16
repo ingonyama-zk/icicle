@@ -75,8 +75,8 @@ mod tests {
         rng.fill(&mut entropy[..]);
         rng.fill(&mut messages[..]);
 
-        let mut entropy_d = DeviceVec::device_malloc(batch_size * ENTROPY_BYTES).unwrap();
-        let mut messages_d = DeviceVec::device_malloc(batch_size * MESSAGE_BYTES).unwrap();
+        let mut entropy_d = DeviceVec::malloc(batch_size * ENTROPY_BYTES);
+        let mut messages_d = DeviceVec::malloc(batch_size * MESSAGE_BYTES);
         entropy_d
             .copy_from_host_async(entropy.into_slice(), &stream)
             .unwrap();
@@ -84,11 +84,11 @@ mod tests {
             .copy_from_host_async(messages.into_slice(), &stream)
             .unwrap();
 
-        let mut public_keys_d = DeviceVec::device_malloc(batch_size * P::PUBLIC_KEY_BYTES).unwrap();
-        let mut secret_keys_d = DeviceVec::device_malloc(batch_size * P::SECRET_KEY_BYTES).unwrap();
-        let mut ciphertexts_d = DeviceVec::device_malloc(batch_size * P::CIPHERTEXT_BYTES).unwrap();
-        let mut shared_secrets_enc_d = DeviceVec::device_malloc(batch_size * P::SHARED_SECRET_BYTES).unwrap();
-        let mut shared_secrets_dec_d = DeviceVec::device_malloc(batch_size * P::SHARED_SECRET_BYTES).unwrap();
+        let mut public_keys_d = DeviceVec::malloc(batch_size * P::PUBLIC_KEY_BYTES);
+        let mut secret_keys_d = DeviceVec::malloc(batch_size * P::SECRET_KEY_BYTES);
+        let mut ciphertexts_d = DeviceVec::malloc(batch_size * P::CIPHERTEXT_BYTES);
+        let mut shared_secrets_enc_d = DeviceVec::malloc(batch_size * P::SHARED_SECRET_BYTES);
+        let mut shared_secrets_dec_d = DeviceVec::malloc(batch_size * P::SHARED_SECRET_BYTES);
 
         keygen::<P>(&entropy_d, &config, &mut public_keys_d, &mut secret_keys_d).unwrap();
 

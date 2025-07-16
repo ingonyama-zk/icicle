@@ -152,7 +152,7 @@ where
     let host_polys = P::generate_random(num_polys);
 
     // === Copy to device memory ===
-    let mut device_vec = DeviceVec::<P>::device_malloc(num_polys).unwrap();
+    let mut device_vec = DeviceVec::<P>::malloc(num_polys);
     device_vec
         .copy_from_host(host_polys.into_slice())
         .unwrap();

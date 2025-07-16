@@ -56,13 +56,13 @@ fn main() {
     // Setting Bn254 points and scalars
     println!("Generating random inputs on host for bn254...");
     let scalars = ScalarField::generate_random(size);
-    let mut ntt_results = DeviceVec::<ScalarField>::device_malloc(size).unwrap();
+    let mut ntt_results = DeviceVec::<ScalarField>::malloc(size);
 
     // Setting bls12377 points and scalars
     println!("Generating random inputs on host for bls12377...");
     let mut scalars_bls12377 = BLS12377ScalarField::generate_random(size);
     let scalars_bls12377_orig = scalars_bls12377.clone();
-    let mut ntt_results_bls12377 = DeviceVec::<BLS12377ScalarField>::device_malloc(size).unwrap();
+    let mut ntt_results_bls12377 = DeviceVec::<BLS12377ScalarField>::malloc(size);
 
     println!("Setting up bn254 Domain...");
     initialize_domain(
