@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use icicle_babykoala::polynomial_ring;
-use icicle_core::vec_ops::VecOpsConfig;
+use icicle_core::matrix_ops::MatMulConfig;
 
 use icicle_core::{matrix_ops::*, polynomial_ring::PolynomialRing, traits::GenerateRandom};
 
@@ -25,7 +25,7 @@ fn x_r_n_r_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Cr
             let input_a = P::generate_random(r * n);
             let input_b = P::generate_random(n * r);
             let mut output_host = vec![P::zero(); out_size];
-            let cfg = VecOpsConfig::default();
+            let cfg = MatMulConfig::default();
 
             for device_id in DEVICES {
                 // set device
@@ -72,7 +72,7 @@ fn x256_n_r_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut C
             let input_a = P::generate_random(256 * n);
             let input_b = P::generate_random(n * r);
             let mut output_host = vec![P::zero(); out_size];
-            let cfg = VecOpsConfig::default();
+            let cfg = MatMulConfig::default();
 
             for device_id in DEVICES {
                 // set device
@@ -118,7 +118,7 @@ fn x256_n_1_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut C
         let input_a = P::generate_random(256 * n);
         let input_b = P::generate_random(n);
         let mut output_host = vec![P::zero(); out_size];
-        let cfg = VecOpsConfig::default();
+        let cfg = MatMulConfig::default();
 
         for device_id in DEVICES {
             // set device
@@ -162,7 +162,7 @@ fn square_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Cri
         let input_a = P::generate_random(n * n);
         let input_b = P::generate_random(n * n);
         let mut output_host = vec![P::zero(); out_size];
-        let cfg = VecOpsConfig::default();
+        let cfg = MatMulConfig::default();
 
         for device_id in DEVICES {
             // set device

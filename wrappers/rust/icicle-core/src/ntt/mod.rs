@@ -472,7 +472,7 @@ macro_rules! impl_ntt_bench {
         use icicle_runtime::{
             device::Device,
             get_active_device, is_device_available,
-            memory::{HostOrDeviceSlice, HostSlice},
+            memory::{HostOrDeviceSlice, HostSlice, IntoIcicleSliceMut, IntoIcicleSlice},
             runtime::load_backend_from_env_or_default,
             set_device,
         };
@@ -544,7 +544,7 @@ macro_rules! impl_ntt_bench {
                     let input = HostSlice::from_slice(&scalars);
 
                     let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
-                    let batch_ntt_result = batch_ntt_result.into_slice();
+                    let mut batch_ntt_result = batch_ntt_result.into_slice_mut();
                     let mut config = NTTConfig::<F>::default();
                     for dir in [NTTDir::kForward, NTTDir::kInverse] {
                         for ordering in [
