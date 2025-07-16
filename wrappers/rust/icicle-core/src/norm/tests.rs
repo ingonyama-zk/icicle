@@ -62,14 +62,7 @@ where
 
         let mut expected = vec![false; batch];
         let result = expected.into_slice_mut();
-        norm::check_norm_bound(
-            input.into_slice(),
-            norm::NormType::LInfinity,
-            bound,
-            &cfg,
-            result,
-        )
-        .unwrap();
+        norm::check_norm_bound(input.into_slice(), norm::NormType::LInfinity, bound, &cfg, result).unwrap();
 
         assert!(
             result

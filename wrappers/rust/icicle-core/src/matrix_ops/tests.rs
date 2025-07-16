@@ -194,10 +194,7 @@ where
         assert_eq!(output_host_case_1, output_host_case_2);
 
         // --- Case 3: Device → Host ---
-        let mut device_mem_input = DeviceVec::<P>::device_malloc(matrix_size).unwrap();
-        device_mem_input
-            .copy_from_host(input_matrix.into_slice())
-            .unwrap();
+        let device_mem_input = DeviceVec::from_host_slice(&input_matrix);
 
         let mut output_host_case_3 = vec![P::default(); matrix_size];
         matrix_transpose(

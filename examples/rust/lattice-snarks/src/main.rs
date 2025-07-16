@@ -51,10 +51,7 @@ where
     let input = P::generate_random(size);
 
     // Allocate and transfer to device memory
-    let mut device_input = DeviceVec::<P>::device_malloc(size).unwrap();
-    device_input
-        .copy_from_host(input.into_slice())
-        .unwrap();
+    let mut device_input = DeviceVec::from_host_slice(&input);
 
     let cfg = negacyclic_ntt::NegacyclicNttConfig::default();
 
@@ -117,17 +114,9 @@ where
     let host_b: Vec<P> = P::generate_random(b_len);
 
     // Allocate device memory for inputs and output
-    let mut device_a = DeviceVec::<P>::device_malloc(a_len).expect("Allocation failed");
-    let mut device_b = DeviceVec::<P>::device_malloc(b_len).expect("Allocation failed");
+    let device_a = DeviceVec::from_host_slice(&host_a);
+    let device_b = DeviceVec::from_host_slice(&host_b);
     let mut device_c = DeviceVec::<P>::device_malloc(c_len).expect("Allocation failed");
-
-    // Transfer inputs to device
-    device_a
-        .copy_from_host(host_a.into_slice())
-        .expect("Copy A to device failed");
-    device_b
-        .copy_from_host(host_b.into_slice())
-        .expect("Copy B to device failed");
 
     // Perform matrix multiplication on device: C = A × B
     let start = std::time::Instant::now();
@@ -170,13 +159,8 @@ where
     let host_input: Vec<P> = P::generate_random(len);
 
     // Allocate device memory
-    let mut device_input = DeviceVec::<P>::device_malloc(len).expect("Allocation failed");
+    let device_input = DeviceVec::from_host_slice(&host_input);
     let mut device_output = DeviceVec::<P>::device_malloc(len).expect("Allocation failed");
-
-    // Copy to device
-    device_input
-        .copy_from_host(host_input.into_slice())
-        .expect("Copy to device failed");
 
     // Transpose
     let start = std::time::Instant::now();
@@ -315,10 +299,7 @@ where
     // ----------------------------------------------------------------------
 
     let host_input: Vec<P> = P::generate_random(size);
-    let mut device_input = DeviceVec::<P>::device_malloc(size).unwrap();
-    device_input
-        .copy_from_host(host_input.into_slice())
-        .unwrap();
+    let device_input = DeviceVec::from_host_slice(&host_input);
 
     // ----------------------------------------------------------------------
     // (2) JL projection on flattened device memory
@@ -421,10 +402,7 @@ where
     println!("[Norm Bound check] Computed ℓ∞ (max) norm: {}", l_infinity_norm);
 
     // Upload to device
-    let mut device_input = DeviceVec::<T>::device_malloc(size).expect("Failed to allocate device memory");
-    device_input
-        .copy_from_host(input.into_slice())
-        .expect("Failed to copy input to device");
+    let device_input = DeviceVec::from_host_slice(&input);
 
     let cfg = VecOpsConfig::default();
 

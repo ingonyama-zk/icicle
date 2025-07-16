@@ -3,12 +3,7 @@ use crate::ntt::{NttAlgorithm, Ordering, CUDA_NTT_ALGORITHM, CUDA_NTT_FAST_TWIDD
 use crate::ring::IntegerRing;
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::memory::{IntoIcicleSlice, IntoIcicleSliceMut};
-use icicle_runtime::{
-    memory::DeviceVec,
-    runtime,
-    stream::IcicleStream,
-    test_utilities,
-};
+use icicle_runtime::{memory::DeviceVec, runtime, stream::IcicleStream, test_utilities};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
@@ -370,10 +365,7 @@ where
 
                 for batch_size in batch_sizes {
                     let scalars: Vec<F> = F::generate_random(test_size * batch_size);
-                    let mut scalars_d = DeviceVec::<F>::device_malloc(test_size * batch_size).unwrap();
-                    scalars_d
-                        .copy_from_host(scalars.into_slice())
-                        .unwrap();
+                    let mut scalars_d = DeviceVec::from_host_slice(&scalars);
 
                     for coset_gen in coset_generators {
                         for ordering in [Ordering::kNN, Ordering::kRR] {

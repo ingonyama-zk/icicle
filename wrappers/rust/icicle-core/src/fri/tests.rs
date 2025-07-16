@@ -143,11 +143,6 @@ pub fn check_fri_proof_serialization<F: Field, S, D, T>(
 
     let merkle_tree_min_layer_to_store = 0;
 
-    let mut scalars_d: DeviceVec<_> = DeviceVec::<F>::malloc(SIZE as usize);
-    scalars_d
-        .copy_from_host(scalars.into_slice())
-        .unwrap();
-
     let fri_proof = fri_merkle_tree_prove::<F>(
         &fri_config,
         &transcript_config,

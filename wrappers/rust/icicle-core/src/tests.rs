@@ -125,17 +125,14 @@ where
 
 pub fn check_montgomery_convert_device<T>()
 where
-    T: Debug + Default + Clone + PartialEq + GenerateRandom + MontgomeryConvertible,
+    T: Debug + Default + Clone + Copy + PartialEq + GenerateRandom + MontgomeryConvertible,
 {
     let mut stream = IcicleStream::create().unwrap();
 
     let size = 1 << 10;
     let elements = T::generate_random(size);
 
-    let mut d_elements = DeviceVec::device_malloc(size).unwrap();
-    d_elements
-        .copy_from_host(elements.into_slice())
-        .unwrap();
+    let mut d_elements = DeviceVec::from_host_slice(&elements);
 
     T::to_mont(&mut d_elements, &stream).unwrap();
     T::from_mont(&mut d_elements, &stream).unwrap();

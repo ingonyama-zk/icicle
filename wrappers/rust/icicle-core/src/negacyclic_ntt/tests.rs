@@ -27,13 +27,7 @@ where
         }
         // (1) ntt host memory -> host_memory
         let mut output = vec![P::zero(); size];
-        P::ntt(
-            input.into_slice(),
-            NTTDir::kForward,
-            &cfg,
-            output.into_slice_mut(),
-        )
-        .unwrap();
+        P::ntt(input.into_slice(), NTTDir::kForward, &cfg, output.into_slice_mut()).unwrap();
         assert_ne!(input, output);
 
         // (2) ntt host memory -> device memory
@@ -49,13 +43,7 @@ where
 
         // (4) intt device memory -> host memory
         let mut roundtrip = vec![P::zero(); size];
-        ntt(
-            &device_mem,
-            NTTDir::kInverse,
-            &cfg,
-            roundtrip.into_slice_mut(),
-        )
-        .unwrap();
+        ntt(&device_mem, NTTDir::kInverse, &cfg, roundtrip.into_slice_mut()).unwrap();
         assert_eq!(input, roundtrip);
 
         // (5) intt inplace device memory and compare to input

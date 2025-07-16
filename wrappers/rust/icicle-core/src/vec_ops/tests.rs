@@ -602,12 +602,7 @@ where
     let mut expected = vec![P::zero(); 1];
 
     // Run the vectorized reduction
-    polyvec_sum_reduce(
-        polyvec.into_slice(),
-        result.into_slice_mut(),
-        &cfg,
-    )
-    .expect("polyvec_sum_reduce failed");
+    polyvec_sum_reduce(polyvec.into_slice(), result.into_slice_mut(), &cfg).expect("polyvec_sum_reduce failed");
 
     // Manually sum all polynomials coefficient-wise
     let mut acc = vec![P::Base::zero(); P::DEGREE];

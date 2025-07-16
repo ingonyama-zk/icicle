@@ -243,10 +243,7 @@ mod tests {
         assert_eq!(leaf, main_leaf);
 
         // test proving merkle-proof with device memory too
-        let mut device_leaves = DeviceVec::<u8>::device_malloc(input.len()).unwrap();
-        device_leaves
-            .copy_from_host(input.into_slice())
-            .unwrap();
+        let device_leaves = DeviceVec::from_host_slice(&input);
         let merkle_proof_from_device_mem: MerkleProof = merkle_tree
             .get_proof(&device_leaves, 2, false /*=pruned*/, &MerkleTreeConfig::default())
             .unwrap();

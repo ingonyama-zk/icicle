@@ -722,10 +722,7 @@ macro_rules! impl_polynomial_tests {
 
             // evaluate to host memory
             let mut host_evals = vec![$field::zero(); domain.len()];
-            f.eval_on_domain(
-                domain.into_slice(),
-                host_evals.into_slice_mut(),
-            );
+            f.eval_on_domain(domain.into_slice(), host_evals.into_slice_mut());
 
             // check eval on domain agrees with eval() method
             assert_eq!(f.eval(&one), host_evals[0]);
