@@ -65,7 +65,7 @@ void slow_mode_random_sampling(
   const size_t elements_per_hash = size_t(std::max(keccak512.output_size() / element_size, uint64_t(1)));
   // To support elements that are larger than 32 bytes
   const size_t hashes_per_element = size_t(std::max(element_size / keccak512.output_size(), uint64_t(1)));
-  const size_t hashes_per_batch = std::max(size / elements_per_hash, size_t(1));
+  const size_t hashes_per_batch = std::max((size + elements_per_hash - 1) / elements_per_hash, size_t(1));
 
   const int nof_workers = std::min((int)(hashes_per_batch), get_nof_workers(cfg));
   const size_t hashes_per_worker = (hashes_per_batch + nof_workers - 1) / nof_workers;
