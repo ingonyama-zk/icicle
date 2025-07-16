@@ -469,9 +469,9 @@ where
     assert!(!mle_poly_b.is_empty(), "MLE polynomial B should not be empty");
     assert!(!mle_poly_c.is_empty(), "MLE polynomial C should not be empty");
 
-    let mle_poly_a_host = HostSlice::from_slice(&mle_poly_a);
-    let mle_poly_b_host = HostSlice::from_slice(&mle_poly_b);
-    let mle_poly_c_host = HostSlice::from_slice(&mle_poly_c);
+    let mle_poly_a_host = mle_poly_a.into_slice();
+    let mle_poly_b_host = mle_poly_b.into_slice();
+    let mle_poly_c_host = mle_poly_c.into_slice();
 
     // Create a vector of references that will live for the duration of the prove call
     let mle_poly_refs: Vec<&HostSlice<_>> = vec![&mle_poly_a_host, &mle_poly_b_host, &mle_poly_c_host];

@@ -1,4 +1,4 @@
-use icicle_runtime::memory::HostOrDeviceSlice;
+use icicle_runtime::memory::{HostOrDeviceSlice, IntoIcicleSliceMut};
 
 use crate::ring::IntegerRing;
 
@@ -545,7 +545,7 @@ macro_rules! impl_polynomial_tests {
 
             // testing correct evaluation of f(8) for f(x)=4x^2+2x+5
             let coeffs = [$field::from(5), $field::from(2), $field::from(4)];
-            let f = Poly::from_coeffs(HostSlice::from_slice(&coeffs), coeffs.len());
+            let f = Poly::from_coeffs(coeffs.into_slice(), coeffs.len());
             let x = $field::from(8);
             let f_x = f.eval(&x);
             assert_eq!(f_x, $field::from(277));
@@ -657,7 +657,7 @@ macro_rules! impl_polynomial_tests {
             f.copy_coeffs(0, &mut device_mem[..]);
             let mut host_coeffs_from_dev = vec![$field::zero(); coeffs.len() as usize];
             device_mem
-                .copy_to_host(HostSlice::from_mut_slice(&mut host_coeffs_from_dev))
+                .copy_to_host(host_coeffs_from_dev.into_slice_mut())
                 .unwrap();
 
             assert_eq!(host_mem, host_coeffs_from_dev);
@@ -726,8 +726,8 @@ macro_rules! impl_polynomial_tests {
             // evaluate to host memory
             let mut host_evals = vec![$field::zero(); domain.len()];
             f.eval_on_domain(
-                HostSlice::from_slice(&domain),
-                HostSlice::from_mut_slice(&mut host_evals),
+                domain.into_slice(),
+                host_evals.into_slice_mut(),
             );
 
             // check eval on domain agrees with eval() method
@@ -737,10 +737,10 @@ macro_rules! impl_polynomial_tests {
 
             // evaluate to device memory
             let mut device_evals = DeviceVec::<$field>::device_malloc(domain.len()).unwrap();
-            f.eval_on_domain(HostSlice::from_slice(&domain), &mut device_evals[..]);
+            f.eval_on_domain(domain.into_slice(), &mut device_evals[..]);
             let mut host_evals_from_device = vec![$field::zero(); domain.len()];
             device_evals
-                .copy_to_host(HostSlice::from_mut_slice(&mut host_evals_from_device))
+                .copy_to_host(host_evals_from_device.into_slice_mut())
                 .unwrap();
 
             // check that evaluation to device memory is equivalent
@@ -827,7 +827,7 @@ macro_rules! impl_polynomial_tests {
             // copy to host and check equality
             let mut coeffs_copied_from_slice = vec![$field::zero(); coeffs_slice_dev.len()];
             coeffs_slice_dev
-                .copy_to_host(HostSlice::from_mut_slice(&mut coeffs_copied_from_slice))
+                .copy_to_host(coeffs_copied_from_slice.into_slice_mut())
                 .unwrap();
             assert_eq!(coeffs_copied_from_slice, coeffs);
 

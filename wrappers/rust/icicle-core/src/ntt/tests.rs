@@ -269,7 +269,7 @@ where
         let mut config = NTTConfig::<F>::default();
         for batch_size in batch_sizes {
             let scalars = F::generate_random(test_size * batch_size);
-            let scalars = HostSlice::from_slice(&scalars);
+            let scalars = scalars.into_slice();
 
             for coset_gen in coset_generators {
                 for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
@@ -318,7 +318,7 @@ where
                             nof_rows,
                             nof_cols,
                             &VecOpsConfig::default(),
-                            HostSlice::from_mut_slice(&mut transposed_input),
+                            transposed_input.into_slice_mut(),
                         )
                         .unwrap();
                         let mut col_batch_ntt_result = vec![F::zero(); batch_size * test_size];
@@ -330,11 +330,11 @@ where
                         )
                         .unwrap();
                         matrix_transpose(
-                            HostSlice::from_slice(&col_batch_ntt_result),
+                            col_batch_ntt_result.into_slice(),
                             nof_cols, // inverted since it was transposed above
                             nof_rows,
                             &VecOpsConfig::default(),
-                            HostSlice::from_mut_slice(&mut transposed_input),
+                            transposed_input.into_slice_mut(),
                         )
                         .unwrap();
                         assert_eq!(batch_ntt_result, transposed_input);
@@ -396,7 +396,7 @@ where
                                     .ext
                                     .set_int(CUDA_NTT_ALGORITHM, alg as i32);
                                 let mut ntt_result_h = vec![F::zero(); test_size * batch_size];
-                                let ntt_result_slice = HostSlice::from_mut_slice(&mut ntt_result_h);
+                                let ntt_result_slice = ntt_result_h.into_slice_mut();
                                 ntt_inplace(&mut *scalars_d, NTTDir::kForward, &config).unwrap();
 
                                 scalars_d

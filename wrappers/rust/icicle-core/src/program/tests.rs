@@ -3,7 +3,7 @@ use crate::ring::IntegerRing;
 use crate::symbol::Symbol;
 use crate::traits::{Arithmetic, GenerateRandom, Invertible};
 use crate::vec_ops::{VecOps, VecOpsConfig};
-use icicle_runtime::memory::HostSlice;
+use icicle_runtime::memory::{HostSlice, IntoIcicleSlice};
 
 pub fn check_program<F, Prog>()
 where
@@ -32,13 +32,13 @@ where
     let var4 = vec![F::zero(); TEST_SIZE];
     let var5 = vec![F::zero(); TEST_SIZE];
     let var6 = vec![F::zero(); TEST_SIZE];
-    let a_slice = HostSlice::from_slice(&a);
-    let b_slice = HostSlice::from_slice(&b);
-    let c_slice = HostSlice::from_slice(&c);
-    let eq_slice = HostSlice::from_slice(&eq);
-    let var4_slice = HostSlice::from_slice(&var4);
-    let var5_slice = HostSlice::from_slice(&var5);
-    let var6_slice = HostSlice::from_slice(&var6);
+    let a_slice = a.into_slice();
+    let b_slice = b.into_slice();
+    let c_slice = c.into_slice();
+    let eq_slice = eq.into_slice();
+    let var4_slice = var4.into_slice();
+    let var5_slice = var5.into_slice();
+    let var6_slice = var6.into_slice();
     let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice, var5_slice, var6_slice];
 
     let program = Prog::new(example_lambda, 7).unwrap();
@@ -85,11 +85,11 @@ where
     let c = F::generate_random(TEST_SIZE);
     let eq = F::generate_random(TEST_SIZE);
     let var4 = vec![F::zero(); TEST_SIZE];
-    let a_slice = HostSlice::from_slice(&a);
-    let b_slice = HostSlice::from_slice(&b);
-    let c_slice = HostSlice::from_slice(&c);
-    let eq_slice = HostSlice::from_slice(&eq);
-    let var4_slice = HostSlice::from_slice(&var4);
+    let a_slice = a.into_slice();
+    let b_slice = b.into_slice();
+    let c_slice = c.into_slice();
+    let eq_slice = eq.into_slice();
+    let var4_slice = var4.into_slice();
     let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice];
 
     let program = Prog::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();

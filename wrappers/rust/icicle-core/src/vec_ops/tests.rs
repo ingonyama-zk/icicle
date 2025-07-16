@@ -397,7 +397,7 @@ where
     const LOG_SIZE: u32 = 20;
     const TEST_SIZE: usize = 1 << LOG_SIZE;
     let input_vec = F::generate_random(TEST_SIZE);
-    let input = HostSlice::from_slice(&input_vec);
+    let input = input_vec.into_slice();
     let mut intermediate = DeviceVec::<F>::device_malloc(TEST_SIZE).unwrap();
     let cfg = VecOpsConfig::default();
     bit_reverse(input, &cfg, intermediate.into_slice_mut()).unwrap();
@@ -425,7 +425,7 @@ where
     const LOG_SIZE: u32 = 20;
     const TEST_SIZE: usize = 1 << LOG_SIZE;
     let input_vec = F::generate_random(TEST_SIZE);
-    let input = HostSlice::from_slice(&input_vec);
+    let input = input_vec.into_slice();
     let mut intermediate = DeviceVec::<F>::device_malloc(TEST_SIZE).unwrap();
     intermediate
         .copy_from_host(input)
@@ -494,25 +494,25 @@ where
 
     // Run vectorized ops
     polyvec_add(
-        HostSlice::from_slice(&a_vec),
-        HostSlice::from_slice(&b_vec),
-        HostSlice::from_mut_slice(&mut add_result),
+        a_vec.into_slice(),
+        b_vec.into_slice(),
+        add_result.into_slice_mut(),
         &cfg,
     )
     .expect("polyvec_add failed");
 
     polyvec_sub(
-        HostSlice::from_slice(&a_vec),
-        HostSlice::from_slice(&b_vec),
-        HostSlice::from_mut_slice(&mut sub_result),
+        a_vec.into_slice(),
+        b_vec.into_slice(),
+        sub_result.into_slice_mut(),
         &cfg,
     )
     .expect("polyvec_sub failed");
 
     polyvec_mul(
-        HostSlice::from_slice(&a_vec),
-        HostSlice::from_slice(&b_vec),
-        HostSlice::from_mut_slice(&mut mul_result),
+        a_vec.into_slice(),
+        b_vec.into_slice(),
+        mul_result.into_slice_mut(),
         &cfg,
     )
     .expect("polyvec_mul failed");
@@ -566,9 +566,9 @@ where
 
     // Run the polyvec_mul_by_scalar vector op
     polyvec_mul_by_scalar(
-        HostSlice::from_slice(&polyvec),
-        HostSlice::from_slice(&scalarvec),
-        HostSlice::from_mut_slice(&mut result),
+        polyvec.into_slice(),
+        scalarvec.into_slice(),
+        result.into_slice_mut(),
         &cfg,
     )
     .expect("polyvec_mul_by_scalar failed");
@@ -603,8 +603,8 @@ where
 
     // Run the vectorized reduction
     polyvec_sum_reduce(
-        HostSlice::from_slice(&polyvec),
-        HostSlice::from_mut_slice(&mut result),
+        polyvec.into_slice(),
+        result.into_slice_mut(),
         &cfg,
     )
     .expect("polyvec_sum_reduce failed");

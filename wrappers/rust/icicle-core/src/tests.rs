@@ -8,7 +8,7 @@ use crate::{
 };
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::{
-    memory::{DeviceVec, HostSlice, IntoIcicleSlice},
+    memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
     stream::IcicleStream,
 };
 use std::fmt::Debug;
@@ -117,8 +117,8 @@ where
     let mut elements = T::generate_random(size);
     let expected = elements.clone();
 
-    T::to_mont(HostSlice::from_mut_slice(&mut elements), &IcicleStream::default()).unwrap();
-    T::from_mont(HostSlice::from_mut_slice(&mut elements), &IcicleStream::default()).unwrap();
+    T::to_mont(elements.into_slice_mut(), &IcicleStream::default()).unwrap();
+    T::from_mont(elements.into_slice_mut(), &IcicleStream::default()).unwrap();
 
     assert_eq!(expected, elements);
 }
@@ -134,7 +134,7 @@ where
 
     let mut d_elements = DeviceVec::device_malloc(size).unwrap();
     d_elements
-        .copy_from_host(HostSlice::from_slice(&elements))
+        .copy_from_host(elements.into_slice())
         .unwrap();
 
     T::to_mont(&mut d_elements, &stream).unwrap();
@@ -142,7 +142,7 @@ where
 
     let mut elements_copy = vec![T::default(); size];
     d_elements
-        .copy_to_host_async(HostSlice::from_mut_slice(&mut elements_copy), &stream)
+        .copy_to_host_async(elements_copy.into_slice_mut(), &stream)
         .unwrap();
     stream
         .synchronize()
@@ -178,7 +178,7 @@ where
 {
     // Generate a vector of one random polynomial
     let polynomials = P::generate_random(5);
-    let poly_slice = HostSlice::from_slice(&polynomials);
+    let poly_slice = polynomials.into_slice();
 
     // Flatten the polynomial slice to a scalar slice
     let scalar_slice = flatten_polyring_slice(poly_slice);

@@ -6,7 +6,7 @@ use crate::polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut,
 use crate::ring::IntegerRing;
 use crate::traits::GenerateRandom;
 use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::memory::{DeviceVec, HostSlice};
+use icicle_runtime::memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
 use rand::Rng;
 
 pub fn check_jl_projection<F>()
@@ -31,10 +31,10 @@ where
 
     // Step 1: Run JL projection
     jl_projection(
-        HostSlice::from_slice(&input),
+        input.into_slice(),
         &seed,
         &cfg,
-        HostSlice::from_mut_slice(&mut output),
+        output.into_slice_mut(),
     )
     .expect("JL projection failed");
 
@@ -45,7 +45,7 @@ where
         0,
         output_size,
         &cfg,
-        HostSlice::from_mut_slice(&mut matrix),
+        matrix.into_slice_mut(),
     )
     .expect("JL-projection failed");
 
@@ -123,7 +123,7 @@ where
             0,
             num_rows,
             &cfg,
-            HostSlice::from_mut_slice(&mut scalar_data),
+            scalar_data.into_slice_mut(),
         )
         .expect("scalar JL matrix gen failed");
 
@@ -150,7 +150,7 @@ where
             num_rows,
             conjugate,
             &cfg,
-            HostSlice::from_mut_slice(&mut actual),
+            actual.into_slice_mut(),
         )
         .expect("polyring JL matrix gen failed");
 
@@ -183,7 +183,7 @@ where
     // === Copy to device memory ===
     let mut device_vec = DeviceVec::<P>::device_malloc(num_polys).unwrap();
     device_vec
-        .copy_from_host(HostSlice::from_slice(&host_polys))
+        .copy_from_host(host_polys.into_slice())
         .unwrap();
 
     // === JL projection parameters ===
@@ -198,18 +198,18 @@ where
         &scalar_device_slice,
         &seed,
         &cfg,
-        HostSlice::from_mut_slice(&mut projected_from_device),
+        projected_from_device.into_slice_mut(),
     )
     .expect("JL projection on device memory failed");
 
     // === Project flattened host memory ===
-    let scalar_host_slice = flatten_polyring_slice(HostSlice::from_slice(&host_polys));
+    let scalar_host_slice = flatten_polyring_slice(host_polys.into_slice());
     let mut projected_from_host = vec![P::Base::zero(); projection_dim];
     jl_projection(
         &scalar_host_slice,
         &seed,
         &cfg,
-        HostSlice::from_mut_slice(&mut projected_from_host),
+        projected_from_host.into_slice_mut(),
     )
     .expect("JL projection on host memory failed");
 
@@ -227,7 +227,7 @@ where
     // === Project directly into a polynomial vector (flattened target) ===
     let mut projected_polys = vec![P::zero(); projection_dim / P::DEGREE];
     {
-        let mut poly_output_slice = flatten_polyring_slice_mut(HostSlice::from_mut_slice(&mut projected_polys));
+        let mut poly_output_slice = flatten_polyring_slice_mut(projected_polys.into_slice_mut());
         jl_projection(&scalar_host_slice, &seed, &cfg, &mut poly_output_slice)
             .expect("JL projection into polynomial failed");
     }

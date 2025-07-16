@@ -541,7 +541,7 @@ macro_rules! impl_ntt_bench {
                     }
 
                     let scalars = F::generate_random(full_size);
-                    let input = HostSlice::from_slice(&scalars);
+                    let input = scalars.into_slice();
 
                     let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
                     let mut batch_ntt_result = batch_ntt_result.into_slice_mut();

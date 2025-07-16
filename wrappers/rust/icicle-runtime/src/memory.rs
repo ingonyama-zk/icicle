@@ -386,7 +386,7 @@ impl<T> DeviceSlice<T> {
         T: Copy + Default,
     {
         let mut host_vec = vec![T::default(); self.len()];
-        let host_slice = HostSlice::from_mut_slice(&mut host_vec);
+        let host_slice = host_vec.into_slice_mut();
         self.copy_to_host(host_slice)
             .unwrap();
         host_vec
@@ -477,7 +477,7 @@ impl<T> DeviceVec<T> {
         T: Copy + Default,
     {
         let mut host_vec = vec![T::default(); self.len()];
-        let host_slice = HostSlice::from_mut_slice(&mut host_vec);
+        let host_slice = host_vec.into_slice_mut();
         self.copy_to_host(host_slice)
             .unwrap();
         host_vec
@@ -498,7 +498,7 @@ impl<T> DeviceVec<T> {
     {
         let mut device_vec = Self::malloc(src.len());
         device_vec
-            .copy_from_host(HostSlice::from_slice(src))
+            .copy_from_host(src.into_slice())
             .unwrap();
         device_vec
     }

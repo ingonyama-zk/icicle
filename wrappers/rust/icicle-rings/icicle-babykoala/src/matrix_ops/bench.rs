@@ -4,6 +4,7 @@ use icicle_core::matrix_ops::MatMulConfig;
 
 use icicle_core::{matrix_ops::*, polynomial_ring::PolynomialRing, traits::GenerateRandom};
 
+use icicle_runtime::memory::{IntoIcicleSlice, IntoIcicleSliceMut};
 use icicle_runtime::{memory::HostSlice, test_utilities};
 
 static DEVICES: [&str; 2] = ["ref", "main"];
@@ -40,14 +41,14 @@ fn x_r_n_r_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Cr
                 c.bench_function(&format!(testid!(), n, r, device_id), |b| {
                     b.iter(|| {
                         P::matmul(
-                            HostSlice::from_slice(&input_a),
+                            input_a.into_slice(),
                             n as u32,
                             n as u32,
-                            HostSlice::from_slice(&input_b),
+                            input_b.into_slice(),
                             n as u32,
                             n as u32,
                             &cfg,
-                            HostSlice::from_mut_slice(&mut output_host),
+                            output_host.into_slice_mut(),
                         )
                     })
                 });
@@ -87,14 +88,14 @@ fn x256_n_r_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut C
                 c.bench_function(&format!(testid!(), n, r, device_id), |b| {
                     b.iter(|| {
                         P::matmul(
-                            HostSlice::from_slice(&input_a),
+                            input_a.into_slice(),
                             n as u32,
                             n as u32,
-                            HostSlice::from_slice(&input_b),
+                            input_b.into_slice(),
                             n as u32,
                             n as u32,
                             &cfg,
-                            HostSlice::from_mut_slice(&mut output_host),
+                            output_host.into_slice_mut(),
                         )
                     })
                 });
@@ -133,14 +134,14 @@ fn x256_n_1_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut C
             c.bench_function(&format!(testid!(), n, device_id), |b| {
                 b.iter(|| {
                     P::matmul(
-                        HostSlice::from_slice(&input_a),
+                        input_a.into_slice(),
                         n as u32,
                         n as u32,
-                        HostSlice::from_slice(&input_b),
+                        input_b.into_slice(),
                         n as u32,
                         n as u32,
                         &cfg,
-                        HostSlice::from_mut_slice(&mut output_host),
+                        output_host.into_slice_mut(),
                     )
                 })
             });
@@ -177,14 +178,14 @@ fn square_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Cri
             c.bench_function(&format!(testid!(), n, device_id), |b| {
                 b.iter(|| {
                     P::matmul(
-                        HostSlice::from_slice(&input_a),
+                        input_a.into_slice(),
                         n as u32,
                         n as u32,
-                        HostSlice::from_slice(&input_b),
+                        input_b.into_slice(),
                         n as u32,
                         n as u32,
                         &cfg,
-                        HostSlice::from_mut_slice(&mut output_host),
+                        output_host.into_slice_mut(),
                     )
                 })
             });

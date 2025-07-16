@@ -53,7 +53,7 @@ where
     // Allocate and transfer to device memory
     let mut device_input = DeviceVec::<P>::device_malloc(size).unwrap();
     device_input
-        .copy_from_host(HostSlice::from_slice(&input))
+        .copy_from_host(input.into_slice())
         .unwrap();
 
     let cfg = negacyclic_ntt::NegacyclicNttConfig::default();
@@ -79,7 +79,7 @@ where
         &device_input,
         NTTDir::kForward,
         &cfg,
-        HostSlice::from_mut_slice(&mut output),
+        output.into_slice_mut(),
     )
     .unwrap();
 
@@ -123,10 +123,10 @@ where
 
     // Transfer inputs to device
     device_a
-        .copy_from_host(HostSlice::from_slice(&host_a))
+        .copy_from_host(host_a.into_slice())
         .expect("Copy A to device failed");
     device_b
-        .copy_from_host(HostSlice::from_slice(&host_b))
+        .copy_from_host(host_b.into_slice())
         .expect("Copy B to device failed");
 
     // Perform matrix multiplication on device: C = A × B
@@ -175,7 +175,7 @@ where
 
     // Copy to device
     device_input
-        .copy_from_host(HostSlice::from_slice(&host_input))
+        .copy_from_host(host_input.into_slice())
         .expect("Copy to device failed");
 
     // Transpose
@@ -256,7 +256,7 @@ where
         // ⏱️ Decompose
         // ------------------------------
         let t0 = std::time::Instant::now();
-        balanced_decomposition::decompose::<P>(HostSlice::from_slice(&input), &mut decomposed[..], *base, &cfg)
+        balanced_decomposition::decompose::<P>(input.into_slice(), &mut decomposed[..], *base, &cfg)
             .expect("Decomposition failed");
         let decompose_time = t0.elapsed();
         println!(
@@ -270,7 +270,7 @@ where
         let t1 = std::time::Instant::now();
         balanced_decomposition::recompose::<P>(
             &decomposed[..],
-            HostSlice::from_mut_slice(&mut recomposed),
+            recomposed.into_slice_mut(),
             *base,
             &cfg,
         )
@@ -317,7 +317,7 @@ where
     let host_input: Vec<P> = P::generate_random(size);
     let mut device_input = DeviceVec::<P>::device_malloc(size).unwrap();
     device_input
-        .copy_from_host(HostSlice::from_slice(&host_input))
+        .copy_from_host(host_input.into_slice())
         .unwrap();
 
     // ----------------------------------------------------------------------
@@ -423,7 +423,7 @@ where
     // Upload to device
     let mut device_input = DeviceVec::<T>::device_malloc(size).expect("Failed to allocate device memory");
     device_input
-        .copy_from_host(HostSlice::from_slice(&input))
+        .copy_from_host(input.into_slice())
         .expect("Failed to copy input to device");
 
     let cfg = VecOpsConfig::default();
@@ -441,7 +441,7 @@ where
         norm::NormType::L2,
         upper_bound,
         &cfg,
-        HostSlice::from_mut_slice(&mut output),
+        output.into_slice_mut(),
     )
     .expect("ℓ₂ norm bound check failed");
     println!("[Norm Bound check] ℓ₂ norm (pass case) took {:?}", start.elapsed());
@@ -459,7 +459,7 @@ where
         norm::NormType::L2,
         lower_bound,
         &cfg,
-        HostSlice::from_mut_slice(&mut output),
+        output.into_slice_mut(),
     )
     .expect("ℓ₂ norm bound check failed");
     println!("[Norm Bound check] ℓ₂ norm (fail case) took {:?}", start.elapsed());

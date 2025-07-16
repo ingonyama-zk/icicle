@@ -3,7 +3,7 @@ use crate::ntt::NTTDir;
 use crate::ring::IntegerRing;
 use crate::{polynomial_ring::PolynomialRing, traits::GenerateRandom};
 use icicle_runtime::{
-    memory::{DeviceVec, HostSlice},
+    memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
     test_utilities,
 };
 
@@ -28,22 +28,22 @@ where
         // (1) ntt host memory -> host_memory
         let mut output = vec![P::zero(); size];
         P::ntt(
-            HostSlice::from_slice(&input),
+            input.into_slice(),
             NTTDir::kForward,
             &cfg,
-            HostSlice::from_mut_slice(&mut output),
+            output.into_slice_mut(),
         )
         .unwrap();
         assert_ne!(input, output);
 
         // (2) ntt host memory -> device memory
         let mut device_mem = DeviceVec::<P>::device_malloc(size).unwrap();
-        ntt(HostSlice::from_slice(&input), NTTDir::kForward, &cfg, &mut device_mem).unwrap();
+        ntt(input.into_slice(), NTTDir::kForward, &cfg, &mut device_mem).unwrap();
 
         // (3) compare (1) and (2)
         let mut host_buffer = vec![P::zero(); size];
         device_mem
-            .copy_to_host(HostSlice::from_mut_slice(&mut host_buffer))
+            .copy_to_host(host_buffer.into_slice_mut())
             .unwrap();
         assert_eq!(output, host_buffer);
 
@@ -53,7 +53,7 @@ where
             &device_mem,
             NTTDir::kInverse,
             &cfg,
-            HostSlice::from_mut_slice(&mut roundtrip),
+            roundtrip.into_slice_mut(),
         )
         .unwrap();
         assert_eq!(input, roundtrip);
@@ -61,7 +61,7 @@ where
         // (5) intt inplace device memory and compare to input
         ntt_inplace(&mut device_mem, NTTDir::kInverse, &cfg).unwrap();
         device_mem
-            .copy_to_host(HostSlice::from_mut_slice(&mut host_buffer))
+            .copy_to_host(host_buffer.into_slice_mut())
             .unwrap();
         assert_eq!(input, host_buffer);
 
