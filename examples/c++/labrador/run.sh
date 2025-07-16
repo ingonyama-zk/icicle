@@ -60,9 +60,10 @@ else
   export ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR}"
   cmake -DCMAKE_BUILD_TYPE=Release -DRING=babykoala -S "${ICILE_DIR}" -B build/icicle
 fi
-cmake -DCMAKE_BUILD_TYPE=Release -S . -B build/example
+cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build/example
 
 cmake --build build/icicle -j
 cmake --build build/example -j
 
 ./build/example/example "$DEVICE_TYPE"
+# compute-sanitizer --tool memcheck --leak-check full ./build/example/example "$DEVICE_TYPE" > sanitizer_output.log 2>&1
