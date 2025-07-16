@@ -118,6 +118,12 @@ const config: Config = {
   trailingSlash: false,
   deploymentBranch: "main",
   staticDirectories: ['static'],
+  markdown: { 
+    mermaid: true,
+  },
+  themes: [
+    '@docusaurus/theme-mermaid',
+  ],
   presets: [
     [
       'classic',
@@ -210,7 +216,10 @@ const config: Config = {
       darkTheme: darkCodeTheme,
       additionalLanguages: ['rust', 'go'],
     },
-  } satisfies Preset.ThemeConfig,
+    mermaid: {
+      theme: { light: 'default', dark: 'default' },
+  },
+} satisfies Preset.ThemeConfig,
 };
 
 
