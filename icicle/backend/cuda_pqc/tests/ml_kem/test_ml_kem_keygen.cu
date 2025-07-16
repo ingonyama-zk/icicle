@@ -59,7 +59,7 @@ public:
 };
 
 // Define the static constants
-const std::string MLKemKeygenTest::TEST_DATA_PATH = "./icicle/backend/cuda_pqc/tests/ml_kem/test_data";
+const std::string MLKemKeygenTest::TEST_DATA_PATH = "./test_data";
 const size_t MLKemKeygenTest::BATCH_SIZE = 8192;
 // const size_t MLKemKeygenTest::BATCH_SIZE = 256;
 

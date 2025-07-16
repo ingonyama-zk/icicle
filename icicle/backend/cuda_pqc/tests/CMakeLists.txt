@@ -44,6 +44,14 @@ add_custom_target(copy_pqc_libs ALL
     DEPENDS icicle_pqc icicle_device icicle_backend_cuda_pqc
 )
 
+# Create a custom target to copy test data to the build directory
+add_custom_target(copy_test_data ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/ml_kem/test_data
+        ${CMAKE_CURRENT_BINARY_DIR}/test_data
+    COMMENT "Copying test data to build directory"
+)
+
 # Helper macro to add a CUDA test
 macro(add_cuda_test name)
     add_executable(${name} ml_kem/${name}.cu)
@@ -51,7 +59,7 @@ macro(add_cuda_test name)
     target_compile_definitions(${name} PRIVATE ICICLE_CUDA_TEST_ONLY BACKEND_BUILD_DIR="${CMAKE_BINARY_DIR}/backend/cuda_pqc")
     target_link_libraries(${name} PRIVATE gtest_main CUDA::cudart)
     # ensure copy
-    add_dependencies(${name} copy_pqc_libs)
+    add_dependencies(${name} copy_pqc_libs copy_test_data)
     if(ICICLE_STATIC_LINK)
         if(UNIX AND NOT APPLE)
             target_link_options(${name} PRIVATE "LINKER:--whole-archive")
