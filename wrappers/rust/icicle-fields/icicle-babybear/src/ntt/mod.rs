@@ -65,12 +65,7 @@ pub(crate) mod tests {
                 .map(|x| ExtElem::from_u32_words(&Into::<[u32; 4]>::into(*x)[..]))
                 .collect();
 
-            ntt_inplace(
-                ext_scalars.into_slice_mut(),
-                NTTDir::kForward,
-                &ntt_cfg,
-            )
-            .unwrap();
+            ntt_inplace(ext_scalars.into_slice_mut(), NTTDir::kForward, &ntt_cfg).unwrap();
 
             risc0_zkp::core::ntt::bit_reverse(ext_scalars_risc0.as_mut_slice());
             risc0_zkp::core::ntt::evaluate_ntt::<Elem, ExtElem>(ext_scalars_risc0.as_mut_slice(), ntt_size);

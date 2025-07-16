@@ -135,13 +135,7 @@ pub fn check_msm_batch_shared<P: Projective + MSM<P>>() {
             )
             .unwrap();
             cfg.precompute_factor = 1;
-            msm(
-                scalars_h,
-                points_d.into_slice(),
-                &cfg,
-                msm_results_2.into_slice_mut(),
-            )
-            .unwrap();
+            msm(scalars_h, points_d.into_slice(), &cfg, msm_results_2.into_slice_mut()).unwrap();
 
             let mut msm_host_result_1 = vec![P::zero(); batch_size];
             let mut msm_host_result_2 = vec![P::zero(); batch_size];

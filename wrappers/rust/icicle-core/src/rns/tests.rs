@@ -102,12 +102,7 @@ where
 
     // Convert c_rns back to Zq: c_from_rns = from_rns(c_rns)
     let mut c_from_rns = vec![Zq::zero(); size];
-    Zq::from_rns(
-        c_rns.into_slice(),
-        c_from_rns.into_slice_mut(),
-        &cfg,
-    )
-    .unwrap();
+    Zq::from_rns(c_rns.into_slice(), c_from_rns.into_slice_mut(), &cfg).unwrap();
 
     // Verify consistency: c (computed in Zq) == c_from_rns (computed via RNS)
     assert_eq!(c, c_from_rns, "Mismatch between direct and RNS computation results.");

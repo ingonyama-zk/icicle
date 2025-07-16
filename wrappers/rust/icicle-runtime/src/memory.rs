@@ -391,7 +391,7 @@ impl<T> DeviceSlice<T> {
             .unwrap();
         host_vec
     }
-    
+
     /// # Safety
     /// `ptr` must point to `len` contiguous elements in device memory.
     /// The caller must ensure the memory is valid for the lifetime `'a` and not aliased.
@@ -749,7 +749,8 @@ impl<'a, T: 'a> IntoIcicleSliceMut<'a, T> for DeviceVec<T> {
     type Out = DeviceSlice<T>;
     fn into_slice_mut(&'a mut self) -> &'a mut DeviceSlice<T> {
         &mut **self
-    }}
+    }
+}
 // Utility to reinterpret HostOrDeviceSlice via a UnifiedSlice or UnifiedSliceMut that also implement HostOrDeviceSlice.
 pub mod reinterpret {
     use super::*;

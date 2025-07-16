@@ -8,7 +8,7 @@ use crate::{
 };
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::{
-    memory::{DeviceVec, IntoIcicleSlice, HostSlice},
+    memory::{DeviceVec, HostSlice, IntoIcicleSlice},
     stream::IcicleStream,
 };
 use std::fmt::Debug;

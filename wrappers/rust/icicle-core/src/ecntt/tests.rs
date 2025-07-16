@@ -69,7 +69,9 @@ where
                 let one_ntt_result = slice.into_slice_mut();
                 for i in 0..batch_size {
                     ecntt(
-                        icicle_runtime::memory::HostSlice::from_slice(&points[i * test_size..(i + 1) * test_size].as_slice()), //TODO: simplify this
+                        icicle_runtime::memory::HostSlice::from_slice(
+                            &points[i * test_size..(i + 1) * test_size].as_slice(),
+                        ), //TODO: simplify this
                         is_inverse,
                         &config,
                         one_ntt_result,

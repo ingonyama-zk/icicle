@@ -383,7 +383,7 @@ macro_rules! impl_ntt_tests {
       $field:ident
     ) => {
         use icicle_runtime::test_utilities;
-        use icicle_runtime::{device::Device, runtime, memory::IntoIcicleSlice};
+        use icicle_runtime::{device::Device, memory::IntoIcicleSlice, runtime};
         use std::sync::Once;
 
         const MAX_SIZE: u64 = 1 << 18;
@@ -472,7 +472,7 @@ macro_rules! impl_ntt_bench {
         use icicle_runtime::{
             device::Device,
             get_active_device, is_device_available,
-            memory::{HostOrDeviceSlice, HostSlice, IntoIcicleSliceMut, IntoIcicleSlice},
+            memory::{HostOrDeviceSlice, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
             runtime::load_backend_from_env_or_default,
             set_device,
         };

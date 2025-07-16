@@ -1,4 +1,8 @@
-use icicle_runtime::{eIcicleError, memory::{IntoIcicleSlice, IntoIcicleSliceMut}, test_utilities};
+use icicle_runtime::{
+    eIcicleError,
+    memory::{IntoIcicleSlice, IntoIcicleSliceMut},
+    test_utilities,
+};
 
 use crate::{
     field::Field,
