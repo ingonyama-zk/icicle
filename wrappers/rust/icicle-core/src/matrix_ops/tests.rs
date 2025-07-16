@@ -104,10 +104,7 @@ where
         .unwrap();
 
         /* Zero out host_buffer, copy result of (4) to host_buffer */
-        let mut output_host_case_4 = vec![P::default(); out_size];
-        device_mem_output
-            .copy_to_host(output_host_case_4.into_slice_mut())
-            .unwrap();
+        let output_host_case_4 = device_mem_output.to_host_vec();
 
         assert_eq!(output_host_case_1, output_host_case_4);
 
@@ -224,10 +221,7 @@ where
         )
         .unwrap();
 
-        let mut output_host_case_4_restored = vec![P::default(); matrix_size];
-        device_mem_restored
-            .copy_to_host(output_host_case_4_restored.into_slice_mut())
-            .unwrap();
+        let output_host_case_4_restored = device_mem_restored.to_host_vec();
         assert_eq!(input_matrix, output_host_case_4_restored);
 
         output_host_case_1

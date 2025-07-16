@@ -65,10 +65,7 @@ pub fn check_msm<P: Projective + MSM<P>>() {
                 )
                 .unwrap();
 
-                let mut msm_host_result = vec![P::zero(); 1];
-                msm_results
-                    .copy_to_host(msm_host_result.into_slice_mut())
-                    .unwrap();
+                let msm_host_result = msm_results.to_host_vec();
                 stream
                     .synchronize()
                     .unwrap();

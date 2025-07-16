@@ -655,10 +655,7 @@ macro_rules! impl_polynomial_tests {
             // read coeffs to device memory
             let mut device_mem = DeviceVec::<$field>::device_malloc(coeffs.len()).unwrap();
             f.copy_coeffs(0, &mut device_mem[..]);
-            let mut host_coeffs_from_dev = vec![$field::zero(); coeffs.len() as usize];
-            device_mem
-                .copy_to_host(host_coeffs_from_dev.into_slice_mut())
-                .unwrap();
+            let host_coeffs_from_dev = device_mem.to_host_vec();
 
             assert_eq!(host_mem, host_coeffs_from_dev);
 
@@ -738,10 +735,7 @@ macro_rules! impl_polynomial_tests {
             // evaluate to device memory
             let mut device_evals = DeviceVec::<$field>::device_malloc(domain.len()).unwrap();
             f.eval_on_domain(domain.into_slice(), &mut device_evals[..]);
-            let mut host_evals_from_device = vec![$field::zero(); domain.len()];
-            device_evals
-                .copy_to_host(host_evals_from_device.into_slice_mut())
-                .unwrap();
+            let host_evals_from_device = device_evals.to_host_vec();
 
             // check that evaluation to device memory is equivalent
             assert_eq!(host_evals, host_evals_from_device);
@@ -825,10 +819,7 @@ macro_rules! impl_polynomial_tests {
             // let g = &f + &f; // cannot borrow here since s is a mutable slice of f
 
             // copy to host and check equality
-            let mut coeffs_copied_from_slice = vec![$field::zero(); coeffs_slice_dev.len()];
-            coeffs_slice_dev
-                .copy_to_host(coeffs_copied_from_slice.into_slice_mut())
-                .unwrap();
+            let coeffs_copied_from_slice = coeffs_slice_dev.to_host_vec();
             assert_eq!(coeffs_copied_from_slice, coeffs);
 
             // or can use the memory directly
