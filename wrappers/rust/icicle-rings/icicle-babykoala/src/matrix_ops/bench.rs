@@ -5,7 +5,7 @@ use icicle_core::matrix_ops::MatMulConfig;
 use icicle_core::{matrix_ops::*, polynomial_ring::PolynomialRing, traits::GenerateRandom};
 
 use icicle_runtime::memory::{IntoIcicleSlice, IntoIcicleSliceMut};
-use icicle_runtime::{memory::HostSlice, test_utilities};
+use icicle_runtime::test_utilities;
 
 static DEVICES: [&str; 2] = ["ref", "main"];
 // static devices: [&str; 1] = ["ref"];

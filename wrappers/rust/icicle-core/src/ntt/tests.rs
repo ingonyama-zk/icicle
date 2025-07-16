@@ -4,7 +4,7 @@ use crate::ring::IntegerRing;
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::memory::{IntoIcicleSlice, IntoIcicleSliceMut};
 use icicle_runtime::{
-    memory::{DeviceVec, HostSlice},
+    memory::DeviceVec,
     runtime,
     stream::IcicleStream,
     test_utilities,

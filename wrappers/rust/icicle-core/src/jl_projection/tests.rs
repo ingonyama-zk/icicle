@@ -6,7 +6,7 @@ use crate::polynomial_ring::{flatten_polyring_slice, flatten_polyring_slice_mut,
 use crate::ring::IntegerRing;
 use crate::traits::GenerateRandom;
 use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
+use icicle_runtime::memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut};
 use rand::Rng;
 
 pub fn check_jl_projection<F>()

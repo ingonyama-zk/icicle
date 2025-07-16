@@ -6,7 +6,7 @@ mod tests {
         kyber_params::{Kyber1024Params, Kyber512Params, Kyber768Params, KyberParams, ENTROPY_BYTES, MESSAGE_BYTES},
     };
     use icicle_runtime::{
-        memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
+        memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut},
         runtime,
         stream::IcicleStream,
         Device,

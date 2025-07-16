@@ -1,4 +1,4 @@
-use icicle_runtime::memory::{HostOrDeviceSlice, IntoIcicleSliceMut};
+use icicle_runtime::memory::HostOrDeviceSlice;
 
 use crate::ring::IntegerRing;
 

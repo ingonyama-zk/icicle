@@ -5,7 +5,7 @@ use crate::{
     vec_ops::VecOpsConfig,
 };
 
-use icicle_runtime::memory::{HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
+use icicle_runtime::memory::{IntoIcicleSlice, IntoIcicleSliceMut};
 use rand::Rng;
 
 pub fn check_norm<T>()

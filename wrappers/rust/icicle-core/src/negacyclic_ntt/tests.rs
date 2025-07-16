@@ -3,7 +3,7 @@ use crate::ntt::NTTDir;
 use crate::ring::IntegerRing;
 use crate::{polynomial_ring::PolynomialRing, traits::GenerateRandom};
 use icicle_runtime::{
-    memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
+    memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut},
     test_utilities,
 };
 

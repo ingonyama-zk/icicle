@@ -13,7 +13,7 @@ mod tests {
         merkle::{MerkleProof, MerkleTree, MerkleTreeConfig, PaddingPolicy},
     };
     use icicle_runtime::{
-        memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
+        memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut},
         test_utilities,
     };
 

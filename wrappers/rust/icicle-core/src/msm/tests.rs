@@ -4,7 +4,7 @@ use crate::msm::{msm, precompute_bases, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR,
 use crate::projective::Projective;
 use crate::traits::{GenerateRandom, MontgomeryConvertible};
 use icicle_runtime::{
-    memory::{DeviceVec, HostOrDeviceSlice, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
+    memory::{DeviceVec, HostOrDeviceSlice, IntoIcicleSlice, IntoIcicleSliceMut},
     runtime,
     stream::IcicleStream,
     test_utilities,

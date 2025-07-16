@@ -3,7 +3,7 @@ use crate::ring::IntegerRing;
 use crate::symbol::Symbol;
 use crate::traits::{Arithmetic, GenerateRandom, Invertible};
 use crate::vec_ops::{VecOps, VecOpsConfig};
-use icicle_runtime::memory::{HostSlice, IntoIcicleSlice};
+use icicle_runtime::memory::IntoIcicleSlice;
 
 pub fn check_program<F, Prog>()
 where

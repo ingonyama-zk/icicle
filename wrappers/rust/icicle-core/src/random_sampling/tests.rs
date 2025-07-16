@@ -4,7 +4,7 @@ use crate::random_sampling::{
 };
 use crate::ring::IntegerRing;
 use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::{memory::{HostSlice, IntoIcicleSliceMut}, test_utilities};
+use icicle_runtime::{memory::IntoIcicleSliceMut, test_utilities};
 use rand::Rng;
 
 pub fn check_random_sampling<F>()
