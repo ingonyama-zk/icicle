@@ -36,6 +36,7 @@ if(ICICLE_STATIC_LINK)
     )
   # On Windows, use /WHOLEARCHIVE
   elseif(WIN32)
+    message(WARNING "EXPERIMENTAL: Windows platform is not supported yet, this feature wasn't tested yet")
     target_link_libraries(icicle_backend_cuda_pqc_interface INTERFACE 
       "/WHOLEARCHIVE:icicle_backend_cuda_pqc"
     )

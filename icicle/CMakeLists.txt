@@ -64,11 +64,6 @@ if(SANITIZE)
 endif()
 
 # device API library
-# add_library(icicle_device SHARED
-#   src/device_api.cpp
-#   src/runtime.cpp
-#   src/config_extension.cpp
-# )
 if (ICICLE_STATIC_LINK)
     add_library(icicle_device STATIC
         src/device_api.cpp
@@ -88,7 +83,6 @@ if(NOT DEFINED CMAKE_INSTALL_PREFIX)
 endif()
 message(STATUS "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
-# set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
 # Specify the installation rules
 install(TARGETS icicle_device

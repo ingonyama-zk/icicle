@@ -22,6 +22,52 @@ void generate_random_bytes(std::byte* buffer, size_t size) {
     }
 }
 
+// Helper function to format timing results with appropriate units
+struct TimingResult {
+    double avg_time;
+    std::string avg_unit;
+    double total_time;
+    std::string total_unit;
+    double ops_per_sec;
+};
+
+TimingResult format_timing(std::chrono::nanoseconds duration, int batch_size) {
+    TimingResult result;
+    double total_ns = static_cast<double>(duration.count());
+    double avg_ns = total_ns / batch_size;
+    
+    result.ops_per_sec = 1e9 / avg_ns;  // Operations per second
+    
+    // Choose appropriate unit for average time
+    if (avg_ns < 1000.0) {
+        result.avg_time = avg_ns;
+        result.avg_unit = "ns";
+    } else if (avg_ns < 1000000.0) {
+        result.avg_time = avg_ns / 1000.0;
+        result.avg_unit = "μs";
+    } else {
+        result.avg_time = avg_ns / 1000000.0;
+        result.avg_unit = "ms";
+    }
+    
+    // Choose appropriate unit for total time
+    if (total_ns < 1000.0) {
+        result.total_time = total_ns;
+        result.total_unit = "ns";
+    } else if (total_ns < 1000000.0) {
+        result.total_time = total_ns / 1000.0;
+        result.total_unit = "μs";
+    } else if (total_ns < 1000000000.0) {
+        result.total_time = total_ns / 1000000.0;
+        result.total_unit = "ms";
+    } else {
+        result.total_time = total_ns / 1000000000.0;
+        result.total_unit = "s";
+    }
+    
+    return result;
+}
+
 // Benchmark ML-KEM operations for a specific parameter set
 template<typename Params>
 void benchmark_ml_kem(const std::string& param_name, int batch_size) {
@@ -35,6 +81,24 @@ void benchmark_ml_kem(const std::string& param_name, int batch_size) {
     std::vector<std::byte> ciphertext(Params::CIPHERTEXT_BYTES * batch_size);
     std::vector<std::byte> shared_secret_enc(Params::SHARED_SECRET_BYTES * batch_size);
     std::vector<std::byte> shared_secret_dec(Params::SHARED_SECRET_BYTES * batch_size);
+
+    // warmup
+    {
+        icicle::pqc::ml_kem::MlKemConfig warmup_config = {};
+        warmup_config.batch_size = batch_size;
+        // Use the same buffers as below, but don't measure time
+        icicle::pqc::ml_kem::keygen<Params>(
+            entropy.data(), warmup_config, public_key.data(), secret_key.data()
+        );
+        icicle::pqc::ml_kem::encapsulate<Params>(
+            message.data(), public_key.data(), warmup_config,
+            ciphertext.data(), shared_secret_enc.data()
+        );
+        icicle::pqc::ml_kem::decapsulate<Params>(
+            secret_key.data(), ciphertext.data(), warmup_config,
+            shared_secret_dec.data()
+        );
+    }
     
     // Generate random data for all batch items
     generate_random_bytes(entropy.data(), entropy.size());
@@ -49,8 +113,7 @@ void benchmark_ml_kem(const std::string& param_name, int batch_size) {
         entropy.data(), config, public_key.data(), secret_key.data()
     );
     auto end = std::chrono::high_resolution_clock::now();
-    auto keygen_total_ms = std::chrono::duration<float, std::milli>(end - start).count();
-    auto keygen_avg_ms = keygen_total_ms / batch_size;
+    auto keygen_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     
     if (keygen_result != eIcicleError::SUCCESS) {
         std::cout << "Key generation failed!" << std::endl;
@@ -64,8 +127,7 @@ void benchmark_ml_kem(const std::string& param_name, int batch_size) {
         ciphertext.data(), shared_secret_enc.data()
     );
     end = std::chrono::high_resolution_clock::now();
-    auto encaps_total_ms = std::chrono::duration<float, std::milli>(end - start).count();
-    auto encaps_avg_ms = encaps_total_ms / batch_size;
+    auto encaps_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     
     if (encaps_result != eIcicleError::SUCCESS) {
         std::cout << "Encapsulation failed!" << std::endl;
@@ -79,8 +141,7 @@ void benchmark_ml_kem(const std::string& param_name, int batch_size) {
         shared_secret_dec.data()
     );
     end = std::chrono::high_resolution_clock::now();
-    auto decaps_total_ms = std::chrono::duration<float, std::milli>(end - start).count();
-    auto decaps_avg_ms = decaps_total_ms / batch_size;
+    auto decaps_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     
     if (decaps_result != eIcicleError::SUCCESS) {
         std::cout << "Decapsulation failed!" << std::endl;
@@ -101,11 +162,44 @@ void benchmark_ml_kem(const std::string& param_name, int batch_size) {
         }
     }
     
-    // Print results
-    std::cout << std::fixed << std::setprecision(3);
-    std::cout << "Keygen (avg): " << std::setw(8) << keygen_avg_ms << " ms  (total: " << keygen_total_ms << " ms)" << std::endl;
-    std::cout << "Encaps (avg): " << std::setw(8) << encaps_avg_ms << " ms  (total: " << encaps_total_ms << " ms)" << std::endl;
-    std::cout << "Decaps (avg): " << std::setw(8) << decaps_avg_ms << " ms  (total: " << decaps_total_ms << " ms)" << std::endl;
+    // Format timing results with appropriate units
+    auto keygen_timing = format_timing(keygen_duration, batch_size);
+    auto encaps_timing = format_timing(encaps_duration, batch_size);
+    auto decaps_timing = format_timing(decaps_duration, batch_size);
+    
+    // Print results with adaptive precision
+    std::cout << std::fixed;
+    
+    // Set precision based on unit (more precision for smaller units)
+    auto print_timing = [](const std::string& name, const TimingResult& timing) {
+        // Set precision for average time
+        if (timing.avg_unit == "ns") {
+            std::cout << std::setprecision(1);
+        } else if (timing.avg_unit == "μs") {
+            std::cout << std::setprecision(2);
+        } else {
+            std::cout << std::setprecision(3);
+        }
+        
+        std::cout << name << " (avg): " << std::setw(8) << timing.avg_time << " " << timing.avg_unit 
+                  << "  (total: ";
+        
+        // Set precision for total time
+        if (timing.total_unit == "ns") {
+            std::cout << std::setprecision(1);
+        } else if (timing.total_unit == "μs") {
+            std::cout << std::setprecision(2);
+        } else {
+            std::cout << std::setprecision(3);
+        }
+        
+        std::cout << timing.total_time << " " << timing.total_unit
+                  << ", " << std::setprecision(0) << timing.ops_per_sec << " ops/sec)" << std::endl;
+    };
+    
+    print_timing("Keygen", keygen_timing);
+    print_timing("Encaps", encaps_timing);
+    print_timing("Decaps", decaps_timing);
     std::cout << "Verification: " << (all_secrets_match ? "✅ PASS" : "❌ FAIL") << std::endl;
 }
 
@@ -128,24 +222,10 @@ int main(int argc, char* argv[]) {
     }
     
     std::cout << "ICICLE ML-KEM Benchmark\n" << std::endl;
-    
-    // Initialize device
-    // auto load_result = icicle_load_backend_from_env_or_default();
-    // if (load_result == eIcicleError::SUCCESS) {
-    //     if (icicle_is_device_available("CUDA-PQC") == eIcicleError::SUCCESS) {
-    //         icicle::Device dev = {"CUDA-PQC", 0};
-    //         icicle_set_device(dev);
-    //         std::cout << "Using CUDA-PQC device" << std::endl;
-    //     } else {
-    //         std::cout << "Using CPU device" << std::endl;
-    //     }
-    // } else {
     icicle::Device dev = {"CUDA-PQC", 0};
-    auto err = icicle_set_device(dev);
+    icicle_set_device(dev);
     dev = icicle::DeviceAPI::get_thread_local_device();
     std::cout << "Using device: " << dev << std::endl;
-    //     std::cout << get_error_string(err) << std::endl;
-    // }
     
     // Benchmark all parameter sets
     benchmark_ml_kem<icicle::pqc::ml_kem::Kyber512Params>("ML-KEM-512", batch_size);
