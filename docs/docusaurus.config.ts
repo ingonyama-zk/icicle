@@ -13,7 +13,7 @@ const ingoPreset = {
   docs: {
     showLastUpdateAuthor: false,
     showLastUpdateTime: true,
-    includeCurrentVersion: false,
+    includeCurrentVersion: process.env.NODE_ENV !== 'production',
     routeBasePath: '/',
     remarkPlugins: [math],
     rehypePlugins: [katex],
@@ -160,6 +160,13 @@ const config: Config = {
       {name: 'og:description', content: 'Ingonyama is a next-generation semiconductor company focusing on Zero-Knowledge Proof hardware acceleration...'},
       {name: 'og:image', content: 'https://dev.ingonyama.com/img/ICICLELOGONEW.png'},
     ],
+      announcementBar: {
+      id: 'my-special-announcement', // unique ID, change if you update the message
+      content: '🚀 We just released <strong>ICICLE v4</strong> — featuring a more intuitive API with lattices. <a href="/start/integration-&-support/migrate_from_v3">Check out the migration guide</a>.',
+      backgroundColor: '#006AEA', 
+      textColor: '#ffffff',      
+      isCloseable: true,          // allows users to dismiss the banner
+    },
     docs: {
       sidebar: {
         hideable: true,

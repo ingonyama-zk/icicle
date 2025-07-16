@@ -1,4 +1,3 @@
-
 # The following functions, each adds a function to a target.
 # In addition, some can check feature is enabled for target, given FEATURE_LIST.
 
@@ -51,7 +50,7 @@ endfunction()
 
 function(handle_ext_field TARGET FEATURE_LIST)
   if(EXT_FIELD AND "EXT_FIELD" IN_LIST FEATURE_LIST)
-  target_compile_definitions(${TARGET} PUBLIC EXT_FIELD=${EXT_FIELD})
+    target_compile_definitions(${TARGET} PUBLIC EXT_FIELD=${EXT_FIELD})
     set(EXT_FIELD ON CACHE BOOL "Enable EXT_FIELD feature" FORCE)
   else()
     set(EXT_FIELD OFF CACHE BOOL "EXT_FIELD not available for this field" FORCE)

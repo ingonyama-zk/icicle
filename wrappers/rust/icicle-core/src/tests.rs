@@ -1,63 +1,78 @@
+use crate::bignum::BigNum;
 use crate::polynomial_ring::{flatten_polyring_slice, PolynomialRing};
+use crate::ring::IntegerRing;
 use crate::{
-    curve::{Affine, Curve, Projective},
     field::Field,
-    traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible},
+    projective::Projective,
+    traits::{GenerateRandom, MontgomeryConvertible},
 };
 use icicle_runtime::{
     memory::{DeviceVec, HostOrDeviceSlice, HostSlice},
     stream::IcicleStream,
 };
+use std::fmt::Debug;
 
-pub fn check_field_arithmetic<F>()
+pub fn check_ring_arithmetic<R>()
 where
-    F: FieldImpl + Arithmetic,
-    F::Config: GenerateRandom<F>,
+    R: IntegerRing + GenerateRandom,
 {
     let size = 1 << 10;
-    let scalars_a = F::Config::generate_random(size);
-    let scalars_b = F::Config::generate_random(size);
+    let scalars_a = R::generate_random(size);
+    let scalars_b = R::generate_random(size);
 
     for i in 0..size {
         let result1 = scalars_a[i] + scalars_b[i];
         let result2 = result1 - scalars_b[i];
         assert_eq!(result2, scalars_a[i]);
 
-        // Test field multiplication API
+        // Test ring multiplication API
         let scalar_a = scalars_a[i];
         let square = scalar_a.sqr();
         let mul_by_self = scalar_a.mul(scalar_a);
         assert_eq!(square, mul_by_self);
 
-        // Test field pow API
+        // Test ring pow API
         let pow_4 = scalar_a.pow(4);
         let mul_mul = mul_by_self.mul(mul_by_self);
         assert_eq!(pow_4, mul_mul);
+    }
+}
 
-        let inv = scalar_a.inv();
-        let one = scalar_a.mul(inv);
+pub fn check_field_arithmetic<F>()
+where
+    F: Field + GenerateRandom,
+{
+    check_ring_arithmetic::<F>();
+    let size = 1 << 10;
+    let scalars_a = F::generate_random(size);
+
+    for i in 0..size {
+        // Test field inv API
+        let inv = scalars_a[i].inv();
+        let one = scalars_a[i].mul(inv);
         assert_eq!(one, F::one());
     }
 }
 
-pub fn check_affine_projective_convert<C: Curve>() {
+pub fn check_affine_projective_convert<P: Projective>() {
     let size = 1 << 10;
-    let affine_points = C::generate_random_affine_points(size);
-    let projective_points = C::generate_random_projective_points(size);
+    let affine_points = P::Affine::generate_random(size);
+    let projective_points = P::generate_random(size);
     for affine_point in affine_points {
-        let projective_eqivalent: Projective<C> = affine_point.into();
+        let projective_eqivalent: P = affine_point.into();
         assert_eq!(affine_point, projective_eqivalent.into());
     }
     for projective_point in projective_points {
-        let affine_eqivalent: Affine<C> = projective_point.into();
+        println!("{:?}", projective_point);
+        let affine_eqivalent: P::Affine = projective_point.into();
         assert_eq!(projective_point, affine_eqivalent.into());
     }
 }
 
-pub fn check_point_arithmetic<C: Curve>() {
+pub fn check_point_arithmetic<P: Projective>() {
     let size = 1 << 10;
-    let projective_points_a = C::generate_random_projective_points(size);
-    let projective_points_b = C::generate_random_projective_points(size);
+    let projective_points_a = P::generate_random(size);
+    let projective_points_b = P::generate_random(size);
 
     for i in 0..size {
         let result1 = projective_points_a[i] + projective_points_b[i];
@@ -66,44 +81,67 @@ pub fn check_point_arithmetic<C: Curve>() {
     }
 }
 
-pub fn check_point_equality<const BASE_LIMBS: usize, F: FieldConfig, C>()
-where
-    C: Curve<BaseField = Field<BASE_LIMBS, F>>,
-{
-    let left = Projective::<C>::zero();
-    let right = Projective::<C>::zero();
+pub fn check_point_equality<P: Projective>() {
+    let left = P::zero();
+    let right = P::zero();
     assert_eq!(left, right);
-    let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], [0; BASE_LIMBS]);
+
+    let x = P::BaseField::zero();
+    let y = P::BaseField::from(2);
+    let z = P::BaseField::zero();
+    let right = P::from_limbs(*x.limbs(), *y.limbs(), *z.limbs());
     assert_eq!(left, right);
-    let mut z = [0; BASE_LIMBS];
-    z[0] = 2;
-    let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [4; BASE_LIMBS], z);
+
+    let z = P::BaseField::from(2);
+    let right = P::from_limbs(
+        *P::BaseField::zero().limbs(),
+        *P::BaseField::from(4).limbs(),
+        *z.limbs(),
+    );
     assert_ne!(left, right);
-    let left = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], C::BaseField::one().into());
+
+    let left = P::from_limbs(
+        *P::BaseField::zero().limbs(),
+        *P::BaseField::from(2).limbs(),
+        *P::BaseField::one().limbs(),
+    );
     assert_eq!(left, right);
 }
 
-pub fn check_field_convert_montgomery<F>()
+pub fn check_montgomery_convert_host<T>()
 where
-    F: FieldImpl + MontgomeryConvertible,
-    F::Config: GenerateRandom<F>,
+    T: Debug + Clone + PartialEq + GenerateRandom + MontgomeryConvertible,
+{
+    let size = 1 << 10;
+    let mut elements = T::generate_random(size);
+    let expected = elements.clone();
+
+    T::to_mont(HostSlice::from_mut_slice(&mut elements), &IcicleStream::default()).unwrap();
+    T::from_mont(HostSlice::from_mut_slice(&mut elements), &IcicleStream::default()).unwrap();
+
+    assert_eq!(expected, elements);
+}
+
+pub fn check_montgomery_convert_device<T>()
+where
+    T: Debug + Default + Clone + PartialEq + GenerateRandom + MontgomeryConvertible,
 {
     let mut stream = IcicleStream::create().unwrap();
 
     let size = 1 << 10;
-    let scalars = F::Config::generate_random(size);
+    let elements = T::generate_random(size);
 
-    let mut d_scalars = DeviceVec::device_malloc(size).unwrap();
-    d_scalars
-        .copy_from_host(HostSlice::from_slice(&scalars))
+    let mut d_elements = DeviceVec::device_malloc(size).unwrap();
+    d_elements
+        .copy_from_host(HostSlice::from_slice(&elements))
         .unwrap();
 
-    F::to_mont(&mut d_scalars, &stream);
-    F::from_mont(&mut d_scalars, &stream);
+    T::to_mont(&mut d_elements, &stream).unwrap();
+    T::from_mont(&mut d_elements, &stream).unwrap();
 
-    let mut scalars_copy = vec![F::zero(); size];
-    d_scalars
-        .copy_to_host_async(HostSlice::from_mut_slice(&mut scalars_copy), &stream)
+    let mut elements_copy = vec![T::default(); size];
+    d_elements
+        .copy_to_host_async(HostSlice::from_mut_slice(&mut elements_copy), &stream)
         .unwrap();
     stream
         .synchronize()
@@ -112,108 +150,30 @@ where
         .destroy()
         .unwrap();
 
-    assert_eq!(scalars_copy, scalars);
+    assert_eq!(elements_copy, elements);
 }
 
-pub fn check_points_convert_montgomery<C: Curve>()
-where
-    Affine<C>: MontgomeryConvertible,
-    Projective<C>: MontgomeryConvertible,
-{
-    let size = 1 << 10;
-
-    let affine_points = C::generate_random_affine_points(size);
-    let mut d_affine = DeviceVec::device_malloc(size).unwrap();
-    let mut affine_points_copy = affine_points.clone();
-    let h_affine = HostSlice::from_mut_slice(&mut affine_points_copy);
-    d_affine
-        .copy_from_host(h_affine)
-        .unwrap();
-
-    // Test affine montgomery conversion with Device Memory
-    Affine::<C>::to_mont(&mut d_affine, &IcicleStream::default())
-        .wrap()
-        .unwrap();
-    Affine::<C>::from_mont(&mut d_affine, &IcicleStream::default())
-        .wrap()
-        .unwrap();
-
-    let mut affine_copy = vec![Affine::<C>::zero(); size];
-    d_affine
-        .copy_to_host(HostSlice::from_mut_slice(&mut affine_copy))
-        .unwrap();
-
-    assert_eq!(affine_points, affine_copy);
-
-    // Test affine montgomery conversion with Host Memory
-    Affine::<C>::to_mont(h_affine, &IcicleStream::default())
-        .wrap()
-        .unwrap();
-    Affine::<C>::from_mont(h_affine, &IcicleStream::default())
-        .wrap()
-        .unwrap();
-
-    assert_eq!(affine_points, affine_points_copy);
-
-    let proj_points = C::generate_random_projective_points(size);
-    let mut d_proj = DeviceVec::device_malloc(size).unwrap();
-    let mut proj_points_copy = proj_points.clone();
-    let h_proj = HostSlice::from_mut_slice(&mut proj_points_copy);
-    d_proj
-        .copy_from_host(h_proj)
-        .unwrap();
-
-    // Test projective montgomery conversion with Device Memory
-    Projective::<C>::to_mont(&mut d_proj, &IcicleStream::default())
-        .wrap()
-        .unwrap();
-    Projective::<C>::from_mont(&mut d_proj, &IcicleStream::default())
-        .wrap()
-        .unwrap();
-
-    let mut projective_copy = vec![Projective::<C>::zero(); size];
-    d_proj
-        .copy_to_host(HostSlice::from_mut_slice(&mut projective_copy))
-        .unwrap();
-
-    assert_eq!(proj_points, projective_copy);
-
-    // Test projective montgomery conversion with Host Memory
-    Projective::<C>::to_mont(h_proj, &IcicleStream::default())
-        .wrap()
-        .unwrap();
-    Projective::<C>::from_mont(h_proj, &IcicleStream::default())
-        .wrap()
-        .unwrap();
-
-    assert_eq!(proj_points, proj_points_copy);
-}
-
-pub fn check_generator<C: Curve>() {
-    let generator = C::get_generator();
-    let zero = Projective::<C>::zero();
+pub fn check_generator<P: Projective>() {
+    let generator = P::get_generator();
+    let zero = P::zero();
     assert_ne!(generator, zero);
-    assert!(C::is_on_curve(generator));
+    assert!(P::is_on_curve(generator));
 }
 
-pub fn check_zero_and_from_slice<P: PolynomialRing>()
-where
-    P::Base: FieldImpl,
-{
+pub fn check_zero_and_from_slice<P: PolynomialRing>() {
     let zero = P::zero();
     let expected = vec![P::Base::zero(); P::DEGREE];
     assert_eq!(zero.values(), expected.as_slice());
 
     let input = vec![P::Base::one(); P::DEGREE];
-    let poly = P::from_slice(&input);
+    let poly = P::from_slice(&input).unwrap();
     assert_eq!(poly.values(), input.as_slice());
 }
 /// Verifies that flattening a slice of polynomials yields a correctly sized,
 /// reinterpreted slice of base field elements.
 pub fn check_polyring_flatten_host_memory<P>()
 where
-    P: PolynomialRing + GenerateRandom<P>,
-    P::Base: FieldImpl,
+    P: PolynomialRing + GenerateRandom,
 {
     // Generate a vector of one random polynomial
     let polynomials = P::generate_random(5);
@@ -246,15 +206,14 @@ where
 /// reinterpreted device slice of base field elements without copying.
 pub fn check_polyring_flatten_device_memory<P>()
 where
-    P: PolynomialRing + GenerateRandom<P>,
-    P::Base: FieldImpl,
+    P: PolynomialRing + GenerateRandom,
 {
     // Generate a single random polynomial on host and copy to device
     let size = 7;
     let host_polys = P::generate_random(size);
     let mut device_vec = DeviceVec::<P>::device_malloc(size).unwrap();
     device_vec
-        .copy_from_host(&HostSlice::from_slice(&host_polys))
+        .copy_from_host(HostSlice::from_slice(&host_polys))
         .unwrap();
 
     // Flatten the device polynomial slice

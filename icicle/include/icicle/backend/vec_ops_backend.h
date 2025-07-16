@@ -38,17 +38,6 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* out)>;
 
-  using scalarBinaryMatrixOpImpl = std::function<eIcicleError(
-    const Device& device,
-    const scalar_t* mat_a,
-    uint32_t nof_rows_a,
-    uint32_t nof_cols_a,
-    const scalar_t* mat_b,
-    uint32_t nof_rows_b,
-    uint32_t nof_cols_b,
-    const VecOpsConfig& config,
-    scalar_t* mat_out)>;
-
   using scalarBitReverseOpImpl = std::function<eIcicleError(
     const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, scalar_t* output)>;
 
@@ -218,16 +207,6 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_matrix_transpose) = []() -> bool {                                                         \
       register_matrix_transpose(DEVICE_TYPE, FUNC);                                                                    \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
-
-  void register_matmul(const std::string& deviceType, scalarBinaryMatrixOpImpl impl);
-
-#define REGISTER_MATMUL_BACKEND(DEVICE_TYPE, FUNC)                                                                     \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_matmul) = []() -> bool {                                                                   \
-      register_matmul(DEVICE_TYPE, FUNC);                                                                              \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
@@ -525,7 +504,7 @@ namespace icicle {
   // for Zq type
 
   // This should be the same for all the devices to get a deterministic result
-  const uint64_t RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS = 256;
+  const size_t RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS = 256;
 
   using ringZqRandomSamplingImpl = std::function<eIcicleError(
     const Device& device,
@@ -891,26 +870,6 @@ namespace icicle {
       static bool UNIQUE(_reg_jl_projection) = []() -> bool {                                                          \
         register_jl_projection(DEVICE_TYPE, PROJECTION);                                                               \
         register_jl_projection_get_rows(DEVICE_TYPE, GET_ROWS);                                                        \
-        return true;                                                                                                   \
-      }();                                                                                                             \
-    }
-
-  using polyRingBinaryMatrixOpImpl = std::function<eIcicleError(
-    const Device& device,
-    const PolyRing* mat_a,
-    uint32_t nof_rows_a,
-    uint32_t nof_cols_a,
-    const PolyRing* mat_b,
-    uint32_t nof_rows_b,
-    uint32_t nof_cols_b,
-    const VecOpsConfig& config,
-    PolyRing* mat_out)>;
-
-  void register_poly_ring_matmul(const std::string& deviceType, polyRingBinaryMatrixOpImpl impl);
-  #define REGISTER_POLY_RING_MATMUL_BACKEND(DEVICE_TYPE, FUNC)                                                         \
-    namespace {                                                                                                        \
-      static bool UNIQUE(_reg_poly_ring_matmul) = []() -> bool {                                                       \
-        register_poly_ring_matmul(DEVICE_TYPE, FUNC);                                                                  \
         return true;                                                                                                   \
       }();                                                                                                             \
     }

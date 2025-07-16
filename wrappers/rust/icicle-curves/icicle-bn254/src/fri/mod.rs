@@ -1,8 +1,8 @@
 use icicle_core::impl_fri;
 
-use crate::curve::{ScalarCfg, ScalarField};
+use crate::curve::ScalarField;
 
-impl_fri!("bn254", bn254_fri, ScalarField, ScalarCfg);
+impl_fri!("bn254", bn254_fri, ScalarField);
 
 #[cfg(test)]
 mod tests {

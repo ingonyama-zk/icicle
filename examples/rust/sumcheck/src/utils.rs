@@ -1,6 +1,5 @@
 use clap::Parser;
-use icicle_core::traits::{FieldImpl, GenerateRandom};
-use icicle_runtime::{runtime, Device};
+use icicle_runtime::Device;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -22,11 +21,4 @@ pub fn try_load_and_set_backend_device(args: &Args) {
 pub fn set_backend_cpu() {
     let device_cpu = Device::new("CPU", 0);
     icicle_runtime::set_device(&device_cpu).unwrap();
-}
-
-pub fn generate_random_vector<F: FieldImpl>(size: usize) -> Vec<F>
-where
-    <F as FieldImpl>::Config: GenerateRandom<F>,
-{
-    F::Config::generate_random(size)
 }

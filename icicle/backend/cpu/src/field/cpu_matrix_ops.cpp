@@ -1,9 +1,11 @@
 #include "icicle/backend/vec_ops_backend.h"
+#include "icicle/backend/mat_ops_backend.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
 #include "icicle/utils/log.h"
 
 #include "icicle/fields/field_config.h"
+#include "icicle/mat_ops.h"
 #include "taskflow/taskflow.hpp"
 #include <cmath>
 #include <cstdint>
@@ -14,6 +16,14 @@
 // Extract number of threads to run from configuration
 int get_nof_workers(const VecOpsConfig& config); // defined in cpu_vec_ops.cpp
 
+// Extract number of threads to run from MatmulConfig
+int get_nof_workers(const MatMulConfig& config)
+{
+  if (config.ext && config.ext->has("n_threads")) { return config.ext->get<int>("n_threads"); }
+  const int hw_threads = std::thread::hardware_concurrency();
+  return std::max(1, hw_threads);
+}
+
 namespace {
   using namespace field_config;
   using namespace icicle;
@@ -22,7 +32,10 @@ namespace {
    * @brief Generic CPU matrix multiplication.
    *
    * Each logical matrix element is a vector of `degree` field elements (e.g., a polynomial in evaluation form).
-   * Computes: mat_out = mat_a × mat_b
+   * Computes: mat_out = mat_a × mat_b, with optional transpose flags:
+   *   - If a_transposed is true: mat_out = mat_a^T × mat_b
+   *   - If b_transposed is true: mat_out = mat_a × mat_b^T
+   *   - If both are true: mat_out = mat_a^T × mat_b^T
    *
    * Template Parameters:
    * - Zq: the base field type
@@ -36,7 +49,7 @@ namespace {
     const T* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
-    const VecOpsConfig& config,
+    const MatMulConfig& config,
     T* mat_out)
   {
     if (!mat_a || !mat_b || !mat_out || nof_rows_a == 0 || nof_cols_a == 0 || nof_rows_b == 0 || nof_cols_b == 0) {
@@ -44,13 +57,21 @@ namespace {
       return eIcicleError::INVALID_ARGUMENT;
     }
 
-    if (config.batch_size != 1) {
-      ICICLE_LOG_ERROR << "Matmul does not support batching (batch_size > 1)";
+    if (config.result_transposed) {
+      ICICLE_LOG_ERROR << "[CPU] Matmul with transposed output is not yet supported. This feature will be available in "
+                          "a future release.";
       return eIcicleError::INVALID_ARGUMENT;
     }
 
-    if (nof_cols_a != nof_rows_b) {
-      ICICLE_LOG_ERROR << "Matmul: inner dimensions do not match (cols_a != rows_b)";
+    // Handle transpose flags: if a_transposed is true, we compute A^T * B
+    // if b_transposed is true, we compute A * B^T (or A^T * B^T if both are true)
+    uint32_t effective_rows_a = config.a_transposed ? nof_cols_a : nof_rows_a;
+    uint32_t effective_cols_a = config.a_transposed ? nof_rows_a : nof_cols_a;
+    uint32_t effective_rows_b = config.b_transposed ? nof_cols_b : nof_rows_b;
+    uint32_t effective_cols_b = config.b_transposed ? nof_rows_b : nof_cols_b;
+
+    if (effective_cols_a != effective_rows_b) {
+      ICICLE_LOG_ERROR << "Matmul: inner dimensions do not match (effective_cols_a != effective_rows_b)";
       return eIcicleError::INVALID_ARGUMENT;
     }
 
@@ -60,22 +81,40 @@ namespace {
     tf::Executor executor(nof_workers);
 
     // One task per output row
-    for (uint32_t row = 0; row < nof_rows_a; ++row) {
+    for (uint32_t row = 0; row < effective_rows_a; ++row) {
       taskflow.emplace([=]() {
-        for (uint32_t col = 0; col < nof_cols_b; ++col) {
+        for (uint32_t col = 0; col < effective_cols_b; ++col) {
           T acc[degree];
           std::memset(acc, 0, sizeof(acc));
 
-          // Compute dot product of row from A and column from B
-          for (uint32_t k = 0; k < nof_cols_a; ++k) {
-            const scalar_t* a = mat_a + (row * nof_cols_a + k) * degree;
-            const scalar_t* b = mat_b + (k * nof_cols_b + col) * degree;
+          // Compute dot product of row from A (or A^T) and column from B (or B^T)
+          for (uint32_t k = 0; k < effective_cols_a; ++k) {
+            // Adjust indexing for transposed matrix A
+            const T* a;
+            if (config.a_transposed) {
+              // Access A^T: row `row` of A^T is column `row` of A
+              a = mat_a + (k * nof_cols_a + row) * degree;
+            } else {
+              // Access A normally: row `row` of A
+              a = mat_a + (row * nof_cols_a + k) * degree;
+            }
+
+            // Adjust indexing for transposed matrix B
+            const T* b;
+            if (config.b_transposed) {
+              // Access B^T: column `col` of B^T is row `col` of B
+              b = mat_b + (col * nof_cols_b + k) * degree;
+            } else {
+              // Access B normally: column `col` of B
+              b = mat_b + (k * nof_cols_b + col) * degree;
+            }
+
             for (uint32_t d = 0; d < degree; ++d) {
               acc[d] = acc[d] + a[d] * b[d];
             }
           }
 
-          scalar_t* out = mat_out + (row * nof_cols_b + col) * degree;
+          T* out = mat_out + (row * effective_cols_b + col) * degree;
           std::memcpy(out, acc, sizeof(T) * degree);
         }
       });
@@ -101,7 +140,7 @@ namespace {
     const T* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
-    const VecOpsConfig& config,
+    const MatMulConfig& config,
     T* mat_out)
   {
     using Zq = typename T::Base;
@@ -124,7 +163,7 @@ namespace {
     const T* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
-    const VecOpsConfig& config,
+    const MatMulConfig& config,
     T* mat_out)
   {
     return cpu_matmul_internal<T, 1>(mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, config, mat_out);
@@ -325,13 +364,13 @@ namespace {
 } // namespace
 
 // === Registration with runtime ===
-REGISTER_MATMUL_BACKEND("CPU", cpu_matmul<scalar_t>);
-REGISTER_MATRIX_TRANSPOSE_BACKEND("CPU", cpu_matrix_transpose<scalar_t>);
+REGISTER_MATMUL_BACKEND("CPU", cpu_matmul<field_config::scalar_t>);
+REGISTER_MATRIX_TRANSPOSE_BACKEND("CPU", cpu_matrix_transpose<field_config::scalar_t>);
 #ifdef EXT_FIELD
-REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND("CPU", (cpu_matrix_transpose<extension_t>));
+REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND("CPU", (cpu_matrix_transpose<field_config::extension_t>));
 #endif
 #ifdef RING
-REGISTER_POLY_RING_MATMUL_BACKEND("CPU", (cpu_matmul_polynomial_ring<PolyRing>));
-REGISTER_MATRIX_TRANSPOSE_RING_RNS_BACKEND("CPU", cpu_matrix_transpose<scalar_rns_t>);
-REGISTER_MATRIX_TRANSPOSE_POLY_RING_BACKEND("CPU", cpu_matrix_transpose<PolyRing>);
+REGISTER_POLY_RING_MATMUL_BACKEND("CPU", (cpu_matmul_polynomial_ring<field_config::PolyRing>));
+REGISTER_MATRIX_TRANSPOSE_RING_RNS_BACKEND("CPU", cpu_matrix_transpose<field_config::scalar_rns_t>);
+REGISTER_MATRIX_TRANSPOSE_POLY_RING_BACKEND("CPU", cpu_matrix_transpose<field_config::PolyRing>);
 #endif

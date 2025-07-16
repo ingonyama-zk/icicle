@@ -1,4 +1,4 @@
-use crate::errors::eIcicleError;
+use crate::errors::IcicleError;
 use crate::runtime;
 use std::{ops::Deref, os::raw::c_void};
 
@@ -18,12 +18,12 @@ impl IcicleStream {
         Self { handle }
     }
 
-    pub fn create() -> Result<Self, eIcicleError> {
+    pub fn create() -> Result<Self, IcicleError> {
         let mut handle = std::ptr::null_mut();
         unsafe { runtime::icicle_create_stream(&mut handle).wrap_value(Self::from_handle(handle)) }
     }
 
-    pub fn synchronize(&self) -> Result<(), eIcicleError> {
+    pub fn synchronize(&self) -> Result<(), IcicleError> {
         unsafe { runtime::icicle_stream_synchronize(self.handle).wrap() }
     }
 
@@ -32,7 +32,7 @@ impl IcicleStream {
             .is_null()
     }
 
-    pub fn destroy(&mut self) -> Result<(), eIcicleError> {
+    pub fn destroy(&mut self) -> Result<(), IcicleError> {
         if !self
             .handle
             .is_null()

@@ -1,7 +1,7 @@
 use crate::{
-    matrix_ops::{matmul, matrix_transpose, MatrixOps, VecOpsConfig},
-    polynomial_ring::PolynomialRing,
-    traits::{FieldImpl, GenerateRandom},
+    matrix_ops::{matmul, matrix_transpose, MatMulConfig, MatrixOps},
+    traits::GenerateRandom,
+    vec_ops::VecOpsConfig,
 };
 
 use icicle_runtime::{
@@ -17,12 +17,11 @@ use icicle_runtime::{
 ///     (4) a, b, result on host
 ///     (5) a on device; b, result on host
 /// Correctness is already ensured by the C++ tests.
-pub fn check_matmul_device_memory<P: PolynomialRing + MatrixOps<P>>()
+pub fn check_matmul_device_memory<P>()
 where
-    P::Base: FieldImpl,
-    P: GenerateRandom<P>,
+    P: GenerateRandom + MatrixOps<P> + Default + Clone + std::fmt::Debug + PartialEq,
 {
-    let cfg = VecOpsConfig::default();
+    let cfg = MatMulConfig::default();
 
     let n = 1 << 5;
     let m = 1 << 6;
@@ -38,7 +37,7 @@ where
             test_utilities::test_set_ref_device();
         }
         // case (1) matmul host memory inputs -> host_memory outputs
-        let mut output_host_case_1 = vec![P::zero(); out_size];
+        let mut output_host_case_1 = vec![P::default(); out_size];
         matmul(
             HostSlice::from_slice(&input_a),
             n as u32,
@@ -66,7 +65,7 @@ where
         .unwrap();
 
         // compare (1) and (2)
-        let mut output_host_case_2 = vec![P::zero(); out_size];
+        let mut output_host_case_2 = vec![P::default(); out_size];
         device_mem_output
             .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_2))
             .unwrap();
@@ -83,7 +82,7 @@ where
             .copy_from_host(HostSlice::from_slice(&input_b))
             .unwrap();
 
-        let mut output_host_case_3 = vec![P::zero(); out_size];
+        let mut output_host_case_3 = vec![P::default(); out_size];
         matmul(
             &device_mem_a,
             n as u32,
@@ -114,7 +113,7 @@ where
         .unwrap();
 
         /* Zero out host_buffer, copy result of (4) to host_buffer */
-        let mut output_host_case_4 = vec![P::zero(); out_size];
+        let mut output_host_case_4 = vec![P::default(); out_size];
         device_mem_output
             .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_4))
             .unwrap();
@@ -122,7 +121,7 @@ where
         assert_eq!(output_host_case_1, output_host_case_4);
 
         // case (5) mamtmul mixed memory model for inputs, host memory output
-        let mut output_host_case_5 = vec![P::zero(); out_size];
+        let mut output_host_case_5 = vec![P::default(); out_size];
         matmul(
             &device_mem_a,
             n as u32,
@@ -161,10 +160,9 @@ where
 /// and checking that a second transpose restores the original data.
 ///
 /// The test is repeated for both main and reference devices.
-pub fn check_matrix_transpose_device_memory<P: PolynomialRing + MatrixOps<P>>()
+pub fn check_matrix_transpose_device_memory<P: MatrixOps<P>>()
 where
-    P::Base: FieldImpl,
-    P: GenerateRandom<P>,
+    P: Default + GenerateRandom + Clone + std::fmt::Debug + PartialEq,
 {
     let cfg = VecOpsConfig::default();
     let nof_rows = 1 << 5;
@@ -181,7 +179,7 @@ where
         }
 
         // --- Case 1: Host → Host ---
-        let mut output_host_case_1 = vec![P::zero(); matrix_size];
+        let mut output_host_case_1 = vec![P::default(); matrix_size];
         matrix_transpose(
             HostSlice::from_slice(&input_matrix),
             nof_rows as u32,
@@ -204,7 +202,7 @@ where
         .unwrap();
 
         // Compare (1) and (2)
-        let mut output_host_case_2 = vec![P::zero(); matrix_size];
+        let mut output_host_case_2 = vec![P::default(); matrix_size];
         device_mem_output
             .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_2))
             .unwrap();
@@ -216,7 +214,7 @@ where
             .copy_from_host(HostSlice::from_slice(&input_matrix))
             .unwrap();
 
-        let mut output_host_case_3 = vec![P::zero(); matrix_size];
+        let mut output_host_case_3 = vec![P::default(); matrix_size];
         matrix_transpose(
             &device_mem_input,
             nof_rows as u32,
@@ -238,7 +236,7 @@ where
         )
         .unwrap();
 
-        let mut output_host_case_4_restored = vec![P::zero(); matrix_size];
+        let mut output_host_case_4_restored = vec![P::default(); matrix_size];
         device_mem_restored
             .copy_to_host(HostSlice::from_mut_slice(&mut output_host_case_4_restored))
             .unwrap();
@@ -254,5 +252,124 @@ where
     let ref_out = test_single_device(false);
 
     // Final check: both devices should yield identical transpose results
+    assert_eq!(device_out, ref_out);
+}
+
+/// Verifies that `a_transposed` and `b_transposed` flags in matmul behave as expected.
+///
+/// Test procedure:
+/// 1. Compute A * B with no transpose.
+/// 2. Compute Aᵗ * Bᵗ using the matmul API with transpose flags.
+/// 3. Manually transpose A and B, then compute Aᵗ * Bᵗ using standard matmul.
+/// 4. Assert that (2) and (3) produce identical results.
+/// 5. Assert that (1) and (2) differ, confirming the transposition takes effect.
+pub fn check_matmul_transposed<P>()
+where
+    P: GenerateRandom + MatrixOps<P> + Default + Clone + std::fmt::Debug + PartialEq,
+{
+    let cfg_transposed = MatMulConfig {
+        a_transposed: true,
+        b_transposed: true,
+        ..MatMulConfig::default()
+    };
+
+    // Create test matrices A (n x m) and B (m x k)
+    let n = 1 << 3; // 8
+    let m = n;
+    let k = n;
+
+    let input_a = P::generate_random(n * m); // A: n x m
+    let input_b = P::generate_random(m * k); // B: m x k
+
+    let test_single_device = |main_device: bool| {
+        if main_device {
+            test_utilities::test_set_main_device();
+        } else {
+            test_utilities::test_set_ref_device();
+        }
+
+        // Case 1: A * B (n×m) × (m×k) = n×k
+        let mut output_case_1 = vec![P::default(); n * k];
+        matmul(
+            HostSlice::from_slice(&input_a),
+            n as u32,
+            m as u32,
+            HostSlice::from_slice(&input_b),
+            m as u32,
+            k as u32,
+            &MatMulConfig::default(),
+            HostSlice::from_mut_slice(&mut output_case_1),
+        )
+        .unwrap();
+
+        // Case 2: Aᵗ * Bᵗ using transposed flags
+        // Aᵗ: m x n, Bᵗ: m x k
+        let mut output_case_2 = vec![P::default(); n * k];
+        matmul(
+            HostSlice::from_slice(&input_a),
+            m as u32,
+            n as u32,
+            HostSlice::from_slice(&input_b),
+            m as u32,
+            k as u32,
+            &cfg_transposed,
+            HostSlice::from_mut_slice(&mut output_case_2),
+        )
+        .unwrap();
+
+        // Case 3: Manually transpose A and B, then compute Aᵗ * Bᵗ
+        let mut a_transposed = vec![P::default(); n * m];
+        matrix_transpose(
+            HostSlice::from_slice(&input_a),
+            n as u32,
+            m as u32,
+            &VecOpsConfig::default(),
+            HostSlice::from_mut_slice(&mut a_transposed),
+        )
+        .unwrap();
+
+        let mut b_transposed = vec![P::default(); n * m];
+        matrix_transpose(
+            HostSlice::from_slice(&input_b),
+            n as u32,
+            m as u32,
+            &VecOpsConfig::default(),
+            HostSlice::from_mut_slice(&mut b_transposed),
+        )
+        .unwrap();
+
+        let mut output_case_3 = vec![P::default(); n * k];
+        matmul(
+            HostSlice::from_slice(&a_transposed),
+            m as u32,
+            n as u32,
+            HostSlice::from_slice(&b_transposed),
+            m as u32,
+            k as u32,
+            &MatMulConfig::default(),
+            HostSlice::from_mut_slice(&mut output_case_3),
+        )
+        .unwrap();
+
+        // Case 2 and 3 should match
+        assert_eq!(
+            output_case_2, output_case_3,
+            "Results should match between using transposed flags and manual transposition"
+        );
+
+        // Case 1 and 2 should differ (almost always, given random inputs)
+        assert_ne!(
+            output_case_1, output_case_2,
+            "Results should differ when transposition is applied"
+        );
+
+        output_case_2
+    };
+
+    // Run test on both main and reference devices
+    let device_out = test_single_device(true);
+    let ref_out = test_single_device(false);
+
+    // Ensure consistent results across devices
     assert_eq!(device_out, ref_out);
 }

@@ -120,6 +120,13 @@ public:
     return apply_op_inplace(u32, [value](auto x) { return x.from(value); }, std::make_index_sequence<nof_fields>{});
   }
 
+  static constexpr HOST_DEVICE_INLINE IntegerRingRns reduce_from_bytes(const std::byte* in)
+  {
+    IntegerRingRns res;
+    return apply_op_inplace(
+      res, [in](auto x) { return x.reduce_from_bytes(in); }, std::make_index_sequence<nof_fields>{});
+  }
+
   template <typename T>
   static constexpr bool has_member_omegas_count()
   {
@@ -150,18 +157,18 @@ public:
 
   friend HOST_DEVICE bool operator!=(const IntegerRingRns& a, const IntegerRingRns& b) { return !(a == b); }
 
-  static HOST_DEVICE_INLINE IntegerRingRns neg(const IntegerRingRns& x)
+  HOST_DEVICE_INLINE IntegerRingRns neg() const
   {
-    return apply_op_unary(x, [](auto x) { return x.neg(x); }, std::make_index_sequence<nof_fields>{});
+    return apply_op_unary(*this, [](auto x) { return x.neg(); }, std::make_index_sequence<nof_fields>{});
   }
 
   // Additional ops
-  static HOST_DEVICE_INLINE IntegerRingRns inverse(const IntegerRingRns& x)
+  HOST_DEVICE_INLINE IntegerRingRns inverse() const
   {
     // Note that if we don't return zero then it's not consistent with the direct Zq type.
     // Also note that has_inverse() in RNS is very cheap (simply checks all elements are non-zero)
-    if (!has_inverse(x)) { return zero(); }
-    return apply_op_unary(x, [](auto x) { return x.inverse(x); }, std::make_index_sequence<nof_fields>{});
+    if (!has_inverse(*this)) { return zero(); }
+    return apply_op_unary(*this, [](auto x) { return x.inverse(); }, std::make_index_sequence<nof_fields>{});
   }
 
   template <size_t... I>
@@ -179,23 +186,22 @@ public:
     return has_inverse_impl(x, std::make_index_sequence<nof_fields>{});
   }
 
-  static HOST_DEVICE_INLINE IntegerRingRns pow(const IntegerRingRns& x, int exp)
+  HOST_DEVICE_INLINE IntegerRingRns pow(int exp) const
   {
-    return apply_op_unary(
-      x, [exp](auto x) { return decltype(x)::pow(x, exp); }, std::make_index_sequence<nof_fields>{});
+    return apply_op_unary(*this, [exp](auto x) { return x.pow(exp); }, std::make_index_sequence<nof_fields>{});
   }
 
-  static HOST_DEVICE_INLINE IntegerRingRns to_montgomery(const IntegerRingRns& x)
+  HOST_DEVICE_INLINE IntegerRingRns to_montgomery() const
   {
-    return apply_op_unary(x, [](auto x) { return x.to_montgomery(x); }, std::make_index_sequence<nof_fields>{});
+    return apply_op_unary(*this, [](auto x) { return x.to_montgomery(); }, std::make_index_sequence<nof_fields>{});
   }
 
-  static HOST_DEVICE_INLINE IntegerRingRns from_montgomery(const IntegerRingRns& x)
+  HOST_DEVICE_INLINE IntegerRingRns from_montgomery() const
   {
-    return apply_op_unary(x, [](auto x) { return x.from_montgomery(x); }, std::make_index_sequence<nof_fields>{});
+    return apply_op_unary(*this, [](auto x) { return x.from_montgomery(); }, std::make_index_sequence<nof_fields>{});
   }
 
-  static HOST_DEVICE_INLINE IntegerRingRns sqr(const IntegerRingRns& x) { return x * x; }
+  HOST_DEVICE_INLINE IntegerRingRns sqr() const { return *this * *this; }
 
   static HOST_DEVICE_INLINE IntegerRingRns inv_log_size(uint32_t logn)
   {

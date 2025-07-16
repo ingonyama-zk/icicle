@@ -5,7 +5,6 @@ package tests
 import (
 	"fmt"
 	"os"
-	"sync"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr/fft"
@@ -14,7 +13,6 @@ import (
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12381/ntt"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
-	"github.com/stretchr/testify/suite"
 )
 
 const (
