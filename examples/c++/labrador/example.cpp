@@ -216,9 +216,9 @@ void benchmark_program()
   ICICLE_LOG_INFO << "Labrador Benchmark";
 
   // Benchmark parameters from the original code
-  std::vector<std::tuple<size_t, size_t>> arr_nr{{1<<8, 1<<4}};
-  std::vector<std::tuple<size_t, size_t>> num_constraint{{100, 100}};
-  size_t NUM_REP = 10;
+  std::vector<std::tuple<size_t, size_t>> arr_nr{{1 << 6, 1 << 3}};
+  std::vector<std::tuple<size_t, size_t>> num_constraint{{10, 10}};
+  size_t NUM_REP = 1;
   bool SKIP_VERIF = false;
 
   std::vector<BenchmarkResult> results;
@@ -246,92 +246,80 @@ void benchmark_program()
   save_to_csv(results, "labrador_benchmark_results.csv");
 }
 
-// === Main driver ===
-
-int main(int argc, char* argv[])
+void prover_verifier_trace()
 {
-  ICICLE_LOG_INFO << "Labrador example";
-  try_load_and_set_backend_device(argc, argv);
+  const int64_t q = get_q<Zq>();
 
-  // I. Use the following code for examining program trace:
-  // const int64_t q = get_q<Zq>();
+  // TODO: icicle_malloc()/ DeviceVector<T>
 
-  // // TODO: icicle_malloc()/ DeviceVector<T>
+  // randomize the witness Si with low norm
+  const size_t n = 1 << 6;
+  const size_t r = 1 << 3;
+  constexpr size_t d = Rq::d;
+  const size_t max_value = 2;
 
-  // // randomize the witness Si with low norm
-  // const size_t n = 1 << 6;
-  // const size_t r = 1 << 3;
-  // constexpr size_t d = Rq::d;
-  // const size_t max_value = 2;
+  const std::vector<Rq> S = rand_poly_vec(r * n, max_value);
+  EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
+  assert(witness_legit_eq(eq_inst, S));
+  ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(n, r, S);
+  assert(witness_legit_const_zero(const_zero_inst, S));
+  ConstZeroInstance const_zero_inst2 = create_rand_const_zero_inst(n, r, S);
+  assert(witness_legit_const_zero(const_zero_inst2, S));
 
-  // const std::vector<Rq> S = rand_poly_vec(r * n, max_value);
-  // EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
-  // assert(witness_legit_eq(eq_inst, S));
-  // ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(n, r, S);
-  // assert(witness_legit_const_zero(const_zero_inst, S));
-  // ConstZeroInstance const_zero_inst2 = create_rand_const_zero_inst(n, r, S);
-  // assert(witness_legit_const_zero(const_zero_inst2, S));
+  // Use current time (milliseconds since epoch) as a unique Ajtai seed
+  auto now = std::chrono::system_clock::now();
+  auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+  std::string ajtai_seed_str = std::to_string(millis);
+  std::cout << "Ajtai seed = " << ajtai_seed_str << std::endl;
 
-  // // Use current time (milliseconds since epoch) as a unique Ajtai seed
-  // auto now = std::chrono::system_clock::now();
-  // auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-  // std::string ajtai_seed_str = std::to_string(millis);
-  // std::cout << "Ajtai seed = " << ajtai_seed_str << std::endl;
+  double beta = sqrt(max_value * n * r * d);
+  uint32_t base0 = calc_base0(r, OP_NORM_BOUND, beta);
+  LabradorParam param{
+    r,
+    n,
+    {reinterpret_cast<const std::byte*>(ajtai_seed_str.data()),
+     reinterpret_cast<const std::byte*>(ajtai_seed_str.data()) + ajtai_seed_str.size()},
+    secure_msis_rank(), // kappa
+    secure_msis_rank(), // kappa1
+    secure_msis_rank(), // kappa2,
+    base0,              // base1
+    base0,              // base2
+    base0,              // base3
+    beta,               // beta
+  };
+  LabradorInstance lab_inst{param};
+  lab_inst.add_equality_constraint(eq_inst);
+  lab_inst.add_const_zero_constraint(const_zero_inst);
+  // lab_inst.add_const_zero_constraint(const_zero_inst2);
 
-  // double beta = sqrt(max_value * n * r * d);
-  // uint32_t base0 = calc_base0(r, OP_NORM_BOUND, beta);
-  // LabradorParam param{
-  //   r,
-  //   n,
-  //   {reinterpret_cast<const std::byte*>(ajtai_seed_str.data()),
-  //    reinterpret_cast<const std::byte*>(ajtai_seed_str.data()) + ajtai_seed_str.size()},
-  //   secure_msis_rank(), // kappa
-  //   secure_msis_rank(), // kappa1
-  //   secure_msis_rank(), // kappa2,
-  //   base0,              // base1
-  //   base0,              // base2
-  //   base0,              // base3
-  //   beta,               // beta
-  // };
-  // LabradorInstance lab_inst{param};
-  // lab_inst.add_equality_constraint(eq_inst);
-  // lab_inst.add_const_zero_constraint(const_zero_inst);
-  // // lab_inst.add_const_zero_constraint(const_zero_inst2);
+  std::string oracle_seed = "ORACLE_SEED";
 
-  // std::string oracle_seed = "ORACLE_SEED";
+  size_t NUM_REC = 1;
+  LabradorProver prover{
+    lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size(), NUM_REC};
 
-  // size_t NUM_REC = 2;
-  // LabradorProver prover{
-  //   lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size(), NUM_REC};
+  std::cout << "Problem param: n,r = " << n << ", " << r << "\n";
+  std::cout << "TESTING = " << (TESTING ? "true" : "false") << "\n";
+  if (TESTING) { std::cout << "TESTING TRUE IMPLIES TIMING ESTIMATES ARE INCORRECT\n"; }
+  auto [trs, final_proof] = prover.prove();
 
-  // std::cout << "Problem param: n,r = " << n << ", " << r << "\n";
-  // std::cout << "TESTING = " << (TESTING ? "true" : "false") << "\n";
-  // if (TESTING) { std::cout << "TESTING TRUE IMPLIES TIMING ESTIMATES ARE INCORRECT\n"; }
-  // auto [trs, final_proof] = prover.prove();
+  // extract all prover_msg from trs vector into a vector prover_msgs
+  std::vector<BaseProverMessages> prover_msgs;
+  for (const auto& transcript : trs) {
+    prover_msgs.push_back(transcript.prover_msg);
+  }
+  if (TESTING) {
+    LabradorVerifier verifier{lab_inst,           prover_msgs,
+                              final_proof,        reinterpret_cast<const std::byte*>(oracle_seed.data()),
+                              oracle_seed.size(), NUM_REC};
 
-  // // extract all prover_msg from trs vector into a vector prover_msgs
-  // std::vector<BaseProverMessages> prover_msgs;
-  // for (const auto& transcript : trs) {
-  //   prover_msgs.push_back(transcript.prover_msg);
-  // }
-  // if (TESTING) {
-  //   LabradorVerifier verifier{lab_inst,           prover_msgs,
-  //                             final_proof,        reinterpret_cast<const std::byte*>(oracle_seed.data()),
-  //                             oracle_seed.size(), NUM_REC};
-
-  //   std::cout << "Verification result: \n";
-  //   if (verifier.verify()) {
-  //     std::cout << "Verification passed. \n";
-  //   } else {
-  //     std::cout << "Verification failed. \n";
-  //   }
-  // }
-
-  // II. To run benchmark uncomment:
-  benchmark_program();
-
-  return 0;
-
+    std::cout << "Verification result: \n";
+    if (verifier.verify()) {
+      std::cout << "Verification passed. \n";
+    } else {
+      std::cout << "Verification failed. \n";
+    }
+  }
   // LabradorBaseProver base_prover{
   //   lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size()};
 
@@ -473,6 +461,22 @@ int main(int argc, char* argv[])
   //   std::cout << "Base proof verification failed\n";
   // }
   // return 0;
+}
+
+// === Main driver ===
+
+int main(int argc, char* argv[])
+{
+  ICICLE_LOG_INFO << "Labrador example";
+  try_load_and_set_backend_device(argc, argv);
+
+  // I. Use the following code for examining program trace:
+  // prover_verifier_trace();
+
+  // II. To run benchmark uncomment:
+  benchmark_program();
+
+  return 0;
 }
 
 // TODO: change poly_vec_eq

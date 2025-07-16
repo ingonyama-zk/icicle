@@ -328,11 +328,12 @@ void LabradorBaseVerifier::agg_const_zero_constraints()
     {},     // config
     Q.data()));
 
-  std::vector<Tq> Q_hat(JL_out * r * n);
-  // Q_hat = NTT(Q)
-  ICICLE_CHECK(ntt(Q.data(), Q.size(), NTTDir::kForward, {}, Q_hat.data()));
-
   std::vector<Zq> test_b0(num_aggregation_rounds, Zq::zero());
+
+  // Allocate memory required for large ops
+  std::vector<Rq> omega_times_Q(JL_out * r * n);
+  // Will start out in Rq and then in place NTT to Tq
+  std::vector<PolyRing> reduction_result(r * n);
 
   for (size_t k = 0; k < num_aggregation_rounds; k++) {
     EqualityInstance new_constraint(r, n);
@@ -380,9 +381,9 @@ void LabradorBaseVerifier::agg_const_zero_constraints()
     }
 
     // For each j do:
-    //    new_constraint.phi[:,:] += omega[k,j]* Q_hat[j, :, :]
+    //    new_constraint.phi[:,:] += omega[k,j]* Q[j, :, :]
 
-    std::vector<Tq> omega_times_Q(JL_out * r * n);
+    // First create omega_times_Q[j, :, :] = omega[k,j] * Q[j, :, :] in Rq
 
     // Configure for batched operations
     VecOpsConfig batch_config = default_vec_ops_config();
@@ -391,19 +392,20 @@ void LabradorBaseVerifier::agg_const_zero_constraints()
 
     // Batch all scalar multiplications into a single call
     ICICLE_CHECK(scalar_mul_vec(
-      &omega[k * JL_out], reinterpret_cast<const Zq*>(Q_hat.data()), r * n * d, batch_config,
+      &omega[k * JL_out], reinterpret_cast<const Zq*>(Q.data()), r * n * d, batch_config,
       reinterpret_cast<Zq*>(omega_times_Q.data())));
 
-    // new_constraint.phi[i,:] += \sum_j omega_times_Q[j, i, :]
-
+    // reduction_result[i,:] += \sum_j omega_times_Q[j, i, :]
     VecOpsConfig sum_config = default_vec_ops_config();
     sum_config.batch_size = r * n * d; // Number of reduction operations
     sum_config.columns_batch = true;   // Elements to sum are strided across batches
-    std::vector<Tq> reduction_result(r * n);
+
     // This will compute the sum across all j for each (i, element) pair
     ICICLE_CHECK(vector_sum<Zq>(
       reinterpret_cast<const Zq*>(omega_times_Q.data()), JL_out, sum_config,
       reinterpret_cast<Zq*>(reduction_result.data())));
+
+    ICICLE_CHECK(ntt(reduction_result.data(), r * n, NTTDir::kForward, {}, reduction_result.data()));
 
     // Then add to new_constraint.phi
     ICICLE_CHECK(vector_add(new_constraint.phi.data(), reduction_result.data(), r * n, {}, new_constraint.phi.data()));

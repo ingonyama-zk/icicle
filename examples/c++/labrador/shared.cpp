@@ -251,8 +251,6 @@ LabradorInstance prepare_recursion_instance(
   D_t.shrink_to_fit();
 
   // Step 10: add the equality constraint Az - sum_i c_i t_i =0 to recursion_instance
-  // Generate A
-  // TODO: change this so that A need not be computed and stored
   size_t kappa = prev_param.kappa;
   size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base1);
 
