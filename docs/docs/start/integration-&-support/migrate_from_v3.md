@@ -138,16 +138,12 @@ In v4, the Program API has been moved from VecOps to a dedicated Program module 
 
 **v3 (Old API):**
 ```rust
-use icicle_bn254::curve::Fr;
+use icicle_bn254::curve::ScalarField;
 use icicle_core::traits::FieldImpl;
 use icicle_core::field::FieldArithmetic;
 
-let a = Fr::from_u32(5);
-let b = Fr::from_u32(10);
-let c = Fr::add(a, b);
-let d = Fr::mul(c, Fr::from_u32(2));
-let e = Fr::sqr(d);
-let f = Fr::inv(e);
+let a = ScalarField::from_u32(5);
+let b = ScalarField::from_u32(10);
 ```
 
 **v4 (Current API):**
@@ -159,13 +155,11 @@ let a = ScalarField::from(5);
 let b = ScalarField::from(10);
 let c = a + b;  // or a.add(b)
 let d = c * ScalarField::from(2);  // or c.mul(ScalarField::from(2))
-let e = d.sqr();
-let f = e.inv();
 ```
 
 **v4 (Method Chaining):**
 ```rust
-use icicle_fields::bn254::ScalarField;
+use icicle_bn254::curve::ScalarField;
 use icicle_core::traits::Arithmetic;
 
 let result = ScalarField::from(5)
@@ -216,10 +210,10 @@ let returning_program = FieldReturningValueProgram::new(|symbols| -> symbol {
 
 **v3:**
 ```rust
-use icicle_bn254::curve::ScalarField;
+use icicle_bn254::curve::{ScalarCfg, ScalarField};
 use icicle_core::traits::FieldCfg;
 
-let random_values = ScalarField::generate_random(size);
+let random_values = ScalarCfg::generate_random(size);
 ```
 
 **v4:**
@@ -232,23 +226,21 @@ let random_values = ScalarField::generate_random(size);
 
 ### Removal of the `FieldCfg` Trait
 
-`FieldCfg` previously exposed compile-time field parameters (modulus, root, etc.) **and** helper functions like `generate_random`. `FieldCfg` was implemented for a separate struct in each field. In v4 there is now a `Field: IntegerRing + Invertible` trait that is implemented for the concrete field types. `IntegerRing: BigNum + GenerateRandom + Arithmetic + TryInverse`
+`FieldCfg` previously exposed compile-time field parameters (generator, root, etc.) **and** helper functions like `generate_random`. `FieldCfg` was implemented for a separate struct in each field. In v4 there is now a `Field: IntegerRing + Invertible` trait that is implemented for the concrete field types. `IntegerRing: BigNum + GenerateRandom + Arithmetic + TryInverse`
 
-* Concrete field types now publish constants directly (e.g., `ScalarField::MODULUS`).
 * Random sampling moved to the standalone `GenerateRandom` trait.
 
 Migration steps:
 
 1. Replace `use icicle_core::traits::FieldCfg;` with `use icicle_core::traits::GenerateRandom;` when you only need random values.
-2. Access constants directly from the field type:
 
-```rust
-// v3
-let p = <Fr as FieldCfg>::MODULUS;
+2. If you used `FieldCfg` for helper methods (other than random generation), check the new trait bounds for `Field` and `IntegerRing`. Most arithmetic and inversion helpers are now part of these traits and are implemented directly on the field type.
 
-// v4
-let p = ScalarField::MODULUS;
-```
+3. Remove any references to the old config struct (e.g., `ScalarCfg`, `CurveCfg` etc) in your codebase, as it is no longer needed in v4. All field operations should be accessed via the field type (e.g., `ScalarField`).
+
+4. Review your imports and update them to only include the traits and types you actually use. For most use cases, you will only need to import the field type (e.g., `ScalarField`) and the relevant traits (e.g., `GenerateRandom`, `IntegerRing`, `Invertible`).
+
+By following these steps, you can migrate your code from the old `FieldCfg`-based API to the new, more streamlined v4 API. This will ensure compatibility with the latest version of the library and take advantage of the improved trait-based design.
 
 All constant names are unchanged, so the update is usually a simple search-and-replace.
 

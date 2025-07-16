@@ -89,45 +89,27 @@ The `Arithmetic` trait in ICICLE v4 is defined as follows:
 ```rust
 pub trait Arithmetic: Sized + Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> {
     fn sqr(&self) -> Self;
-    fn inv(&self) -> Self;
     fn pow(&self, exp: usize) -> Self;
 }
 ```
 
 This trait extends the standard Rust operators (`Add`, `Sub`, `Mul`) and adds specialized field operations like square, inverse, and exponentiation.
 
-### Deprecation of the `FieldImpl` Trait
+#### The Invertible Trait
 
-In ICICLE v3, generic code typically bounded field types by the heavyweight `FieldImpl` super-trait.  It lumped together arithmetic, random generation, Montgomery helpers, device handles, and more.  While convenient, that design made API signatures noisy and hid which capabilities a function truly needed.
-
-With **v4**, `FieldImpl` is gone.  Its functionality has been split across smaller, focused traits inside `icicle_core::traits`:
-
-| New trait | What it covers | Typical import |
-|-----------|----------------|-----------------|
-| `Arithmetic` | Core math + operator overloads (`+`, `-`, `*`, `sqr`, `inv`, `pow`) | `use icicle_core::traits::Arithmetic;` |
-| `GenerateRandom` | Host-side sampling (`generate_random`) | `use icicle_core::traits::GenerateRandom;` |
-| `MontgomeryConvertible` | Batch Montgomery ⇄ canonical conversion for host/device slices | `use icicle_core::traits::MontgomeryConvertible;` |
-| `Handle` | Low-level FFI pointer access | `use icicle_core::traits::Handle;` |
-
-Because these traits are orthogonal you can now declare **precise** bounds.  For example:
+Field inversion is now provided by the `Invertible` trait. This trait defines a single method, `inv`, which returns the multiplicative inverse of a field element.
 
 ```rust
-// v3 – required the full FieldImpl bundle
-fn scale_in_place<T: FieldImpl>(v: &mut [T], k: &T) {
-    for x in v.iter_mut() {
-        *x = *x * *k;
-    }
-}
-
-// v4 – only Arithmetic is needed
-fn scale_in_place<T: Arithmetic>(v: &mut [T], k: &T) {
-    for x in v.iter_mut() {
-        *x = *x * *k;
-    }
+pub trait Invertible: Sized {
+    fn inv(&self) -> Self;
 }
 ```
 
-If you still see `FieldImpl` in your codebase, replace it with the minimal set of new traits your algorithm actually requires (most commonly `Arithmetic` and perhaps `GenerateRandom`).
+If the field element is zero, the function will return zero.
+
+### Renaming of the `FieldImpl` Trait
+
+`FieldImpl` was renamed into `BigNum`
 
 ### Refactor Program from Vecops to Program module
 
@@ -156,34 +138,28 @@ In v4, the Program API has been moved from VecOps to a dedicated Program module 
 
 **v3 (Old API):**
 ```rust
-use icicle_fields::bn254::Fr;
+use icicle_bn254::curve::ScalarField;
 use icicle_core::traits::FieldImpl;
 use icicle_core::field::FieldArithmetic;
 
-let a = Fr::from_u32(5);
-let b = Fr::from_u32(10);
-let c = Fr::add(a, b);
-let d = Fr::mul(c, Fr::from_u32(2));
-let e = Fr::sqr(d);
-let f = Fr::inv(e);
+let a = ScalarField::from_u32(5);
+let b = ScalarField::from_u32(10);
 ```
 
 **v4 (Current API):**
 ```rust
-use icicle_fields::bn254::ScalarField;
+use icicle_bn254::curve::ScalarField;
 use icicle_core::traits::Arithmetic;
 
 let a = ScalarField::from(5);
 let b = ScalarField::from(10);
 let c = a + b;  // or a.add(b)
 let d = c * ScalarField::from(2);  // or c.mul(ScalarField::from(2))
-let e = d.sqr();
-let f = e.inv();
 ```
 
 **v4 (Method Chaining):**
 ```rust
-use icicle_fields::bn254::ScalarField;
+use icicle_bn254::curve::ScalarField;
 use icicle_core::traits::Arithmetic;
 
 let result = ScalarField::from(5)
@@ -197,21 +173,21 @@ let result = ScalarField::from(5)
 
 **v3 (VecOps API):**
 ```rust
-use icicle_fields::bn254::Fr;
+use icicle_bn254::curve::ScalarField;
 use icicle_core::vec_ops::{VecOps, VecOpsConfig};
 
 // Create program
-let program = Fr::create_program(|symbols| {
+let program = ScalarField::create_program(|symbols| {
     // Program logic here
 }, nof_params)?;
 
 // Execute program
-Fr::execute_program(&program, &mut vec_data, &config)?;
+ScalarField::execute_program(&program, &mut vec_data, &config)?;
 ```
 
 **v4 (Program API):**
 ```rust
-use icicle_fields::bn254::ScalarField;
+use icicle_bn254::curve::ScalarField;
 use icicle_core::program::{Program, ReturningValueProgram};
 use icicle_bn254::program::stark252::{FieldProgram, FieldReturningValueProgram};
 
@@ -234,15 +210,15 @@ let returning_program = FieldReturningValueProgram::new(|symbols| -> symbol {
 
 **v3:**
 ```rust
-use icicle_fields::bn254::Fr;
+use icicle_bn254::curve::{ScalarCfg, ScalarField};
 use icicle_core::traits::FieldCfg;
 
-let random_values = Fr::generate_random(size);
+let random_values = ScalarCfg::generate_random(size);
 ```
 
 **v4:**
 ```rust
-use icicle_fields::bn254::ScalarField;
+use icicle_bn254::curve::ScalarField;
 use icicle_core::traits::GenerateRandom;
 
 let random_values = ScalarField::generate_random(size);
@@ -250,23 +226,21 @@ let random_values = ScalarField::generate_random(size);
 
 ### Removal of the `FieldCfg` Trait
 
-`FieldCfg` previously exposed compile-time field parameters (modulus, root, etc.) **and** helper functions like `generate_random`.  In v4 these responsibilities are split:
+`FieldCfg` previously exposed compile-time field parameters (generator, root, etc.) **and** helper functions like `generate_random`. `FieldCfg` was implemented for a separate struct in each field. In v4 there is now a `Field: IntegerRing + Invertible` trait that is implemented for the concrete field types. `IntegerRing: BigNum + GenerateRandom + Arithmetic + TryInverse`
 
-* Concrete field types now publish constants directly (e.g., `ScalarField::MODULUS`).
 * Random sampling moved to the standalone `GenerateRandom` trait.
 
 Migration steps:
 
 1. Replace `use icicle_core::traits::FieldCfg;` with `use icicle_core::traits::GenerateRandom;` when you only need random values.
-2. Access constants directly from the field type:
 
-```rust
-// v3
-let p = <Fr as FieldCfg>::MODULUS;
+2. If you used `FieldCfg` for helper methods (other than random generation), check the new trait bounds for `Field` and `IntegerRing`. Most arithmetic and inversion helpers are now part of these traits and are implemented directly on the field type.
 
-// v4
-let p = ScalarField::MODULUS;
-```
+3. Remove any references to the old config struct (e.g., `ScalarCfg`, `CurveCfg` etc) in your codebase, as it is no longer needed in v4. All field operations should be accessed via the field type (e.g., `ScalarField`).
+
+4. Review your imports and update them to only include the traits and types you actually use. For most use cases, you will only need to import the field type (e.g., `ScalarField`) and the relevant traits (e.g., `GenerateRandom`, `IntegerRing`, `Invertible`).
+
+By following these steps, you can migrate your code from the old `FieldCfg`-based API to the new, more streamlined v4 API. This will ensure compatibility with the latest version of the library and take advantage of the improved trait-based design.
 
 All constant names are unchanged, so the update is usually a simple search-and-replace.
 
