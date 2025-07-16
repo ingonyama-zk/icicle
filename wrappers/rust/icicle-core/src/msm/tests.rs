@@ -109,8 +109,7 @@ pub fn check_msm_batch_shared<P: Projective + MSM<P>>() {
         test_utilities::test_set_main_device();
         cfg.precompute_factor = precompute_factor;
         let points = generate_random_affine_points_with_zeroes::<P::Affine>(test_size, 10);
-        let mut precomputed_points_d =
-            DeviceVec::<P::Affine>::malloc(cfg.precompute_factor as usize * test_size);
+        let mut precomputed_points_d = DeviceVec::<P::Affine>::malloc(cfg.precompute_factor as usize * test_size);
         precompute_bases::<P>(points.into_slice(), &cfg, &mut precomputed_points_d).unwrap();
         for batch_size in batch_sizes {
             let scalars = P::ScalarField::generate_random(test_size * batch_size);
