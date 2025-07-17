@@ -73,7 +73,7 @@ Poseidon hash using babybear field:
 use icicle_babybear::field::ScalarField;
 use icicle_core::hash::HashConfig;
 use icicle_core::poseidon::{Poseidon, PoseidonHasher};
-use icicle_core::traits::FieldImpl;
+use icicle_core::field::Field;
 use icicle_runtime::memory::HostSlice;
 
 let batch = 1 << 10; // Number of hashes to compute in a single batch
