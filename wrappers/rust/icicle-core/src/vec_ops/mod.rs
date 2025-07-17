@@ -37,10 +37,10 @@ impl VecOpsConfig {
 #[doc(hidden)]
 pub trait VecAdd<T> {
     fn add(
-        a: &(impl HostOrDeviceSlice<T> + ?Sized),
-        b: &(impl HostOrDeviceSlice<T> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-        cfg: &VecOpsConfig,
+        _a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _cfg: &VecOpsConfig,
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecAdd::add not implemented for this type")
@@ -50,9 +50,9 @@ pub trait VecAdd<T> {
 #[doc(hidden)]
 pub trait VecAccumulate<T> {
     fn accumulate(
-        a: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-        b: &(impl HostOrDeviceSlice<T> + ?Sized),
-        cfg: &VecOpsConfig,
+        _a: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _cfg: &VecOpsConfig,
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecAccumulate::accumulate not implemented for this type")
@@ -62,10 +62,10 @@ pub trait VecAccumulate<T> {
 #[doc(hidden)]
 pub trait VecSub<T> {
     fn sub(
-        a: &(impl HostOrDeviceSlice<T> + ?Sized),
-        b: &(impl HostOrDeviceSlice<T> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-        cfg: &VecOpsConfig,
+        _a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _cfg: &VecOpsConfig,
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecSub::sub not implemented for this type")
@@ -75,10 +75,10 @@ pub trait VecSub<T> {
 #[doc(hidden)]
 pub trait VecMul<T> {
     fn mul(
-        a: &(impl HostOrDeviceSlice<T> + ?Sized),
-        b: &(impl HostOrDeviceSlice<T> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-        cfg: &VecOpsConfig,
+        _a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _cfg: &VecOpsConfig,
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecMul::mul not implemented for this type")
@@ -88,10 +88,10 @@ pub trait VecMul<T> {
 #[doc(hidden)]
 pub trait VecDiv<T> {
     fn div(
-        a: &(impl HostOrDeviceSlice<T> + ?Sized),
-        b: &(impl HostOrDeviceSlice<T> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-        cfg: &VecOpsConfig,
+        _a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _cfg: &VecOpsConfig,
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecDiv::div not implemented for this type")
@@ -101,9 +101,9 @@ pub trait VecDiv<T> {
 #[doc(hidden)]
 pub trait VecInv<T> {
     fn inv(
-        input: &(impl HostOrDeviceSlice<T> + ?Sized),
-        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-        cfg: &VecOpsConfig,
+        _input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _cfg: &VecOpsConfig,
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecInv::inv not implemented for this type")
@@ -113,9 +113,9 @@ pub trait VecInv<T> {
 #[doc(hidden)]
 pub trait VecSum<T> {
     fn sum(
-        a: &(impl HostOrDeviceSlice<T> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-        cfg: &VecOpsConfig,
+        _a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _cfg: &VecOpsConfig,
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecSum::sum not implemented for this type")
@@ -125,9 +125,9 @@ pub trait VecSum<T> {
 #[doc(hidden)]
 pub trait VecProduct<T> {
     fn product(
-        a: &(impl HostOrDeviceSlice<T> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-        cfg: &VecOpsConfig,
+        _a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _cfg: &VecOpsConfig,
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecProduct::product not implemented for this type")
@@ -137,10 +137,10 @@ pub trait VecProduct<T> {
 #[doc(hidden)]
 pub trait VecScalarAdd<T> {
     fn scalar_add(
-        a: &(impl HostOrDeviceSlice<T> + ?Sized),
-        b: &(impl HostOrDeviceSlice<T> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-        cfg: &VecOpsConfig,
+        _a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _cfg: &VecOpsConfig,
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecScalarAdd::scalar_add not implemented for this type")
@@ -150,10 +150,10 @@ pub trait VecScalarAdd<T> {
 #[doc(hidden)]
 pub trait VecScalarSub<T> {
     fn scalar_sub(
-        a: &(impl HostOrDeviceSlice<T> + ?Sized),
-        b: &(impl HostOrDeviceSlice<T> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-        cfg: &VecOpsConfig,
+        _a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _cfg: &VecOpsConfig,
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecScalarSub::scalar_sub not implemented for this type")
@@ -163,10 +163,10 @@ pub trait VecScalarSub<T> {
 #[doc(hidden)]
 pub trait VecScalarMul<T> {
     fn scalar_mul(
-        a: &(impl HostOrDeviceSlice<T> + ?Sized),
-        b: &(impl HostOrDeviceSlice<T> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-        cfg: &VecOpsConfig,
+        _a: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _result: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _cfg: &VecOpsConfig,
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecScalarMul::scalar_mul not implemented for this type")
@@ -179,17 +179,17 @@ pub trait VecScalar<T>: VecScalarAdd<T> + VecScalarSub<T> + VecScalarMul<T> {}
 #[doc(hidden)]
 pub trait VecBitReverse<T> {
     fn bit_reverse(
-        input: &(impl HostOrDeviceSlice<T> + ?Sized),
-        cfg: &VecOpsConfig,
-        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _cfg: &VecOpsConfig,
+        _output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecBitReverse::bit_reverse not implemented for this type")
     }
 
     fn bit_reverse_inplace(
-        input: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-        cfg: &VecOpsConfig,
+        _input: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _cfg: &VecOpsConfig,
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecBitReverse::bit_reverse_inplace not implemented for this type")
@@ -199,13 +199,13 @@ pub trait VecBitReverse<T> {
 #[doc(hidden)]
 pub trait VecSlice<T> {
     fn slice(
-        input: &(impl HostOrDeviceSlice<T> + ?Sized),
-        offset: u64,
-        stride: u64,
-        size_in: u64,
-        size_out: u64,
-        cfg: &VecOpsConfig,
-        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        _input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        _offset: u64,
+        _stride: u64,
+        _size_in: u64,
+        _size_out: u64,
+        _cfg: &VecOpsConfig,
+        _output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> Result<(), IcicleError> {
         // Default implementation - this should be overridden by specific implementations
         unimplemented!("VecSlice::slice not implemented for this type")
