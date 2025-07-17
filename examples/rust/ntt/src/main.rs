@@ -11,6 +11,13 @@ use icicle_core::{
 use std::convert::TryInto;
 use std::time::Instant;
 
+// Add Arkworks imports for comparison
+use ark_bn254::Fr as ArkBn254Fr;
+use ark_bls12_377::Fr as ArkBls12377Fr;
+use ark_ff::{BigInteger, PrimeField as ArkPrimeField};
+use ark_poly::domain::Radix2EvaluationDomain;
+use ark_poly::EvaluationDomain;
+
 #[derive(Parser, Debug)]
 struct Args {
     /// Size of NTT to run (20 for 2^20)
@@ -49,12 +56,13 @@ fn main() {
     // Setting Bn254 points and scalars
     println!("Generating random inputs on host for bn254...");
     let scalars = ScalarField::generate_random(size);
-    let mut ntt_results = DeviceVec::<ScalarField>::device_malloc(size).unwrap();
+    let mut ntt_results = DeviceVec::<ScalarField>::malloc(size);
 
     // Setting bls12377 points and scalars
     println!("Generating random inputs on host for bls12377...");
-    let scalars_bls12377 = BLS12377ScalarField::generate_random(size);
-    let mut ntt_results_bls12377 = DeviceVec::<BLS12377ScalarField>::device_malloc(size).unwrap();
+    let mut scalars_bls12377 = BLS12377ScalarField::generate_random(size);
+    let scalars_bls12377_orig = scalars_bls12377.clone();
+    let mut ntt_results_bls12377 = DeviceVec::<BLS12377ScalarField>::malloc(size);
 
     println!("Setting up bn254 Domain...");
     initialize_domain(
@@ -87,10 +95,10 @@ fn main() {
     println!("Executing bn254 NTT on device...");
     let start = Instant::now();
     ntt::ntt(
-        HostSlice::from_slice(&scalars),
+        scalars.into_slice(),
         ntt::NTTDir::kForward,
         &cfg,
-        &mut ntt_results[..],
+        ntt_results.into_slice_mut(),
     )
     .unwrap();
     println!(
@@ -100,13 +108,27 @@ fn main() {
             .as_micros()
     );
 
+    println!("Moving results to host...");
+    let host_bn254_results = ntt_results.to_host_vec();
+    assert_ne!(host_bn254_results, scalars); // check that the results are not the same as the inputs
+
+    ntt::ntt_inplace(
+        scalars.into_slice_mut(),
+        ntt::NTTDir::kForward,
+        &cfg,
+    )
+    .unwrap();
+
+    assert_eq!(host_bn254_results, scalars); // check that the results are the same as the inputs after inplace
+
+    //==================== BLS12-377 ====================
     println!("Executing bls12377 NTT on device...");
     let start = Instant::now();
     ntt::ntt(
-        HostSlice::from_slice(&scalars_bls12377),
+        scalars_bls12377.into_slice(),
         ntt::NTTDir::kForward,
         &cfg_bls12377,
-        &mut ntt_results_bls12377[..],
+        ntt_results_bls12377.into_slice_mut(),
     )
     .unwrap();
     println!(
@@ -117,13 +139,60 @@ fn main() {
     );
 
     println!("Moving results to host...");
-    let mut host_bn254_results = vec![ScalarField::zero(); size];
-    ntt_results
-        .copy_to_host(HostSlice::from_mut_slice(&mut host_bn254_results[..]))
-        .unwrap();
 
-    let mut host_bls12377_results = vec![BLS12377ScalarField::zero(); size];
-    ntt_results_bls12377
-        .copy_to_host(HostSlice::from_mut_slice(&mut host_bls12377_results[..]))
-        .unwrap();
+    let host_bls12377_results = ntt_results_bls12377.to_host_vec();
+    assert_ne!(host_bls12377_results, scalars_bls12377); // check that the results are not the same as the inputs
+
+    ntt::ntt_inplace(
+        scalars_bls12377.into_slice_mut(),
+        ntt::NTTDir::kForward,
+        &cfg_bls12377,
+    )
+    .unwrap();
+
+    assert_eq!(host_bls12377_results, scalars_bls12377);
+
+    //==================== Arkworks comparison ====================
+    println!("Comparing results with Arkworks...");
+    // BN254
+    let mut ark_bn_data: Vec<ArkBn254Fr> = scalars_orig
+        .iter()
+        .map(|x| {
+            let bytes = x.to_bytes_le();
+            ArkBn254Fr::from_le_bytes_mod_order(bytes.as_slice())
+        })
+        .collect();
+    let domain_bn = Radix2EvaluationDomain::<ArkBn254Fr>::new(size).unwrap();
+    domain_bn.fft_in_place(&mut ark_bn_data);
+    let ark_bn_as_icicle: Vec<ScalarField> = ark_bn_data
+        .iter()
+        .map(|x| {
+            let bytes = x.into_bigint().to_bytes_le();
+            ScalarField::from_bytes_le(bytes.as_slice())
+        })
+        .collect();
+    assert_eq!(ark_bn_as_icicle, host_bn254_results);
+
+    // BLS12-377
+    let mut ark_bls_data: Vec<ArkBls12377Fr> = scalars_bls12377_orig
+        .iter()
+        .map(|x| {
+            let bytes = x.to_bytes_le();
+            ArkBls12377Fr::from_le_bytes_mod_order(bytes.as_slice())
+        })
+        .collect();
+    let domain_bls = Radix2EvaluationDomain::<ArkBls12377Fr>::new(size).unwrap();
+    domain_bls.fft_in_place(&mut ark_bls_data);
+    let ark_bls_as_icicle: Vec<BLS12377ScalarField> = ark_bls_data
+        .iter()
+        .map(|x| {
+            let bytes = x.into_bigint().to_bytes_le();
+            BLS12377ScalarField::from_bytes_le(bytes.as_slice())
+        })
+        .collect();
+    assert_eq!(ark_bls_as_icicle, host_bls12377_results);
+
+    println!("All comparisons with Arkworks passed ✅");
+
+    println!("Done!");
 }

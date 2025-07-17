@@ -80,7 +80,7 @@ stream.synchronize().unwrap();
 use icicle_runtime::{IcicleStream, DeviceVec, HostSlice};
 
 let mut stream = IcicleStream::create().unwrap();
-let mut device_memory = DeviceVec::device_malloc(1024).unwrap();
+let mut device_memory = DeviceVec::malloc(1024);
 // Perform operations using IcicleStream and related APIs
 stream.synchronize().unwrap();
 ```

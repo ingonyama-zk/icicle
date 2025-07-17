@@ -8,6 +8,10 @@ icicle-runtime = { path = "../../../wrappers/rust/icicle-runtime" }
 icicle-core = { path = "../../../wrappers/rust/icicle-core" }
 icicle-bn254 = { path = "../../../wrappers/rust/icicle-curves/icicle-bn254" }
 icicle-bls12-377 = { path = "../../../wrappers/rust/icicle-curves/icicle-bls12-377" }
+ark-bn254 = "0.4.0"
+ark-bls12-377 = "0.4.0"
+ark-ff = "0.4.0"
+ark-poly = "0.4.0"
 
 clap = { version = "<=4.4.12", features = ["derive"] }
 

@@ -14,7 +14,7 @@ use icicle_core::{
     traits::MontgomeryConvertible,
 };
 use icicle_runtime::{
-    memory::{DeviceVec, HostSlice},
+    memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
     stream::IcicleStream,
 };
 use rayon::prelude::*;
@@ -106,7 +106,7 @@ where
     // SAFETY: Reinterpreting Arkworks field elements as Icicle-specific scalars
     let icicle_scalars = unsafe { &mut *(ark_scalars as *mut _ as *mut [I]) };
 
-    let icicle_host_slice = HostSlice::from_mut_slice(&mut icicle_scalars[..]);
+    let icicle_host_slice = icicle_scalars.into_slice_mut();
 
     // Convert from Montgomery representation using the Icicle type's conversion method
     I::from_mont(icicle_host_slice, &IcicleStream::default()).unwrap();
@@ -123,7 +123,7 @@ where
     let icicle_scalars = unsafe { &*(ark_scalars as *const _ as *const [I]) };
 
     // Create a HostSlice from the mutable slice
-    let icicle_host_slice = HostSlice::from_slice(&icicle_scalars[..]);
+    let icicle_host_slice = icicle_scalars.into_slice();
 
     let mut icicle_scalars = DeviceVec::<I>::device_malloc_async(ark_scalars.len(), &stream).unwrap();
     icicle_scalars
@@ -282,9 +282,9 @@ fn main() {
     let start = Instant::now();
     msm(
         &icicle_scalars_dev,
-        HostSlice::from_slice(&icicle_affine_points),
+        icicle_affine_points.into_slice(),
         &MSMConfig::default(),
-        HostSlice::from_mut_slice(&mut icicle_msm_result),
+        icicle_msm_result.into_slice_mut(),
     )
     .unwrap();
     let duration = start.elapsed();
@@ -312,17 +312,14 @@ fn main() {
     }
 
     // transfer points to device
-    let mut d_icicle_affine_points = DeviceVec::<IcicleAffine>::device_malloc(icicle_affine_points.len()).unwrap();
-    d_icicle_affine_points
-        .copy_from_host(HostSlice::from_slice(&icicle_affine_points[..]))
-        .unwrap();
+    let d_icicle_affine_points = DeviceVec::<IcicleAffine>::from_host_slice(&icicle_affine_points);
 
     let start = Instant::now();
     msm(
         &icicle_scalars_dev,
         &d_icicle_affine_points,
         &MSMConfig::default(),
-        HostSlice::from_mut_slice(&mut icicle_msm_result),
+        icicle_msm_result.into_slice_mut(),
     )
     .unwrap();
     let duration = start.elapsed();

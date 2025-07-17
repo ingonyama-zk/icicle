@@ -144,15 +144,20 @@ use icicle_runtime::memory::{DeviceVec, HostSlice};
 
 // Copy data from host to device
 let input = vec![1, 2, 3, 4];
-let mut d_mem = DeviceVec::<u32>::device_malloc(input.len()).unwrap();
+let mut d_mem = DeviceVec::<u32>::device_malloc(input.len()).unwrap(); // old memory API example, for compatibility
+let mut d_mem = DeviceVec::<u32>::malloc(input.len()); // new memory alloc API example
 d_mem.copy_from_host(HostSlice::from_slice(&input)).unwrap();
-// OR
+
+let d_mem = DeviceVec::from_host_slice(&input); // new memory API example
+// or async way
 d_mem.copy_from_host_async(HostSlice::from_slice(&input, &stream)).unwrap();
 
 // Copy data back from device to host
-let mut output = vec![0; input.len()];
+let mut output = vec![0; input.len()]; // old memory API example, for compatibility
 d_mem.copy_to_host(HostSlice::from_mut_slice(&mut output)).unwrap();
-// OR
+
+let mut output = d_mem.to_host_vec(); // new memory API example
+// or async way
 d_mem.copy_to_host_async(HostSlice::from_mut_slice(&mut output, &stream)).unwrap();
 ```
 

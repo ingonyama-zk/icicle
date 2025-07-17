@@ -80,7 +80,7 @@ fn main() {
         HostSlice::from_slice(&scalars),
         HostSlice::from_slice(&points),
         &MSMConfig::default(),
-        HostSlice::from_mut_slice(&mut msm_results[..]),
+        msm_results.into_slice_mut(),
     )
     .unwrap();
 

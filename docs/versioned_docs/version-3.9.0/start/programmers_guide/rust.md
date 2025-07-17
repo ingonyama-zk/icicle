@@ -88,7 +88,7 @@ Memory can be allocated on the active device using the `DeviceVec` API. This mem
 use icicle_runtime::memory::DeviceVec;
 
 // Allocate 1024 elements on the device
-let mut device_memory: DeviceVec<u8> = DeviceVec::<u8>::device_malloc(1024).unwrap();
+let mut device_memory: DeviceVec<u8> = DeviceVec::<u8>::malloc(1024);
 ```
 
 The memory is released when the `DeviceVec` object is dropped.
@@ -144,7 +144,7 @@ use icicle_runtime::memory::{DeviceVec, HostSlice};
 
 // Copy data from host to device
 let input = vec![1, 2, 3, 4];
-let mut d_mem = DeviceVec::<u32>::device_malloc(input.len()).unwrap();
+let mut d_mem = DeviceVec::<u32>::malloc(input.len()).unwrap();
 d_mem.copy_from_host(HostSlice::from_slice(&input)).unwrap();
 // OR
 d_mem.copy_from_host_async(HostSlice::from_slice(&input, &stream)).unwrap();
@@ -255,10 +255,10 @@ fn main() {
 
     let mut msm_results = vec![G1Projective::zero(); 1];
     msm::msm(
-        HostSlice::from_slice(&scalars),
-        HostSlice::from_slice(&points),
+        scalars.into_slice(),
+        points.into_slice(),
         &MSMConfig::default(),
-        HostSlice::from_mut_slice(&mut msm_results[..]),
+        msm_results.into_slice_mut(),
     )
     .unwrap();
     println!("MSM result = {:?}", msm_results);
