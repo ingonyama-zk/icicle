@@ -173,5 +173,25 @@ macro_rules! impl_bignum {
                 Self { limbs }
             }
         }
+
+        impl $bignum {
+            /// Create a new value from a 32-bit integer without requiring the `BigNum` trait to be in scope.
+            #[inline(always)]
+            pub fn from_u32(val: u32) -> Self {
+                Self::from(val)
+            }
+
+            /// Returns the additive identity (0).
+            #[inline(always)]
+            pub fn zero() -> Self {
+                Self::from(0u32)
+            }
+
+            /// Returns the multiplicative identity (1).
+            #[inline(always)]
+            pub fn one() -> Self {
+                Self::from(1u32)
+            }
+        }
     };
 }

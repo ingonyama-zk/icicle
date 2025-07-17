@@ -1,5 +1,4 @@
 use icicle_core::affine::Affine;
-use icicle_core::bignum::BigNum;
 use icicle_core::projective::Projective;
 use icicle_core::{impl_curve, impl_field, impl_montgomery_convertible};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};

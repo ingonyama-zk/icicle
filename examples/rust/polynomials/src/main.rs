@@ -2,7 +2,6 @@ use icicle_babybear::field::ScalarField;
 use icicle_babybear::polynomials::DensePolynomial as PolynomialBabyBear;
 use icicle_bn254::curve::ScalarField as Bn254ScalarField;
 use icicle_bn254::polynomials::DensePolynomial as PolynomialBn254;
-use icicle_core::bignum::BigNum;
 
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 

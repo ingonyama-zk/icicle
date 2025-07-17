@@ -1,5 +1,4 @@
 use crate::curve::{G1Projective, G2Projective};
-use icicle_core::bignum::BigNum;
 use icicle_core::impl_field;
 use icicle_core::impl_pairing;
 use icicle_core::pairing::Pairing;

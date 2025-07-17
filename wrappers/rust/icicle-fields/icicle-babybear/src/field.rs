@@ -1,6 +1,5 @@
 use icicle_core::{impl_field, impl_montgomery_convertible};
 
-use icicle_core::bignum::BigNum;
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
