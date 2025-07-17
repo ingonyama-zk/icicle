@@ -63,10 +63,10 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
   auto step_start = std::chrono::high_resolution_clock::now();
   // Each call resets timer
   auto log_step = [&](const char* msg) {
-    auto step_end = std::chrono::high_resolution_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
-    std::cout << msg << " (" << elapsed << " ms)" << std::endl;
-    step_start = std::chrono::high_resolution_clock::now();
+    // auto step_end = std::chrono::high_resolution_clock::now();
+    // auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
+    // std::cout << msg << " (" << elapsed << " ms)" << std::endl;
+    // step_start = std::chrono::high_resolution_clock::now();
   };
   /* ────────────────────────────────────────────────── */
 
@@ -267,10 +267,10 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   /* ───────────────── TIMING HELPERS ───────────────── */
   auto step_start = std::chrono::high_resolution_clock::now();
   auto log_step = [&](const char* msg) {
-    auto step_end = std::chrono::high_resolution_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
-    std::cout << msg << " (" << elapsed << " ms)" << std::endl;
-    step_start = std::chrono::high_resolution_clock::now();
+    // auto step_end = std::chrono::high_resolution_clock::now();
+    // auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
+    // std::cout << msg << " (" << elapsed << " ms)" << std::endl;
+    // step_start = std::chrono::high_resolution_clock::now();
   };
   /* ────────────────────────────────────────────────── */
 
