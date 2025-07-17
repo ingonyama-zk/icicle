@@ -212,10 +212,10 @@ void benchmark_program()
   ICICLE_LOG_INFO << "Labrador Benchmark";
 
   // Benchmark parameters from the original code
-  std::vector<std::tuple<size_t, size_t>> arr_nr{{1 << 9, 1 << 5}};
-  std::vector<std::tuple<size_t, size_t>> num_constraint{{10, 10}};
-  size_t NUM_REP = 1;
-  bool SKIP_VERIF = true;
+  std::vector<std::tuple<size_t, size_t>> arr_nr{{1<<6, 1<<3},{1<<8, 1<<4}, {1 << 9, 1 << 5}};
+  std::vector<std::tuple<size_t, size_t>> num_constraint{{1, 1}, {10, 10}, {10, 100}, {100, 100}};
+  size_t NUM_REP = 10;
+  bool SKIP_VERIF = false;
 
   std::vector<BenchmarkResult> results;
 
