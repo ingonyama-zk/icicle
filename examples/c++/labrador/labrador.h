@@ -166,6 +166,13 @@ namespace icicle {
       ConfigExtension* ext = nullptr; ///< Optional backend-specific configuration (e.g., for CUDA/HIP/OpenCL).
     };
 
+    inline eIcicleError random_sampling(
+      size_t output_size, bool fast_mode, const std::byte* seed, size_t seed_len, const VecOpsConfig& cfg, Zq* output)
+    {
+      ScopedCpuDevice force_cpu{};
+      return icicle::random_sampling(output_size, fast_mode, seed, seed_len, cfg, output);
+    }
+
     /// @brief Uniform Zq^n sampling.
     /// Used to sample aggregation scalars or projection vectors.
     /// Supports two modes of operation:
@@ -174,7 +181,8 @@ namespace icicle {
     inline eIcicleError random_sampling(
       size_t output_size, bool fast_mode, const std::byte* seed, size_t seed_len, const VecOpsConfig& cfg, Tq* output)
     {
-      return random_sampling(output_size * Tq::d, fast_mode, seed, seed_len, cfg, (Zq*)output);
+      ScopedCpuDevice force_cpu{};
+      return icicle::random_sampling(output_size * Tq::d, fast_mode, seed, seed_len, cfg, (Zq*)output);
     }
 
     /// TODO update:
@@ -189,6 +197,7 @@ namespace icicle {
       const VecOpsConfig& config,
       Rq* output)
     {
+      // ScopedCpuDevice force_cpu{};
       return icicle::sample_challenge_space_polynomials(seed, seed_len, size, ones, twos, norm, config, output);
     }
 
