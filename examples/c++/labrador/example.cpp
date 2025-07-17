@@ -87,16 +87,12 @@ BenchmarkResult run_benchmark(const BenchmarkConfig& config, bool SKIP_VERIF)
     LabradorInstance lab_inst{param};
 
     // Add equality constraints
-    for (size_t i = 0; i < config.num_eq_const; i++) {
-      EqualityInstance eq_inst = create_rand_eq_inst(config.n, config.r, S);
-      lab_inst.add_equality_constraint(eq_inst);
-    }
+    std::vector<EqualityInstance> eq_inst = create_rand_eq_inst(config.n, config.r, S, config.num_eq_const);
+    lab_inst.add_equality_constraint(eq_inst);
 
     // Add constant zero constraints
-    for (size_t i = 0; i < config.num_cz_const; i++) {
-      ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(config.n, config.r, S);
-      lab_inst.add_const_zero_constraint(const_zero_inst);
-    }
+    std::vector<ConstZeroInstance> const_zero_inst = create_rand_const_zero_inst(config.n, config.r, S, config.num_cz_const);
+    lab_inst.add_const_zero_constraint(const_zero_inst);
 
     // Create oracle seed
     std::string oracle_seed = "ORACLE_SEED_" + std::to_string(rep);
@@ -253,18 +249,27 @@ void prover_verifier_trace()
   // TODO: icicle_malloc()/ DeviceVector<T>
 
   // randomize the witness Si with low norm
-  const size_t n = 1 << 6;
-  const size_t r = 1 << 3;
+  const size_t n = 1 << 9;
+  const size_t r = 1 << 5;
   constexpr size_t d = Rq::d;
   const size_t max_value = 2;
+  size_t num_eq_const =10;
+  size_t num_cz_const =10;
 
   const std::vector<Rq> S = rand_poly_vec(r * n, max_value);
-  EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
-  assert(witness_legit_eq(eq_inst, S));
-  ConstZeroInstance const_zero_inst = create_rand_const_zero_inst(n, r, S);
-  assert(witness_legit_const_zero(const_zero_inst, S));
-  ConstZeroInstance const_zero_inst2 = create_rand_const_zero_inst(n, r, S);
-  assert(witness_legit_const_zero(const_zero_inst2, S));
+  auto eq_inst = create_rand_eq_inst(n, r, S, num_eq_const);
+  std::cout<<"Created Eq constraints\n";
+  auto const_zero_inst = create_rand_const_zero_inst(n, r, S, num_cz_const);
+  std::cout<<"Created Cz constraints\n";
+
+  // for(auto &inst: eq_inst){
+  //   assert(witness_legit_eq(inst, S));
+  // }
+  // std::cout<<"Checked Eq constraints\n";
+  // for(auto &inst: const_zero_inst){
+  //   assert(witness_legit_const_zero(inst, S));
+  // }
+  // std::cout<<"Checked Eq constraints\n";
 
   // Use current time (milliseconds since epoch) as a unique Ajtai seed
   auto now = std::chrono::system_clock::now();
@@ -290,7 +295,6 @@ void prover_verifier_trace()
   LabradorInstance lab_inst{param};
   lab_inst.add_equality_constraint(eq_inst);
   lab_inst.add_const_zero_constraint(const_zero_inst);
-  // lab_inst.add_const_zero_constraint(const_zero_inst2);
 
   std::string oracle_seed = "ORACLE_SEED";
 

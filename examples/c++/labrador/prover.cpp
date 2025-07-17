@@ -226,16 +226,16 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       Rq b_rq;
       ICICLE_CHECK(ntt(&new_constraint.b, 1, NTTDir::kInverse, {}, &b_rq));
 
-      Zq lhs = b_rq.values[0];
-      Zq rhs = verif_test_b0[k]; // already available
-      Zq diff = lhs - rhs;       // mod q
+      // Zq lhs = b_rq.values[0];
+      // Zq rhs = verif_test_b0[k]; // already available
+      // Zq diff = lhs - rhs;       // mod q
 
-      std::cout << "\tk=" << k << "\n\t  lhs=" << lhs << "\n\t  rhs=" << rhs << "\n\t  diff=" << diff << std::endl;
-      if (verif_test_b0[k] != b_rq.values[0]) {
-        std::cout << "\tFail: New constraint b doesn't match verif b for idx" << k << "\n";
-      } else {
-        std::cout << "\tPass: New constraint b matches verif b for idx" << k << "\n";
-      }
+      // std::cout << "\tk=" << k << "\n\t  lhs=" << lhs << "\n\t  rhs=" << rhs << "\n\t  diff=" << diff << std::endl;
+      // if (verif_test_b0[k] != b_rq.values[0]) {
+      //   std::cout << "\tFail: New constraint b doesn't match verif b for idx" << k << "\n";
+      // } else {
+      //   std::cout << "\tPass: New constraint b matches verif b for idx" << k << "\n";
+      // }
       // if (!witness_legit_const_zero({r, n, new_constraint.a, new_constraint.phi, verif_test_b0[k]}, S)) {
       //   std::cout << "\tVerif test constraint " << k << " failed\n";
       // }

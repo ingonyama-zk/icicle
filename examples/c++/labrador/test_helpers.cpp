@@ -49,11 +49,15 @@ std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value)
 }
 
 // Generate a random EqualityInstance satisfied by the given witness S
-EqualityInstance create_rand_eq_inst(size_t n, size_t r, const std::vector<Rq>& S)
+std::vector<EqualityInstance> create_rand_eq_inst(size_t n, size_t r, const std::vector<Rq>& S, size_t num_const)
 {
   int64_t q = get_q<Zq>();
   // set a and phi completely randomly in Tq
-  EqualityInstance eq_inst{r, n, rand_poly_vec(r * r, q), rand_poly_vec(n * r, q), zero()};
+  // view as num_const X r^2 matrix
+  const std::vector<Tq> A = rand_poly_vec(num_const*r * r, q);
+  // view as num_const X rn matrix
+  const std::vector<Tq> Phi = rand_poly_vec(num_const*r * n, q);
+  std::vector<Tq> b(num_const);
 
   // S_hat = NTT(S)
   std::vector<Tq> S_hat(r * n);
@@ -66,36 +70,46 @@ EqualityInstance create_rand_eq_inst(size_t n, size_t r, const std::vector<Rq>& 
   std::vector<Tq> G_hat(r * r);
   ICICLE_CHECK(matmul(S_hat.data(), r, n, S_hat_transposed.data(), n, r, {}, G_hat.data()));
 
-  Tq G_A_inner_prod, phi_S_inner_prod;
-  // G_A_inner_prod = <G, a>
-  ICICLE_CHECK(matmul(G_hat.data(), 1, r * r, eq_inst.a.data(), r * r, 1, {}, &G_A_inner_prod));
-  // phi_S_inner_prod = <S, phi>
-  ICICLE_CHECK(matmul(S_hat.data(), 1, r * n, eq_inst.phi.data(), r * n, 1, {}, &phi_S_inner_prod));
+  std::vector<Tq> G_A_inner_prod(num_const), phi_S_inner_prod(num_const);
+  // G_A_inner_prod = A@G_hat
+  ICICLE_CHECK(matmul(A.data(), num_const, r * r, G_hat.data(), r * r, 1, {}, G_A_inner_prod.data()));
+  // phi_S_inner_prod = Phi@S
+  ICICLE_CHECK(matmul(Phi.data(), num_const, r * n, S_hat.data(), r * n, 1, {}, phi_S_inner_prod.data()));
 
   // b = -(<G, a> + <S, phi>)
-  ICICLE_CHECK(vector_add(G_A_inner_prod.values, phi_S_inner_prod.values, Rq::d, {}, eq_inst.b.values));
+  ICICLE_CHECK(vector_add(G_A_inner_prod.data(), phi_S_inner_prod.data(), num_const, {}, b.data()));
   Zq minus_1 = Zq::from(1).neg();
-  ICICLE_CHECK(scalar_mul_vec(&minus_1, eq_inst.b.values, Rq::d, {}, eq_inst.b.values));
+  ICICLE_CHECK(scalar_mul_vec(&minus_1, reinterpret_cast<Zq*>(b.data()), Rq::d*num_const, {}, reinterpret_cast<Zq*>(b.data())));
+
+  std::vector<EqualityInstance> eq_inst; 
+
+  for(size_t i=0; i<num_const; i++){
+    EqualityInstance new_eq_inst{r,n, {&A[i*r*r], &A[i*r*r]+r*r}, {&Phi[i*r*n], &Phi[i*r*n]+r*n}, b[i]};
+    eq_inst.push_back(new_eq_inst);
+  }
   // Now S is a witness for the equality constraint eq_inst
   return eq_inst;
 }
 
 // Generate a random ConstZeroInstance satisfied by the given witness S
-ConstZeroInstance create_rand_const_zero_inst(size_t n, size_t r, const std::vector<Rq>& S)
+std::vector<ConstZeroInstance> create_rand_const_zero_inst(size_t n, size_t r, const std::vector<Rq>& S, size_t num_const)
 {
   int64_t q = get_q<Zq>();
-  EqualityInstance eq_inst = create_rand_eq_inst(n, r, S);
+  const std::vector<EqualityInstance> eq_inst = create_rand_eq_inst(n, r, S, num_const);
   // set a, phi equal to the random EqualityInstance
-  ConstZeroInstance const_zero_inst{r, n, eq_inst.a, eq_inst.phi, Zq::zero()};
+  std::vector<ConstZeroInstance> const_zero_inst;
+  for(size_t i=0; i<num_const; i++){
+    ConstZeroInstance new_cz_inst{r, n, eq_inst[i].a, eq_inst[i].phi, Zq::zero()};
 
-  // For b only set const coeff equal to the one in eq_inst.b
-  // eq_inst_b_unhat = INTT(eq_inst.b)
-  Rq eq_inst_b_unhat;
-  ICICLE_CHECK(ntt(&eq_inst.b, 1, NTTDir::kInverse, {}, &eq_inst_b_unhat));
+    // For b only set const coeff equal to the one in eq_inst[i].b
+    // eq_inst_b_unhat = INTT(eq_inst[i].b)
+    Rq eq_inst_b_unhat;
+    ICICLE_CHECK(ntt(&eq_inst[i].b, 1, NTTDir::kInverse, {}, &eq_inst_b_unhat));
 
-  // set const_zero_inst.b equal to const coeff of eq_inst_b
-
-  const_zero_inst.b = eq_inst_b_unhat.values[0];
+    // set new_cz_inst.b equal to const coeff of eq_inst_b
+    new_cz_inst.b = eq_inst_b_unhat.values[0];
+    const_zero_inst.push_back(new_cz_inst);
+  }
   return const_zero_inst;
 }
 

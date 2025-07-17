@@ -22,10 +22,10 @@ bool poly_vec_eq(const PolyRing* vec1, const PolyRing* vec2, size_t size);
 std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value);
 
 // Generate a random EqualityInstance satisfied by the given witness S
-EqualityInstance create_rand_eq_inst(size_t n, size_t r, const std::vector<Rq>& S);
+std::vector<EqualityInstance> create_rand_eq_inst(size_t n, size_t r, const std::vector<Rq>& S, size_t num_const);
 
 // Generate a random ConstZeroInstance satisfied by the given witness S
-ConstZeroInstance create_rand_const_zero_inst(size_t n, size_t r, const std::vector<Rq>& S);
+std::vector<ConstZeroInstance> create_rand_const_zero_inst(size_t n, size_t r, const std::vector<Rq>& S, size_t num_const);
 
 // Check if the given EqualityInstance is satisfied by the witness S or not
 bool witness_legit_eq(const EqualityInstance& eq_inst, const std::vector<Rq>& S);

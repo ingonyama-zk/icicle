@@ -210,11 +210,29 @@ struct LabradorInstance {
     equality_constraints.push_back(inst);
   }
 
+  void add_equality_constraint(const std::vector<EqualityInstance>& instances)
+  {
+    for (const auto& inst : instances) {
+      if (inst.r != param.r || inst.n != param.n)
+        throw std::invalid_argument("EqualityInstance incompatible with LabradorInstance");
+    }
+    equality_constraints.insert(equality_constraints.end(), instances.begin(), instances.end());
+  }
+
   void add_const_zero_constraint(const ConstZeroInstance& inst)
   {
     if (inst.r != param.r || inst.n != param.n)
       throw std::invalid_argument("ConstZeroInstance incompatible with LabradorInstance");
     const_zero_constraints.push_back(inst);
+  }
+
+  void add_const_zero_constraint(const std::vector<ConstZeroInstance>& instances)
+  {
+    for (const auto& inst : instances) {
+      if (inst.r != param.r || inst.n != param.n)
+        throw std::invalid_argument("ConstZeroInstance incompatible with LabradorInstance");
+    }
+    const_zero_constraints.insert(const_zero_constraints.end(), instances.begin(), instances.end());
   }
 
   /// @brief Aggregates all equality constraints into a single equality constraint by creating a random linear
