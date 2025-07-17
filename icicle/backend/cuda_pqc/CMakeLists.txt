@@ -26,24 +26,25 @@ add_library(icicle_backend_cuda_pqc_interface INTERFACE)
 
 # When using static linking, we need to use whole-archive to ensure registration works
 if(ICICLE_STATIC_LINK)
-  # On Linux/GCC/Clang, use --whole-archive
-  if(UNIX AND NOT APPLE)
+  if(WIN32)
+    message(WARNING "EXPERIMENTAL: Windows platform is not supported yet, this feature wasn't tested yet")
+
+    if(MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      target_link_libraries(icicle_backend_cuda_pqc_interface INTERFACE 
+        "/WHOLEARCHIVE:icicle_backend_cuda_pqc"
+      )
+    else()
+      target_link_libraries(icicle_backend_cuda_pqc_interface INTERFACE 
+        "-Wl,--whole-archive" 
+        icicle_backend_cuda_pqc 
+        "-Wl,--no-whole-archive"
+      )
+    endif()
+  else()
     target_link_libraries(icicle_backend_cuda_pqc_interface INTERFACE 
       "-Wl,--whole-archive" 
       icicle_backend_cuda_pqc 
       "-Wl,--no-whole-archive"
-    )
-  # On macOS, use -force_load
-  elseif(APPLE)
-    target_link_libraries(icicle_backend_cuda_pqc_interface INTERFACE 
-      "-Wl,-force_load" 
-      "$<TARGET_FILE:icicle_backend_cuda_pqc>"
-    )
-  # On Windows, use /WHOLEARCHIVE
-  elseif(WIN32)
-    message(WARNING "EXPERIMENTAL: Windows platform is not supported yet, this feature wasn't tested yet")
-    target_link_libraries(icicle_backend_cuda_pqc_interface INTERFACE 
-      "/WHOLEARCHIVE:icicle_backend_cuda_pqc"
     )
   endif()
 else()

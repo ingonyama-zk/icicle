@@ -61,21 +61,32 @@ macro(add_cuda_test name)
     # ensure copy
     add_dependencies(${name} copy_pqc_libs copy_test_data)
     if(ICICLE_STATIC_LINK)
-        if(UNIX AND NOT APPLE)
+        if(WIN32)
+            message(WARNING "EXPERIMENTAL: Windows platform is not supported yet, this feature wasn't tested yet")
+
+            if(MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            target_link_options(${name} PRIVATE
+                "/WHOLEARCHIVE:${CMAKE_BINARY_DIR}/lib/libicicle_pqc.a"
+                "/WHOLEARCHIVE:${CMAKE_BINARY_DIR}/lib/libicicle_backend_cuda_pqc.a"
+                "/WHOLEARCHIVE:${CMAKE_BINARY_DIR}/lib/libicicle_device.a"
+            )
+            else()
             target_link_options(${name} PRIVATE "LINKER:--whole-archive")
             target_link_libraries(${name} PRIVATE
                 ${CMAKE_BINARY_DIR}/lib/libicicle_pqc.a
                 ${CMAKE_BINARY_DIR}/lib/libicicle_backend_cuda_pqc.a
-                ${CMAKE_BINARY_DIR}/lib/libicicle_device.a)
+                ${CMAKE_BINARY_DIR}/lib/libicicle_device.a
+            )
             target_link_options(${name} PRIVATE "LINKER:--no-whole-archive")
-        elseif(APPLE)
-            target_link_options(${name} PRIVATE "LINKER:-force_load" ${CMAKE_BINARY_DIR}/lib/libicicle_pqc.a)
-            target_link_options(${name} PRIVATE "LINKER:-force_load" ${CMAKE_BINARY_DIR}/lib/libicicle_backend_cuda_pqc.a)
-        elseif(MSVC)
-            target_link_options(${name} PRIVATE "/WHOLEARCHIVE:${CMAKE_BINARY_DIR}/lib/libicicle_pqc.a")
-            target_link_options(${name} PRIVATE "/WHOLEARCHIVE:${CMAKE_BINARY_DIR}/lib/libicicle_backend_cuda_pqc.a")
+            endif()
         else()
-            target_link_libraries(${name} PRIVATE ${CMAKE_BINARY_DIR}/lib/libicicle_pqc.a ${CMAKE_BINARY_DIR}/lib/libicicle_backend_cuda_pqc.a)
+            target_link_options(${name} PRIVATE "LINKER:--whole-archive")
+            target_link_libraries(${name} PRIVATE
+            ${CMAKE_BINARY_DIR}/lib/libicicle_pqc.a
+            ${CMAKE_BINARY_DIR}/lib/libicicle_backend_cuda_pqc.a
+            ${CMAKE_BINARY_DIR}/lib/libicicle_device.a
+            )
+            target_link_options(${name} PRIVATE "LINKER:--no-whole-archive")
         endif()
         target_link_libraries(${name} PRIVATE ${CMAKE_BINARY_DIR}/lib/libicicle_device.a dl pthread)
     else()

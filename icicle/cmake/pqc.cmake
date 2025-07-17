@@ -36,29 +36,32 @@ function(setup_pqc_package_target)
   
   # Link all the required components to the package with proper whole-archive handling
   if(CUDA_PQC_BACKEND AND ICICLE_STATIC_LINK)
-    # For static builds with CUDA backend, use --whole-archive for all libraries
-    if(UNIX AND NOT APPLE)
+    # For static builds with CUDA backend, use whole-archive for all libraries
+    if(WIN32)
+      message(WARNING "EXPERIMENTAL: Windows platform is not supported yet, this feature wasn't tested yet")
+
+      if(MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_link_libraries(icicle_pqc_package INTERFACE
+          "/WHOLEARCHIVE:icicle_device"
+          "/WHOLEARCHIVE:icicle_pqc"
+          "/WHOLEARCHIVE:icicle_backend_cuda_pqc"
+        )
+      else()
+        target_link_libraries(icicle_pqc_package INTERFACE
+          "-Wl,--whole-archive"
+          icicle_device
+          icicle_pqc
+          icicle_backend_cuda_pqc
+          "-Wl,--no-whole-archive"
+        )
+      endif()
+    else()
       target_link_libraries(icicle_pqc_package INTERFACE
         "-Wl,--whole-archive"
         icicle_device
-        icicle_pqc  
+        icicle_pqc
         icicle_backend_cuda_pqc
         "-Wl,--no-whole-archive"
-      )
-    elseif(APPLE)
-      target_link_libraries(icicle_pqc_package INTERFACE
-        "-Wl,-force_load"
-        "$<TARGET_FILE:icicle_device>"
-        "-Wl,-force_load"
-        "$<TARGET_FILE:icicle_pqc>"
-        "-Wl,-force_load"
-        "$<TARGET_FILE:icicle_backend_cuda_pqc>"
-      )
-    elseif(WIN32)
-      target_link_libraries(icicle_pqc_package INTERFACE
-        "/WHOLEARCHIVE:icicle_device"
-        "/WHOLEARCHIVE:icicle_pqc"
-        "/WHOLEARCHIVE:icicle_backend_cuda_pqc"
       )
     endif()
   else()
