@@ -51,12 +51,13 @@ std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value)
 // Generate a random EqualityInstance satisfied by the given witness S
 std::vector<EqualityInstance> create_rand_eq_inst(size_t n, size_t r, const std::vector<Rq>& S, size_t num_const)
 {
+  if (num_const == 0) { return {}; }
   int64_t q = get_q<Zq>();
   // set a and phi completely randomly in Tq
   // view as num_const X r^2 matrix
-  const std::vector<Tq> A = rand_poly_vec(num_const*r * r, q);
+  const std::vector<Tq> A = rand_poly_vec(num_const * r * r, q);
   // view as num_const X rn matrix
-  const std::vector<Tq> Phi = rand_poly_vec(num_const*r * n, q);
+  const std::vector<Tq> Phi = rand_poly_vec(num_const * r * n, q);
   std::vector<Tq> b(num_const);
 
   // S_hat = NTT(S)
@@ -79,12 +80,14 @@ std::vector<EqualityInstance> create_rand_eq_inst(size_t n, size_t r, const std:
   // b = -(<G, a> + <S, phi>)
   ICICLE_CHECK(vector_add(G_A_inner_prod.data(), phi_S_inner_prod.data(), num_const, {}, b.data()));
   Zq minus_1 = Zq::from(1).neg();
-  ICICLE_CHECK(scalar_mul_vec(&minus_1, reinterpret_cast<Zq*>(b.data()), Rq::d*num_const, {}, reinterpret_cast<Zq*>(b.data())));
+  ICICLE_CHECK(
+    scalar_mul_vec(&minus_1, reinterpret_cast<Zq*>(b.data()), Rq::d * num_const, {}, reinterpret_cast<Zq*>(b.data())));
 
-  std::vector<EqualityInstance> eq_inst; 
+  std::vector<EqualityInstance> eq_inst;
 
-  for(size_t i=0; i<num_const; i++){
-    EqualityInstance new_eq_inst{r,n, {&A[i*r*r], &A[i*r*r]+r*r}, {&Phi[i*r*n], &Phi[i*r*n]+r*n}, b[i]};
+  for (size_t i = 0; i < num_const; i++) {
+    EqualityInstance new_eq_inst{
+      r, n, {&A[i * r * r], &A[i * r * r] + r * r}, {&Phi[i * r * n], &Phi[i * r * n] + r * n}, b[i]};
     eq_inst.push_back(new_eq_inst);
   }
   // Now S is a witness for the equality constraint eq_inst
@@ -92,13 +95,15 @@ std::vector<EqualityInstance> create_rand_eq_inst(size_t n, size_t r, const std:
 }
 
 // Generate a random ConstZeroInstance satisfied by the given witness S
-std::vector<ConstZeroInstance> create_rand_const_zero_inst(size_t n, size_t r, const std::vector<Rq>& S, size_t num_const)
+std::vector<ConstZeroInstance>
+create_rand_const_zero_inst(size_t n, size_t r, const std::vector<Rq>& S, size_t num_const)
 {
+  if (num_const == 0) { return {}; }
   int64_t q = get_q<Zq>();
   const std::vector<EqualityInstance> eq_inst = create_rand_eq_inst(n, r, S, num_const);
   // set a, phi equal to the random EqualityInstance
   std::vector<ConstZeroInstance> const_zero_inst;
-  for(size_t i=0; i<num_const; i++){
+  for (size_t i = 0; i < num_const; i++) {
     ConstZeroInstance new_cz_inst{r, n, eq_inst[i].a, eq_inst[i].phi, Zq::zero()};
 
     // For b only set const coeff equal to the one in eq_inst[i].b
