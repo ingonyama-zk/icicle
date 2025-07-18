@@ -7,6 +7,7 @@
 #include "shared.h"
 #include "oracle.h"
 #include "test_helpers.h"
+#include "device_vector.h"
 
 /// @brief Struct that proves the base case of the Labrador
 struct LabradorBaseProver {

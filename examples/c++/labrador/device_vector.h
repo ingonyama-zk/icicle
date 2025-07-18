@@ -8,7 +8,7 @@
 #include <vector>
 
 /**
- * @class deviceVector
+ * @class DeviceVector
  * @brief A dynamic array container for GPU/device memory
  *
  * This class provides an STL vector-like interface for managing memory on
@@ -18,7 +18,7 @@
  * @tparam T The type of elements stored in the vector
  */
 template <typename T>
-class deviceVector
+class DeviceVector
 {
 private:
   T* data_;         ///< Pointer to device memory
@@ -40,7 +40,7 @@ public:
    * @brief Default constructor
    * Creates an empty vector with no allocated memory
    */
-  deviceVector() : data_(nullptr), size_(0), capacity_(0) {}
+  DeviceVector() : data_(nullptr), size_(0), capacity_(0) {}
 
   /**
    * @brief Size constructor
@@ -49,7 +49,7 @@ public:
    * Creates a vector with the specified size. Elements are
    * uninitialized on the device.
    */
-  explicit deviceVector(size_t size);
+  explicit DeviceVector(size_t size);
 
   /**
    * @brief Constructor from std::vector
@@ -57,30 +57,30 @@ public:
    *
    * Allocates device memory and copies all elements from the host vector
    */
-  explicit deviceVector(const std::vector<T>& other);
+  explicit DeviceVector(const std::vector<T>& other);
 
   /**
    * @brief Copy constructor
-   * @param other Source deviceVector to copy
+   * @param other Source DeviceVector to copy
    *
    * Creates a deep copy with new device memory allocation
    */
-  deviceVector(const deviceVector& other);
+  DeviceVector(const DeviceVector& other);
 
   /**
    * @brief Destructor
    * Frees all allocated device memory
    */
-  ~deviceVector();
+  ~DeviceVector();
 
   /**
    * @brief Assignment operator
-   * @param other Source deviceVector to copy
+   * @param other Source DeviceVector to copy
    * @return Reference to this vector
    *
    * Performs deep copy, reusing existing allocation if possible
    */
-  deviceVector& operator=(const deviceVector& other);
+  DeviceVector& operator=(const DeviceVector& other);
 
   // Capacity operations
   /**
@@ -134,12 +134,12 @@ public:
   void push_back(const T& value);
 
   /**
-   * @brief Append elements from another deviceVector
+   * @brief Append elements from another DeviceVector
    * @param vec Source vector on device
    *
    * Performs device-to-device copy
    */
-  void push_back(const deviceVector<T>& vec);
+  void push_back(const DeviceVector<T>& vec);
 
   /**
    * @brief Append elements from std::vector
@@ -228,12 +228,7 @@ public:
 // Definitions
 
 template <typename T>
-deviceVector<T>::deviceVector() : data_(nullptr), size_(0), capacity_(0)
-{
-}
-
-template <typename T>
-deviceVector<T>::~deviceVector()
+DeviceVector<T>::~DeviceVector()
 {
   if (data_) { ICICLE_CHECK(icicle_free(data_)); }
 }
@@ -241,7 +236,7 @@ deviceVector<T>::~deviceVector()
 // Private helper - grow function
 // Growth strategy: double the capacity or use min_capacity, whichever is larger
 template <typename T>
-void deviceVector<T>::grow(size_t min_capacity)
+void DeviceVector<T>::grow(size_t min_capacity)
 {
   if (min_capacity <= capacity_) { return; }
 
@@ -265,14 +260,14 @@ void deviceVector<T>::grow(size_t min_capacity)
 
 // Reserve function
 template <typename T>
-void deviceVector<T>::reserve(size_t new_capacity)
+void DeviceVector<T>::reserve(size_t new_capacity)
 {
   if (new_capacity > capacity_) { grow(new_capacity); }
 }
 
 // Size constructor: Note it doesn't set the memory to the default constructor-- it sets all bytes to 0 in the memory
 template <typename T>
-deviceVector<T>::deviceVector(size_t count) : data_(nullptr), size_(count), capacity_(count)
+DeviceVector<T>::DeviceVector(size_t count) : data_(nullptr), size_(count), capacity_(count)
 {
   if (count > 0) {
     ICICLE_CHECK(icicle_malloc(reinterpret_cast<void**>(&data_), count * sizeof(T)));
@@ -280,17 +275,9 @@ deviceVector<T>::deviceVector(size_t count) : data_(nullptr), size_(count), capa
   }
 }
 
-// Doesn't reduce the allocated memory
-template <typename T>
-void deviceVector<T>::clear()
-{
-  size_ = 0;
-  // Note: we keep the capacity and allocated memory
-}
-
 // Resize function
 template <typename T>
-void deviceVector<T>::resize(size_t new_size)
+void DeviceVector<T>::resize(size_t new_size)
 {
   if (new_size > capacity_) { grow(new_size); }
 
@@ -305,7 +292,7 @@ void deviceVector<T>::resize(size_t new_size)
 
 // 4. Push_back function
 template <typename T>
-void deviceVector<T>::push_back(const T& value)
+void DeviceVector<T>::push_back(const T& value)
 {
   if (size_ == capacity_) { grow(size_ + 1); }
 
@@ -314,9 +301,9 @@ void deviceVector<T>::push_back(const T& value)
   size_++;
 }
 
-// Push_back for deviceVector
+// Push_back for DeviceVector
 template <typename T>
-void deviceVector<T>::push_back(const deviceVector<T>& vec)
+void DeviceVector<T>::push_back(const DeviceVector<T>& vec)
 {
   if (vec.size_ == 0) { return; }
 
@@ -330,7 +317,7 @@ void deviceVector<T>::push_back(const deviceVector<T>& vec)
 
 // Push_back for std::vector
 template <typename T>
-void deviceVector<T>::push_back(const std::vector<T>& vec)
+void DeviceVector<T>::push_back(const std::vector<T>& vec)
 {
   if (vec.size() == 0) { return; }
 
@@ -344,7 +331,7 @@ void deviceVector<T>::push_back(const std::vector<T>& vec)
 
 // Copy from host function
 template <typename T>
-void deviceVector<T>::copy_from_host(const T* host_data, size_t count)
+void DeviceVector<T>::copy_from_host(const T* host_data, size_t count)
 {
   if (count == 0) { return; }
 
@@ -362,14 +349,14 @@ void deviceVector<T>::copy_from_host(const T* host_data, size_t count)
 
 // Constructor from std::vector
 template <typename T>
-deviceVector<T>::deviceVector(const std::vector<T>& other) : data_(nullptr), size_(0), capacity_(0)
+DeviceVector<T>::DeviceVector(const std::vector<T>& other) : data_(nullptr), size_(0), capacity_(0)
 {
   copy_from_host(other.data(), other.size());
 }
 
 // Copy to host function
 template <typename T>
-void deviceVector<T>::copy_to_host(T* host_data, size_t count) const
+void DeviceVector<T>::copy_to_host(T* host_data, size_t count) const
 {
   if (count == 0 || size_ == 0) { return; }
 
@@ -378,7 +365,7 @@ void deviceVector<T>::copy_to_host(T* host_data, size_t count) const
   icicle_copy_to_host(host_data, data_, elements_to_copy * sizeof(T));
 }
 template <typename T>
-std::vector<T> deviceVector<T>::as_host_vector() const
+std::vector<T> DeviceVector<T>::as_host_vector() const
 {
   std::vector<T> v(size_);
   copy_to_host(v.data(), size_);
@@ -387,7 +374,7 @@ std::vector<T> deviceVector<T>::as_host_vector() const
 
 // Copy constructor
 template <typename T>
-deviceVector<T>::deviceVector(const deviceVector& other) : data_(nullptr), size_(0), capacity_(0)
+DeviceVector<T>::DeviceVector(const DeviceVector& other) : data_(nullptr), size_(0), capacity_(0)
 {
   if (other.size_ > 0) {
     ICICLE_CHECK(icicle_malloc(reinterpret_cast<void**>(&data_), other.size_ * sizeof(T)));
@@ -401,7 +388,7 @@ deviceVector<T>::deviceVector(const deviceVector& other) : data_(nullptr), size_
 
 // Assignment operator
 template <typename T>
-deviceVector<T>& deviceVector<T>::operator=(const deviceVector& other)
+DeviceVector<T>& DeviceVector<T>::operator=(const DeviceVector& other)
 {
   if (this != &other) {
     // Resize if necessary
@@ -421,9 +408,9 @@ deviceVector<T>& deviceVector<T>::operator=(const deviceVector& other)
 
 // Get single element (copies from device to host)
 template <typename T>
-T deviceVector<T>::get(size_t idx) const
+T DeviceVector<T>::get(size_t idx) const
 {
-  if (idx >= size_) { throw std::out_of_range("deviceVector::get: index out of range"); }
+  if (idx >= size_) { throw std::out_of_range("DeviceVector::get: index out of range"); }
   T value;
   ICICLE_CHECK(icicle_copy_to_host(&value, data_ + idx, sizeof(T)));
   return value;
@@ -431,18 +418,18 @@ T deviceVector<T>::get(size_t idx) const
 
 // Set single element (copies from host to device)
 template <typename T>
-void deviceVector<T>::set(size_t idx, const T& value)
+void DeviceVector<T>::set(size_t idx, const T& value)
 {
-  if (idx >= size_) { throw std::out_of_range("deviceVector::set: index out of range"); }
+  if (idx >= size_) { throw std::out_of_range("DeviceVector::set: index out of range"); }
   ICICLE_CHECK(icicle_copy_to_device(data_ + idx, &value, sizeof(T)));
 }
 
 template <typename T>
-std::vector<T> deviceVector<T>::slice(size_t start, size_t stop) const
+std::vector<T> DeviceVector<T>::slice(size_t start, size_t stop) const
 {
   // Handle bounds
-  if (start >= size_ || stop > size_) { throw std::out_of_range("deviceVector::slice: index out of range"); }
-  if (start > stop || stop > size_) { throw std::out_of_range("deviceVector::slice: start > stop"); }
+  if (start >= size_ || stop > size_) { throw std::out_of_range("DeviceVector::slice: index out of range"); }
+  if (start > stop || stop > size_) { throw std::out_of_range("DeviceVector::slice: start > stop"); }
 
   size_t count = stop - start;
   std::vector<T> result(count);

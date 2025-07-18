@@ -85,7 +85,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
   std::vector<std::byte> jl_seed(seed1);
   jl_seed.push_back(std::byte(JL_i));
 
-  std::vector<Rq> Q(JL_out * r * n);
+  DeviceVector<Rq> Q(JL_out * r * n);
   log_step("\t Variable setup");
 
   ICICLE_CHECK(icicle::labrador::get_jl_matrix_rows(
@@ -102,9 +102,9 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
   std::vector<Tq> msg3;
 
   // Allocate memory required for large ops
-  std::vector<Rq> omega_times_Q(JL_out * r * n);
+  DeviceVector<Rq> omega_times_Q(JL_out * r * n);
   // Will start out in Rq and then in place NTT to Tq
-  std::vector<PolyRing> reduction_result(r * n);
+  DeviceVector<PolyRing> reduction_result(r * n);
   log_step("\t alloc large vectors");
 
   for (size_t k = 0; k < num_aggregation_rounds; k++) {
@@ -181,7 +181,9 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
     VecOpsConfig sum_config = default_vec_ops_config();
     sum_config.batch_size = r * n * d; // Number of reduction operations
     sum_config.columns_batch = true;   // Elements to sum are strided across batches
-
+    sum_config.is_a_on_device = true;
+    sum_config.is_result_on_device = true;
+    
     // This will compute the sum across all j for each (i, element) pair
     ICICLE_CHECK(vector_sum<Zq>(
       reinterpret_cast<const Zq*>(omega_times_Q.data()), JL_out, sum_config,
