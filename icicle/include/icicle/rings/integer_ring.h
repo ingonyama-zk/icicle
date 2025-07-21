@@ -8,6 +8,13 @@ class IntegerRing : public ModArith<IntegerRing<CONFIG>, CONFIG>
   // By deriving from ModArith<IntegerRing> (CRTP) we get operands defined for the type IntegerRing
 
 public:
+  // Copy-assignment forwards to ModArith implementation.
+  HOST_DEVICE IntegerRing& operator=(const IntegerRing& other)
+  {
+    ModArith<IntegerRing<CONFIG>, CONFIG>::operator=(other);
+    return *this;
+  }
+
   static constexpr HOST_DEVICE bool has_inverse(const IntegerRing& xs)
   {
     // Note: inverse returns zero when no inverse
