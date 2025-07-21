@@ -1,0 +1,39 @@
+name: Run Examples
+
+on:
+  schedule:
+    - cron: '00 23 * * 6'
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-and-run-examples:
+    name: Build and Run Examples
+    runs-on: [self-hosted, Linux, X64, icicle]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run C++ Examples
+        working-directory: ./examples
+        run: ./run_examples.sh "c++"
+
+      - name: Run Rust Examples
+        working-directory: ./examples
+        run: ./run_examples.sh "rust"
+
+      - name: Setup Go
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+        with:
+          go-version: '1.22.0'
+          cache: false
+
+      - name: Run Golang Examples
+        working-directory: ./examples
+        run: ./run_examples.sh "golang"

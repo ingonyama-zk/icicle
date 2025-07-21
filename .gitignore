@@ -16,6 +16,7 @@
 **/.DS_Store
 **/Cargo.lock
 **/icicle/build/
+**/icicle/Testing/
 **/wrappers/rust/icicle-cuda-runtime/src/bindings.rs
 **/build*/*
 .cache*
@@ -24,3 +25,4 @@
 #ignore all backends except cpu
 #icicle/backend/*
 !icicle/backend/cpu
+!icicle/backend/cuda_pqc

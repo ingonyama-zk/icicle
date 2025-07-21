@@ -7,6 +7,16 @@ on:
     paths:
       - 'docs/**'
   workflow_call:
+    inputs:
+      artifact_name:
+        description: "The name for the uploaded artifact"
+        required: true
+        type: string
+      invoked:
+        description: "Whether the workflow was invoked by a workflow_call event; THIS SHOULD NOT BE SUPPLIED BY THE USER"
+        required: false
+        type: string
+        default: "true"
 
 jobs:
   build:
@@ -26,3 +36,9 @@ jobs:
       - name: Build website
         run: npm run build
         working-directory: ./docs
+      - name: Upload artifact
+        if: inputs.invoked != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: docs/build

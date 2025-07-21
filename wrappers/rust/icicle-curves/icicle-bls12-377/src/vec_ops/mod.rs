@@ -1,18 +1,11 @@
-#[cfg(feature = "bw6-761")]
-use crate::curve::{BaseCfg, BaseField};
-use crate::curve::{ScalarCfg, ScalarField};
+use crate::curve::ScalarField;
 use icicle_core::{
     impl_vec_ops_field,
     vec_ops::{/*BitReverseConfig,*/ VecOps, VecOpsConfig},
 };
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{memory::HostOrDeviceSlice, IcicleError};
 
-use icicle_core::program::Program;
-use icicle_core::traits::FieldImpl;
-
-impl_vec_ops_field!("bls12_377", bls12_377, ScalarField, ScalarCfg);
-#[cfg(feature = "bw6-761")]
-impl_vec_ops_field!("bw6_761", bw6_761, BaseField, BaseCfg);
+impl_vec_ops_field!("bls12_377", bls12_377, ScalarField);
 
 #[cfg(test)]
 pub(crate) mod tests {

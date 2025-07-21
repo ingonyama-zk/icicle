@@ -24,17 +24,16 @@ public:
       return Wide{FWide::from_field(xs.c0), FWide::from_field(xs.c1)};
     }
 
-    friend HOST_DEVICE_INLINE Wide operator+(const Wide& xs, const Wide& ys)
-    {
-      return Wide{xs.c0 + ys.c0, xs.c1 + ys.c1};
-    }
+    HOST_DEVICE_INLINE Wide operator+(const Wide& ys) const { return Wide{c0 + ys.c0, c1 + ys.c1}; }
 
-    friend HOST_DEVICE_INLINE Wide operator-(const Wide& xs, const Wide& ys)
-    {
-      return Wide{xs.c0 - ys.c0, xs.c1 - ys.c1};
-    }
+    HOST_DEVICE_INLINE Wide operator-(const Wide& ys) const { return Wide{c0 - ys.c0, c1 - ys.c1}; }
 
-    static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs) { return Wide{FWide::neg(xs.c0), FWide::neg(xs.c1)}; }
+    constexpr HOST_DEVICE_INLINE Wide neg() const { return Wide{c0.neg(), c1.neg()}; }
+
+    constexpr HOST_DEVICE_INLINE ComplexExtensionField reduce() const
+    {
+      return ComplexExtensionField{c0.reduce(), c1.reduce()};
+    }
   };
 
   typedef T FF;
@@ -53,21 +52,26 @@ public:
     return ComplexExtensionField{FF::one(), FF::zero()};
   }
 
-  // Converts a uint32_t value to a QuarticExtensionField element.
-  // If `val` ≥ p, it wraps around modulo p, affecting only the first coefficient.
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField from(uint32_t val)
   {
     return ComplexExtensionField{FF::from(val), FF::zero()};
   }
 
-  static constexpr HOST_DEVICE_INLINE ComplexExtensionField to_montgomery(const ComplexExtensionField& xs)
+  /* Receives an array of bytes and its size and returns extension field element. */
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField from(const std::byte* in, unsigned nof_bytes)
   {
-    return ComplexExtensionField{FF::to_montgomery(xs.c0), FF::to_montgomery(xs.c1)};
+    if (nof_bytes < 2 * sizeof(FF)) {
+#ifndef __CUDACC__
+      ICICLE_LOG_ERROR << "Input size is too small";
+#endif // __CUDACC__
+      return ComplexExtensionField::zero();
+    }
+    return ComplexExtensionField{FF::from(in, sizeof(FF)), FF::from(in + sizeof(FF), sizeof(FF))};
   }
 
-  static constexpr HOST_DEVICE_INLINE ComplexExtensionField from_montgomery(const ComplexExtensionField& xs)
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField reduce_from_bytes(const std::byte* in)
   {
-    return ComplexExtensionField{FF::from_montgomery(xs.c0), FF::from_montgomery(xs.c1)};
+    return ComplexExtensionField{FF::reduce_from_bytes(in), FF::reduce_from_bytes(in + sizeof(FF))};
   }
 
   static HOST_INLINE ComplexExtensionField rand_host()
@@ -81,10 +85,20 @@ public:
       out[i] = rand_host();
   }
 
-  template <unsigned REDUCTION_SIZE = 1>
-  static constexpr HOST_DEVICE_INLINE ComplexExtensionField sub_modulus(const ComplexExtensionField& xs)
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField to_montgomery() const
   {
-    return ComplexExtensionField{FF::sub_modulus<REDUCTION_SIZE>(&xs.c0), FF::sub_modulus<REDUCTION_SIZE>(&xs.c1)};
+    return ComplexExtensionField{c0.to_montgomery(), c1.to_montgomery()};
+  }
+
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField from_montgomery() const
+  {
+    return ComplexExtensionField{c0.from_montgomery(), c1.from_montgomery()};
+  }
+
+  template <unsigned REDUCTION_SIZE = 1>
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField sub_modulus() const
+  {
+    return ComplexExtensionField{c0.template sub_modulus<REDUCTION_SIZE>(), c1.template sub_modulus<REDUCTION_SIZE>()};
   }
 
   friend std::ostream& operator<<(std::ostream& os, const ComplexExtensionField& xs)
@@ -110,7 +124,7 @@ public:
 
   friend HOST_DEVICE_INLINE ComplexExtensionField operator-(FF xs, const ComplexExtensionField& ys)
   {
-    return ComplexExtensionField{xs - ys.c0, FF::neg(ys.c1)};
+    return ComplexExtensionField{xs - ys.c0, ys.c1.neg()};
   }
 
   friend HOST_DEVICE_INLINE ComplexExtensionField operator+(ComplexExtensionField xs, const FF& ys)
@@ -123,10 +137,7 @@ public:
     return ComplexExtensionField{xs.c0 - ys, xs.c1};
   }
 
-  constexpr HOST_DEVICE_INLINE ComplexExtensionField operator-() const
-  {
-    return ComplexExtensionField{FF::neg(c0), FF::neg(c1)};
-  }
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField operator-() const { return this->neg(); }
 
   constexpr HOST_DEVICE_INLINE ComplexExtensionField& operator+=(const ComplexExtensionField& ys)
   {
@@ -184,31 +195,43 @@ public:
     if constexpr (CONFIG::nonresidue_is_u32) {
       return FF::template mul_unsigned<CONFIG::nonresidue>(xs);
     } else {
-      return FF::template mul_wide<>(FF::reduce(xs), CONFIG::nonresidue);
+      return xs.reduce().mul_wide(CONFIG::nonresidue);
     }
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE Wide mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
+  constexpr HOST_DEVICE_INLINE Wide mul_wide(const ComplexExtensionField& ys) const
   {
-    FWide real_prod = FF::mul_wide(xs.c0, ys.c0);
-    FWide imaginary_prod = FF::mul_wide(xs.c1, ys.c1);
-    FWide prod_of_sums = FF::mul_wide(xs.c0 + xs.c1, ys.c0 + ys.c1);
-    FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
-    nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
-    return Wide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
+#ifdef __CUDA_ARCH__
+    constexpr bool do_karatsuba = FF::TLC >= 8; // The basic multiplier size is 1 limb, Karatsuba is more efficient when
+                                                // the multiplication is 8 times wider or more
+#else
+    constexpr bool do_karatsuba = FF::TLC >= 16; // The basic multiplier size is 2 limbs, Karatsuba is more efficient
+                                                 // when the multiplication is 8 times wider or more
+#endif
+
+    if constexpr (do_karatsuba) {
+      FWide real_prod = c0.mul_wide(ys.c0);
+      FWide imaginary_prod = c1.mul_wide(ys.c1);
+      FWide prod_of_sums = (c0 + c1).mul_wide(ys.c0 + ys.c1);
+      FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
+      nonresidue_times_im = CONFIG::nonresidue_is_negative ? nonresidue_times_im.neg() : nonresidue_times_im;
+      return Wide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
+    } else {
+      FWide real_prod = c0.mul_wide(ys.c0);
+      FWide imaginary_prod = c1.mul_wide(ys.c1);
+      FWide ab = c0.mul_wide(ys.c1);
+      FWide ba = c1.mul_wide(ys.c0);
+      FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
+      nonresidue_times_im = CONFIG::nonresidue_is_negative ? nonresidue_times_im.neg() : nonresidue_times_im;
+      return Wide{real_prod + nonresidue_times_im, ab + ba};
+    }
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Wide mul_wide(const ComplexExtensionField& xs, const FF& ys)
-  {
-    return Wide{FF::mul_wide(xs.c0, ys), FF::mul_wide(xs.c1, ys)};
-  }
+  constexpr HOST_DEVICE_INLINE Wide mul_wide(const FF& ys) const { return Wide{c0.mul_wide(ys), c1.mul_wide(ys)}; }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Wide mul_wide(const FF& xs, const ComplexExtensionField& ys)
   {
-    return mul_wide(ys, xs);
+    return ys.mul_wide(xs);
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
@@ -221,19 +244,22 @@ public:
   template <class T2>
   friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const ComplexExtensionField& xs, const T2& ys)
   {
-    Wide xy = mul_wide(xs, ys);
-    return reduce(xy);
+    Wide xy = xs.mul_wide(ys);
+    return xy.reduce();
   }
 
-  friend HOST_DEVICE_INLINE bool operator==(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
+  template <
+    class T2,
+    typename = typename std::enable_if<
+      !std::is_same<T2, ComplexExtensionField>() && !std::is_base_of<ComplexExtensionField, T2>()>::type>
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const T2& ys, const ComplexExtensionField& xs)
   {
-    return (xs.c0 == ys.c0) && (xs.c1 == ys.c1);
+    return xs * ys;
   }
 
-  friend HOST_DEVICE_INLINE bool operator!=(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
-  {
-    return !(xs == ys);
-  }
+  HOST_DEVICE_INLINE bool operator==(const ComplexExtensionField& ys) const { return (c0 == ys.c0) && (c1 == ys.c1); }
+
+  HOST_DEVICE_INLINE bool operator!=(const ComplexExtensionField& ys) const { return !(*this == ys); }
 
   template <typename Gen, bool IS_3B = false>
   static HOST_DEVICE_INLINE FF mul_weierstrass_b_real(const FF& xs)
@@ -261,7 +287,7 @@ public:
     if constexpr (Gen::is_b_u32_g2_re) {
       r = FF::template mul_unsigned<b_mult.limbs_storage.limbs[0], FF>(xs);
       if constexpr (Gen::is_b_neg_g2_re)
-        return FF::neg(r);
+        return r.neg();
       else {
         return r;
       }
@@ -296,7 +322,7 @@ public:
     if constexpr (Gen::is_b_u32_g2_im) {
       r = FF::template mul_unsigned<b_mult.limbs_storage.limbs[0], FF>(xs);
       if constexpr (Gen::is_b_neg_g2_im)
-        return FF::neg(r);
+        return r.neg();
       else {
         return r;
       }
@@ -315,7 +341,7 @@ public:
     FF re_im = mul_weierstrass_b_real<Gen, IS_3B>(xs_imaginary);
     FF im_re = mul_weierstrass_b_imag<Gen, IS_3B>(xs_real);
     FF nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
-    nonresidue_times_im = CONFIG::nonresidue_is_negative ? FF::neg(nonresidue_times_im) : nonresidue_times_im;
+    nonresidue_times_im = CONFIG::nonresidue_is_negative ? nonresidue_times_im.neg() : nonresidue_times_im;
     return ComplexExtensionField{real_prod + nonresidue_times_im, re_im + im_re};
   }
 
@@ -331,80 +357,64 @@ public:
     FF re_im = FF::template mul_const<mul_real>(xs_imaginary);
     FF im_re = FF::template mul_const<mul_imaginary>(xs_real);
     FF nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
-    nonresidue_times_im = CONFIG::nonresidue_is_negative ? FF::neg(nonresidue_times_im) : nonresidue_times_im;
+    nonresidue_times_im = CONFIG::nonresidue_is_negative ? nonresidue_times_im.neg() : nonresidue_times_im;
     return ComplexExtensionField{real_prod + nonresidue_times_im, re_im + im_re};
   }
 
-  template <uint32_t multiplier, unsigned REDUCTION_SIZE = 1>
+  template <uint32_t multiplier>
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField mul_unsigned(const ComplexExtensionField& xs)
   {
     return {FF::template mul_unsigned<multiplier>(xs.c0), FF::template mul_unsigned<multiplier>(xs.c1)};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Wide sqr_wide(const ComplexExtensionField& xs)
+  constexpr HOST_DEVICE_INLINE Wide sqr_wide() const
   {
     // TODO: change to a more efficient squaring
-    return mul_wide<MODULUS_MULTIPLE>(xs, xs);
+    return mul_wide(*this, *this);
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE ComplexExtensionField sqr(const ComplexExtensionField& xs)
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField sqr() const
   {
     // TODO: change to a more efficient squaring
-    return xs * xs;
+    return *this * *this;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE ComplexExtensionField neg(const ComplexExtensionField& xs)
-  {
-    return ComplexExtensionField{FF::neg(xs.c0), FF::neg(xs.c1)};
-  }
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField neg() const { return ComplexExtensionField{c0.neg(), c1.neg()}; }
 
   // inverse of zero is set to be zero which is what we want most of the time
-  static constexpr HOST_DEVICE_INLINE ComplexExtensionField inverse(const ComplexExtensionField& xs)
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField inverse() const
   {
-    ComplexExtensionField xs_conjugate = {xs.c0, FF::neg(xs.c1)};
-    FF nonresidue_times_im = mul_by_nonresidue(FF::sqr(xs.c1));
-    nonresidue_times_im = CONFIG::nonresidue_is_negative ? FF::neg(nonresidue_times_im) : nonresidue_times_im;
+    ComplexExtensionField xs_conjugate = {c0, c1.neg()};
+    FF nonresidue_times_im = mul_by_nonresidue(c1.sqr());
+    nonresidue_times_im = CONFIG::nonresidue_is_negative ? nonresidue_times_im.neg() : nonresidue_times_im;
     // TODO: wide here
-    FF xs_norm_squared = FF::sqr(xs.c0) - nonresidue_times_im;
-    return xs_conjugate * ComplexExtensionField{FF::inverse(xs_norm_squared), FF::zero()};
+    FF xs_norm_squared = c0.sqr() - nonresidue_times_im;
+    return xs_conjugate * ComplexExtensionField{xs_norm_squared.inverse(), FF::zero()};
   }
 
-  static constexpr HOST_DEVICE ComplexExtensionField pow(ComplexExtensionField base, int exp)
+  constexpr HOST_DEVICE ComplexExtensionField pow(int exp) const
   {
     ComplexExtensionField res = one();
+    ComplexExtensionField base = *this;
     while (exp > 0) {
       if (exp & 1) res = res * base;
-      base = base * base;
+      base = base.sqr();
       exp >>= 1;
     }
     return res;
   }
 
   template <unsigned NLIMBS>
-  static constexpr HOST_DEVICE ComplexExtensionField pow(ComplexExtensionField base, storage<NLIMBS> exp)
+  constexpr HOST_DEVICE ComplexExtensionField pow(storage<NLIMBS> exp) const
   {
     ComplexExtensionField res = one();
-    while (host_math::is_zero(exp)) {
+    ComplexExtensionField base = *this;
+    while (!host_math::is_zero(exp)) {
       if (host_math::get_bit<NLIMBS>(exp, 0)) res = res * base;
       base = base * base;
       exp = host_math::right_shift<NLIMBS, 1>(exp);
     }
     return res;
-  }
-
-  /* Receives an array of bytes and its size and returns extension field element. */
-  static constexpr HOST_DEVICE_INLINE ComplexExtensionField from(const std::byte* in, unsigned nof_bytes)
-  {
-    if (nof_bytes < 2 * sizeof(FF)) {
-#ifndef __CUDACC__
-      ICICLE_LOG_ERROR << "Input size is too small";
-#endif // __CUDACC__
-      return ComplexExtensionField::zero();
-    }
-    return ComplexExtensionField{FF::from(in, sizeof(FF)), FF::from(in + sizeof(FF), sizeof(FF))};
   }
 };
 

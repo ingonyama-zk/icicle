@@ -1,3 +1,5 @@
+//go:build !icicle_exclude_all || g2
+
 package g2
 
 // #cgo CFLAGS: -I./include/
@@ -50,7 +52,7 @@ func (p *G2Projective) FromAffine(a G2Affine) G2Projective {
 func (p G2Projective) ProjectiveEq(p2 *G2Projective) bool {
 	cP := (*C.g2_projective_t)(unsafe.Pointer(&p))
 	cP2 := (*C.g2_projective_t)(unsafe.Pointer(p2))
-	__ret := C.bn254_g2_eq(cP, cP2)
+	__ret := C.bn254_g2_projective_eq(cP, cP2)
 	return __ret == (C._Bool)(true)
 }
 

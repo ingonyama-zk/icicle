@@ -14,4 +14,8 @@ namespace icicle {
 
   REGISTER_SUMCHECK_FACTORY_BACKEND("CPU", cpu_create_sumcheck_backend<scalar_t>);
 
+#ifdef EXT_FIELD
+  REGISTER_SUMCHECK_EXT_FIELD_BACKEND("CPU", cpu_create_sumcheck_backend<extension_t>);
+#endif // EXT_FIELD
+
 } // namespace icicle
