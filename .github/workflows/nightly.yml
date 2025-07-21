@@ -1,0 +1,194 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  test-curve:
+    name: Curves
+    uses: ./.github/workflows/test-curve.yml
+    with:
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
+      enable_conditional_testing: false
+    secrets:
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        # backend: [cuda, metal]
+        backend: [cuda]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
+
+  test-field:
+    name: Fields
+    uses: ./.github/workflows/test-field.yml
+    with:
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
+      enable_conditional_testing: false
+    secrets:
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        # backend: [cuda, metal]
+        backend: [cuda]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
+
+  test-hash:
+    name: Hashes
+    uses: ./.github/workflows/test-hash.yml
+    with:
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
+      enable_conditional_testing: false
+    secrets:
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        # backend: [cuda, metal]
+        backend: [cuda]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
+
+  test-ring:
+    name: Rings
+    uses: ./.github/workflows/test-ring.yml
+    with:
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
+      enable_conditional_testing: false
+    secrets:
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        # backend: [cuda, metal]
+        backend: [cuda]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
+
+  test-runtime:
+    name: Runtime
+    uses: ./.github/workflows/test-runtime.yml
+    with:
+      backend: ${{ matrix.backend }}
+      backend_upper: ${{ matrix.backend_upper }}
+      runner: ${{ matrix.runner }}
+      enable_conditional_testing: false
+    secrets:
+      backend_ssh_key: ${{ matrix.secret_key }}
+    strategy:
+      matrix:
+        # backend: [cuda, metal]
+        backend: [cuda]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: ${{ secrets.CUDA_PULL_KEY }}
+            runner: '["self-hosted", "Linux", "X64", "icicle"]'
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: ${{ secrets.METAL_PULL_KEY }}
+          #   runner: '["self-hosted", "macOS", "ARM64", "icicle", "metal"]'
+
+  test-pqc:
+    name: PQC ML-KEM
+    uses: ./.github/workflows/test-pqc.yml
+    with:
+      runner: '["self-hosted", "Linux", "X64", "icicle"]'
+      enable_conditional_testing: false
+
+  notify-slack:
+    name: Notify Slack
+    runs-on: ubuntu-latest
+    needs: [test-curve, test-field, test-hash, test-ring, test-runtime, test-pqc]
+    if: ${{ failure() }}
+    steps:
+      - name: Get merged PRs
+        id: get-prs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          YESTERDAY=$(date -d "yesterday" +%Y-%m-%d)
+          PR_LIST=$(gh pr list --repo ingonyama-zk/icicle --state merged --search "merged:>=$YESTERDAY" --json number,title,url --jq -r '.[] | "• <\(.url)|\(.title) (#\(.number))>"' | head -10)
+
+          if [ -z "$PR_LIST" ]; then
+            PR_LIST=$(gh pr list --repo ingonyama-zk/icicle --state merged --json number,title,url --jq -r '.[] | "• <\(.url)|\(.title) (#\(.number))>"' | head -5)
+
+            if [ -z "$PR_LIST" ]; then
+              echo "Error: No merged PRs found at all. This is unexpected - failing the job."
+              exit 1
+            fi
+          fi
+
+          echo "pr_links<<EOF" >> $GITHUB_OUTPUT
+          echo "$PR_LIST" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@b0fa283ad8fea605de13dc3f449259339835fc52
+        with:
+          webhook: ${{ secrets.ICICLE_SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "🚨 ICICLE Nightly Tests Failed",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🚨 ICICLE Nightly Tests Failed"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Repository:* ingonyama-zk/icicle\n*Workflow:* Nightly\n*Status:* Failed\n*Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Merged PRs from yesterday (potential causes):*\n${{ steps.get-prs.outputs.pr_links }}"
+                  }
+                }
+              ]
+            }
