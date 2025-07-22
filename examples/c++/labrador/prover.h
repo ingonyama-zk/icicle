@@ -11,7 +11,7 @@
 
 // CONSISTENCY_CHECKS asserts invariants during the proof generation
 // Note program needs to be compiled in Debug mode when CONSISTENCY_CHECKS = true
-constexpr bool CONSISTENCY_CHECKS = true;
+constexpr bool CONSISTENCY_CHECKS = false;
 // SHOW_STEPS creates a print output listing every step performed by the Prover and the time taken
 constexpr bool SHOW_STEPS = true;
 

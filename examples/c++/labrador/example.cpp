@@ -25,8 +25,8 @@ void prover_verifier_trace()
   const int64_t q = get_q<Zq>();
 
   // randomize the witness Si with low norm
-  const size_t n = 1 << 12;
-  const size_t r = 1 << 6;
+  const size_t n = 1 << 9;
+  const size_t r = 1 << 5;
   constexpr size_t d = Rq::d;
   const size_t max_value = 2;
   size_t num_eq_const = 10;
@@ -65,7 +65,7 @@ void prover_verifier_trace()
 
   std::string oracle_seed = "ORACLE_SEED";
 
-  size_t NUM_REC = 6;
+  size_t NUM_REC = 3;
   LabradorProver prover{
     lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size(), NUM_REC};
 
@@ -79,17 +79,15 @@ void prover_verifier_trace()
   for (const auto& transcript : trs) {
     prover_msgs.push_back(transcript.prover_msg);
   }
-  if (CONSISTENCY_CHECKS) {
-    LabradorVerifier verifier{lab_inst,           prover_msgs,
-                              final_proof,        reinterpret_cast<const std::byte*>(oracle_seed.data()),
-                              oracle_seed.size(), NUM_REC};
+  LabradorVerifier verifier{lab_inst,           prover_msgs,
+                            final_proof,        reinterpret_cast<const std::byte*>(oracle_seed.data()),
+                            oracle_seed.size(), NUM_REC};
 
-    std::cout << "Verification result: \n";
-    if (verifier.verify()) {
-      std::cout << "Verification passed. \n";
-    } else {
-      std::cout << "Verification failed. \n";
-    }
+  std::cout << "Verification result: \n";
+  if (verifier.verify()) {
+    std::cout << "Verification passed. \n";
+  } else {
+    std::cout << "Verification failed. \n";
   }
 }
 
@@ -107,7 +105,7 @@ int main(int argc, char* argv[])
 
   std::vector<std::tuple<size_t, size_t>> arr_nr{{1 << 6, 1 << 3}};
   std::vector<std::tuple<size_t, size_t>> num_constraint{{10, 10}};
-  size_t NUM_REP = 3;
+  size_t NUM_REP = 1;
   bool SKIP_VERIF = false;
   benchmark_program(arr_nr, num_constraint, NUM_REP, SKIP_VERIF);
 

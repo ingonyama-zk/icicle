@@ -66,7 +66,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
     if (SHOW_STEPS) {
       auto step_end = std::chrono::high_resolution_clock::now();
       auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
-      std::cout << msg << " (" << elapsed << " ms)" << std::endl;
+      std::cout << "\t" << msg << " (" << elapsed << " ms)" << std::endl;
       step_start = std::chrono::high_resolution_clock::now();
     }
   };
@@ -257,13 +257,14 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   const size_t n = lab_inst.param.n; // Dimension of witness vectors
   constexpr size_t d = Rq::d;
 
+  if (SHOW_STEPS) { std::cout << "Running base_case_prover..." << std::endl; }
   /* ───────────────── TIMING HELPERS ───────────────── */
   auto step_start = std::chrono::high_resolution_clock::now();
   auto log_step = [&](const char* msg) {
     if (SHOW_STEPS) {
       auto step_end = std::chrono::high_resolution_clock::now();
       auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
-      std::cout << msg << " (" << elapsed << " ms)" << std::endl;
+      std::cout << "\t" << msg << " (" << elapsed << " ms)" << std::endl;
       step_start = std::chrono::high_resolution_clock::now();
     }
   };
@@ -286,22 +287,20 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Tq> T_hat = ajtai_commitment(A, n, kappa, S_hat.data(), r * n);
   log_step("Step 3 completed: Ajtai commitment T_hat");
 
-  // Step 4: already done
-
-  // Step 5: Convert T_hat to Rq
+  // Step 4: Convert T_hat to Rq
   std::vector<Rq> T(r * kappa);
   // Perform negacyclic INTT
   ICICLE_CHECK(ntt(T_hat.data(), r * kappa, NTTDir::kInverse, {}, T.data()));
-  log_step("Step 5 completed: INTT conversion of T_hat");
+  log_step("Step 4 completed: INTT conversion of T_hat");
 
-  // Step 6: decompose T to T_tilde
+  // Step 5: Decompose T to T_tilde
   size_t base1 = lab_inst.param.base1;
   size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base1);
   std::vector<Rq> T_tilde(l1 * r * kappa);
   ICICLE_CHECK(decompose(T.data(), r * kappa, base1, {}, T_tilde.data(), T_tilde.size()));
-  log_step("Step 6 completed: Decomposed T to T_tilde");
+  log_step("Step 5 completed: Decomposed T to T_tilde");
 
-  // Step 7: compute g
+  // Step 6: Compute g
   std::vector<Tq> S_hat_transposed(n * r);
   ICICLE_CHECK(matrix_transpose<Tq>(S_hat.data(), r, n, {}, S_hat_transposed.data()));
 
@@ -313,19 +312,17 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Rq> g(r_choose_2);
 
   ICICLE_CHECK(ntt(g_hat.data(), r_choose_2, NTTDir::kInverse, {}, g.data()));
-  log_step("Step 7 completed: Computed g");
+  log_step("Step 6 completed: Computed g");
 
-  // Step 8: decompose g to g_tilde
+  // Step 7: Decompose g to g_tilde
   size_t base2 = lab_inst.param.base2;
   // TODO: Take advantage of g being small and truncate upper limbs
   size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base2);
   std::vector<Rq> g_tilde(l2 * g.size());
   ICICLE_CHECK(decompose(g.data(), g.size(), base2, {}, g_tilde.data(), g_tilde.size()));
-  log_step("Step 8 completed: Decomposed g to g_tilde");
+  log_step("Step 7 completed: Decomposed g to g_tilde");
 
-  // Step 9: already done
-
-  // Step 10: u1 = B@T_tilde + C@g_tilde
+  // Step 8: u1 = B@T_tilde + C@g_tilde
   size_t kappa1 = lab_inst.param.kappa1;
   const std::vector<Tq>& B = lab_inst.param.B; // (t_len × kappa1)
   const std::vector<Tq>& C = lab_inst.param.C; // (g_len × kappa1)
@@ -346,26 +343,26 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   std::vector<Tq> u1(kappa1);
   vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
-  log_step("Step 10 completed: Computed u1");
+  log_step("Step 8 completed: Computed u1");
 
-  // Step 11: derive seed1 using the oracle and the actual bytes of u1
+  // Step 9: Derive seed1 using the oracle and the bytes of u1
   const std::byte* u1_bytes = reinterpret_cast<const std::byte*>(u1.data());
   const size_t u1_bytes_len = u1.size() * sizeof(Tq);
   std::vector<std::byte> seed1 = oracle.generate(u1_bytes, u1_bytes_len);
   // add u1 to the trs
   trs.prover_msg.u1 = u1;
   trs.seed1 = seed1;
-  log_step("Step 11 completed: Generated seed1");
+  log_step("Step 9 completed: Generated seed1");
 
-  // Step 12: Select a JL projection
+  // Step 10: Select a JL projection
   size_t JL_out = lab_inst.param.JL_out;
   auto [JL_i, p] = select_valid_jl_proj(seed1.data(), seed1.size());
-  log_step("Step 12 completed: Selected JL projection");
+  log_step("Step 10 completed: Selected JL projection");
 
   trs.prover_msg.JL_i = JL_i;
   trs.prover_msg.p = p;
 
-  // Step 13: serialize (JL_i, p) into bytes and feed to oracle for seed2
+  // Step 11: Serialize (JL_i, p) into bytes and feed to oracle for seed2
   std::vector<std::byte> jl_buf(sizeof(size_t));
   std::memcpy(jl_buf.data(), &JL_i, sizeof(size_t));
   jl_buf.insert(
@@ -374,15 +371,9 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   std::vector<std::byte> seed2 = oracle.generate(jl_buf.data(), jl_buf.size());
   trs.seed2 = seed2;
-  log_step("Step 13 completed: Generated seed2");
+  log_step("Step 11 completed: Generated seed2");
 
-  // Step 14: removed
-  // Step 15, 16: already done
-
-  // Step 17: Create conjugated polynomial vectors from JL matrix rows
-  // std::cout << "Step 17 completed: Computed Q polynomial" << std::endl;
-
-  // Step 18: Let L be the number of constZeroInstance constraints in LabradorInstance.
+  // Step 12: Let L be the number of ConstZeroInstance constraints in LabradorInstance.
   // For 0 ≤ k < ceil(128/log(q)), sample the following random vectors:
   const size_t L = lab_inst.const_zero_constraints.size();
   const size_t num_aggregation_rounds = lab_inst.param.num_aggregation_rounds;
@@ -404,12 +395,12 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   trs.psi = psi;
   trs.omega = omega;
-  log_step("Step 18 completed: Sampled psi and omega");
+  log_step("Step 12 completed: Sampled psi and omega");
 
-  // Step 19: Aggregate ConstZeroInstance constraints
+  // Step 13: Aggregate ConstZeroInstance constraints
 
   std::vector<Tq> msg3 = agg_const_zero_constraints(S_hat, G_hat, p, psi, omega, JL_i, seed1);
-  log_step("Step 19 completed: Aggregated ConstZeroInstance constraints");
+  log_step("Step 13 completed: Aggregated ConstZeroInstance constraints");
 
   if (CONSISTENCY_CHECKS) {
     std::cout << "\tTesting witness validity...";
@@ -417,16 +408,16 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
     std::cout << "VALID\n";
   }
 
-  // Step 20: derive seed3 from the oracle using the actual bytes of msg3
+  // Step 14: Derive seed3 from the oracle using the bytes of msg3
   const std::byte* msg3_bytes = reinterpret_cast<const std::byte*>(msg3.data());
   const size_t msg3_bytes_len = msg3.size() * sizeof(Tq);
   std::vector<std::byte> seed3 = oracle.generate(msg3_bytes, msg3_bytes_len);
-  log_step("Step 20 completed: Generated seed3");
+  log_step("Step 14 completed: Generated seed3");
 
   trs.prover_msg.b_agg = msg3;
   trs.seed3 = seed3;
 
-  // Step 21: Sample random polynomial vectors α using seed3
+  // Step 15: Sample random polynomial vectors α using seed3
   // Let K be the number of EqualityInstances in the LabradorInstance
   const size_t K = lab_inst.equality_constraints.size();
   // Will be true since we add constraints while aggregating constZeroInstances
@@ -437,17 +428,18 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   ICICLE_CHECK(random_sampling(K, false, alpha_seed.data(), alpha_seed.size(), {}, alpha_hat.data()));
 
   trs.alpha_hat = alpha_hat;
-  log_step("Step 21 completed: Sampled alpha_hat");
-  // Step 22:
+  log_step("Step 15 completed: Sampled alpha_hat");
+
+  // Step 16: Aggregate equality constraints
   lab_inst.agg_equality_constraints(alpha_hat);
-  log_step("Step 22 completed: Aggregated equality constraints");
+  log_step("Step 16 completed: Aggregated equality constraints");
   if (CONSISTENCY_CHECKS) {
     std::cout << "\tTesting witness validity...";
     assert(lab_witness_legit(lab_inst, S));
     std::cout << "VALID\n";
   }
 
-  // Step 23: For 0 ≤ i ≤ j < r, the Prover computes the matrix multiplication between matrix
+  // Step 17: For 0 ≤ i ≤ j < r, the Prover computes the matrix multiplication between matrix
   // Phi = (φ'_0|φ'_1|···|φ'_{r-1})^T ∈ R_q^{r×n} and S ∈ R_q^{r×n} defined earlier.
   // Let H ∈ R_q^{r×r}, such that H = 2^{-1}(Phi @ S^T + (Phi @ S^T)^T)
 
@@ -475,9 +467,9 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
     scalar_mul_vec(&two_inv, reinterpret_cast<Zq*>(H.data()), r * r * d, {}, reinterpret_cast<Zq*>(H.data())));
 
   std::vector<Rq> h = extract_symm_part(H.data(), r);
-  log_step("Step 23 completed: Computed h vector");
+  log_step("Step 17 completed: Computed h vector");
 
-  // Step 24: Decompose h
+  // Step 18: Decompose h
   size_t base3 = lab_inst.param.base3;
   size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base3);
 
@@ -485,18 +477,17 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   ICICLE_CHECK(decompose(h.data(), h.size(), base3, {}, h_tilde.data(), h_tilde.size()));
   std::vector<Tq> h_tilde_hat(h_tilde.size());
   ICICLE_CHECK(ntt(h_tilde.data(), h_tilde.size(), NTTDir::kForward, {}, h_tilde_hat.data()));
-  log_step("Step 24 completed: Decomposed h to H_tilde");
+  log_step("Step 18 completed: Decomposed h to H_tilde");
 
-  // Step 25: already done
-  // Step 26: commit to h_tilde
+  // Step 19: Commit to h_tilde
   size_t kappa2 = lab_inst.param.kappa2;
   const std::vector<Tq>& D = lab_inst.param.D; // (h_len × kappa2)
 
   // u2 = D @ h_tilde
   std::vector<Tq> u2 = ajtai_commitment(D, h_tilde_hat.size(), kappa2, h_tilde_hat.data(), h_tilde_hat.size());
-  log_step("Step 26 completed: Computed u2 commitment");
+  log_step("Step 19 completed: Computed u2 commitment");
 
-  // Step 27:
+  // Step 20:
   // add u2 to the trs
   trs.prover_msg.u2 = u2;
 
@@ -506,20 +497,20 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<std::byte> seed4 = oracle.generate(u2_bytes, u2_bytes_len);
 
   trs.seed4 = seed4;
-  log_step("Step 27 completed: Generated seed4");
+  log_step("Step 20 completed: Generated seed4");
 
-  // Step 28: sampling low operator norm challenges
+  // Step 21: Sample low-operator-norm challenges
   std::vector<Rq> challenge = sample_low_norm_challenges(n, r, seed4.data(), seed4.size());
 
   std::vector<Tq> challenges_hat(r);
   ICICLE_CHECK(ntt(challenge.data(), challenge.size(), NTTDir::kForward, {}, challenges_hat.data()));
   trs.challenges_hat = challenges_hat;
-  log_step("Step 28 completed: Sampled challenges");
+  log_step("Step 21 completed: Sampled challenges");
 
-  // Step 29: Compute z_hat[:] = \sum_i c_i * S[i,:] = [c1 c2 ... cr] @ S
+  // Step 22: Compute z_hat[:] = \sum_i c_i * S[i,:] = [c1 c2 ... cr] @ S
   std::vector<Tq> z_hat(n);
   ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, S_hat.data(), r, n, {}, z_hat.data()));
-  log_step("Step 29 completed: Computed z_hat and created final proof");
+  log_step("Step 22 completed: Computed z_hat and created final proof");
 
   if (CONSISTENCY_CHECKS) {
     std::vector<Tq> ct_hat(kappa);
@@ -618,7 +609,7 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
     if (SHOW_STEPS) {
       std::cout << "\tRecursion problem prepared\n";
       std::cout << "\tn= " << lab_inst_i.param.n << ", r= " << lab_inst_i.param.r << "\n";
-      std::cout << "\tProof size= " << base_proof.size() << "\n";
+      std::cout << "\tProof size= " << base_proof.size() << " B\n";
     }
     if (CONSISTENCY_CHECKS) {
       if (lab_witness_legit(lab_inst_i, S_i)) {
@@ -632,7 +623,7 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
   LabradorBaseProver base_prover(lab_inst_i, S_i, oracle);
   std::tie(base_proof, part_trs) = base_prover.base_case_prover();
   trs.push_back(part_trs);
-  if (SHOW_STEPS) { std::cout << "\tProof size= " << base_proof.size() << "\n"; }
+  if (SHOW_STEPS) { std::cout << "\tProof size= " << base_proof.size() << " B\n"; }
 
   return std::make_pair(trs, base_proof);
 }
