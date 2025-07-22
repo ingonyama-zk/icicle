@@ -303,4 +303,8 @@ struct LabradorBaseCaseProof {
   {
   }
   LabradorBaseCaseProof(const LabradorBaseCaseProof& other) : z_hat(other.z_hat), t(other.t), g(other.g), h(other.h) {}
+
+  size_t size() const{
+    return (z_hat.size()+t.size()+g.size()+h.size())*Rq::d*sizeof(Zq);
+  }
 };

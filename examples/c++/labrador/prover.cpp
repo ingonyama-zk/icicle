@@ -63,10 +63,10 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
   auto step_start = std::chrono::high_resolution_clock::now();
   // Each call resets timer
   auto log_step = [&](const char* msg) {
-    auto step_end = std::chrono::high_resolution_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
-    std::cout << msg << " (" << elapsed << " ms)" << std::endl;
-    step_start = std::chrono::high_resolution_clock::now();
+    // auto step_end = std::chrono::high_resolution_clock::now();
+    // auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
+    // std::cout << msg << " (" << elapsed << " ms)" << std::endl;
+    // step_start = std::chrono::high_resolution_clock::now();
   };
   /* ────────────────────────────────────────────────── */
 
@@ -269,10 +269,10 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   /* ───────────────── TIMING HELPERS ───────────────── */
   auto step_start = std::chrono::high_resolution_clock::now();
   auto log_step = [&](const char* msg) {
-    auto step_end = std::chrono::high_resolution_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
-    std::cout << msg << " (" << elapsed << " ms)" << std::endl;
-    step_start = std::chrono::high_resolution_clock::now();
+    // auto step_end = std::chrono::high_resolution_clock::now();
+    // auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
+    // std::cout << msg << " (" << elapsed << " ms)" << std::endl;
+    // step_start = std::chrono::high_resolution_clock::now();
   };
   /* ────────────────────────────────────────────────── */
 
@@ -675,36 +675,14 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
         std::cout << "\tRecursion problem-witness valid\n";
       } else {
         throw std::runtime_error("\tRecursion problem-witness INVALID\n");
-        // // Debug: check each constraint individually
-        // std::cout << "\tDebugging constraints (iteration " << i << "):\n";
-        // std::cout << "\tNumber of equality constraints: " << lab_inst_i.equality_constraints.size() << "\n";
-        // std::cout << "\tNumber of const-zero constraints: " << lab_inst_i.const_zero_constraints.size() << "\n";
-        // std::cout << "\tWitness size: " << S_i.size() << ", expected: " << lab_inst_i.param.r * lab_inst_i.param.n
-        //           << "\n";
-
-        // for (size_t j = 0; j < lab_inst_i.equality_constraints.size(); j++) {
-        //   if (!witness_legit_eq(lab_inst_i.equality_constraints[j], S_i)) {
-        //     std::cout << "\t\tEquality constraint " << j << " FAILED\n";
-        //   } else {
-        //     std::cout << "\t\tEquality constraint " << j << " passed\n";
-        //   }
-        // }
-
-        // for (size_t j = 0; j < lab_inst_i.const_zero_constraints.size(); j++) {
-        //   if (!witness_legit_const_zero(lab_inst_i.const_zero_constraints[j], S_i)) {
-        //     std::cout << "\t\tConst-zero constraint " << j << " FAILED\n";
-        //   } else {
-        //     std::cout << "\t\tConst-zero constraint " << j << " passed\n";
-        //   }
-        // }
       }
     }
   }
-  std::cout << "Prover::Recursion iteration = " << NUM_REC - 1 << "\n";
+  // std::cout << "Prover::Recursion iteration = " << NUM_REC - 1 << "\n";
   LabradorBaseProver base_prover(lab_inst_i, S_i, oracle);
   std::tie(base_proof, part_trs) = base_prover.base_case_prover();
   trs.push_back(part_trs);
-  std::cout << "\tProof size= " << base_proof.size() << "\n";
+  // std::cout << "\tProof size= " << base_proof.size() << "\n";
 
   return std::make_pair(trs, base_proof);
 }

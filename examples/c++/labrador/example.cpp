@@ -212,9 +212,9 @@ void benchmark_program()
   ICICLE_LOG_INFO << "Labrador Benchmark";
 
   // Benchmark parameters from the original code
-  std::vector<std::tuple<size_t, size_t>> arr_nr{{1 << 9, 1 << 5}};
-  std::vector<std::tuple<size_t, size_t>> num_constraint{{10, 10}};
-  size_t NUM_REP = 1;
+  std::vector<std::tuple<size_t, size_t>> arr_nr{{1<<6, 1<<3}, {1<<8, 1<<4}, {1 << 9, 1 << 5}};
+  std::vector<std::tuple<size_t, size_t>> num_constraint{{1, 1}, {10, 10}, {10, 100}, {100, 100}};
+  size_t NUM_REP = 10;
   bool SKIP_VERIF = false;
 
   std::vector<BenchmarkResult> results;
@@ -249,8 +249,8 @@ void prover_verifier_trace()
   // TODO: icicle_malloc()/ DeviceVector<T>
 
   // randomize the witness Si with low norm
-  const size_t n = 1 << 9;
-  const size_t r = 1 << 5;
+  const size_t n = 1 << 12;
+  const size_t r = 1 << 6;
   constexpr size_t d = Rq::d;
   const size_t max_value = 2;
   size_t num_eq_const =10;
@@ -298,7 +298,7 @@ void prover_verifier_trace()
 
   std::string oracle_seed = "ORACLE_SEED";
 
-  size_t NUM_REC = 1;
+  size_t NUM_REC = 6;
   LabradorProver prover{
     lab_inst, S, reinterpret_cast<const std::byte*>(oracle_seed.data()), oracle_seed.size(), NUM_REC};
 
