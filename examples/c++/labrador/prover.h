@@ -9,6 +9,12 @@
 #include "test_helpers.h"
 #include "device_vector.h"
 
+// CONSISTENCY_CHECKS asserts invariants during the proof generation
+// Note program needs to be compiled in Debug mode when CONSISTENCY_CHECKS = true
+constexpr bool CONSISTENCY_CHECKS = false;
+// SHOW_STEPS creates a print output listing every step performed by the Prover and the time taken
+constexpr bool SHOW_STEPS = true;
+
 /// @brief Struct that proves the base case of the Labrador
 struct LabradorBaseProver {
   /// The problem instance being proven.

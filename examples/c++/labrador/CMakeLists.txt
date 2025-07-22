@@ -14,6 +14,7 @@ add_executable(example
   types.cpp
   oracle.cpp
   test_helpers.cpp
+  benchmarking.cpp
 )
 install(TARGETS example
   RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"

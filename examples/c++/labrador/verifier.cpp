@@ -71,6 +71,7 @@ void LabradorBaseVerifier::create_transcript()
 
 // Chunked LInfinity norm check to support vectors larger than 2^16 elements.
 // Uses the same API as `check_norm_bound` except the norm type is fixed to LInfinity.
+// TODO: replace this
 inline eIcicleError check_norm_bound_LInfinity_chunked(
   const Zq* input, size_t size, uint64_t norm_bound, const VecOpsConfig& cfg, bool* output)
 {
@@ -330,10 +331,10 @@ void LabradorBaseVerifier::agg_const_zero_constraints()
 
   std::vector<Zq> test_b0(num_aggregation_rounds, Zq::zero());
 
-    // Allocate memory required for large ops
-    DeviceVector<Rq> omega_times_Q(JL_out * r * n);
-    // Will start out in Rq and then in place NTT to Tq
-    DeviceVector<PolyRing> reduction_result(r * n);
+  // Allocate memory required for large ops
+  DeviceVector<Rq> omega_times_Q(JL_out * r * n);
+  // Will start out in Rq and then in place NTT to Tq
+  DeviceVector<PolyRing> reduction_result(r * n);
 
   for (size_t k = 0; k < num_aggregation_rounds; k++) {
     EqualityInstance new_constraint(r, n);
@@ -401,7 +402,7 @@ void LabradorBaseVerifier::agg_const_zero_constraints()
     sum_config.columns_batch = true;   // Elements to sum are strided across batches
     sum_config.is_a_on_device = true;
     sum_config.is_result_on_device = true;
-    
+
     // This will compute the sum across all j for each (i, element) pair
     ICICLE_CHECK(vector_sum<Zq>(
       reinterpret_cast<const Zq*>(omega_times_Q.data()), JL_out, sum_config,
@@ -474,12 +475,6 @@ bool LabradorBaseVerifier::part_verify()
       test_b0[k] = test_b0[k] - omega[omega_index(k, l)] * p[l];
     }
 
-    // Zq lhs = b_agg_unhat[k].values[0];
-    // Zq rhs = test_b0[k]; // already available
-    // Zq diff = lhs - rhs; // mod q
-
-    // std::cout << "k=" << k << "  lhs=" << lhs << "  rhs=" << rhs << "  diff=" << diff << std::endl;
-
     if (test_b0[k] != b_agg_unhat[k].values[0]) {
       std::cout << "verify(): b0 test failed for " << k << std::endl;
       return false;
@@ -506,7 +501,7 @@ bool LabradorVerifier::verify()
 {
   LabradorInstance lab_inst_i = lab_inst;
   for (size_t i = 0; i < NUM_REC - 1; i++) {
-    std::cout << "Verifier::Recursion iteration = " << i << "\n";
+    // std::cout << "Verifier::Recursion iteration = " << i << "\n";
     LabradorBaseVerifier base_verifier(lab_inst_i, prover_msgs[i], oracle);
     if (!base_verifier.part_verify()) {
       std::cout << "\tProver message verification failed\n";
@@ -525,10 +520,10 @@ bool LabradorVerifier::verify()
       prepare_recursion_instance(base_verifier.lab_inst.param, final_const, base_verifier.trs, base0, mu, nu);
     oracle = base_verifier.oracle;
 
-    std::cout << "\tVerifier::Recursion problem prepared\n";
-    std::cout << "\tn= " << lab_inst_i.param.n << ", r= " << lab_inst_i.param.r << "\n";
+    // std::cout << "\tVerifier::Recursion problem prepared\n";
+    // std::cout << "\tn= " << lab_inst_i.param.n << ", r= " << lab_inst_i.param.r << "\n";
   }
-  std::cout << "Verifier::Recursion iteration = " << NUM_REC - 1 << "\n";
+  // std::cout << "Verifier::Recursion iteration = " << NUM_REC - 1 << "\n";
   LabradorBaseVerifier base_verifier(lab_inst_i, prover_msgs[NUM_REC - 1], oracle);
   if (!base_verifier.fully_verify(final_proof)) {
     std::cout << "\tVerifier- Final verification failed\n";

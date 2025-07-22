@@ -63,10 +63,12 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
   auto step_start = std::chrono::high_resolution_clock::now();
   // Each call resets timer
   auto log_step = [&](const char* msg) {
-    // auto step_end = std::chrono::high_resolution_clock::now();
-    // auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
-    // std::cout << msg << " (" << elapsed << " ms)" << std::endl;
-    // step_start = std::chrono::high_resolution_clock::now();
+    if (SHOW_STEPS) {
+      auto step_end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
+      std::cout << msg << " (" << elapsed << " ms)" << std::endl;
+      step_start = std::chrono::high_resolution_clock::now();
+    }
   };
   /* ────────────────────────────────────────────────── */
 
@@ -183,7 +185,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
     sum_config.columns_batch = true;   // Elements to sum are strided across batches
     sum_config.is_a_on_device = true;
     sum_config.is_result_on_device = true;
-    
+
     // This will compute the sum across all j for each (i, element) pair
     ICICLE_CHECK(vector_sum<Zq>(
       reinterpret_cast<const Zq*>(omega_times_Q.data()), JL_out, sum_config,
@@ -212,7 +214,7 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
     ICICLE_CHECK(scalar_mul_vec(&minus_1, new_constraint.b.values, d, {}, new_constraint.b.values));
     log_step("\t\t b = -b");
 
-    if (TESTING) {
+    if (CONSISTENCY_CHECKS) {
       // Following should work if our B^{(k)} evaluation is correct above
       if (!witness_legit_eq(new_constraint, S)) { std::cout << "Constraint " << k << " failed\n"; }
 
@@ -228,19 +230,9 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
       Rq b_rq;
       ICICLE_CHECK(ntt(&new_constraint.b, 1, NTTDir::kInverse, {}, &b_rq));
 
-      // Zq lhs = b_rq.values[0];
-      // Zq rhs = verif_test_b0[k]; // already available
-      // Zq diff = lhs - rhs;       // mod q
-
-      // std::cout << "\tk=" << k << "\n\t  lhs=" << lhs << "\n\t  rhs=" << rhs << "\n\t  diff=" << diff << std::endl;
-      // if (verif_test_b0[k] != b_rq.values[0]) {
-      //   std::cout << "\tFail: New constraint b doesn't match verif b for idx" << k << "\n";
-      // } else {
-      //   std::cout << "\tPass: New constraint b matches verif b for idx" << k << "\n";
-      // }
-      // if (!witness_legit_const_zero({r, n, new_constraint.a, new_constraint.phi, verif_test_b0[k]}, S)) {
-      //   std::cout << "\tVerif test constraint " << k << " failed\n";
-      // }
+      if (!witness_legit_const_zero({r, n, new_constraint.a, new_constraint.phi, verif_test_b0[k]}, S)) {
+        std::cout << "\tVerif test constraint " << k << " failed\n";
+      }
     }
     // Add the EqualityInstance to LabradorInstance
     lab_inst.add_equality_constraint(new_constraint);
@@ -269,15 +261,14 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   /* ───────────────── TIMING HELPERS ───────────────── */
   auto step_start = std::chrono::high_resolution_clock::now();
   auto log_step = [&](const char* msg) {
-    // auto step_end = std::chrono::high_resolution_clock::now();
-    // auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
-    // std::cout << msg << " (" << elapsed << " ms)" << std::endl;
-    // step_start = std::chrono::high_resolution_clock::now();
+    if (SHOW_STEPS) {
+      auto step_end = std::chrono::high_resolution_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(step_end - step_start).count();
+      std::cout << msg << " (" << elapsed << " ms)" << std::endl;
+      step_start = std::chrono::high_resolution_clock::now();
+    }
   };
   /* ────────────────────────────────────────────────── */
-
-  // std::cout << "Number of constraints (Eq, Cz): " << lab_inst.equality_constraints.size() << ", "
-  //           << lab_inst.const_zero_constraints.size() << std::endl;
 
   PartialTranscript trs;
   log_step("Step 1 completed: Initialized variables");
@@ -310,27 +301,6 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Rq> T_tilde(l1 * r * kappa);
   ICICLE_CHECK(decompose(T.data(), r * kappa, base1, {}, T_tilde.data(), T_tilde.size()));
   log_step("Step 6 completed: Decomposed T to T_tilde");
-
-  // if (TESTING) {
-  //   // Ensure that recompose(T_tilde) == T
-  //   std::vector<Rq> temp(r * kappa);
-  //   ICICLE_CHECK(recompose(T_tilde.data(), T_tilde.size(), base1, {}, temp.data(), temp.size()));
-  //   bool decompose_recompose_correct = true;
-  //   for (size_t i = 0; i < r * kappa; i++) {
-  //     for (size_t j = 0; j < d; j++) {
-  //       if (temp[i].values[j] != T[i].values[j]) {
-  //         decompose_recompose_correct = false;
-  //         break;
-  //       }
-  //     }
-  //     if (!decompose_recompose_correct) break;
-  //   }
-  //   if (decompose_recompose_correct) {
-  //     std::cout << "\tDecompose/recompose test passed\n";
-  //   } else {
-  //     std::cout << "\tDecompose/recompose test failed\n";
-  //   }
-  // }
 
   // Step 7: compute g
   std::vector<Tq> S_hat_transposed(n * r);
@@ -440,25 +410,10 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   // Step 19: Aggregate ConstZeroInstance constraints
 
-  // if (TESTING) {
-  //   bool Q_testing = true;
-  //   for (size_t l = 0; l < JL_out; l++) {
-  //     std::vector<Tq> a{r * r, zero()}, phi{&Q_hat[l * r * n], &Q_hat[(l + 1) * r * n]};
-
-  //     ConstZeroInstance cz{r, n, a, phi, Zq::neg(p[l])};
-  //     if (!witness_legit_const_zero(cz, S)) {
-  //       std::cout << "\tQ-constraint-check fails for " << l << "\n";
-  //       Q_testing = false;
-  //       break;
-  //     };
-  //   }
-  //   if (Q_testing) { std::cout << "\tQ-constraint-check passed... " << "\n"; }
-  // }
-
   std::vector<Tq> msg3 = agg_const_zero_constraints(S_hat, G_hat, p, psi, omega, JL_i, seed1);
   log_step("Step 19 completed: Aggregated ConstZeroInstance constraints");
 
-  if (TESTING) {
+  if (CONSISTENCY_CHECKS) {
     std::cout << "\tTesting witness validity...";
     assert(lab_witness_legit(lab_inst, S));
     std::cout << "VALID\n";
@@ -472,11 +427,11 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
 
   trs.prover_msg.b_agg = msg3;
   trs.seed3 = seed3;
-  // std::cout << "Step 20 completed: Generated seed3" << std::endl;
 
   // Step 21: Sample random polynomial vectors α using seed3
   // Let K be the number of EqualityInstances in the LabradorInstance
   const size_t K = lab_inst.equality_constraints.size();
+  // Will be true since we add constraints while aggregating constZeroInstances
   assert(K > 0);
   std::vector<Tq> alpha_hat(K);
   std::vector<std::byte> alpha_seed(seed3);
@@ -488,7 +443,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // Step 22:
   lab_inst.agg_equality_constraints(alpha_hat);
   log_step("Step 22 completed: Aggregated equality constraints");
-  if (TESTING) {
+  if (CONSISTENCY_CHECKS) {
     std::cout << "\tTesting witness validity...";
     assert(lab_witness_legit(lab_inst, S));
     std::cout << "VALID\n";
@@ -532,7 +487,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   ICICLE_CHECK(decompose(h.data(), h.size(), base3, {}, h_tilde.data(), h_tilde.size()));
   std::vector<Tq> h_tilde_hat(h_tilde.size());
   ICICLE_CHECK(ntt(h_tilde.data(), h_tilde.size(), NTTDir::kForward, {}, h_tilde_hat.data()));
-  // std::cout << "Step 24 completed: Decomposed h to H_tilde" << std::endl;
+  log_step("Step 24 completed: Decomposed h to H_tilde");
 
   // Step 25: already done
   // Step 26: commit to h_tilde
@@ -568,29 +523,23 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, S_hat.data(), r, n, {}, z_hat.data()));
   log_step("Step 29 completed: Computed z_hat and created final proof");
 
-  if (TESTING) {
+  if (CONSISTENCY_CHECKS) {
     std::vector<Tq> ct_hat(kappa);
     ICICLE_CHECK(matmul(challenges_hat.data(), 1, r, T_hat.data(), r, kappa, {}, ct_hat.data()));
     std::vector<Tq> zA_hat = ajtai_commitment(A, n, kappa, z_hat.data(), z_hat.size());
 
     // zA_hat == \sum_i c_i t_i
     bool succ = true;
-    for (size_t i = 0; i < kappa; i++) {
-      for (size_t j = 0; j < d; j++) {
-        if (zA_hat[i].values[j] != ct_hat[i].values[j]) {
-          succ = false;
-          std::cout << "\tbase_prover zA = ct failed\n";
-          break;
-        }
-      }
+    if (!poly_vec_eq(zA_hat.data(), ct_hat.data(), kappa)) {
+      succ = false;
+      std::cout << "\tbase_prover zA = ct failed\n";
     }
     if (succ) { std::cout << "\tbase_prover zA = ct passed\n"; }
   }
 
   LabradorBaseCaseProof final_proof{z_hat, T_tilde, g_tilde, h_tilde};
-  // std::cout << "Step 29 completed: Computed z_hat and created final proof" << std::endl;
+  log_step("base_case_prover completed!");
 
-  std::cout << "base_case_prover completed!\n" << std::endl;
   return std::make_pair(final_proof, trs);
 }
 
@@ -613,7 +562,7 @@ std::vector<Rq> LabradorProver::prepare_recursion_witness(
   if (!poly_vec_eq(z.data(), temp.data(), n)) {
     throw std::runtime_error("Parameter Choice Error: z could not be recomposed from z_tilde in "
                              "prepare_recursion_witness. Consider changing base0 parameter.");
-  } else {
+  } else if (SHOW_STEPS) {
     std::cout << "\tprepare_recursion_witness: z recomposition passes.\n";
   }
   // Step 3:
@@ -650,7 +599,8 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
   LabradorInstance lab_inst_i = lab_inst;
   std::vector<Rq> S_i = S;
   for (size_t i = 0; i < NUM_REC - 1; i++) {
-    std::cout << "Prover::Recursion iteration = " << i << "\n";
+    if (SHOW_STEPS) { std::cout << "Prover::Recursion iteration = " << i << "\n"; }
+
     LabradorBaseProver base_prover(lab_inst_i, S_i, oracle);
     std::tie(base_proof, part_trs) = base_prover.base_case_prover();
     trs.push_back(part_trs);
@@ -667,10 +617,12 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
 
     oracle = base_prover.oracle;
 
-    std::cout << "\tRecursion problem prepared\n";
-    std::cout << "\tn= " << lab_inst_i.param.n << ", r= " << lab_inst_i.param.r << "\n";
-    std::cout << "\tProof size= " << base_proof.size() << "\n";
-    if (TESTING) {
+    if (SHOW_STEPS) {
+      std::cout << "\tRecursion problem prepared\n";
+      std::cout << "\tn= " << lab_inst_i.param.n << ", r= " << lab_inst_i.param.r << "\n";
+      std::cout << "\tProof size= " << base_proof.size() << "\n";
+    }
+    if (CONSISTENCY_CHECKS) {
       if (lab_witness_legit(lab_inst_i, S_i)) {
         std::cout << "\tRecursion problem-witness valid\n";
       } else {
@@ -678,11 +630,11 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
       }
     }
   }
-  // std::cout << "Prover::Recursion iteration = " << NUM_REC - 1 << "\n";
+  if (SHOW_STEPS) { std::cout << "Prover::Recursion iteration = " << NUM_REC - 1 << "\n"; }
   LabradorBaseProver base_prover(lab_inst_i, S_i, oracle);
   std::tie(base_proof, part_trs) = base_prover.base_case_prover();
   trs.push_back(part_trs);
-  // std::cout << "\tProof size= " << base_proof.size() << "\n";
+  if (SHOW_STEPS) { std::cout << "\tProof size= " << base_proof.size() << "\n"; }
 
   return std::make_pair(trs, base_proof);
 }

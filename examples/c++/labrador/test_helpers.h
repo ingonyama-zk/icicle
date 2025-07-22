@@ -3,8 +3,6 @@
 #include "types.h"
 #include "utils.h"
 
-constexpr bool TESTING = false;
-
 /// print a Zq vector
 void print_vec(const Zq* vec, size_t len, const std::string& name);
 
@@ -25,7 +23,8 @@ std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value);
 std::vector<EqualityInstance> create_rand_eq_inst(size_t n, size_t r, const std::vector<Rq>& S, size_t num_const);
 
 // Generate a random ConstZeroInstance satisfied by the given witness S
-std::vector<ConstZeroInstance> create_rand_const_zero_inst(size_t n, size_t r, const std::vector<Rq>& S, size_t num_const);
+std::vector<ConstZeroInstance>
+create_rand_const_zero_inst(size_t n, size_t r, const std::vector<Rq>& S, size_t num_const);
 
 // Check if the given EqualityInstance is satisfied by the witness S or not
 bool witness_legit_eq(const EqualityInstance& eq_inst, const std::vector<Rq>& S);
