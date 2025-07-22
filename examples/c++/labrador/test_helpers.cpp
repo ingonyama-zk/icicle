@@ -15,22 +15,6 @@ void print_vec(const Zq* vec, size_t len, const std::string& name = "")
 // print a polynomial
 void print_poly(const PolyRing& poly, const std::string& name = "") { print_vec(poly.values, PolyRing::d, name); }
 
-/// @brief Compares two vectors of Tq polynomials element-wise
-/// @param vec1 First vector to compare
-/// @param vec2 Second vector to compare
-/// @param size Number of Tq elements to compare
-/// @return true if vectors are equal, false otherwise
-bool poly_vec_eq(const PolyRing* vec1, const PolyRing* vec2, size_t size)
-{
-  constexpr size_t d = PolyRing::d;
-  for (size_t i = 0; i < size; i++) {
-    for (size_t j = 0; j < d; j++) {
-      if (vec1[i].values[j] != vec2[i].values[j]) { return false; }
-    }
-  }
-  return true;
-}
-
 // Generate a random polynomial vector with coefficients bounded by max_value
 std::vector<PolyRing> rand_poly_vec(size_t size, int64_t max_value)
 {

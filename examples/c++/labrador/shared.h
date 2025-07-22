@@ -9,6 +9,13 @@
 
 using namespace icicle::labrador;
 
+/// @brief Compares two vectors of PolyRing polynomials element-wise
+/// @param vec1 First vector to compare
+/// @param vec2 Second vector to compare
+/// @param size Number of PolyRing elements to compare
+/// @return true if vectors are equal, false otherwise
+bool poly_vec_eq(const PolyRing* vec1, const PolyRing* vec2, size_t size);
+
 /// @brief Computes the Ajtai commitment of the given input S. Views input S as matrix of vectors to be committed.
 /// Vectors are arranged in the row major form. If A is the Ajtai matrix, then this outputs S@A.
 /// @param A Random Ajtai commitment matrix

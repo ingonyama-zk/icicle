@@ -107,11 +107,9 @@ int main(int argc, char* argv[])
 
   std::vector<std::tuple<size_t, size_t>> arr_nr{{1 << 6, 1 << 3}};
   std::vector<std::tuple<size_t, size_t>> num_constraint{{10, 10}};
-  size_t NUM_REP = 10;
+  size_t NUM_REP = 3;
   bool SKIP_VERIF = false;
   benchmark_program(arr_nr, num_constraint, NUM_REP, SKIP_VERIF);
 
   return 0;
 }
-
-// TODO: change poly_vec_eq

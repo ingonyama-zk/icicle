@@ -123,8 +123,6 @@ namespace icicle {
     }
 
     /// Returns one or more rows of a JL-matrix, as Rq polynomials, optionally conjugated
-    /// TODO: Note in the docs that row_size is measured in Zq. TODO Ash: we can make it be in Rq too. Let me know
-    /// please
     inline eIcicleError get_jl_matrix_rows(
       const std::byte* seed,
       size_t seed_len,
@@ -169,6 +167,7 @@ namespace icicle {
     inline eIcicleError random_sampling(
       size_t output_size, bool fast_mode, const std::byte* seed, size_t seed_len, const VecOpsConfig& cfg, Zq* output)
     {
+      // TODO: forced on CPU
       ScopedCpuDevice force_cpu{};
       return icicle::random_sampling(output_size, fast_mode, seed, seed_len, cfg, output);
     }
@@ -181,6 +180,7 @@ namespace icicle {
     inline eIcicleError random_sampling(
       size_t output_size, bool fast_mode, const std::byte* seed, size_t seed_len, const VecOpsConfig& cfg, Tq* output)
     {
+      // TODO: forced on CPU
       ScopedCpuDevice force_cpu{};
       return icicle::random_sampling(output_size * Tq::d, fast_mode, seed, seed_len, cfg, (Zq*)output);
     }
@@ -197,7 +197,6 @@ namespace icicle {
       const VecOpsConfig& config,
       Rq* output)
     {
-      // ScopedCpuDevice force_cpu{};
       return icicle::sample_challenge_space_polynomials(seed, seed_len, size, ones, twos, norm, config, output);
     }
 

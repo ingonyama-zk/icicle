@@ -250,7 +250,6 @@ std::vector<Tq> LabradorBaseProver::agg_const_zero_constraints(
 }
 
 // This destroys the lab_inst in LabradorBaseProver
-// TODO: Prover only needs to send BaseProverMessages
 std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_case_prover()
 {
   // Step 1: Pack the Witnesses into a Matrix S
@@ -394,15 +393,14 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   // psi seed = seed2 || 0x01
   std::vector<std::byte> psi_seed(seed2);
   psi_seed.push_back(std::byte('1'));
-  // TODO: change fast mode to false
   if (psi.size() > 0) {
-    ICICLE_CHECK(random_sampling(psi.size(), true, psi_seed.data(), psi_seed.size(), {}, psi.data()));
+    ICICLE_CHECK(random_sampling(psi.size(), false, psi_seed.data(), psi_seed.size(), {}, psi.data()));
   }
   // Sample omega
   // omega seed = seed2 || 0x02
   std::vector<std::byte> omega_seed(seed2);
   omega_seed.push_back(std::byte('2'));
-  ICICLE_CHECK(random_sampling(omega.size(), true, omega_seed.data(), omega_seed.size(), {}, omega.data()));
+  ICICLE_CHECK(random_sampling(omega.size(), false, omega_seed.data(), omega_seed.size(), {}, omega.data()));
 
   trs.psi = psi;
   trs.omega = omega;
@@ -436,7 +434,7 @@ std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_cas
   std::vector<Tq> alpha_hat(K);
   std::vector<std::byte> alpha_seed(seed3);
   alpha_seed.push_back(std::byte('1'));
-  ICICLE_CHECK(random_sampling(K, true, alpha_seed.data(), alpha_seed.size(), {}, alpha_hat.data()));
+  ICICLE_CHECK(random_sampling(K, false, alpha_seed.data(), alpha_seed.size(), {}, alpha_hat.data()));
 
   trs.alpha_hat = alpha_hat;
   log_step("Step 21 completed: Sampled alpha_hat");

@@ -1,5 +1,13 @@
 #include "shared.h"
 
+bool poly_vec_eq(const PolyRing* vec1, const PolyRing* vec2, size_t size)
+{
+  for (size_t i = 0; i < size; i++) {
+    if (vec1[i] != vec2[i]) { return false; }
+  }
+  return true;
+}
+
 std::vector<Tq>
 ajtai_commitment(const std::vector<Tq>& A, size_t input_len, size_t output_len, const Tq* S, size_t S_len)
 {

@@ -85,7 +85,7 @@ BenchmarkResult run_benchmark(const BenchmarkConfig& config, bool SKIP_VERIF)
 
       if (!verifier.verify()) {
         all_verified = false;
-        std::cerr << "Verification failed for repetition " << rep << std::endl;
+        std::cerr << "FAILED\n Verification failed for repetition " << rep << std::endl;
       }
       std::cout << "SUCCESS!\n\n";
     }
