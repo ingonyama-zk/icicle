@@ -7,6 +7,7 @@
 #include "shared.h"
 #include "oracle.h"
 #include "test_helpers.h"
+#include "device_vector.h"
 
 /// @brief Struct to verify the base case of the Labrador protocol
 struct LabradorBaseVerifier {

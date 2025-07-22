@@ -18,7 +18,7 @@ std::pair<size_t, std::vector<Zq>> LabradorBaseProver::select_valid_jl_proj(std:
     ICICLE_CHECK(icicle::labrador::jl_projection(
       reinterpret_cast<const Zq*>(S.data()), n * r * d, jl_seed.data(), jl_seed.size(), {}, p.data(), JL_out));
     // check norm
-    bool JL_check = false;
+    bool JL_check = true;
     double beta = lab_inst.param.beta;
 
     // ignore ICICLE errors when elements of p are greater than sqrt(q)
@@ -669,7 +669,7 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
 
     std::cout << "\tRecursion problem prepared\n";
     std::cout << "\tn= " << lab_inst_i.param.n << ", r= " << lab_inst_i.param.r << "\n";
-
+    std::cout << "\tProof size= " << base_proof.size() << "\n";
     if (TESTING) {
       if (lab_witness_legit(lab_inst_i, S_i)) {
         std::cout << "\tRecursion problem-witness valid\n";
@@ -704,6 +704,7 @@ std::pair<std::vector<PartialTranscript>, LabradorBaseCaseProof> LabradorProver:
   LabradorBaseProver base_prover(lab_inst_i, S_i, oracle);
   std::tie(base_proof, part_trs) = base_prover.base_case_prover();
   trs.push_back(part_trs);
+  std::cout << "\tProof size= " << base_proof.size() << "\n";
 
   return std::make_pair(trs, base_proof);
 }
