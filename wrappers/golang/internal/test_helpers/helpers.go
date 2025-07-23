@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+	"github.com/stretchr/testify/suite"
 )
 
 var (
@@ -63,4 +64,16 @@ func GenerateBytesArray(size int) ([]byte, []uint32) {
 	}
 
 	return bytes, limbs
+}
+
+func TestWrapper(suite *suite.Suite, fn func(*suite.Suite)) func() {
+	return func() {
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+		runtime.RunOnDevice(&REFERENCE_DEVICE, func(args ...any) {
+			defer wg.Done()
+			fn(suite)
+		})
+		wg.Wait()
+	}
 }

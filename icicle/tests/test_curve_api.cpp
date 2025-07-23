@@ -72,9 +72,53 @@ public:
     run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
-      ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
-      ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
+      ASSERT_EQ(true, result_main[res_idx].is_on_curve());
+      ASSERT_EQ(true, result_ref[res_idx].is_on_curve());
       ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
+    }
+  }
+
+  template <typename A, typename P>
+  void MSM_bitsize()
+  {
+    const int logn = 12;
+    const int batch = 1;
+    const int N = (1 << logn) - rand_uint_32b(0, 5 * logn); // make it not always power of two
+    const int total_nof_elemets = batch * N;
+
+    auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
+    auto bases = std::make_unique<A[]>(N);
+    scalar_t::rand_host_many(scalars.get(), total_nof_elemets);
+    P::rand_host_many(bases.get(), N);
+
+    auto result_main = std::make_unique<P[]>(batch);
+    auto result_ref = std::make_unique<P[]>(batch);
+
+    auto config = default_msm_config();
+    config.batch_size = batch;
+    config.are_points_shared_in_batch = true;
+
+    auto run = [&](const std::string& dev_type, P* result, const char* msg, bool measure, int iters) {
+      Device dev = {dev_type, 0};
+      icicle_set_device(dev);
+
+      std::ostringstream oss;
+      oss << dev_type << " " << msg;
+
+      for (int i = 0; i < iters; ++i) {
+        ICICLE_CHECK(msm(scalars.get(), bases.get(), N, config, result));
+      }
+    };
+
+    for (int bitsize = 1; bitsize <= scalar_t::NBITS; bitsize += 1) {
+      config.bitsize = bitsize;
+      run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+      run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+      for (int res_idx = 0; res_idx < batch; ++res_idx) {
+        ASSERT_EQ(true, result_main[res_idx].is_on_curve());
+        ASSERT_EQ(true, result_ref[res_idx].is_on_curve());
+        ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
+      }
     }
   }
 
@@ -120,8 +164,8 @@ public:
     run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
-      ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
-      ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
+      ASSERT_EQ(true, result_main[res_idx].is_on_curve());
+      ASSERT_EQ(true, result_ref[res_idx].is_on_curve());
       ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
     }
   }
@@ -177,8 +221,8 @@ public:
       run(IcicleTestBase::reference_device(), result_single_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
 
       for (int res_idx = 0; res_idx < batch; ++res_idx) {
-        ASSERT_EQ(true, P::is_on_curve(result_multi_thread[res_idx]));
-        ASSERT_EQ(true, P::is_on_curve(result_single_thread[res_idx]));
+        ASSERT_EQ(true, result_multi_thread[res_idx].is_on_curve());
+        ASSERT_EQ(true, result_single_thread[res_idx].is_on_curve());
         ASSERT_EQ(result_multi_thread[res_idx], result_single_thread[res_idx]);
       }
     }
@@ -233,13 +277,17 @@ TEST_F(CurveApiTest, msm_pre_compute) { MSM_PRE_COMPUTE_test<affine_t, projectiv
 TEST_F(CurveApiTest, msmCpuThreads) { MSM_CPU_THREADS_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, MontConversionAffine) { mont_conversion_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, MontConversionProjective) { mont_conversion_test<projective_t, projective_t>(); }
+TEST_F(CurveApiTest, msm_bitsize) { MSM_bitsize<affine_t, projective_t>(); }
 
   #ifdef G2_ENABLED
 TEST_F(CurveApiTest, msmG2) { MSM_test<g2_affine_t, g2_projective_t>(); }
-TEST_F(CurveApiTest, MontConversionG2Affine) { mont_conversion_test<g2_affine_t, g2_projective_t>(); }
-TEST_F(CurveApiTest, MontConversionG2Projective) { mont_conversion_test<g2_projective_t, g2_projective_t>(); }
   #endif // G2
 #endif   // MSM
+
+#ifdef G2_ENABLED
+TEST_F(CurveApiTest, MontConversionG2Affine) { mont_conversion_test<g2_affine_t, g2_projective_t>(); }
+TEST_F(CurveApiTest, MontConversionG2Projective) { mont_conversion_test<g2_projective_t, g2_projective_t>(); }
+#endif // G2
 
 #ifdef ECNTT
 TEST_F(CurveApiTest, ecntt)
@@ -277,7 +325,7 @@ TEST_F(CurveApiTest, ecntt)
 
   // note that memcmp is tricky here because projetive points can have many representations
   for (uint64_t i = 0; i < N; ++i) {
-    ASSERT_FALSE(projective_t::is_zero(out_ref[i]));
+    ASSERT_FALSE(out_ref[i].is_zero());
     ASSERT_EQ(out_ref[i], out_main[i]);
   }
 }
@@ -346,7 +394,7 @@ TEST_F(CurveApiTest, ecnttDeviceMem)
   run(IcicleTestBase::main_device(), out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
   // note that memcmp is tricky here because projetive points can have many representations
   for (uint64_t i = 0; i < N; ++i) {
-    ASSERT_FALSE(projective_t::is_zero(out_ref[i]));
+    ASSERT_FALSE(out_ref[i].is_zero());
     ASSERT_EQ(out_ref[i], out_main[i]);
   }
 }
@@ -372,14 +420,14 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
 {
   auto a = TypeParam::rand_host();
   auto b = TypeParam::rand_host();
-  ASSERT_EQ(true, TypeParam::is_on_curve(a) && TypeParam::is_on_curve(b));               // rand is on curve
+  ASSERT_EQ(true, a.is_on_curve() && b.is_on_curve());                                   // rand is on curve
   ASSERT_EQ(a + TypeParam::zero(), a);                                                   // zero addition
   ASSERT_EQ(a + b - a, b);                                                               // addition,subtraction cancel
-  ASSERT_EQ(a + TypeParam::neg(a), TypeParam::zero());                                   // addition with neg cancel
+  ASSERT_EQ(a + a.neg(), TypeParam::zero());                                             // addition with neg cancel
   ASSERT_EQ(a + a + a, scalar_t::from(3) * a);                                           // scalar multiplication
   ASSERT_EQ(scalar_t::from(3) * (a + b), scalar_t::from(3) * a + scalar_t::from(3) * b); // distributive
-  ASSERT_EQ(a + b, a + TypeParam::to_affine(b)); // mixed addition projective+affine
-  ASSERT_EQ(a - b, a - TypeParam::to_affine(b)); // mixed subtraction projective-affine
+  ASSERT_EQ(a + b, a + b.to_affine()); // mixed addition projective+affine
+  ASSERT_EQ(a - b, a - b.to_affine()); // mixed subtraction projective-affine
 }
 
 #ifdef PAIRING
@@ -391,8 +439,8 @@ TEST(CurveSanity, TargetFieldSanityTest)
 {
   auto a = TargetField::rand_host();
   auto b = TargetField::rand_host();
-  auto b_inv = TargetField::inverse(b);
-  auto a_neg = TargetField::neg(a);
+  auto b_inv = b.inverse();
+  auto a_neg = a.neg();
 
   ASSERT_EQ(a + TargetField::zero(), a);
   ASSERT_EQ(a + b - a, b);
@@ -411,8 +459,8 @@ TEST(CurveSanity, PairingBilinearityTest)
     // Proper TargetField/ScalarField multiplication is not implemented yet, so we need a uint32_t coefficient
     uint32_t coeff = 42;
     scalar_t s = scalar_t::from(coeff);
-    affine_t ps = projective_t::to_affine(projective_t::from_affine(p) * s);
-    g2_affine_t qs = g2_projective_t::to_affine(g2_projective_t::from_affine(q) * s);
+    affine_t ps = (projective_t::from_affine(p) * s).to_affine();
+    g2_affine_t qs = (g2_projective_t::from_affine(q) * s).to_affine();
 
     TargetField f1, f2, f3, f4;
     pairing<PairingConfig>(ps, q, f1);
@@ -420,8 +468,8 @@ TEST(CurveSanity, PairingBilinearityTest)
     pairing<PairingConfig>(p, q, f3);
     pairing<PairingConfig>(ps, qs, f4);
 
-    ASSERT_EQ(f1, f2);                                  // e(ps, q) == e(p, qs)
-    ASSERT_EQ(TargetField::pow(f3, coeff * coeff), f4); // e(ps, qs) == e(p, q) ^ (s^2)
+    ASSERT_EQ(f1, f2);                    // e(ps, q) == e(p, qs)
+    ASSERT_EQ(f3.pow(coeff * coeff), f4); // e(ps, qs) == e(p, q) ^ (s^2)
   }
 }
 
@@ -430,7 +478,7 @@ TEST(CurveSanity, FinalExponentiationTest)
   for (int i = 0; i < 10; i++) {
     TargetField f = TargetField::rand_host();
     final_exponentiation<PairingConfig>(f);
-    f = TargetField::pow(f, scalar_t::get_modulus());
+    f = f.pow(scalar_t::get_modulus());
     ASSERT_EQ(f, TargetField::one());
   }
 }
@@ -448,7 +496,7 @@ TYPED_TEST(CurveSanity, ScalarMultTest)
   auto expected_mult = TypeParam::zero();
   START_TIMER(ref)
   for (int i = 0; i < scalar_t::NBITS; i++) {
-    if (i > 0) { expected_mult = TypeParam::dbl(expected_mult); }
+    if (i > 0) { expected_mult = expected_mult.dbl(); }
     if (scalar.get_scalar_digit(scalar_t::NBITS - i - 1, 1)) { expected_mult = expected_mult + point; }
   }
   END_TIMER(ref, "scalar mult double-and-add", true);

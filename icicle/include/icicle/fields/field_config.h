@@ -45,7 +45,7 @@ namespace field_config = goldilocks;
 // Note: rings are currently here since most code is shared with fields and include field_config.h
 // Maybe we will refactor in the future
 
-#if RING_ID == LABRADOR
-  #include "icicle/rings/integer_rings/labrador.h"
-namespace field_config = labrador;
+#if RING_ID == BABYKOALA
+  #include "icicle/rings/params/babykoala.h"
+namespace field_config = babykoala;
 #endif

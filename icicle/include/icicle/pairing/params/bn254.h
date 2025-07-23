@@ -39,7 +39,7 @@ namespace pairing_bn254 {
       // (9*c0-c1)+u*(9*c1+c0)
       g2_point_field_t f8 = f * point_field_t::from(8);
       point_field_t c0 = f.c1;
-      c0 = point_field_t::neg(c0); // mul fp by nonresidue (-1)
+      c0 = c0.neg(); // mul fp by nonresidue (-1)
       c0 = c0 + f8.c0 + f.c0;
       point_field_t c1 = f8.c1 + f.c1 + f.c0;
       f = g2_point_field_t{c0, c1};

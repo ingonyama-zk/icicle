@@ -10,11 +10,15 @@ mod tests {
     };
     use icicle_core::{
         hash::{HashConfig, Hasher},
-        merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
+        merkle::{MerkleProof, MerkleTree, MerkleTreeConfig, PaddingPolicy},
     };
-    use icicle_runtime::{eIcicleError, memory::HostSlice, test_utilities};
+    use icicle_runtime::{
+        memory::{DeviceVec, HostSlice},
+        test_utilities,
+    };
     use rand::Rng;
     use std::sync::Once;
+    use std::time::Instant;
 
     static INIT: Once = Once::new();
 
@@ -273,9 +277,20 @@ mod tests {
         assert_eq!(path, main_path);
         assert_eq!(leaf, main_leaf);
 
-        // TODOs :
-        // (1) test real backends: CPU + CUDA. Can also compare the proofs to see the root, path and leaf are the same.
-        // (2) test different cases of input padding
+        // test proving merkle-proof with device memory too
+        let mut device_leaves = DeviceVec::<u8>::device_malloc(input.len()).unwrap();
+        device_leaves
+            .copy_from_host(HostSlice::from_slice(&input))
+            .unwrap();
+        let merkle_proof_from_device_mem: MerkleProof = merkle_tree
+            .get_proof(&device_leaves, 2, false /*=pruned*/, &MerkleTreeConfig::default())
+            .unwrap();
+        assert_eq!(
+            merkle_tree
+                .verify(&merkle_proof_from_device_mem)
+                .unwrap(),
+            true
+        );
     }
 
     #[test]
@@ -295,7 +310,7 @@ mod tests {
 
         let hasher = Blake3::new(0).unwrap();
 
-        let err = pow_solver(
+        pow_solver(
             &hasher,
             input_host,
             BITS,
@@ -303,8 +318,8 @@ mod tests {
             &mut gpu_found,
             &mut gpu_nonce,
             &mut gpu_mined_hash,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert!(gpu_found);
         assert_eq!(gpu_nonce, golden_nonce);
         assert_eq!(gpu_mined_hash, golden_hash);
@@ -312,7 +327,7 @@ mod tests {
         let mut gpu_is_correct = false;
         let mut gpu_mined_hash_check = 0;
 
-        let err = pow_verify(
+        pow_verify(
             &hasher,
             input_host,
             BITS,
@@ -320,8 +335,8 @@ mod tests {
             gpu_nonce,
             &mut gpu_is_correct,
             &mut gpu_mined_hash_check,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert_eq!(gpu_mined_hash_check, golden_hash);
         assert!(gpu_is_correct);
 
@@ -330,7 +345,7 @@ mod tests {
         let mut cpu_nonce = 0;
         let mut cpu_mined_hash = 0;
         let hasher = Blake3::new(0).unwrap();
-        let err = pow_solver(
+        pow_solver(
             &hasher,
             input_host,
             BITS,
@@ -338,8 +353,8 @@ mod tests {
             &mut cpu_found,
             &mut cpu_nonce,
             &mut cpu_mined_hash,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert!(cpu_found);
         assert_eq!(cpu_nonce, golden_nonce);
         assert_eq!(cpu_mined_hash, golden_hash);
@@ -347,7 +362,7 @@ mod tests {
         let mut cpu_is_correct = false;
         let mut cpu_mined_hash_check = 0;
 
-        let err = pow_verify(
+        pow_verify(
             &hasher,
             input_host,
             BITS,
@@ -355,8 +370,8 @@ mod tests {
             cpu_nonce,
             &mut cpu_is_correct,
             &mut cpu_mined_hash_check,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert_eq!(cpu_mined_hash, golden_hash);
         assert!(cpu_is_correct);
     }
@@ -377,7 +392,7 @@ mod tests {
 
         let hasher = Keccak256::new(0).unwrap();
 
-        let err = pow_solver(
+        pow_solver(
             &hasher,
             input_host,
             BITS,
@@ -385,14 +400,14 @@ mod tests {
             &mut gpu_found,
             &mut gpu_nonce,
             &mut gpu_mined_hash,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert!(gpu_found);
 
         let mut gpu_is_correct = false;
         let mut gpu_mined_hash_check = 0;
 
-        let err = pow_verify(
+        pow_verify(
             &hasher,
             input_host,
             BITS,
@@ -400,8 +415,8 @@ mod tests {
             gpu_nonce,
             &mut gpu_is_correct,
             &mut gpu_mined_hash_check,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert_eq!(gpu_mined_hash_check, gpu_mined_hash);
         assert!(gpu_is_correct);
 
@@ -410,7 +425,7 @@ mod tests {
         let mut cpu_nonce = 0;
         let mut cpu_mined_hash = 0;
         let hasher = Keccak256::new(0).unwrap();
-        let err = pow_solver(
+        pow_solver(
             &hasher,
             input_host,
             BITS,
@@ -418,8 +433,8 @@ mod tests {
             &mut cpu_found,
             &mut cpu_nonce,
             &mut cpu_mined_hash,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert!(cpu_found);
         assert_eq!(cpu_nonce, gpu_nonce);
         assert_eq!(cpu_mined_hash, gpu_mined_hash);
@@ -427,7 +442,7 @@ mod tests {
         let mut cpu_is_correct = false;
         let mut cpu_mined_hash_check = 0;
 
-        let err = pow_verify(
+        pow_verify(
             &hasher,
             input_host,
             BITS,
@@ -435,9 +450,83 @@ mod tests {
             cpu_nonce,
             &mut cpu_is_correct,
             &mut cpu_mined_hash_check,
-        );
-        assert_eq!(err, eIcicleError::Success);
+        )
+        .unwrap();
         assert_eq!(cpu_mined_hash, cpu_mined_hash_check);
         assert!(cpu_is_correct);
+    }
+
+    #[test]
+    fn test_merkle_tree_segfault() {
+        initialize();
+        test_utilities::test_set_main_device();
+
+        let n = 18;
+        let field_element_size = 4;
+        for elements_per_leaf in [1, 5] {
+            // calc tree parameters
+            let leaf_size = field_element_size * elements_per_leaf;
+            let mut test_vec = vec![
+                0 as u8;
+                (field_element_size * (1 << n))
+                    .try_into()
+                    .unwrap()
+            ];
+            rand::thread_rng().fill(&mut test_vec[..]);
+            let nof_leafs = (((1 << n) + elements_per_leaf - 1) / elements_per_leaf) as u64;
+            let tree_height = if nof_leafs.is_power_of_two() {
+                nof_leafs.ilog2() as usize
+            } else {
+                nof_leafs.ilog2() as usize + 1
+            };
+
+            let build_tree = |main_dev: bool| {
+                if main_dev {
+                    test_utilities::test_set_main_device();
+                } else {
+                    test_utilities::test_set_ref_device();
+                }
+                // define the tree
+                let hasher = Blake2s::new(leaf_size).unwrap();
+                let compress = Blake2s::new(hasher.output_size() * 2).unwrap();
+                let layer_hashes: Vec<&Hasher> = std::iter::once(&hasher)
+                    .chain(std::iter::repeat(&compress).take(tree_height))
+                    .collect();
+
+                println!("Leaf Size: {}", leaf_size);
+                println!("Number of Leafs: {}", nof_leafs);
+                println!("Hasher Output Size: {}", hasher.output_size());
+                println!("Tree Height: {}", tree_height);
+
+                let merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 0).unwrap();
+                let mut config = MerkleTreeConfig::default();
+                config.padding_policy = PaddingPolicy::ZeroPadding;
+
+                let build_start = Instant::now();
+
+                merkle_tree
+                    .build(HostSlice::from_slice(&test_vec), &config)
+                    .unwrap();
+
+                println!(
+                    "Merkle tree build took: {:?} on device = {}",
+                    build_start.elapsed(),
+                    if main_dev { "Main" } else { "Ref" }
+                );
+
+                let root: &[u8] = merkle_tree
+                    .get_root()
+                    .unwrap();
+
+                let mut root_vec = vec![0u8; hasher.output_size() as usize];
+                root_vec.copy_from_slice(root);
+                return root_vec;
+            };
+
+            // build the tree on main and ref devices and compare the roots
+            let ref_root = build_tree(false);
+            let main_root = build_tree(true);
+            assert_eq!(ref_root, main_root);
+        }
     }
 }

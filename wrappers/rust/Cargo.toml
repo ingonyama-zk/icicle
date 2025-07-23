@@ -4,7 +4,7 @@ members = [
   "icicle-runtime",
   "icicle-core",
   "icicle-curves/icicle-bw6-761",
-  "icicle-curves/icicle-bls12-377",
+  "icicle-curves/icicle-bls12-377", 
   "icicle-curves/icicle-bls12-381",
   "icicle-curves/icicle-bn254",
   "icicle-curves/icicle-grumpkin",
@@ -13,13 +13,14 @@ members = [
   "icicle-fields/icicle-koalabear",
   "icicle-fields/icicle-m31",
   "icicle-fields/icicle-stark252",
-  "icicle-rings/icicle-labrador",
+  "icicle-rings/icicle-babykoala",
   "icicle-hash",
+  "icicle-pqc",
 ]
 exclude = []
 
 [workspace.package]
-version = "3.9.0"
+version = "4.0.0"
 edition = "2021"
 authors = ["Ingonyama"]
 homepage = "https://www.ingonyama.com"
