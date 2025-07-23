@@ -193,7 +193,7 @@ public:
     }
   }
 
-  constexpr HOST_DEVICE_INLINE Wide mul_wide(const CubicExtensionField& ys) const
+  constexpr HOST_DEVICE Wide mul_wide(const CubicExtensionField& ys) const
   {
     FWide c0_prod = c0.mul_wide(ys.c0);
     FWide c1_prod = c1.mul_wide(ys.c1);

@@ -1,6 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use icicle_babykoala::polynomial_ring;
-use icicle_core::matrix_ops::MatMulConfig;
 
 use icicle_core::{matrix_ops::*, polynomial_ring::PolynomialRing, traits::GenerateRandom};
 
