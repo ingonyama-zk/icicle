@@ -35,7 +35,7 @@ TYPED_TEST(FieldTest, FieldSanityTest)
 
 TYPED_TEST(FieldTest, NTTTest)
 {
-  const uint64_t N = 1 << 3; // rand_uint_32b(3, 17);
+  const uint64_t N = 1 << 9; //rand_uint_32b(2, 17);
   const int batch_size = 1 << 0; // rand_uint_32b(0, 4);
   const bool columns_batch = false; // rand_uint_32b(0, 1);
   const NTTDir dir = NTTDir::kForward; // static_cast<NTTDir>(rand_uint_32b(0, 1));
@@ -57,9 +57,10 @@ TYPED_TEST(FieldTest, NTTTest)
     in_a[i] = (i % 2 == 0) ? TypeParam::zero() : TypeParam::one();
   }
   
+  const int debug_size = std::min(32, total_size);
   // Print in_a values for debugging
   ICICLE_LOG_INFO << "in_a values after initialization:";
-  for (int i = 0; i < total_size; i++) {
+  for (int i = 0; i < debug_size; i++) {
     ICICLE_LOG_INFO << "in_a[" << i << "] = " << in_a[i];
   }
 
@@ -74,6 +75,7 @@ TYPED_TEST(FieldTest, NTTTest)
     auto config = default_ntt_config<TypeParam>();
     config.batch_size = batch_size;
     config.columns_batch = columns_batch;
+    config.ordering = Ordering::kNR;
 
     // Print NTT configuration
     ICICLE_LOG_INFO << "NTT Configuration for " << dev_type << ":";
@@ -99,12 +101,16 @@ TYPED_TEST(FieldTest, NTTTest)
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
 
+  ICICLE_LOG_INFO << "Input data before CPU NTT:";
+  for (int i = 0; i < debug_size; i++) {
+    ICICLE_LOG_INFO << "in_a[" << i << "] = " << in_a[i];
+  }
   // Run reference implementation (CPU)
   run(IcicleTestBase::reference_device(), out_ref.get(), VERBOSE, "NTT", ITERS);
 
   // Print out_ref values after CPU NTT
   ICICLE_LOG_INFO << "out_ref values after CPU NTT:";
-  for (int i = 0; i < total_size; i++) {
+  for (int i = 0; i < debug_size; i++) {
     ICICLE_LOG_INFO << "out_ref[" << i << "] = " << out_ref[i];
   }
 
@@ -128,7 +134,7 @@ TYPED_TEST(FieldTest, NTTTest)
 
     // Print input data before Vulkan NTT
     ICICLE_LOG_INFO << "Input data before Vulkan NTT:";
-    for (int i = 0; i < total_size; i++) {
+    for (int i = 0; i < debug_size; i++) {
       ICICLE_LOG_INFO << "in_a[" << i << "] = " << in_a[i];
     }
 
@@ -179,7 +185,7 @@ TYPED_TEST(FieldTest, NTTTest)
     
     // Print out_vulkan values before comparison
     ICICLE_LOG_INFO << "out_vulkan values before comparison:";
-    for (int i = 0; i < total_size; i++) {
+    for (int i = 0; i < debug_size; i++) {
       ICICLE_LOG_INFO << "out_vulkan[" << i << "] = " << out_vulkan[i];
     }
     
