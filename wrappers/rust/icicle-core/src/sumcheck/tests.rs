@@ -63,7 +63,6 @@ where
 pub fn check_sumcheck_simple<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
-    SW::Field: GenerateRandom,
     P: ReturningValueProgramImpl,
 {
     let log_mle_poly_size = 13u64;

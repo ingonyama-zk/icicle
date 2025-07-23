@@ -8,6 +8,7 @@ const benchmarks = [
   { title: 'PQC', baseImg: 'pqc_graph_1' },
   { title: 'SHA3', baseImg: 'SHA3_graph_1' },
   { title: 'Sumcheck', baseImg: 'Sumcheck_graph_1' },
+  { title: 'Labrador', baseImg: 'Labrador_graph_1' },
 ];
 
 export default function BenchmarkGallery() {
