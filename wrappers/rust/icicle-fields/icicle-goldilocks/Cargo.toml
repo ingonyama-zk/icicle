@@ -23,6 +23,12 @@ serde_json = "1.0.140"
 cmake = "0.1.50"
 
 [features]
+default = ["fri", "ntt", "poseidon2", "sumcheck"]
+fri = []
+ntt = []
+poseidon2 = []
+sumcheck = []
+
 cuda_backend = ["icicle-runtime/cuda_backend"]
 pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]
 metal_backend = ["icicle-runtime/metal_backend"]

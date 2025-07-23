@@ -1,59 +1,471 @@
 /**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+ * Global Docusaurus Custom CSS
+ * Infima is the default CSS framework used in Docusaurus.
  */
 
-/* You can override the default Infima variables here. */
+/* ========== COLOR VARIABLES ========== */
 :root {
-  --ifm-color-primary: #FFCB00;
-  --ifm-color-primary-dark: #FFCB00;
-  --ifm-color-primary-darker: #FFCB00;
-  --ifm-color-primary-darkest: #FFCB00;
-  --ifm-color-primary-light: #FFCB00;
-  --ifm-color-primary-lighter: #FFCB00;
-  --ifm-color-primary-lightest: #FFCB00;
+  --ifm-color-primary: #006AEA;
+  --ifm-color-primary-dark: #006AEA;
+  --ifm-color-primary-darker: #006AEA;
+  --ifm-color-primary-darkest: #006AEA;
+  --ifm-color-primary-light: #006AEA;
+  --ifm-color-primary-lighter: #006AEA;
+  --ifm-color-primary-lightest: #006AEA;
   --ifm-code-font-size: 95%;
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
-[data-theme='dark'] {
-  --ifm-color-primary: #FFCB00;
-  --ifm-color-primary-dark: #FFCB00;
-  --ifm-color-primary-darker:#FFCB00;
-  --ifm-color-primary-darkest: #FFCB00;
-  --ifm-color-primary-light:#FFCB00;
-  --ifm-color-primary-lighter: #FFCB00;
-  --ifm-color-primary-lightest: #FFCB00;
+/* Force primary-colored links to use custom color in dark mode */
+
+/* Navbar link (e.g. "Docs") */
+[data-theme='dark'] .navbar__item.navbar__link--active {
+  color: #339BFF !important;
 }
 
+/* "Edit this page" link */
+[data-theme='dark'] .theme-edit-this-page {
+  color: #339BFF !important;
+}
+
+/* Pagination buttons (Previous/Next links) */
+[data-theme='dark'] .pagination-nav__link {
+  color: #339BFF !important;
+}
+
+/* Sidebar active item */
+[data-theme='dark'] .menu__link--active {
+  color: #339BFF !important;
+}
+
+/* Breadcrumbs active item */
+[data-theme='dark'] .breadcrumbs__item--active .breadcrumbs__link {
+  color: #339BFF !important;
+}
+
+/* ========== LOGO ABOVE SIDEBAR ========== */
+.navbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  padding: 0 1rem;
+  justify-content: flex-start; /* <--- this is the key change */
+}
+
+.navbar__brand {
+  position: relative; /* back in flex flow */
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.navbar__logo {
+  display: flex;
+  align-items: center;
+}
+.navbar__logo img {
+  height: 50px;
+  display: block;
+}
+
+/* ========== NAVBAR SPACING ADJUSTMENTS ========== */
+.navbar__items--left {
+  margin-left: 2rem;
+}
+.navbar__items--right {
+  gap: 0.5rem;
+}
+.navbar__item {
+  padding: 0 0.75rem;
+}
+.navbar__item.dropdown {
+  margin-right: 0.5rem;
+}
+/* Tighter spacing for the Ingonyama paw logo */
+.navbar__item.ingo-paw {
+  padding-left: 8px;
+  padding-right: 0;
+  margin-left: -10px; /* pull closer to previous item */
+  display: flex;
+  align-items: center;
+}
+
+.navbar__item.ingo-paw img {
+  height: 28px;
+  display: block;
+}
+
+/* Default (light mode) logo */
+.ingo-paw-logo {
+  content: url('/img/Ingologo.svg');
+}
+
+/* Dark mode logo */
+[data-theme='dark'] .ingo-paw-logo {
+  content: url('/img/darkmode/ingologo_drk.svg');
+}
+
+
+/* ========== GITHUB CTA BUTTON ========== */
+.github-cta-button {
+  background-color: var(--ifm-color-primary);
+  color: #fff !important;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  text-transform: none;
+  margin-left: 10px;
+  transition: background-color 0.2s ease;
+  display: inline-block;
+}
+.github-cta-button:hover {
+  background-color: #0056b3;
+  text-decoration: none;
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  color: #fff;
+}
+
+/* ========== SIDEBAR STYLING ========== */
+
+/* Folder (group) titles */
+.menu__link--sublist {
+  font-weight: bold !important;
+  color: #000 !important;
+  font-size: 1rem !important;
+  margin-top: 1rem;
+}
+
+/* First group: remove top margin */
+.menu__list > .menu__list-item:first-child > .menu__link--sublist {
+  margin-top: 0;
+}
+
+/* Child items (files) */
+.menu__list .menu__list .menu__link {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: normal;
+}
+
+/* Active item */
+.menu__link--active {
+  color: var(--ifm-color-primary);
+  font-weight: bold;
+}
+
+/* ========== DARK MODE OVERRIDES ========== */
+[data-theme='dark'] .menu__link--sublist {
+  color: #fff !important;
+}
+
+[data-theme='dark'] .menu__list .menu__list .menu__link {
+  color: #dadada !important;
+}
+
+/* ========== CARDS STYLING ========== */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 768px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card-row-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 2rem;
+  width: 100%;
+  height: auto;
+}
+
+@media (max-width: 996px) {
+  .card-row-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.card-box {
+  background: transparent;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.card-box:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+}
+
+.card-box h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+/* Light mode description text */
+.card-box p {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* Dark mode: fix unreadable description */
+[data-theme='dark'] .card-box p {
+  color: #dadada;
+}
+
+.card-icon-left {
+  width: 70px;
+  height: auto;
+}
+
+.card-icon-top {
+  display: block;
+  width: 150px;
+  height: auto;
+  margin-bottom: 0.75rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* === Light mode card icons === */
+.arch-icon {
+  content: url('/img/Arch.png');
+}
+.prog-icon {
+  content: url('/img/Programguide.png');
+}
+.intsup-icon {
+  content: url('/img/Intandsup.png');
+}
+.api-icon {
+  content: url('/img/API.png');
+}
+
+/* === Dark mode card icons === */
+[data-theme='dark'] .arch-icon {
+  content: url('/img/darkmode/Arch_drk.svg');
+}
+[data-theme='dark'] .prog-icon {
+  content: url('/img/darkmode/Programguide_drk.svg');
+}
+[data-theme='dark'] .intsup-icon {
+  content: url('/img/darkmode/Intandsup_drk.svg');
+}
+[data-theme='dark'] .api-icon {
+  content: url('/img/darkmode/API_drk.svg');
+}
+
+/* === Swap navbar logo in dark mode === */
+
+/* Light theme (default) */
+.custom-navbar-logo {
+  content: url('/img/icicledocslogo.png');
+}
+
+/* Dark theme */
+[data-theme='dark'] .custom-navbar-logo {
+  content: url('/img/darkmode/icicledocslogo_drk.svg');
+}
+
+
+/* ===ecosystem cards==== */
+.ecosystem-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 996px) {
+  .ecosystem-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ecosystemcard {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ecosystemcard:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-4px);
+}
+
+.ecosystemcard img {
+  width: 100px;
+  height: auto;
+  margin-bottom: 1rem;
+}
+
+.ecosystemcard h4 {
+  margin: 0.5rem 0 0.3rem;
+  font-size: 1.1rem;
+}
+
+.ecosystemcard p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* Hide duplicated logo ONLY inside sidebar on mobile */
+@media (max-width: 996px) {
+  .navbar-sidebar .navbar__brand {
+    display: none !important;
+  }
+}
+
+
+/* ========== LOGO IN TOC =========== */
+
+/* Wrapper for the logo inside the Table of Contents */
+.global-logo-corner {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+/* The logo image itself */
+.global-logo-corner img {
+  width: 180px;   /* adjust as needed */
+  height: auto;
+  display: inline-block;
+  border-radius: 8px; /* optional styling */
+}
+
+/* Optional: hide logo when ToC collapses on small screens */
+@media (max-width: 996px) {
+  .global-logo-corner {
+    display: none;
+  }
+}
+@media (max-width: 996px) {
+  .global-logo-corner {
+    display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
+@media (min-width: 997px) {
+  .global-logo-corner {
+    position: relative;
+    z-index: 10;
+  }
+}
+
+.theme-doc-sidebar-container {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* ========== CODE BLOCK HIGHLIGHTING ========== */
 .docusaurus-highlight-code-line {
   background-color: rgba(0, 0, 0, 0.1);
   display: block;
   margin: 0 calc(-1 * var(--ifm-pre-padding));
   padding: 0 var(--ifm-pre-padding);
 }
-
 [data-theme='dark'] .docusaurus-highlight-code-line {
   background-color: rgba(0, 0, 0, 0.3);
 }
 
-/* Mermaid elements must be changed to be visible in dark mode */
-[data-theme='dark'] .mermaid .messageLine0, .messageLine1 {
-      filter: invert(51%) sepia(84%) saturate(405%) hue-rotate(21deg) brightness(94%) contrast(91%) !important;
+/* === Light mode (default) === */
+.cpp-icon {
+  content: url('/img/cpp.png');
 }
-/* NOTE Must be a separate specification from the above or it won't toggle off */
-[data-theme='dark'] .mermaid .flowchart-link {
-      filter: invert(51%) sepia(84%) saturate(405%) hue-rotate(21deg) brightness(94%) contrast(91%) !important;
+.go-icon {
+  content: url('/img/go.png');
 }
-[data-theme='dark'] .mermaid .cluster-label {
-      filter: invert(51%) sepia(84%) saturate(405%) hue-rotate(21deg) brightness(94%) contrast(91%) !important;
-}
-[data-theme='dark'] .mermaid .messageText {
-      stroke:none !important; fill:white !important;
+.rust-icon {
+  content: url('/img/rust.png');
 }
 
-/* Our additions */
+/* === Dark mode swap === */
+[data-theme='dark'] .cpp-icon {
+  content: url('/img/darkmode/cpp_drk.svg');
+}
+[data-theme='dark'] .go-icon {
+  content: url('/img/darkmode/go_drk.svg');
+}
+[data-theme='dark'] .rust-icon {
+  content: url('/img/darkmode/rust_drk.svg');
+}
+
+/* ========== MERMAID DARK MODE FIX ========== */
+[data-theme='dark'] {
+  --ifm-color-primary: #006AEA;
+  --ifm-color-primary-dark: #006AEA;
+  --ifm-color-primary-darker: #006AEA;
+  --ifm-color-primary-darkest: #006AEA;
+  --ifm-color-primary-light: #006AEA;
+  --ifm-color-primary-lighter: #006AEA;
+  --ifm-color-primary-lightest: #006AEA;
+}
+[data-theme='dark'] .mermaid .messageLine0,
+[data-theme='dark'] .mermaid .messageLine1,
+[data-theme='dark'] .mermaid .flowchart-link,
+[data-theme='dark'] .mermaid .cluster-label {
+  filter: invert(51%) sepia(84%) saturate(405%) hue-rotate(21deg) brightness(94%) contrast(91%) !important;
+}
+[data-theme='dark'] .mermaid .messageText {
+  stroke: none !important;
+  fill: white !important;
+}
+
+/* ========== MISC ========== */
 .anchor {
   scroll-margin-top: 50pt;
+}
+
+/* Fixes for sticky table headers in MDX/Docusaurus */
+table thead th {
+  background: #fff;
+  z-index: 4;
+}
+[data-theme='dark'] table thead th {
+  background: #000;
+}
+
+/* Make markdown and doc containers not block sticky */
+.theme-doc-markdown,
+.theme-doc-markdown--centered,
+.markdown {
+  overflow: visible !important;
+  position: relative;
+}
+@media (max-width: 1100px) {
+  .navbar__item {
+    padding: 0 0.4rem; /* reduce padding for tighter layout */
+  }
 }

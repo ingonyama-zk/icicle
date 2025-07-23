@@ -6,7 +6,7 @@ set(ICICLE_FIELDS
   1002:stark252:NTT,POSEIDON,POSEIDON2,SUMCHECK,FRI
   1003:m31:EXT_FIELD,POSEIDON,POSEIDON2,SUMCHECK
   1004:koalabear:NTT,EXT_FIELD,POSEIDON,POSEIDON2,SUMCHECK,FRI
-  1005:goldilocks:NTT,POSEIDON2,SUMCHECK,FRI
+  1005:goldilocks:NTT,EXT_FIELD,POSEIDON2,SUMCHECK,FRI
 )
 
 # Define available curve libraries with an index and their supported features
@@ -22,5 +22,5 @@ set(ICICLE_CURVES
 # Define available ring libraries with an index and their supported features
 # Format: index:curve:features
 set(ICICLE_RINGS
-  2001:labrador:NTT
+  2001:babykoala:NTT
 )

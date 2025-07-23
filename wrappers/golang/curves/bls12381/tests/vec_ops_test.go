@@ -124,10 +124,10 @@ type Bls12_381VecOpsTestSuite struct {
 }
 
 func (s *Bls12_381VecOpsTestSuite) TestBls12_381VecOps() {
-	s.Run("TestBls12_381VecOps", testWrapper(&s.Suite, testBls12_381VecOps))
-	s.Run("TestBls12_381Transpose", testWrapper(&s.Suite, testBls12_381Transpose))
-	s.Run("TestBls12_381Sum", testWrapper(&s.Suite, testBls12_381Sum))
-	s.Run("TestBls12_381Product", testWrapper(&s.Suite, testBls12_381Product))
+	s.Run("TestBls12_381VecOps", test_helpers.TestWrapper(&s.Suite, testBls12_381VecOps))
+	s.Run("TestBls12_381Transpose", test_helpers.TestWrapper(&s.Suite, testBls12_381Transpose))
+	s.Run("TestBls12_381Sum", test_helpers.TestWrapper(&s.Suite, testBls12_381Sum))
+	s.Run("TestBls12_381Product", test_helpers.TestWrapper(&s.Suite, testBls12_381Product))
 }
 
 func TestSuiteBls12_381VecOps(t *testing.T) {

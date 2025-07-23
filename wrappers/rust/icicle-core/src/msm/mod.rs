@@ -1,7 +1,7 @@
-use crate::curve::{Affine, Curve, Projective};
+use crate::projective::Projective;
 use icicle_runtime::{
     config::ConfigExtension,
-    errors::eIcicleError,
+    errors::{eIcicleError, IcicleError},
     memory::{DeviceSlice, HostOrDeviceSlice},
     stream::IcicleStreamHandle,
 };
@@ -73,19 +73,113 @@ impl Default for MSMConfig {
 }
 
 #[doc(hidden)]
-pub trait MSM<C: Curve> {
+pub trait MSM<P: Projective> {
     fn msm_unchecked(
-        scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
-        bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+        scalars: &(impl HostOrDeviceSlice<P::ScalarField> + ?Sized),
+        bases: &(impl HostOrDeviceSlice<P::Affine> + ?Sized),
         cfg: &MSMConfig,
-        results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+        results: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+    ) -> Result<(), IcicleError>;
 
     fn precompute_bases_unchecked(
-        bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+        bases: &(impl HostOrDeviceSlice<P::Affine> + ?Sized),
         cfg: &MSMConfig,
-        output_bases: &mut DeviceSlice<Affine<C>>,
-    ) -> Result<(), eIcicleError>;
+        output_bases: &mut DeviceSlice<P::Affine>,
+    ) -> Result<(), IcicleError>;
+
+    fn msm(
+        scalars: &(impl HostOrDeviceSlice<P::ScalarField> + ?Sized),
+        bases: &(impl HostOrDeviceSlice<P::Affine> + ?Sized),
+        cfg: &MSMConfig,
+        results: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+    ) -> Result<(), IcicleError> {
+        if bases.len() % (cfg.precompute_factor as usize) != 0 {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "Precompute factor {} does not divide the number of bases {}",
+                    cfg.precompute_factor,
+                    bases.len()
+                ),
+            ));
+        }
+        let bases_size = bases.len() / (cfg.precompute_factor as usize);
+        if scalars.len() % bases_size != 0 {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "Number of bases {} does not divide the number of scalars {}",
+                    bases_size,
+                    scalars.len()
+                ),
+            ));
+        }
+        if scalars.len() % results.len() != 0 {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "Number of results {} does not divide the number of scalars {}",
+                    results.len(),
+                    scalars.len()
+                ),
+            ));
+        }
+
+        // check device slices are on active device
+        if scalars.is_on_device() && !scalars.is_on_active_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "scalars not allocated on an inactive device",
+            ));
+        }
+        if bases.is_on_device() && !bases.is_on_active_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "bases not allocated on an inactive device",
+            ));
+        }
+        if results.is_on_device() && !results.is_on_active_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "results not allocated on an inactive device",
+            ));
+        }
+
+        let mut local_cfg = cfg.clone();
+        local_cfg.are_points_shared_in_batch = bases_size < scalars.len();
+        local_cfg.batch_size = results.len() as i32;
+        local_cfg.are_scalars_on_device = scalars.is_on_device();
+        local_cfg.are_bases_on_device = bases.is_on_device();
+        local_cfg.are_results_on_device = results.is_on_device();
+
+        Self::msm_unchecked(scalars, bases, &local_cfg, results)
+    }
+
+    fn precompute_bases(
+        points: &(impl HostOrDeviceSlice<P::Affine> + ?Sized),
+        config: &MSMConfig,
+        output_bases: &mut DeviceSlice<P::Affine>,
+    ) -> Result<(), IcicleError> {
+        if output_bases.len() != points.len() * (config.precompute_factor as usize) {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                format!(
+                    "Precompute factor is probably incorrect: expected {} but got {}",
+                    output_bases.len() / points.len(),
+                    config.precompute_factor
+                ),
+            ));
+        }
+
+        if !output_bases.is_on_device() {
+            return Err(IcicleError::new(
+                eIcicleError::InvalidArgument,
+                "output_bases not allocated on a device",
+            ));
+        }
+
+        Self::precompute_bases_unchecked(points, config, output_bases)
+    }
 }
 
 /// Computes the multi-scalar multiplication, or MSM: `s1*P1 + s2*P2 + ... + sn*Pn`, or a batch of several MSMs.
@@ -102,55 +196,14 @@ pub trait MSM<C: Curve> {
 ///
 /// * `results` - buffer to write results into. Its length is equal to the batch size i.e. number of MSMs to compute.
 ///
-/// Returns `Ok(())` if no errors occurred or a `CudaError` otherwise.
-pub fn msm<C: Curve + MSM<C>>(
-    scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
-    bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+/// Returns `Ok(())` if no errors occurred or an `IcicleError` otherwise.
+pub fn msm<P: Projective + MSM<P>>(
+    scalars: &(impl HostOrDeviceSlice<P::ScalarField> + ?Sized),
+    bases: &(impl HostOrDeviceSlice<P::Affine> + ?Sized),
     cfg: &MSMConfig,
-    results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
-) -> Result<(), eIcicleError> {
-    if bases.len() % (cfg.precompute_factor as usize) != 0 {
-        panic!(
-            "Precompute factor {} does not divide the number of bases {}",
-            cfg.precompute_factor,
-            bases.len()
-        );
-    }
-    let bases_size = bases.len() / (cfg.precompute_factor as usize);
-    if scalars.len() % bases_size != 0 {
-        panic!(
-            "Number of bases {} does not divide the number of scalars {}",
-            bases_size,
-            scalars.len()
-        );
-    }
-    if scalars.len() % results.len() != 0 {
-        panic!(
-            "Number of results {} does not divide the number of scalars {}",
-            results.len(),
-            scalars.len()
-        );
-    }
-
-    // check device slices are on active device
-    if scalars.is_on_device() && !scalars.is_on_active_device() {
-        panic!("scalars not allocated on an inactive device");
-    }
-    if bases.is_on_device() && !bases.is_on_active_device() {
-        panic!("bases not allocated on an inactive device");
-    }
-    if results.is_on_device() && !results.is_on_active_device() {
-        panic!("results not allocated on an inactive device");
-    }
-
-    let mut local_cfg = cfg.clone();
-    local_cfg.are_points_shared_in_batch = bases_size < scalars.len();
-    local_cfg.batch_size = results.len() as i32;
-    local_cfg.are_scalars_on_device = scalars.is_on_device();
-    local_cfg.are_bases_on_device = bases.is_on_device();
-    local_cfg.are_results_on_device = results.is_on_device();
-
-    C::msm_unchecked(scalars, bases, &local_cfg, results)
+    results: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+) -> Result<(), IcicleError> {
+    P::msm(scalars, bases, cfg, results)
 }
 
 /// A function that precomputes MSM bases by extending them with their shifted copies.
@@ -171,22 +224,13 @@ pub fn msm<C: Curve + MSM<C>>(
 ///
 /// * `output_bases` - Device-allocated buffer of size `bases_size` * `precompute_factor` for the extended bases.
 ///
-/// Returns `Ok(())` if no errors occurred or a `eIcicleError` otherwise.
-pub fn precompute_bases<C: Curve + MSM<C>>(
-    points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+/// Returns `Ok(())` if no errors occurred or an `IcicleError` otherwise.
+pub fn precompute_bases<P: Projective + MSM<P>>(
+    points: &(impl HostOrDeviceSlice<P::Affine> + ?Sized),
     config: &MSMConfig,
-    output_bases: &mut DeviceSlice<Affine<C>>,
-) -> Result<(), eIcicleError> {
-    assert_eq!(
-        output_bases.len(),
-        points.len() * (config.precompute_factor as usize),
-        "Precompute factor is probably incorrect: expected {} but got {}",
-        output_bases.len() / points.len(),
-        config.precompute_factor
-    );
-    assert!(output_bases.is_on_device());
-
-    C::precompute_bases_unchecked(points, config, output_bases)
+    output_bases: &mut DeviceSlice<P::Affine>,
+) -> Result<(), IcicleError> {
+    P::precompute_bases(points, config, output_bases)
 }
 
 #[macro_export]
@@ -194,39 +238,41 @@ macro_rules! impl_msm {
     (
       $curve_prefix:literal,
       $curve_prefix_ident:ident,
-      $curve:ident
+      $projective_type:ident
     ) => {
         mod $curve_prefix_ident {
-            use super::{$curve, Affine, Curve, MSMConfig, Projective};
+            use crate::msm::$projective_type;
+            use icicle_core::projective::Projective;
+            use icicle_core::msm::MSMConfig;
             use icicle_runtime::errors::eIcicleError;
 
             extern "C" {
                 #[link_name = concat!($curve_prefix, "_msm")]
                 pub(crate) fn msm_ffi(
-                    scalars: *const <$curve as Curve>::ScalarField,
-                    points: *const Affine<$curve>,
+                    scalars: *const <$projective_type as Projective>::ScalarField,
+                    points: *const <$projective_type as Projective>::Affine,
                     count: i32,
                     config: &MSMConfig,
-                    out: *mut Projective<$curve>,
+                    out: *mut $projective_type,
                 ) -> eIcicleError;
 
                 #[link_name = concat!($curve_prefix, "_msm_precompute_bases")]
                 pub(crate) fn precompute_bases_ffi(
-                    points: *const Affine<$curve>,
+                    points: *const <$projective_type as Projective>::Affine,
                     bases_size: i32,
                     config: &MSMConfig,
-                    output_bases: *mut Affine<$curve>,
+                    output_bases: *mut <$projective_type as Projective>::Affine,
                 ) -> eIcicleError;
             }
         }
 
-        impl MSM<$curve> for $curve {
+        impl MSM<$projective_type> for $projective_type {
             fn msm_unchecked(
-                scalars: &(impl HostOrDeviceSlice<<$curve as Curve>::ScalarField> + ?Sized),
-                points: &(impl HostOrDeviceSlice<Affine<$curve>> + ?Sized),
+                scalars: &(impl HostOrDeviceSlice<<$projective_type as icicle_core::projective::Projective>::ScalarField> + ?Sized),
+                points: &(impl HostOrDeviceSlice<<$projective_type as icicle_core::projective::Projective>::Affine> + ?Sized),
                 cfg: &MSMConfig,
-                results: &mut (impl HostOrDeviceSlice<Projective<$curve>> + ?Sized),
-            ) -> Result<(), eIcicleError> {
+                results: &mut (impl HostOrDeviceSlice<$projective_type> + ?Sized),
+            ) -> Result<(), IcicleError> {
                 unsafe {
                     $curve_prefix_ident::msm_ffi(
                         scalars.as_ptr(),
@@ -240,10 +286,10 @@ macro_rules! impl_msm {
             }
 
             fn precompute_bases_unchecked(
-                points: &(impl HostOrDeviceSlice<Affine<$curve>> + ?Sized),
+                points: &(impl HostOrDeviceSlice<<$projective_type as icicle_core::projective::Projective>::Affine> + ?Sized),
                 config: &MSMConfig,
-                output_bases: &mut DeviceSlice<Affine<$curve>>,
-            ) -> Result<(), eIcicleError> {
+                output_bases: &mut DeviceSlice<<$projective_type as icicle_core::projective::Projective>::Affine>,
+            ) -> Result<(), IcicleError> {
                 unsafe {
                     $curve_prefix_ident::precompute_bases_ffi(
                         points.as_ptr(),
@@ -302,9 +348,9 @@ macro_rules! impl_msm_bench {
       $curve:ident
     ) => {
         use criterion::{criterion_group, criterion_main, Criterion};
-        use icicle_core::curve::{Affine, Curve, Projective};
         use icicle_core::msm::{msm, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR, MSM};
-        use icicle_core::traits::{FieldImpl, GenerateRandom};
+        use icicle_core::projective::Projective;
+        use icicle_core::traits::GenerateRandom;
         use icicle_runtime::{
             device::Device,
             get_active_device, is_device_available,
@@ -336,9 +382,9 @@ macro_rules! impl_msm_bench {
             println!("ICICLE benchmark with {:?}", device);
         }
 
-        fn check_msm_batch<C: Curve + MSM<C>>(c: &mut Criterion)
+        fn check_msm_batch<P: Projective + MSM<P>>(c: &mut Criterion)
         where
-            <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
+            P::ScalarField: GenerateRandom,
         {
             use criterion::black_box;
             use criterion::SamplingMode;
@@ -378,11 +424,12 @@ macro_rules! impl_msm_bench {
             for test_size_log2 in (min_log2..=max_log2) {
                 let test_size = 1 << test_size_log2;
 
-                let points = generate_random_affine_points_with_zeroes(test_size, 10);
+                let points = generate_random_affine_points_with_zeroes::<P::Affine>(test_size, 10);
                 for precompute_factor in [1, 4, 8] {
-                    let mut precomputed_points_d = DeviceVec::device_malloc(precompute_factor * test_size).unwrap();
+                    let mut precomputed_points_d =
+                        DeviceVec::<P::Affine>::device_malloc(precompute_factor * test_size).unwrap();
                     cfg.precompute_factor = precompute_factor as i32;
-                    precompute_bases(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
+                    precompute_bases::<P>(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
                     for batch_size_log2 in [0, 4, 7] {
                         let batch_size = 1 << batch_size_log2;
                         let full_size = batch_size * test_size;
@@ -391,13 +438,13 @@ macro_rules! impl_msm_bench {
                             continue;
                         }
 
-                        let mut scalars = <C::ScalarField as FieldImpl>::Config::generate_random(full_size);
-                        let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(full_size);
+                        let mut scalars = P::ScalarField::generate_random(full_size);
+                        let scalars = P::ScalarField::generate_random(full_size);
                         // a version of batched msm without using `cfg.points_size`, requires copying bases
 
                         let scalars_h = HostSlice::from_slice(&scalars);
 
-                        let mut msm_results = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
+                        let mut msm_results = DeviceVec::<P>::device_malloc(batch_size).unwrap();
 
                         let bench_descr = format!(
                             " {} x {} with precomp = {:?}",

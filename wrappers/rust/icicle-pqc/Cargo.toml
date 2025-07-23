@@ -1,0 +1,18 @@
+[package]
+name = "icicle-pqc"
+description = "Rust wrapper for the implementation of Post-quantum protocols by Ingonyama"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+icicle-core = { workspace = true }
+icicle-runtime = { workspace = true } # currently only cuda_pqc_backend is supported, move to optional features after cpu support is added
+
+[build-dependencies]
+cmake = "0.1.50"
+
+[dev-dependencies]
+rand = "0.9.1"

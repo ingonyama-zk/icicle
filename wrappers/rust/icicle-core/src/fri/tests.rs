@@ -1,37 +1,38 @@
 use super::FriMerkleTree;
+use crate::field::Field;
 use crate::{
     fri::{
         fri_merkle_tree_prove, fri_merkle_tree_verify, fri_proof::FriProofOps,
         fri_transcript_config::FriTranscriptConfig, FriConfig, FriProof,
     },
     hash::Hasher,
-    traits::{FieldImpl, GenerateRandom},
+    traits::{Arithmetic, GenerateRandom},
 };
 use icicle_runtime::{memory::DeviceVec, stream::IcicleStream};
 use icicle_runtime::{memory::HostSlice, test_utilities};
 
-pub fn check_fri<F: FieldImpl>(
+pub fn check_fri<F: Field>(
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
     transcript_hash: &Hasher,
 ) where
-    <F as FieldImpl>::Config: FriMerkleTree<F> + GenerateRandom<F>,
+    F: FriMerkleTree<F> + GenerateRandom + Arithmetic,
 {
     let check = || {
-        const SIZE: u64 = 1 << 10;
+        const SIZE: u64 = 1 << 9;
         let fri_config = FriConfig::default();
-        let scalars = F::Config::generate_random(SIZE as usize);
+        let scalars = F::generate_random(SIZE as usize);
 
-        let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, F::one());
+        let transcript_config = FriTranscriptConfig::new_default_labels(transcript_hash, F::one());
 
         let merkle_tree_min_layer_to_store = 0;
 
-        let fri_proof = <F as FieldImpl>::Config::fri_merkle_tree_prove(
+        let fri_proof = F::fri_merkle_tree_prove(
             &fri_config,
             &transcript_config,
             HostSlice::from_slice(&scalars),
-            &merkle_tree_leaves_hash,
-            &merkle_tree_compress_hash,
+            merkle_tree_leaves_hash,
+            merkle_tree_compress_hash,
             merkle_tree_min_layer_to_store,
         )
         .unwrap();
@@ -47,12 +48,12 @@ pub fn check_fri<F: FieldImpl>(
             .unwrap();
         let fri_proof_copy = FriProof::<F>::create_with_arguments(query_proofs, final_poly, pow_nonce).unwrap();
 
-        let valid = <F as FieldImpl>::Config::fri_merkle_tree_verify(
+        let valid = F::fri_merkle_tree_verify(
             &fri_config,
             &transcript_config,
             &fri_proof_copy,
-            &merkle_tree_leaves_hash,
-            &merkle_tree_compress_hash,
+            merkle_tree_leaves_hash,
+            merkle_tree_compress_hash,
         )
         .unwrap();
         assert!(valid);
@@ -63,12 +64,12 @@ pub fn check_fri<F: FieldImpl>(
     check();
 }
 
-pub fn check_fri_on_device<F: FieldImpl>(
+pub fn check_fri_on_device<F: Field>(
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
     transcript_hash: &Hasher,
 ) where
-    <F as FieldImpl>::Config: FriMerkleTree<F> + GenerateRandom<F>,
+    F: FriMerkleTree<F> + GenerateRandom + Arithmetic,
 {
     let check = || {
         const SIZE: u64 = 1 << 10;
@@ -76,9 +77,9 @@ pub fn check_fri_on_device<F: FieldImpl>(
         let mut fri_config = FriConfig::default();
         fri_config.is_async = true;
         fri_config.stream_handle = *stream;
-        let scalars = F::Config::generate_random(SIZE as usize);
+        let scalars = F::generate_random(SIZE as usize);
 
-        let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, F::one());
+        let transcript_config = FriTranscriptConfig::new_default_labels(transcript_hash, F::one());
 
         let merkle_tree_min_layer_to_store = 0;
 
@@ -90,9 +91,9 @@ pub fn check_fri_on_device<F: FieldImpl>(
         let fri_proof = fri_merkle_tree_prove::<F>(
             &fri_config,
             &transcript_config,
-            HostSlice::from_slice(&scalars),
-            &merkle_tree_leaves_hash,
-            &merkle_tree_compress_hash,
+            &scalars_d,
+            merkle_tree_leaves_hash,
+            merkle_tree_compress_hash,
             merkle_tree_min_layer_to_store,
         )
         .unwrap();
@@ -104,8 +105,8 @@ pub fn check_fri_on_device<F: FieldImpl>(
             &fri_config,
             &transcript_config,
             &fri_proof,
-            &merkle_tree_leaves_hash,
-            &merkle_tree_compress_hash,
+            merkle_tree_leaves_hash,
+            merkle_tree_compress_hash,
         )
         .unwrap();
         stream
@@ -123,22 +124,22 @@ pub fn check_fri_on_device<F: FieldImpl>(
     check();
 }
 
-pub fn check_fri_proof_serialization<F: FieldImpl, S, D, T>(
+pub fn check_fri_proof_serialization<F: Field, S, D, T>(
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
     transcript_hash: &Hasher,
     serialize: S,
     deserialize: D,
 ) where
-    <F as FieldImpl>::Config: FriMerkleTree<F> + GenerateRandom<F>,
+    F: FriMerkleTree<F> + GenerateRandom + Arithmetic,
     S: Fn(&FriProof<F>) -> T,
     D: Fn(&T) -> FriProof<F>,
 {
     const SIZE: u64 = 1 << 10;
     let fri_config = FriConfig::default();
-    let scalars = F::Config::generate_random(SIZE as usize);
+    let scalars = F::generate_random(SIZE as usize);
 
-    let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, F::one());
+    let transcript_config = FriTranscriptConfig::new_default_labels(transcript_hash, F::one());
 
     let merkle_tree_min_layer_to_store = 0;
 
@@ -151,8 +152,8 @@ pub fn check_fri_proof_serialization<F: FieldImpl, S, D, T>(
         &fri_config,
         &transcript_config,
         HostSlice::from_slice(&scalars),
-        &merkle_tree_leaves_hash,
-        &merkle_tree_compress_hash,
+        merkle_tree_leaves_hash,
+        merkle_tree_compress_hash,
         merkle_tree_min_layer_to_store,
     )
     .unwrap();
@@ -182,6 +183,20 @@ pub fn check_fri_proof_serialization<F: FieldImpl, S, D, T>(
             assert_eq!(leaf, leaf_deserialized);
         }
     }
-    assert_eq!(fri_proof.get_final_poly(), fri_proof_deserialized.get_final_poly());
-    assert_eq!(fri_proof.get_pow_nonce(), fri_proof_deserialized.get_pow_nonce());
+    assert_eq!(
+        fri_proof
+            .get_final_poly()
+            .unwrap(),
+        fri_proof_deserialized
+            .get_final_poly()
+            .unwrap()
+    );
+    assert_eq!(
+        fri_proof
+            .get_pow_nonce()
+            .unwrap(),
+        fri_proof_deserialized
+            .get_pow_nonce()
+            .unwrap()
+    );
 }

@@ -142,11 +142,11 @@ type Koalabear_extensionVecOpsTestSuite struct {
 }
 
 func (s *Koalabear_extensionVecOpsTestSuite) TestKoalabear_extensionVecOps() {
-	s.Run("TestKoalabear_extensionVecOps", testWrapper(&s.Suite, testKoalabear_extensionVecOps))
-	s.Run("TestKoalabear_extensionTranspose", testWrapper(&s.Suite, testKoalabear_extensionTranspose))
-	s.Run("TestKoalabear_extensionSum", testWrapper(&s.Suite, testKoalabear_extensionSum))
-	s.Run("TestKoalabear_extensionProduct", testWrapper(&s.Suite, testKoalabear_extensionProduct))
-	s.Run("TestKoalabear_extensionMixedVecOps", testWrapper(&s.Suite, testKoalabear_extensionMixedVecOps))
+	s.Run("TestKoalabear_extensionVecOps", test_helpers.TestWrapper(&s.Suite, testKoalabear_extensionVecOps))
+	s.Run("TestKoalabear_extensionTranspose", test_helpers.TestWrapper(&s.Suite, testKoalabear_extensionTranspose))
+	s.Run("TestKoalabear_extensionSum", test_helpers.TestWrapper(&s.Suite, testKoalabear_extensionSum))
+	s.Run("TestKoalabear_extensionProduct", test_helpers.TestWrapper(&s.Suite, testKoalabear_extensionProduct))
+	s.Run("TestKoalabear_extensionMixedVecOps", test_helpers.TestWrapper(&s.Suite, testKoalabear_extensionMixedVecOps))
 }
 
 func TestSuiteKoalabear_extensionVecOps(t *testing.T) {

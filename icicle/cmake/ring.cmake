@@ -53,6 +53,12 @@ function(setup_ring_target RING RING_INDEX FEATURES_STRING)
 
   set_target_properties(icicle_ring PROPERTIES OUTPUT_NAME "icicle_ring_${RING}")
   target_link_libraries(icicle_ring PUBLIC icicle_device)
+  if(NOT HASH)
+    message(FATAL_ERROR "HASH must be ON to link icicle_ring against icicle_hash")
+  else()
+    target_link_libraries(icicle_ring PRIVATE icicle_hash)
+  endif()
+
 
   # Ensure RING is defined in the cache for backends to see
   set(RING "${RING}" CACHE STRING "")
