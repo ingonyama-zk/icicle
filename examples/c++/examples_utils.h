@@ -11,7 +11,7 @@ using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::p
   printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
 // Load and choose backend
-void try_load_and_set_backend_device(int argc = 0, char** argv = nullptr)
+static void try_load_and_set_backend_device(int argc = 0, char** argv = nullptr)
 {
   const char* selected_device = argc > 1 ? argv[1] : nullptr;
 
@@ -34,3 +34,31 @@ void try_load_and_set_backend_device(int argc = 0, char** argv = nullptr)
 
   ICICLE_LOG_ERROR << "Device " << selected_device << " is not available, falling back to CPU";
 }
+
+class ScopedCpuDevice
+{
+public:
+  ScopedCpuDevice(const char* description = nullptr)
+  {
+    // Get and store the current device
+    ICICLE_CHECK(icicle_get_active_device(original_device));
+    // Switch to CPU
+    ICICLE_CHECK(icicle_set_device("CPU"));
+
+    if (description) {
+      ICICLE_LOG_DEBUG << description << ": Switching from " << original_device.type << " to CPU ";
+    } else {
+      ICICLE_LOG_DEBUG << "Switching from " << original_device.type << " to CPU";
+    }
+  }
+
+  ~ScopedCpuDevice()
+  {
+    // Restore the original device
+    ICICLE_LOG_DEBUG << "Restoring device " << original_device.type;
+    icicle_set_device(original_device);
+  }
+
+private:
+  Device original_device{""};
+};
