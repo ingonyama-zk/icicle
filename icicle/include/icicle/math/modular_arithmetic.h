@@ -505,13 +505,13 @@ public:
     return value;
   }
 
-  HOST_DEVICE Derived& operator=(Derived const& other)
+  HOST_DEVICE Derived& operator=(const Derived& other)
   {
 #pragma unroll
     for (int i = 0; i < TLC; i++) {
       this->limbs_storage.limbs[i] = other.limbs_storage.limbs[i];
     }
-    return *this;
+    return static_cast<Derived&>(*this);
   }
 
   HOST_DEVICE Derived operator*(const Derived& ys) const

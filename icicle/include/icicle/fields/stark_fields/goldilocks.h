@@ -24,6 +24,13 @@ namespace goldilocks {
     using Base = ModArith<GoldilocksField<CONFIG>, CONFIG>;
 
   public:
+    // Copy-assignment forwards to ModArith implementation.
+    HOST_DEVICE GoldilocksField& operator=(const GoldilocksField& other)
+    {
+      ModArith<GoldilocksField<CONFIG>, CONFIG>::operator=(other);
+      return *this;
+    }
+
     static constexpr unsigned TLC = CONFIG::limbs_count;
     static constexpr unsigned NBITS = CONFIG::modulus_bit_count;
     typedef storage<TLC> ff_storage;
