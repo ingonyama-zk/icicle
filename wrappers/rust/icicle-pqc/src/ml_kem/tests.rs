@@ -6,7 +6,7 @@ mod tests {
         kyber_params::{Kyber1024Params, Kyber512Params, Kyber768Params, KyberParams, ENTROPY_BYTES, MESSAGE_BYTES},
     };
     use icicle_runtime::{
-        memory::{DeviceVec, HostSlice},
+        memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut},
         runtime,
         stream::IcicleStream,
         Device,
@@ -30,27 +30,27 @@ mod tests {
         config.batch_size = batch_size;
 
         keygen::<P>(
-            HostSlice::from_slice(&entropy),
+            entropy.into_slice(),
             &config,
-            HostSlice::from_mut_slice(&mut public_keys),
-            HostSlice::from_mut_slice(&mut secret_keys),
+            public_keys.into_slice_mut(),
+            secret_keys.into_slice_mut(),
         )
         .unwrap();
 
         encapsulate::<P>(
-            HostSlice::from_slice(&messages),
-            HostSlice::from_slice(&public_keys),
+            messages.into_slice(),
+            public_keys.into_slice(),
             &config,
-            HostSlice::from_mut_slice(&mut ciphertexts),
-            HostSlice::from_mut_slice(&mut shared_secrets_enc),
+            ciphertexts.into_slice_mut(),
+            shared_secrets_enc.into_slice_mut(),
         )
         .unwrap();
 
         decapsulate::<P>(
-            HostSlice::from_slice(&secret_keys),
-            HostSlice::from_slice(&ciphertexts),
+            secret_keys.into_slice(),
+            ciphertexts.into_slice(),
             &config,
-            HostSlice::from_mut_slice(&mut shared_secrets_dec),
+            shared_secrets_dec.into_slice_mut(),
         )
         .unwrap();
 
@@ -75,20 +75,20 @@ mod tests {
         rng.fill(&mut entropy[..]);
         rng.fill(&mut messages[..]);
 
-        let mut entropy_d = DeviceVec::device_malloc(batch_size * ENTROPY_BYTES).unwrap();
-        let mut messages_d = DeviceVec::device_malloc(batch_size * MESSAGE_BYTES).unwrap();
+        let mut entropy_d = DeviceVec::malloc(batch_size * ENTROPY_BYTES);
+        let mut messages_d = DeviceVec::malloc(batch_size * MESSAGE_BYTES);
         entropy_d
-            .copy_from_host_async(HostSlice::from_slice(&entropy), &stream)
+            .copy_from_host_async(entropy.into_slice(), &stream)
             .unwrap();
         messages_d
-            .copy_from_host_async(HostSlice::from_slice(&messages), &stream)
+            .copy_from_host_async(messages.into_slice(), &stream)
             .unwrap();
 
-        let mut public_keys_d = DeviceVec::device_malloc(batch_size * P::PUBLIC_KEY_BYTES).unwrap();
-        let mut secret_keys_d = DeviceVec::device_malloc(batch_size * P::SECRET_KEY_BYTES).unwrap();
-        let mut ciphertexts_d = DeviceVec::device_malloc(batch_size * P::CIPHERTEXT_BYTES).unwrap();
-        let mut shared_secrets_enc_d = DeviceVec::device_malloc(batch_size * P::SHARED_SECRET_BYTES).unwrap();
-        let mut shared_secrets_dec_d = DeviceVec::device_malloc(batch_size * P::SHARED_SECRET_BYTES).unwrap();
+        let mut public_keys_d = DeviceVec::malloc(batch_size * P::PUBLIC_KEY_BYTES);
+        let mut secret_keys_d = DeviceVec::malloc(batch_size * P::SECRET_KEY_BYTES);
+        let mut ciphertexts_d = DeviceVec::malloc(batch_size * P::CIPHERTEXT_BYTES);
+        let mut shared_secrets_enc_d = DeviceVec::malloc(batch_size * P::SHARED_SECRET_BYTES);
+        let mut shared_secrets_dec_d = DeviceVec::malloc(batch_size * P::SHARED_SECRET_BYTES);
 
         keygen::<P>(&entropy_d, &config, &mut public_keys_d, &mut secret_keys_d).unwrap();
 
@@ -107,10 +107,10 @@ mod tests {
         let mut shared_secrets_enc = vec![0u8; batch_size * P::SHARED_SECRET_BYTES];
         let mut shared_secrets_dec = vec![0u8; batch_size * P::SHARED_SECRET_BYTES];
         shared_secrets_enc_d
-            .copy_to_host_async(HostSlice::from_mut_slice(&mut shared_secrets_enc), &stream)
+            .copy_to_host_async(shared_secrets_enc.into_slice_mut(), &stream)
             .unwrap();
         shared_secrets_dec_d
-            .copy_to_host_async(HostSlice::from_mut_slice(&mut shared_secrets_dec), &stream)
+            .copy_to_host_async(shared_secrets_dec.into_slice_mut(), &stream)
             .unwrap();
 
         stream

@@ -17,6 +17,13 @@ namespace m31 {
     using Base = ModArith<MersenneField<CONFIG>, CONFIG>;
 
   public:
+    // Copy-assignment forwards to ModArith implementation.
+    HOST_DEVICE MersenneField& operator=(const MersenneField& other)
+    {
+      ModArith<MersenneField<CONFIG>, CONFIG>::operator=(other);
+      return *this;
+    }
+
     HOST_DEVICE_INLINE MersenneField(const MersenneField& other) : Base(other) {}
     HOST_DEVICE_INLINE MersenneField(const uint32_t& x = 0) : Base({x}) {}
     HOST_DEVICE_INLINE MersenneField(storage<CONFIG::limbs_count> x) : Base{x} {}

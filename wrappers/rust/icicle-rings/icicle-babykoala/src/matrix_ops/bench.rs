@@ -1,10 +1,10 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use icicle_babykoala::polynomial_ring;
-use icicle_core::vec_ops::VecOpsConfig;
 
 use icicle_core::{matrix_ops::*, polynomial_ring::PolynomialRing, traits::GenerateRandom};
 
-use icicle_runtime::{memory::HostSlice, test_utilities};
+use icicle_runtime::memory::{IntoIcicleSlice, IntoIcicleSliceMut};
+use icicle_runtime::test_utilities;
 
 static DEVICES: [&str; 2] = ["ref", "main"];
 // static devices: [&str; 1] = ["ref"];
@@ -25,7 +25,7 @@ fn x_r_n_r_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Cr
             let input_a = P::generate_random(r * n);
             let input_b = P::generate_random(n * r);
             let mut output_host = vec![P::zero(); out_size];
-            let cfg = VecOpsConfig::default();
+            let cfg = MatMulConfig::default();
 
             for device_id in DEVICES {
                 // set device
@@ -40,14 +40,14 @@ fn x_r_n_r_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Cr
                 c.bench_function(&format!(testid!(), n, r, device_id), |b| {
                     b.iter(|| {
                         P::matmul(
-                            HostSlice::from_slice(&input_a),
+                            input_a.into_slice(),
                             n as u32,
                             n as u32,
-                            HostSlice::from_slice(&input_b),
+                            input_b.into_slice(),
                             n as u32,
                             n as u32,
                             &cfg,
-                            HostSlice::from_mut_slice(&mut output_host),
+                            output_host.into_slice_mut(),
                         )
                     })
                 });
@@ -72,7 +72,7 @@ fn x256_n_r_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut C
             let input_a = P::generate_random(256 * n);
             let input_b = P::generate_random(n * r);
             let mut output_host = vec![P::zero(); out_size];
-            let cfg = VecOpsConfig::default();
+            let cfg = MatMulConfig::default();
 
             for device_id in DEVICES {
                 // set device
@@ -87,14 +87,14 @@ fn x256_n_r_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut C
                 c.bench_function(&format!(testid!(), n, r, device_id), |b| {
                     b.iter(|| {
                         P::matmul(
-                            HostSlice::from_slice(&input_a),
+                            input_a.into_slice(),
                             n as u32,
                             n as u32,
-                            HostSlice::from_slice(&input_b),
+                            input_b.into_slice(),
                             n as u32,
                             n as u32,
                             &cfg,
-                            HostSlice::from_mut_slice(&mut output_host),
+                            output_host.into_slice_mut(),
                         )
                     })
                 });
@@ -118,7 +118,7 @@ fn x256_n_1_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut C
         let input_a = P::generate_random(256 * n);
         let input_b = P::generate_random(n);
         let mut output_host = vec![P::zero(); out_size];
-        let cfg = VecOpsConfig::default();
+        let cfg = MatMulConfig::default();
 
         for device_id in DEVICES {
             // set device
@@ -133,14 +133,14 @@ fn x256_n_1_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut C
             c.bench_function(&format!(testid!(), n, device_id), |b| {
                 b.iter(|| {
                     P::matmul(
-                        HostSlice::from_slice(&input_a),
+                        input_a.into_slice(),
                         n as u32,
                         n as u32,
-                        HostSlice::from_slice(&input_b),
+                        input_b.into_slice(),
                         n as u32,
                         n as u32,
                         &cfg,
-                        HostSlice::from_mut_slice(&mut output_host),
+                        output_host.into_slice_mut(),
                     )
                 })
             });
@@ -162,7 +162,7 @@ fn square_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Cri
         let input_a = P::generate_random(n * n);
         let input_b = P::generate_random(n * n);
         let mut output_host = vec![P::zero(); out_size];
-        let cfg = VecOpsConfig::default();
+        let cfg = MatMulConfig::default();
 
         for device_id in DEVICES {
             // set device
@@ -177,14 +177,14 @@ fn square_battery<P: PolynomialRing + MatrixOps<P> + GenerateRandom>(c: &mut Cri
             c.bench_function(&format!(testid!(), n, device_id), |b| {
                 b.iter(|| {
                     P::matmul(
-                        HostSlice::from_slice(&input_a),
+                        input_a.into_slice(),
                         n as u32,
                         n as u32,
-                        HostSlice::from_slice(&input_b),
+                        input_b.into_slice(),
                         n as u32,
                         n as u32,
                         &cfg,
-                        HostSlice::from_mut_slice(&mut output_host),
+                        output_host.into_slice_mut(),
                     )
                 })
             });

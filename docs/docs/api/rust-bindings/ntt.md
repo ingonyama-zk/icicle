@@ -84,10 +84,10 @@ let cfg = ntt::NTTConfig::<ScalarField>::default();
 
 // Computing NTT
 ntt::ntt(
-    HostSlice::from_slice(&scalars),
+    scalars.into_slice(),
     ntt::NTTDir::kForward,
     &cfg,
-    &mut ntt_results[..],
+    ntt_results.into_slice_mut(),
 )
 .unwrap();
 ```
@@ -98,9 +98,9 @@ Before performing NTT operations, it is mandatory to construct the domain as [ex
 In rust, we have the following functions to construct, destruct the domain and retrieve a root of unity from it:
 
 ```rust
-pub trait NTTDomain<F: FieldImpl> {
-    pub fn initialize_domain<F>(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), IcicleError>;
-    pub fn release_domain<F>() -> Result<(), IcicleError>;
-    pub fn get_root_of_unity<F>(max_size: u64) -> F;
+pub trait NTTDomain<S: IntegerRing> {
+    pub fn initialize_domain<S>(primitive_root: S, config: &NTTInitDomainConfig) -> Result<(), IcicleError>;
+    pub fn release_domain<S>() -> Result<(), IcicleError>;
+    pub fn get_root_of_unity<S>(max_size: u64) -> S;
 }
 ```

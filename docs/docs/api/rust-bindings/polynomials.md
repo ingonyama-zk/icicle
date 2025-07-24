@@ -127,7 +127,7 @@ Functions within the DensePolynomial API that deal with polynomial coefficients 
 
 ```rust
 // Assume `coeffs` could either be in host memory or CUDA device memory
-let coeffs: DeviceSlice<F> = DeviceVec::<F>::device_malloc(coeffs_len).unwrap();
+let coeffs: DeviceSlice<F> = DeviceVec::<F>::malloc(coeffs_len);
 let p_from_coeffs = PolynomialBabyBear::from_coeffs(&coeffs, coeffs.len());
 
 // Similarly for evaluations from roots of unity
@@ -228,8 +228,8 @@ f.eval_on_domain(HostSlice::from_slice(&domain), HostSlice::from_mut_slice(&mut 
 
 // Evaluate on roots-of-unity-domain
 let domain_log_size = 4;
-let mut device_evals = DeviceVec::<ScalarField>::device_malloc(1 << domain_log_size).unwrap();
-f.eval_on_rou_domain(domain_log_size, &mut device_evals[..]);
+let mut device_evals = DeviceVec::<ScalarField>::malloc(1 << domain_log_size);
+f.eval_on_rou_domain(domain_log_size, device_evals.into_slice_mut());
 ```
 
 ### Read coefficients
@@ -240,8 +240,8 @@ Read or copy polynomial coefficients for further processing:
 let x_squared_coeff = f.get_coeff(2);  // Coefficient of x^2
 
 // Copy coefficients to a device-specific memory space
-let mut device_mem = DeviceVec::<Field>::device_malloc(coeffs.len()).unwrap();
-f.copy_coeffs(0, &mut device_mem[..]);
+let mut device_mem = DeviceVec::<Field>::malloc(coeffs.len());
+f.copy_coeffs(0, device_mem.into_slice_mut());
 ```
 
 ### Polynomial Degree
