@@ -51,10 +51,7 @@ where
     let input = P::generate_random(size);
 
     // Allocate and transfer to device memory
-    let mut device_input = DeviceVec::<P>::device_malloc(size).unwrap();
-    device_input
-        .copy_from_host(HostSlice::from_slice(&input))
-        .unwrap();
+    let mut device_input = DeviceVec::from_host_slice(&input);
 
     let cfg = negacyclic_ntt::NegacyclicNttConfig::default();
 
@@ -79,7 +76,7 @@ where
         &device_input,
         NTTDir::kForward,
         &cfg,
-        HostSlice::from_mut_slice(&mut output),
+        output.into_slice_mut(),
     )
     .unwrap();
 
@@ -117,17 +114,9 @@ where
     let host_b: Vec<P> = P::generate_random(b_len);
 
     // Allocate device memory for inputs and output
-    let mut device_a = DeviceVec::<P>::device_malloc(a_len).expect("Allocation failed");
-    let mut device_b = DeviceVec::<P>::device_malloc(b_len).expect("Allocation failed");
+    let device_a = DeviceVec::from_host_slice(&host_a);
+    let device_b = DeviceVec::from_host_slice(&host_b);
     let mut device_c = DeviceVec::<P>::device_malloc(c_len).expect("Allocation failed");
-
-    // Transfer inputs to device
-    device_a
-        .copy_from_host(HostSlice::from_slice(&host_a))
-        .expect("Copy A to device failed");
-    device_b
-        .copy_from_host(HostSlice::from_slice(&host_b))
-        .expect("Copy B to device failed");
 
     // Perform matrix multiplication on device: C = A × B
     let start = std::time::Instant::now();
@@ -170,13 +159,8 @@ where
     let host_input: Vec<P> = P::generate_random(len);
 
     // Allocate device memory
-    let mut device_input = DeviceVec::<P>::device_malloc(len).expect("Allocation failed");
+    let device_input = DeviceVec::from_host_slice(&host_input);
     let mut device_output = DeviceVec::<P>::device_malloc(len).expect("Allocation failed");
-
-    // Copy to device
-    device_input
-        .copy_from_host(HostSlice::from_slice(&host_input))
-        .expect("Copy to device failed");
 
     // Transpose
     let start = std::time::Instant::now();
@@ -256,7 +240,7 @@ where
         // ⏱️ Decompose
         // ------------------------------
         let t0 = std::time::Instant::now();
-        balanced_decomposition::decompose::<P>(HostSlice::from_slice(&input), &mut decomposed[..], *base, &cfg)
+        balanced_decomposition::decompose::<P>(input.into_slice(), &mut decomposed[..], *base, &cfg)
             .expect("Decomposition failed");
         let decompose_time = t0.elapsed();
         println!(
@@ -270,7 +254,7 @@ where
         let t1 = std::time::Instant::now();
         balanced_decomposition::recompose::<P>(
             &decomposed[..],
-            HostSlice::from_mut_slice(&mut recomposed),
+            recomposed.into_slice_mut(),
             *base,
             &cfg,
         )
@@ -315,10 +299,7 @@ where
     // ----------------------------------------------------------------------
 
     let host_input: Vec<P> = P::generate_random(size);
-    let mut device_input = DeviceVec::<P>::device_malloc(size).unwrap();
-    device_input
-        .copy_from_host(HostSlice::from_slice(&host_input))
-        .unwrap();
+    let device_input = DeviceVec::from_host_slice(&host_input);
 
     // ----------------------------------------------------------------------
     // (2) JL projection on flattened device memory
@@ -327,7 +308,7 @@ where
     // Reinterpret `PolyRing` as a flat slice of base field elements (`Zq`),
     // since the projection operates on individual scalars rather than polynomials.
     let zq_device_slice = flatten_polyring_slice(&device_input);
-    let mut device_output = DeviceVec::<P::Base>::device_malloc(projection_dim).unwrap();
+    let mut device_output = DeviceVec::<P::Base>::malloc(projection_dim);
 
     let t_start = std::time::Instant::now();
     jl_projection::jl_projection(&zq_device_slice, &seed, &cfg, &mut device_output)
@@ -347,7 +328,7 @@ where
 
     let row_size = size; // number of input polynomials per row
     let num_rows = 1; // how many rows to extract (can be increased)
-    let mut jl_rows = DeviceVec::<P>::device_malloc(num_rows * row_size).unwrap();
+    let mut jl_rows = DeviceVec::<P>::malloc(num_rows * row_size);
 
     let t_start = std::time::Instant::now();
     jl_projection::get_jl_matrix_rows_as_polyring(
@@ -421,10 +402,7 @@ where
     println!("[Norm Bound check] Computed ℓ∞ (max) norm: {}", l_infinity_norm);
 
     // Upload to device
-    let mut device_input = DeviceVec::<T>::device_malloc(size).expect("Failed to allocate device memory");
-    device_input
-        .copy_from_host(HostSlice::from_slice(&input))
-        .expect("Failed to copy input to device");
+    let device_input = DeviceVec::from_host_slice(&input);
 
     let cfg = VecOpsConfig::default();
 
@@ -441,7 +419,7 @@ where
         norm::NormType::L2,
         upper_bound,
         &cfg,
-        HostSlice::from_mut_slice(&mut output),
+        output.into_slice_mut(),
     )
     .expect("ℓ₂ norm bound check failed");
     println!("[Norm Bound check] ℓ₂ norm (pass case) took {:?}", start.elapsed());
@@ -459,7 +437,7 @@ where
         norm::NormType::L2,
         lower_bound,
         &cfg,
-        HostSlice::from_mut_slice(&mut output),
+        output.into_slice_mut(),
     )
     .expect("ℓ₂ norm bound check failed");
     println!("[Norm Bound check] ℓ₂ norm (fail case) took {:?}", start.elapsed());

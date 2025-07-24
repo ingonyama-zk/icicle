@@ -3,11 +3,11 @@ use crate::bignum::BigNum;
 use crate::msm::{msm, precompute_bases, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR, MSM};
 use crate::projective::Projective;
 use crate::traits::{GenerateRandom, MontgomeryConvertible};
-use icicle_runtime::{memory::HostOrDeviceSlice, test_utilities};
 use icicle_runtime::{
-    memory::{DeviceVec, HostSlice},
+    memory::{DeviceVec, HostOrDeviceSlice, IntoIcicleSlice, IntoIcicleSliceMut},
     runtime,
     stream::IcicleStream,
+    test_utilities,
 };
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
@@ -47,7 +47,7 @@ pub fn check_msm<P: Projective + MSM<P>>() {
                 test_utilities::test_set_main_device_with_id(device_id);
                 let mut scalars_d = DeviceVec::<P::ScalarField>::device_malloc_async(test_size, &stream).unwrap();
                 scalars_d
-                    .copy_from_host_async(HostSlice::from_slice(&scalars), &stream)
+                    .copy_from_host_async(scalars.into_slice(), &stream)
                     .unwrap();
 
                 // convert to mont for testing MSM in this case
@@ -58,17 +58,14 @@ pub fn check_msm<P: Projective + MSM<P>>() {
                 cfg.are_scalars_montgomery_form = true;
                 cfg.is_async = true;
                 msm(
-                    &scalars_d[..],
-                    HostSlice::from_slice(&points),
+                    scalars_d.into_slice(),
+                    points.into_slice(),
                     &cfg,
-                    &mut msm_results[..],
+                    msm_results.into_slice_mut(),
                 )
                 .unwrap();
 
-                let mut msm_host_result = vec![P::zero(); 1];
-                msm_results
-                    .copy_to_host(HostSlice::from_mut_slice(&mut msm_host_result[..]))
-                    .unwrap();
+                let msm_host_result = msm_results.to_host_vec();
                 stream
                     .synchronize()
                     .unwrap();
@@ -77,10 +74,10 @@ pub fn check_msm<P: Projective + MSM<P>>() {
                 test_utilities::test_set_ref_device();
                 let mut ref_msm_host_result = vec![P::zero(); 1];
                 msm(
-                    HostSlice::from_slice(&scalars),
-                    HostSlice::from_slice(&points),
+                    scalars.into_slice(),
+                    points.into_slice(),
                     &MSMConfig::default(),
-                    HostSlice::from_mut_slice(&mut ref_msm_host_result),
+                    ref_msm_host_result.into_slice_mut(),
                 )
                 .unwrap();
 
@@ -112,33 +109,39 @@ pub fn check_msm_batch_shared<P: Projective + MSM<P>>() {
         test_utilities::test_set_main_device();
         cfg.precompute_factor = precompute_factor;
         let points = generate_random_affine_points_with_zeroes::<P::Affine>(test_size, 10);
-        let mut precomputed_points_d =
-            DeviceVec::<P::Affine>::device_malloc(cfg.precompute_factor as usize * test_size).unwrap();
-        precompute_bases::<P>(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
+        let mut precomputed_points_d = DeviceVec::<P::Affine>::malloc(cfg.precompute_factor as usize * test_size);
+        precompute_bases::<P>(points.into_slice(), &cfg, &mut precomputed_points_d).unwrap();
         for batch_size in batch_sizes {
             let scalars = P::ScalarField::generate_random(test_size * batch_size);
-            let scalars_h = HostSlice::from_slice(&scalars);
+            let scalars_h = scalars.into_slice();
 
-            let mut msm_results_1 = DeviceVec::<P>::device_malloc(batch_size).unwrap();
-            let mut msm_results_2 = DeviceVec::<P>::device_malloc(batch_size).unwrap();
-            let mut points_d = DeviceVec::<P::Affine>::device_malloc(test_size).unwrap();
+            let mut msm_results_1 = DeviceVec::<P>::malloc(batch_size);
+            let mut msm_results_2 = DeviceVec::<P>::malloc(batch_size);
+            let mut points_d = DeviceVec::<P::Affine>::malloc(test_size);
             points_d
-                .copy_from_host_async(HostSlice::from_slice(&points), &stream)
+                .copy_from_host_async(points.into_slice(), &stream)
                 .unwrap();
 
             cfg.precompute_factor = precompute_factor;
-            msm(scalars_h, &precomputed_points_d[..], &cfg, &mut msm_results_1[..]).unwrap();
+            msm(
+                scalars_h,
+                precomputed_points_d.into_slice(),
+                &cfg,
+                msm_results_1.into_slice_mut(),
+            )
+            .unwrap();
             cfg.precompute_factor = 1;
-            msm(scalars_h, &points_d[..], &cfg, &mut msm_results_2[..]).unwrap();
+            msm(scalars_h, points_d.into_slice(), &cfg, msm_results_2.into_slice_mut()).unwrap();
 
             let mut msm_host_result_1 = vec![P::zero(); batch_size];
             let mut msm_host_result_2 = vec![P::zero(); batch_size];
             msm_results_1
-                .copy_to_host_async(HostSlice::from_mut_slice(&mut msm_host_result_1), &stream)
+                .copy_to_host_async(msm_host_result_1.into_slice_mut(), &stream)
                 .unwrap();
             msm_results_2
-                .copy_to_host_async(HostSlice::from_mut_slice(&mut msm_host_result_2), &stream)
+                .copy_to_host_async(msm_host_result_2.into_slice_mut(), &stream)
                 .unwrap();
+
             stream
                 .synchronize()
                 .unwrap();
@@ -150,9 +153,9 @@ pub fn check_msm_batch_shared<P: Projective + MSM<P>>() {
             ref_msm_config.c = 4;
             msm(
                 scalars_h,
-                HostSlice::from_slice(&points),
+                points.into_slice(),
                 &MSMConfig::default(),
-                HostSlice::from_mut_slice(&mut msm_ref_result),
+                msm_ref_result.into_slice_mut(),
             )
             .unwrap();
 
@@ -160,6 +163,7 @@ pub fn check_msm_batch_shared<P: Projective + MSM<P>>() {
             assert_eq!(msm_host_result_2, msm_ref_result);
         }
     }
+
     stream
         .destroy()
         .unwrap();
@@ -186,36 +190,42 @@ pub fn check_msm_batch_not_shared<P: Projective + MSM<P>>() {
         for batch_size in batch_sizes {
             cfg.precompute_factor = precompute_factor;
             let scalars = P::ScalarField::generate_random(test_size * batch_size);
-            let scalars_h = HostSlice::from_slice(&scalars);
+            let scalars_h = scalars.into_slice();
 
             let points = generate_random_affine_points_with_zeroes(test_size * batch_size, 10);
             println!("points len: {}", points.len());
             let mut precomputed_points_d =
-                DeviceVec::<P::Affine>::device_malloc(cfg.precompute_factor as usize * test_size * batch_size).unwrap();
+                DeviceVec::<P::Affine>::malloc(cfg.precompute_factor as usize * test_size * batch_size);
             cfg.batch_size = batch_size as i32;
             cfg.are_points_shared_in_batch = false;
-            precompute_bases::<P>(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
+            precompute_bases::<P>(points.into_slice(), &cfg, &mut precomputed_points_d).unwrap();
             println!("precomputed points len: {}", (precomputed_points_d).len());
 
-            let mut msm_results_1 = DeviceVec::<P>::device_malloc(batch_size).unwrap();
-            let mut msm_results_2 = DeviceVec::<P>::device_malloc(batch_size).unwrap();
-            let mut points_d = DeviceVec::<P::Affine>::device_malloc(test_size * batch_size).unwrap();
+            let mut msm_results_1 = DeviceVec::<P>::malloc(batch_size);
+            let mut msm_results_2 = DeviceVec::<P>::malloc(batch_size);
+            let mut points_d = DeviceVec::<P::Affine>::malloc(test_size * batch_size);
             points_d
-                .copy_from_host_async(HostSlice::from_slice(&points), &stream)
+                .copy_from_host_async(points.into_slice(), &stream)
                 .unwrap();
 
             cfg.precompute_factor = precompute_factor;
-            msm(scalars_h, &precomputed_points_d[..], &cfg, &mut msm_results_1[..]).unwrap();
+            msm(
+                scalars_h,
+                precomputed_points_d.into_slice(),
+                &cfg,
+                msm_results_1.into_slice_mut(),
+            )
+            .unwrap();
             cfg.precompute_factor = 1;
-            msm(scalars_h, &points_d[..], &cfg, &mut msm_results_2[..]).unwrap();
+            msm(scalars_h, points_d.into_slice(), &cfg, msm_results_2.into_slice_mut()).unwrap();
 
             let mut msm_host_result_1 = vec![P::zero(); batch_size];
             let mut msm_host_result_2 = vec![P::zero(); batch_size];
             msm_results_1
-                .copy_to_host_async(HostSlice::from_mut_slice(&mut msm_host_result_1), &stream)
+                .copy_to_host_async(msm_host_result_1.into_slice_mut(), &stream)
                 .unwrap();
             msm_results_2
-                .copy_to_host_async(HostSlice::from_mut_slice(&mut msm_host_result_2), &stream)
+                .copy_to_host_async(msm_host_result_2.into_slice_mut(), &stream)
                 .unwrap();
             stream
                 .synchronize()
@@ -228,9 +238,9 @@ pub fn check_msm_batch_not_shared<P: Projective + MSM<P>>() {
             ref_msm_config.c = 4;
             msm(
                 scalars_h,
-                HostSlice::from_slice(&points),
+                points.into_slice(),
                 &MSMConfig::default(),
-                HostSlice::from_mut_slice(&mut msm_ref_result),
+                msm_ref_result.into_slice_mut(),
             )
             .unwrap();
 
@@ -267,20 +277,20 @@ pub fn check_msm_skewed_distributions<P: Projective + MSM<P>>() {
             test_utilities::test_set_main_device();
             let mut msm_results = vec![P::zero(); batch_size];
             msm(
-                HostSlice::from_slice(&scalars),
-                HostSlice::from_slice(&points),
+                scalars.into_slice(),
+                points.into_slice(),
                 &cfg,
-                HostSlice::from_mut_slice(&mut msm_results),
+                msm_results.into_slice_mut(),
             )
             .unwrap();
 
             test_utilities::test_set_ref_device();
             let mut msm_results_ref = vec![P::zero(); batch_size];
             msm(
-                HostSlice::from_slice(&scalars),
-                HostSlice::from_slice(&points),
+                scalars.into_slice(),
+                points.into_slice(),
                 &cfg,
-                HostSlice::from_mut_slice(&mut msm_results_ref),
+                msm_results_ref.into_slice_mut(),
             )
             .unwrap();
 

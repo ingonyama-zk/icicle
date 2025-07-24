@@ -6,8 +6,9 @@ use crate::{
     projective::Projective,
     traits::{GenerateRandom, MontgomeryConvertible},
 };
+use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::{
-    memory::{DeviceVec, HostOrDeviceSlice, HostSlice},
+    memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut},
     stream::IcicleStream,
 };
 use std::fmt::Debug;
@@ -116,32 +117,29 @@ where
     let mut elements = T::generate_random(size);
     let expected = elements.clone();
 
-    T::to_mont(HostSlice::from_mut_slice(&mut elements), &IcicleStream::default()).unwrap();
-    T::from_mont(HostSlice::from_mut_slice(&mut elements), &IcicleStream::default()).unwrap();
+    T::to_mont(elements.into_slice_mut(), &IcicleStream::default()).unwrap();
+    T::from_mont(elements.into_slice_mut(), &IcicleStream::default()).unwrap();
 
     assert_eq!(expected, elements);
 }
 
 pub fn check_montgomery_convert_device<T>()
 where
-    T: Debug + Default + Clone + PartialEq + GenerateRandom + MontgomeryConvertible,
+    T: Debug + Default + Clone + Copy + PartialEq + GenerateRandom + MontgomeryConvertible,
 {
     let mut stream = IcicleStream::create().unwrap();
 
     let size = 1 << 10;
     let elements = T::generate_random(size);
 
-    let mut d_elements = DeviceVec::device_malloc(size).unwrap();
-    d_elements
-        .copy_from_host(HostSlice::from_slice(&elements))
-        .unwrap();
+    let mut d_elements = DeviceVec::from_host_slice(&elements);
 
     T::to_mont(&mut d_elements, &stream).unwrap();
     T::from_mont(&mut d_elements, &stream).unwrap();
 
     let mut elements_copy = vec![T::default(); size];
     d_elements
-        .copy_to_host_async(HostSlice::from_mut_slice(&mut elements_copy), &stream)
+        .copy_to_host_async(elements_copy.into_slice_mut(), &stream)
         .unwrap();
     stream
         .synchronize()
@@ -177,7 +175,7 @@ where
 {
     // Generate a vector of one random polynomial
     let polynomials = P::generate_random(5);
-    let poly_slice = HostSlice::from_slice(&polynomials);
+    let poly_slice = polynomials.into_slice();
 
     // Flatten the polynomial slice to a scalar slice
     let scalar_slice = flatten_polyring_slice(poly_slice);
@@ -211,13 +209,9 @@ where
     // Generate a single random polynomial on host and copy to device
     let size = 7;
     let host_polys = P::generate_random(size);
-    let mut device_vec = DeviceVec::<P>::device_malloc(size).unwrap();
-    device_vec
-        .copy_from_host(HostSlice::from_slice(&host_polys))
-        .unwrap();
+    let device_slice = host_polys.into_slice();
 
     // Flatten the device polynomial slice
-    let device_slice = &device_vec;
     let scalar_slice = flatten_polyring_slice(device_slice);
 
     // Check length is DEGREE × num_polynomials
