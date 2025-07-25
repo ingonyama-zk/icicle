@@ -125,10 +125,9 @@ include(cmake/backend_include.cmake)
 
 if (PQC)
   setup_pqc_target()
-endif()
-
-if (PQC_PACKAGE)
-  setup_pqc_package_target()
+  if (PQC_PACKAGE)
+    setup_pqc_package_target()
+  endif()
 endif()
 
 if (BUILD_TESTS)

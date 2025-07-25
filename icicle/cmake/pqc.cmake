@@ -10,21 +10,16 @@ function(setup_pqc_target)
   )
   
   target_link_libraries(icicle_pqc PUBLIC icicle_device)
+  # Add PQC backend if enabled
+  add_dependencies(icicle_pqc ${PQC_BACKEND_TARGETS})
+    
+  # Use the interface library that handles whole-archive linking correctly
+  target_link_libraries(icicle_pqc PRIVATE ${PQC_BACKEND_TARGETS_INTERFACE})
 
   install(TARGETS icicle_pqc
     RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
     LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/")
-  
-  # Add PQC backend if enabled
-  if(CUDA_PQC_BACKEND)
-    # Add dependency on the backend target
-    add_dependencies(icicle_pqc icicle_backend_cuda_pqc)
-    
-    # Use the interface library that handles whole-archive linking correctly
-    target_link_libraries(icicle_pqc PRIVATE icicle_backend_cuda_pqc_interface)
-  endif()
-
 endfunction()
 
 function(setup_pqc_package_target)
@@ -35,7 +30,7 @@ function(setup_pqc_package_target)
   add_library(icicle::icicle_pqc_package ALIAS icicle_pqc_package)
   
   # Link all the required components to the package with proper whole-archive handling
-  if(CUDA_PQC_BACKEND AND ICICLE_STATIC_LINK)
+  if(ICICLE_STATIC_LINK)
     # For static builds with CUDA backend, use whole-archive for all libraries
     if(WIN32)
       message(WARNING "EXPERIMENTAL: Windows platform is not supported yet, this feature wasn't tested yet")
@@ -44,14 +39,14 @@ function(setup_pqc_package_target)
         target_link_libraries(icicle_pqc_package INTERFACE
           "/WHOLEARCHIVE:icicle_device"
           "/WHOLEARCHIVE:icicle_pqc"
-          "/WHOLEARCHIVE:icicle_backend_cuda_pqc"
+          "/WHOLEARCHIVE:${PQC_BACKEND_TARGETS}"
         )
       else()
         target_link_libraries(icicle_pqc_package INTERFACE
           "-Wl,--whole-archive"
           icicle_device
           icicle_pqc
-          icicle_backend_cuda_pqc
+          ${PQC_BACKEND_TARGETS}
           "-Wl,--no-whole-archive"
         )
       endif()
@@ -60,7 +55,7 @@ function(setup_pqc_package_target)
         "-Wl,--whole-archive"
         icicle_device
         icicle_pqc
-        icicle_backend_cuda_pqc
+        ${PQC_BACKEND_TARGETS}
         "-Wl,--no-whole-archive"
       )
     endif()
@@ -69,10 +64,8 @@ function(setup_pqc_package_target)
     target_link_libraries(icicle_pqc_package INTERFACE
       icicle_device
       icicle_pqc
+      ${PQC_BACKEND_TARGETS}
     )
-    if(CUDA_PQC_BACKEND)
-      target_link_libraries(icicle_pqc_package INTERFACE icicle_backend_cuda_pqc)
-    endif()
   endif()
   
   # Set package properties
@@ -83,13 +76,7 @@ function(setup_pqc_package_target)
   )
   
   # Export the package and its dependencies for installation
-  set(PACKAGE_TARGETS icicle_pqc_package icicle_device icicle_pqc)
-  
-  # Include CUDA-PQC backend if enabled
-  if(CUDA_PQC_BACKEND)
-    list(APPEND PACKAGE_TARGETS icicle_backend_cuda_pqc icicle_backend_cuda_pqc_interface)
-  endif()
-  
+  set(PACKAGE_TARGETS icicle_pqc_package icicle_device icicle_pqc ${PQC_BACKEND_TARGETS} ${PQC_BACKEND_TARGETS_INTERFACE})
   install(TARGETS ${PACKAGE_TARGETS}
     EXPORT icicle_pqc_package_targets
     INCLUDES DESTINATION "${CMAKE_INSTALL_PREFIX}/include"

@@ -122,33 +122,6 @@ if (HASH)
   if (POSEIDON2 AND (FIELD OR CURVE))
     target_link_libraries(test_hash_api PRIVATE icicle_field)
   endif()
-
-  # Added backend libs when static linking
-  if(ICICLE_STATIC_LINK AND CUDA_PQC_BACKEND)
-    target_link_libraries(test_hash_api PRIVATE dl pthread)
-
-    if(WIN32)
-      message(WARNING "EXPERIMENTAL: Windows platform is not supported yet, this feature wasn't tested yet")
-
-      if(MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_link_options(test_hash_api PRIVATE
-          "/WHOLEARCHIVE:$<TARGET_FILE:icicle_device>"
-          "/WHOLEARCHIVE:$<TARGET_FILE:icicle_pqc>"
-          "/WHOLEARCHIVE:$<TARGET_FILE:icicle_backend_cuda_pqc>"
-        )
-      else()
-        target_link_libraries(test_hash_api PRIVATE
-          "-Wl,--whole-archive" icicle_device "-Wl,--no-whole-archive"
-          icicle_pqc icicle_backend_cuda_pqc_interface
-        )
-      endif()
-    else()
-      target_link_libraries(test_hash_api PRIVATE
-        "-Wl,--whole-archive" icicle_device "-Wl,--no-whole-archive"
-        icicle_pqc icicle_backend_cuda_pqc_interface
-      )
-    endif()
-  endif()
 endif()
 
 
@@ -163,37 +136,7 @@ endif()
 if (PQC)
   add_executable(test_pqc_api test_pqc_api.cpp)
   target_include_directories(test_pqc_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
-
-  if(ICICLE_STATIC_LINK)
-    target_link_libraries(test_pqc_api PRIVATE GTest::gtest_main)
-    # system libs
-    target_link_libraries(test_pqc_api PRIVATE dl pthread)
-
-    if(WIN32)
-      message(WARNING "EXPERIMENTAL: Windows platform is not supported yet, this feature wasn't tested yet")
-
-      if(MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_link_options(test_pqc_api PRIVATE
-          "/WHOLEARCHIVE:$<TARGET_FILE:icicle_pqc>"
-          "/WHOLEARCHIVE:$<TARGET_FILE:icicle_device>"
-          "/WHOLEARCHIVE:$<TARGET_FILE:icicle_backend_cuda_pqc>"
-        )
-      else()
-        target_link_libraries(test_pqc_api PRIVATE
-          "-Wl,--whole-archive" icicle_pqc icicle_device "-Wl,--no-whole-archive"
-          icicle_backend_cuda_pqc_interface
-        )
-      endif()
-    else()
-      target_link_libraries(test_pqc_api PRIVATE
-        "-Wl,--whole-archive" icicle_pqc icicle_device "-Wl,--no-whole-archive"
-      )
-      target_link_libraries(test_pqc_api PRIVATE icicle_backend_cuda_pqc_interface)
-    endif()
-  else()
-    target_link_libraries(test_pqc_api PRIVATE GTest::gtest_main icicle_device icicle_pqc icicle_backend_cuda_pqc)
-  endif()
-
+  target_link_libraries(test_pqc_api PRIVATE GTest::gtest_main icicle_device icicle_pqc)
   icicle_add_system_libs(test_pqc_api)
   gtest_discover_tests(test_pqc_api)
 endif()

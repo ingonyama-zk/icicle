@@ -5,6 +5,7 @@ include(CMakeFindDependencyMacro)
 
 # Try to find optional dependencies
 find_dependency(CUDAToolkit QUIET)
+find_dependency(Taskflow QUIET)
 
 # Load targets
 include("${CMAKE_CURRENT_LIST_DIR}/icicle_pqc_package_targets.cmake")

@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
 
-# TODO: share cmake code with the closed CUDA backend ? worth it?
 include(cmake/Common.cmake)
 find_cuda_compiler()
 
@@ -11,7 +10,7 @@ set_gpu_env()
 
 find_package(CUDAToolkit REQUIRED)
 
-# Build CUDA backend as a static lib
+# Build CUDA backend as a static or shared library
 if(ICICLE_STATIC_LINK)
   add_library(icicle_backend_cuda_pqc STATIC src/cuda_pqc_device_api.cu src/ml_kem/cuda_pqc_ml_kem.cu)
 else()
@@ -51,6 +50,12 @@ else()
   # For shared libraries, just link normally
   target_link_libraries(icicle_backend_cuda_pqc_interface INTERFACE icicle_backend_cuda_pqc)
 endif()
+
+list(APPEND PQC_BACKEND_TARGETS icicle_backend_cuda_pqc)
+list(APPEND PQC_BACKEND_TARGETS_INTERFACE icicle_backend_cuda_pqc_interface)
+
+set(PQC_BACKEND_TARGETS "${PQC_BACKEND_TARGETS}" PARENT_SCOPE)
+set(PQC_BACKEND_TARGETS_INTERFACE "${PQC_BACKEND_TARGETS_INTERFACE}" PARENT_SCOPE)
 
 # Install targets
 install(TARGETS icicle_backend_cuda_pqc icicle_backend_cuda_pqc_interface
