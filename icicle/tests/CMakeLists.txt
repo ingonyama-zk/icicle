@@ -45,7 +45,6 @@ if(ICICLE_STATIC_LINK)
     if(MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       target_link_options(test_device_api PRIVATE
         "/WHOLEARCHIVE:$<TARGET_FILE:icicle_device>"
-        "/WHOLEARCHIVE:$<TARGET_FILE:icicle_pqc>"
       )
     else()
       target_link_libraries(test_device_api PRIVATE
