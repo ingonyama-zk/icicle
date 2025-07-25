@@ -119,7 +119,7 @@ if (HASH)
   endif()
 endif()
 
-
+# ring API test
 if (RING)
     add_executable(test_ring_api test_ring_api.cpp)
     target_include_directories(test_ring_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
@@ -128,6 +128,7 @@ if (RING)
     gtest_discover_tests(test_ring_api)
 endif()
 
+# PQC API test
 if (PQC)
   add_executable(test_pqc_api test_pqc_api.cpp)
   target_include_directories(test_pqc_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
