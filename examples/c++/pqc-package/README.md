@@ -1,10 +1,10 @@
-# Example: Install and use ICICLE PQC (C++)
+# ICICLE PQC Example (C++)
 
-This example demonstrates how to install ICICLE PQC (Post-Quantum Cryptography) binaries and use them in a C++ application to perform ML-KEM (Module-Lattice-based Key Encapsulation Mechanism) operations.
+This example demonstrates how to use ICICLE PQC (Post-Quantum Cryptography) in a C++ application to perform ML-KEM (Module-Lattice-based Key Encapsulation Mechanism) operations.
 
 ## Prerequisites
 
-- **NVIDIA GPU**: This example requires CUDA-capable NVIDIA hardware
+- **NVIDIA GPU**: CUDA-capable NVIDIA hardware
 - **NVIDIA Drivers**: Properly installed NVIDIA drivers
 - **ICICLE PQC**: ICICLE PQC library installation
 
@@ -12,65 +12,79 @@ This example demonstrates how to install ICICLE PQC (Post-Quantum Cryptography) 
 
 ### Build and Install ICICLE PQC from Source
 
-Build ICICLE PQC from the source repository:
+1. **Create build directory and configure with PQC flags**
 
-```bash
+    ```bash
+    mkdir -p build
+    cmake -S . -B build \
+        -DPQC=ON \
+        -DCUDA_PQC_BACKEND=ON \
+        -DPQC_PACKAGE=ON \
+        -DICICLE_STATIC_LINK=ON \
+        -DCMAKE_INSTALL_PREFIX=/path/to/icicle/pqc/install
+    ```
 
-# Create build directory and configure with PQC flags
-mkdir -p build
-cmake -S . -B build \
-    -DPQC=ON \
-    -DCUDA_PQC_BACKEND=ON \
-    -DPQC_PACKAGE=ON \
-    -DICICLE_STATIC_LINK=ON \
-    -DCMAKE_INSTALL_PREFIX=/path/to/icicle/pqc/install
+2. **Build and install**
 
-# Build and install
-cmake --build build -j
-cmake --install build
+    ```bash
+    cmake --build build -j
+    cmake --install build
+    ```
 
-# Set environment variable
-export ICICLE_PQC_INSTALL_DIR=/path/to/icicle/pqc/install
-```
+3. **Set environment variable**
 
-> [!NOTE]
-> Replace `/path/to/icicle/pqc/install` with your desired installation directory. The CMake flags enable PQC support, CUDA backend, packaging, and static linking.
+    ```bash
+    export ICICLE_PQC_INSTALL_DIR=/path/to/icicle/pqc/install
+    ```
+
+> **Note**: Replace `/path/to/icicle/pqc/install` with your desired installation directory.
 
 ## Building the Example
 
-### Using the Build Script (Recommended)
+### Using the Run Script (Recommended)
 
-The example includes a comprehensive build script that checks for dependencies:
+The easiest way to build and run the example is using the `run.sh` script:
+
+```bash
+# Build and run with ICICLE PQC installation path
+./run.sh /path/to/icicle/pqc/install
+
+# Build and run with custom batch size
+./run.sh /path/to/icicle/pqc/install 10
+
+# Use environment variable for install path
+export ICICLE_PQC_INSTALL_DIR=/path/to/icicle/pqc/install
+./run.sh
+
+# Get help and see all usage options
+./run.sh --help
+```
+
+### Using the Build Script Only
+
+If you prefer to build without running, use the build script:
 
 ```bash
 ./build.sh
 ```
 
-The build script will:
-
-1. ✅ Check for NVIDIA drivers
-2. ✅ Verify ICICLE PQC installation
-3. 🔨 Configure and build the project using CMake
-
-### Manual Build
-
-If you prefer to build manually:
-
-```bash
-# Ensure ICICLE_PQC_INSTALL_DIR is set
-export ICICLE_PQC_INSTALL_DIR=/path/to/icicle/pqc/install
-
-# Create build directory and configure
-mkdir -p build
-cmake -S . -B build -DICICLE_PQC_INSTALL_DIR="$ICICLE_PQC_INSTALL_DIR"
-
-# Build the project
-cmake --build build
-```
-
 ## Running the Example
 
-After successful compilation, you can run the PQC example:
+### Using the Run Script (Recommended)
+
+The easiest way is to use the `run.sh` script which builds and runs in one command:
+
+```bash
+# Build and run with default batch size
+./run.sh /path/to/icicle/pqc/install
+
+# Build and run with custom batch size
+./run.sh /path/to/icicle/pqc/install 10
+```
+
+### Manual Execution
+
+If you built using `build.sh` or manual build, you can run the compiled example directly:
 
 ```bash
 # Run with default batch size (1)
