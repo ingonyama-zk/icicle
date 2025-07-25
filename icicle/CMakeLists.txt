@@ -49,7 +49,7 @@ option(SUMCHECK "Build sumcheck" ${ENABLE_ALL_FEATURES})
 option(FRI "Build fri" ${ENABLE_ALL_FEATURES})
 option(PQC "Build pqc" ${CUDA_PQC_BACKEND}) # Post-Quantum Cryptography. TODO: default to ON? do we care about CPU too?
 option(SANITIZE "Enable memory address sanitizer" OFF)
-option(ICICLE_STATIC_LINK "Build icicle_device as a STATIC library" OFF)
+option(ICICLE_STATIC_LINK "Build targets as static libraries" OFF)
 option(PQC_PACKAGE "build pqc package" OFF)
 
 # address sanitizer
