@@ -32,15 +32,13 @@ endmacro()
 # device API test
 add_executable(test_device_api test_device_api.cpp)
 target_include_directories(test_device_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
-icicle_add_system_libs(test_device_api)
 gtest_discover_tests(test_device_api)
+target_link_libraries(test_device_api PRIVATE GTest::gtest_main)
+icicle_add_system_libs(test_device_api)
 
 # Configure linking based on static vs shared libraries
-if(ICICLE_STATIC_LINK AND CUDA_PQC_BACKEND)
+if(ICICLE_STATIC_LINK)
   # For static builds with PQC backend, use whole-archive linking
-  target_link_libraries(test_device_api PRIVATE GTest::gtest_main)
-  # system libs
-  target_link_libraries(test_device_api PRIVATE dl pthread)
   if(WIN32)
     message(WARNING "EXPERIMENTAL: Windows platform is not supported yet, this feature wasn't tested yet")
 
@@ -48,23 +46,20 @@ if(ICICLE_STATIC_LINK AND CUDA_PQC_BACKEND)
       target_link_options(test_device_api PRIVATE
         "/WHOLEARCHIVE:$<TARGET_FILE:icicle_device>"
         "/WHOLEARCHIVE:$<TARGET_FILE:icicle_pqc>"
-        "/WHOLEARCHIVE:$<TARGET_FILE:icicle_backend_cuda_pqc>"
       )
     else()
       target_link_libraries(test_device_api PRIVATE
         "-Wl,--whole-archive" icicle_device "-Wl,--no-whole-archive"
-        icicle_pqc icicle_backend_cuda_pqc_interface
       )
     endif()
   else()
     target_link_libraries(test_device_api PRIVATE
       "-Wl,--whole-archive" icicle_device "-Wl,--no-whole-archive"
-      icicle_pqc icicle_backend_cuda_pqc_interface
     )
   endif()
 else()
-  # For shared builds or static builds without PQC backend, use normal linking
-  target_link_libraries(test_device_api PRIVATE GTest::gtest_main icicle_device)
+  # For shared builds, use normal linking
+  target_link_libraries(test_device_api PRIVATE icicle_device)
 endif()
 
 #field API test
