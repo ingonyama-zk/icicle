@@ -53,7 +53,8 @@ TYPED_TEST(PqcTest, MLkemSharedSecretConsistencyTest)
   ICICLE_CHECK(keygen<TypeParam>(entropy.data(), config, public_key.data(), secret_key.data()));
 
   // Encapsulation
-  ICICLE_CHECK(encapsulate<TypeParam>(message.data(), public_key.data(), config, ciphertext.data(), shared_secret_enc.data()));
+  ICICLE_CHECK(
+    encapsulate<TypeParam>(message.data(), public_key.data(), config, ciphertext.data(), shared_secret_enc.data()));
 
   // Decapsulation
   ICICLE_CHECK(decapsulate<TypeParam>(secret_key.data(), ciphertext.data(), config, shared_secret_dec.data()));
