@@ -1,7 +1,11 @@
 
 
 function(setup_hash_target)
-  add_library(icicle_hash SHARED)
+  if(ICICLE_STATIC_LINK)
+    add_library(icicle_hash STATIC)
+  else()
+    add_library(icicle_hash SHARED)
+  endif()
   target_sources(icicle_hash PRIVATE 
     src/hash/keccak.cpp
     src/hash/blake2s.cpp
