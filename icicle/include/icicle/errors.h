@@ -25,6 +25,7 @@ namespace icicle {
     INVALID_ARGUMENT,          ///< Invalid argument passed
     BACKEND_LOAD_FAILED,       ///< Failed to load the backend
     LICENSE_CHECK_ERROR,       ////< Failed to check license or invalid license
+    DOMAIN_INITIALIZATION_FAILED, ///< Failed to initialize the ntt domain
     UNKNOWN_ERROR,             ///< An unknown error occurred
   };
 
