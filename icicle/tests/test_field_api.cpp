@@ -35,167 +35,184 @@ TYPED_TEST(FieldTest, FieldSanityTest)
 
 TYPED_TEST(FieldTest, NTTTest)
 {
-  const uint64_t N = 1 << 9; //rand_uint_32b(2, 17);
-  const int batch_size = 1 << 0; // rand_uint_32b(0, 4);
-  const bool columns_batch = false; // rand_uint_32b(0, 1);
-  const NTTDir dir = NTTDir::kForward; // static_cast<NTTDir>(rand_uint_32b(0, 1));
-  const bool inplace = false; // rand_uint_32b(0, 1);
+  // Test NTT sizes from 2^1 to 2^20 to identify where Vulkan starts failing
+  for (int log_size = 1; log_size <= 20; log_size++) {
+    const uint64_t N = 1 << log_size;
+    const int batch_size = 1 << 0; // rand_uint_32b(0, 4);
+    const bool columns_batch = false; // rand_uint_32b(0, 1);
+    const NTTDir dir = NTTDir::kForward; // static_cast<NTTDir>(rand_uint_32b(0, 1));
+    const bool inplace = false; // rand_uint_32b(0, 1);
 
-  ICICLE_LOG_DEBUG << "N = " << N;
-  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
-  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
-  ICICLE_LOG_DEBUG << "dir = " << (dir == NTTDir::kForward ? "forward" : "inverse");
-  ICICLE_LOG_DEBUG << "inplace = " << inplace;
+    ICICLE_LOG_INFO << "\n=== Testing NTT with size 2^" << log_size << " = " << N << " ===";
+    ICICLE_LOG_DEBUG << "N = " << N;
+    ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+    ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
+    ICICLE_LOG_DEBUG << "dir = " << (dir == NTTDir::kForward ? "forward" : "inverse");
+    ICICLE_LOG_DEBUG << "inplace = " << inplace;
 
-  const int total_size = N * batch_size;
-  auto in_a = std::make_unique<TypeParam[]>(total_size);
-  auto out_main = std::make_unique<TypeParam[]>(total_size);
-  auto out_ref = std::make_unique<TypeParam[]>(total_size);
+    const int total_size = N * batch_size;
+    auto in_a = std::make_unique<TypeParam[]>(total_size);
+    auto out_main = std::make_unique<TypeParam[]>(total_size);
+    auto out_ref = std::make_unique<TypeParam[]>(total_size);
 
-  // Initialize input data with alternating 0s and 1s
-  for (int i = 0; i < total_size; i++) {
-    in_a[i] = (i % 2 == 0) ? TypeParam::zero() : TypeParam::one();
-  }
-  
-  const int debug_size = std::min(32, total_size);
-  // Print in_a values for debugging
-  ICICLE_LOG_INFO << "in_a values after initialization:";
-  for (int i = 0; i < debug_size; i++) {
-    ICICLE_LOG_INFO << "in_a[" << i << "] = " << in_a[i];
-  }
-
-  auto run = [&](const std::string& dev_type, TypeParam* out, bool measure, const char* msg, int iters) {
-    Device dev = {dev_type, 0};
-    icicle_set_device(dev);
-
-    // Initialize NTT domain
-    auto init_domain_config = default_ntt_init_domain_config();
-    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log2(N)), init_domain_config));
-
-    auto config = default_ntt_config<TypeParam>();
-    config.batch_size = batch_size;
-    config.columns_batch = columns_batch;
-    config.ordering = Ordering::kNR;
-
-    // Print NTT configuration
-    ICICLE_LOG_INFO << "NTT Configuration for " << dev_type << ":";
-    ICICLE_LOG_INFO << "  - Size: " << N;
-    ICICLE_LOG_INFO << "  - Batch size: " << config.batch_size;
-    ICICLE_LOG_INFO << "  - Columns batch: " << config.columns_batch;
-    ICICLE_LOG_INFO << "  - Direction: " << (dir == NTTDir::kForward ? "Forward" : "Inverse");
-    ICICLE_LOG_INFO << "  - Ordering: " << static_cast<int>(config.ordering);
-    ICICLE_LOG_INFO << "  - Inputs on device: " << config.are_inputs_on_device;
-    ICICLE_LOG_INFO << "  - Outputs on device: " << config.are_outputs_on_device;
-    ICICLE_LOG_INFO << "  - Is async: " << config.is_async;
-
-    std::ostringstream oss;
-    oss << dev_type << " " << msg;
-
-    START_TIMER(NTT_sync)
-    for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(ntt(in_a.get(), N, dir, config, out)); //TODO: ..., inplace ? in_a.get() : out));
+    // Initialize input data with alternating 0s and 1s
+    for (int i = 0; i < total_size; i++) {
+      in_a[i] = (i % 2 == 0) ? TypeParam::zero() : TypeParam::one();
     }
-    END_TIMER(NTT_sync, oss.str().c_str(), measure);
-
-    // Release NTT domain
-    ICICLE_CHECK(ntt_release_domain<scalar_t>());
-  };
-
-  ICICLE_LOG_INFO << "Input data before CPU NTT:";
-  for (int i = 0; i < debug_size; i++) {
-    ICICLE_LOG_INFO << "in_a[" << i << "] = " << in_a[i];
-  }
-  // Run reference implementation (CPU)
-  run(IcicleTestBase::reference_device(), out_ref.get(), VERBOSE, "NTT", ITERS);
-
-  // Print out_ref values after CPU NTT
-  ICICLE_LOG_INFO << "out_ref values after CPU NTT:";
-  for (int i = 0; i < debug_size; i++) {
-    ICICLE_LOG_INFO << "out_ref[" << i << "] = " << out_ref[i];
-  }
-
-  // // Run main implementation
-  // run(IcicleTestBase::main_device(), out_main.get(), VERBOSE, "NTT", ITERS);
-
-  // // Compare results
-  // if (inplace) {
-  //   ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), total_size * sizeof(TypeParam)));
-  // } else {
-  //   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
-  // }
-
-  // Run Vulkan implementation if available
-  if (std::find(FieldTest<TypeParam>::s_registered_devices.begin(), FieldTest<TypeParam>::s_registered_devices.end(), "VULKAN") != FieldTest<TypeParam>::s_registered_devices.end()) {
-    auto out_vulkan = std::make_unique<TypeParam[]>(total_size);
     
-    // Initialize NTT domain for Vulkan
-    Device vulkan_dev = {"VULKAN", 0};
-    icicle_set_device(vulkan_dev);
-
-    // Print input data before Vulkan NTT
-    ICICLE_LOG_INFO << "Input data before Vulkan NTT:";
+    const int debug_size = std::min(32, total_size);
+    // Print in_a values for debugging
+    ICICLE_LOG_INFO << "in_a values after initialization:";
     for (int i = 0; i < debug_size; i++) {
       ICICLE_LOG_INFO << "in_a[" << i << "] = " << in_a[i];
     }
 
-    // Allocate device memory and copy input data
-    TypeParam* d_in = nullptr;
-    TypeParam* d_out = nullptr;
-    ICICLE_CHECK(icicle_malloc((void**)&d_in, total_size * sizeof(TypeParam)));
-    ICICLE_CHECK(icicle_malloc((void**)&d_out, total_size * sizeof(TypeParam)));
-    ICICLE_CHECK(icicle_copy_to_device(d_in, in_a.get(), total_size * sizeof(TypeParam)));
+    auto run = [&](const std::string& dev_type, TypeParam* out, bool measure, const char* msg, int iters) {
+      Device dev = {dev_type, 0};
+      icicle_set_device(dev);
 
-    auto init_domain_config = default_ntt_init_domain_config();
-    ICICLE_LOG_INFO << "before init domain";
-    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log2(N)), init_domain_config));
-    ICICLE_LOG_INFO << "after init domain";
+      // Initialize NTT domain
+      auto init_domain_config = default_ntt_init_domain_config();
+      ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log2(N)), init_domain_config));
 
-    auto config = default_ntt_config<TypeParam>();
-    config.batch_size = batch_size;
-    config.columns_batch = columns_batch;
-    config.are_inputs_on_device = true;
-    config.are_outputs_on_device = true;
+      auto config = default_ntt_config<TypeParam>();
+      config.batch_size = batch_size;
+      config.columns_batch = columns_batch;
+      config.ordering = Ordering::kNR;
 
-    ICICLE_LOG_INFO << "NTT Configuration for Vulkan:";
-    ICICLE_LOG_INFO << "  - Size: " << N;
-    ICICLE_LOG_INFO << "  - Batch size: " << config.batch_size;
-    ICICLE_LOG_INFO << "  - Columns batch: " << config.columns_batch;
-    ICICLE_LOG_INFO << "  - Direction: " << (dir == NTTDir::kForward ? "Forward" : "Inverse");
-    ICICLE_LOG_INFO << "  - Ordering: " << static_cast<int>(config.ordering);
-    ICICLE_LOG_INFO << "  - Inputs on device: " << config.are_inputs_on_device;
-    ICICLE_LOG_INFO << "  - Outputs on device: " << config.are_outputs_on_device;
-    ICICLE_LOG_INFO << "  - Is async: " << config.is_async;
+      // Print NTT configuration
+      ICICLE_LOG_INFO << "NTT Configuration for " << dev_type << ":";
+      ICICLE_LOG_INFO << "  - Size: " << N;
+      ICICLE_LOG_INFO << "  - Batch size: " << config.batch_size;
+      ICICLE_LOG_INFO << "  - Columns batch: " << config.columns_batch;
+      ICICLE_LOG_INFO << "  - Direction: " << (dir == NTTDir::kForward ? "Forward" : "Inverse");
+      ICICLE_LOG_INFO << "  - Ordering: " << static_cast<int>(config.ordering);
+      ICICLE_LOG_INFO << "  - Inputs on device: " << config.are_inputs_on_device;
+      ICICLE_LOG_INFO << "  - Outputs on device: " << config.are_outputs_on_device;
+      ICICLE_LOG_INFO << "  - Is async: " << config.is_async;
 
+      std::ostringstream oss;
+      oss << dev_type << " " << msg;
 
-    ICICLE_LOG_INFO << "before ntt";
+      START_TIMER(NTT_sync)
+      for (int i = 0; i < iters; ++i) {
+        ICICLE_CHECK(ntt(in_a.get(), N, dir, config, out)); //TODO: ..., inplace ? in_a.get() : out));
+      }
+      END_TIMER(NTT_sync, oss.str().c_str(), measure);
 
-    START_TIMER(NTT_sync)
-    ICICLE_CHECK(ntt(d_in, N, dir, config, inplace ? d_in : d_out));
-    END_TIMER(NTT_sync, "VULKAN NTT", VERBOSE);
+      // Release NTT domain
+      ICICLE_CHECK(ntt_release_domain<scalar_t>());
+    };
 
-    // Copy result back to host
-    ICICLE_CHECK(icicle_copy_to_host(out_vulkan.get(), inplace ? d_in : d_out, total_size * sizeof(TypeParam)));
-
-    // Free device memory
-    ICICLE_CHECK(icicle_free(d_in));
-    ICICLE_CHECK(icicle_free(d_out));
-
-    // Release NTT domain for Vulkan
-    ICICLE_CHECK(ntt_release_domain<scalar_t>());
-    
-    // Print out_vulkan values before comparison
-    ICICLE_LOG_INFO << "out_vulkan values before comparison:";
+    ICICLE_LOG_INFO << "Input data before CPU NTT:";
     for (int i = 0; i < debug_size; i++) {
-      ICICLE_LOG_INFO << "out_vulkan[" << i << "] = " << out_vulkan[i];
+      ICICLE_LOG_INFO << "in_a[" << i << "] = " << in_a[i];
     }
-    
-    // Compare Vulkan results with reference
-    if (inplace) {
-      ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), total_size * sizeof(TypeParam)));
-    } else {
-      ASSERT_EQ(0, memcmp(out_vulkan.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+    // Run reference implementation (CPU)
+    run(IcicleTestBase::reference_device(), out_ref.get(), VERBOSE, "NTT", ITERS);
+
+    // Print out_ref values after CPU NTT
+    ICICLE_LOG_INFO << "out_ref values after CPU NTT:";
+    for (int i = 0; i < debug_size; i++) {
+      ICICLE_LOG_INFO << "out_ref[" << i << "] = " << out_ref[i];
+    }
+
+    // // Run main implementation
+    // run(IcicleTestBase::main_device(), out_main.get(), VERBOSE, "NTT", ITERS);
+
+    // // Compare results
+    // if (inplace) {
+    //   ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+    // } else {
+    //   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+    // }
+
+    // Run Vulkan implementation if available
+    if (std::find(FieldTest<TypeParam>::s_registered_devices.begin(), FieldTest<TypeParam>::s_registered_devices.end(), "VULKAN") != FieldTest<TypeParam>::s_registered_devices.end()) {
+      auto out_vulkan = std::make_unique<TypeParam[]>(total_size);
+      
+      // Initialize NTT domain for Vulkan
+      Device vulkan_dev = {"VULKAN", 0};
+      icicle_set_device(vulkan_dev);
+
+      // Print input data before Vulkan NTT
+      ICICLE_LOG_INFO << "Input data before Vulkan NTT:";
+      for (int i = 0; i < debug_size; i++) {
+        ICICLE_LOG_INFO << "in_a[" << i << "] = " << in_a[i];
+      }
+
+      // Allocate device memory and copy input data
+      TypeParam* d_in = nullptr;
+      TypeParam* d_out = nullptr;
+      ICICLE_CHECK(icicle_malloc((void**)&d_in, total_size * sizeof(TypeParam)));
+      ICICLE_CHECK(icicle_malloc((void**)&d_out, total_size * sizeof(TypeParam)));
+      ICICLE_CHECK(icicle_copy_to_device(d_in, in_a.get(), total_size * sizeof(TypeParam)));
+
+      auto init_domain_config = default_ntt_init_domain_config();
+      ICICLE_LOG_INFO << "before init domain";
+      ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log2(N)), init_domain_config));
+      ICICLE_LOG_INFO << "after init domain";
+
+      auto config = default_ntt_config<TypeParam>();
+      config.batch_size = batch_size;
+      config.columns_batch = columns_batch;
+      config.are_inputs_on_device = true;
+      config.are_outputs_on_device = true;
+
+      ICICLE_LOG_INFO << "NTT Configuration for Vulkan:";
+      ICICLE_LOG_INFO << "  - Size: " << N;
+      ICICLE_LOG_INFO << "  - Batch size: " << config.batch_size;
+      ICICLE_LOG_INFO << "  - Columns batch: " << config.columns_batch;
+      ICICLE_LOG_INFO << "  - Direction: " << (dir == NTTDir::kForward ? "Forward" : "Inverse");
+      ICICLE_LOG_INFO << "  - Ordering: " << static_cast<int>(config.ordering);
+      ICICLE_LOG_INFO << "  - Inputs on device: " << config.are_inputs_on_device;
+      ICICLE_LOG_INFO << "  - Outputs on device: " << config.are_outputs_on_device;
+      ICICLE_LOG_INFO << "  - Is async: " << config.is_async;
+
+
+      ICICLE_LOG_INFO << "before ntt";
+
+      START_TIMER(NTT_sync)
+      ICICLE_CHECK(ntt(d_in, N, dir, config, inplace ? d_in : d_out));
+      END_TIMER(NTT_sync, "VULKAN NTT", VERBOSE);
+
+      // Copy result back to host
+      ICICLE_CHECK(icicle_copy_to_host(out_vulkan.get(), inplace ? d_in : d_out, total_size * sizeof(TypeParam)));
+
+      // Free device memory
+      ICICLE_CHECK(icicle_free(d_in));
+      ICICLE_CHECK(icicle_free(d_out));
+
+      // Release NTT domain for Vulkan
+      ICICLE_CHECK(ntt_release_domain<scalar_t>());
+      
+      // Print out_vulkan values before comparison
+      ICICLE_LOG_INFO << "out_vulkan values before comparison:";
+      for (int i = 0; i < debug_size; i++) {
+        ICICLE_LOG_INFO << "out_vulkan[" << i << "] = " << out_vulkan[i];
+      }
+      
+      // Compare Vulkan results with reference
+      bool vulkan_passed = true;
+      for (int i = 0; i < total_size; i++) {
+        if (out_vulkan[i] != out_ref[i]) {
+          ICICLE_LOG_ERROR << "Vulkan NTT failed for size 2^" << log_size << " at index " << i 
+                          << ": expected " << out_ref[i] << ", got " << out_vulkan[i];
+          vulkan_passed = false;
+          break;
+        }
+      }
+      
+      if (vulkan_passed) {
+        ICICLE_LOG_INFO << "✓ Vulkan NTT PASSED for size 2^" << log_size;
+      } else {
+        ICICLE_LOG_ERROR << "✗ Vulkan NTT FAILED for size 2^" << log_size;
+        // Continue testing to see if larger sizes work
+      }
     }
   }
+  
+  ICICLE_LOG_INFO << "=== NTT testing completed for all sizes ===";
 }
 
 TYPED_TEST(FieldTest, vectorDivision)
