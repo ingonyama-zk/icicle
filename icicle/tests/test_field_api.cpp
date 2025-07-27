@@ -78,7 +78,7 @@ TYPED_TEST(FieldTest, NTTTest)
       auto config = default_ntt_config<TypeParam>();
       config.batch_size = batch_size;
       config.columns_batch = columns_batch;
-      config.ordering = Ordering::kNR;
+      config.ordering = Ordering::kRN;
 
       // Print NTT configuration
       ICICLE_LOG_INFO << "NTT Configuration for " << dev_type << ":";
@@ -207,7 +207,8 @@ TYPED_TEST(FieldTest, NTTTest)
         ICICLE_LOG_INFO << "✓ Vulkan NTT PASSED for size 2^" << log_size;
       } else {
         ICICLE_LOG_ERROR << "✗ Vulkan NTT FAILED for size 2^" << log_size;
-        // Continue testing to see if larger sizes work
+        // Fail the test immediately when any size fails
+        ASSERT_TRUE(vulkan_passed) << "Vulkan NTT failed for size 2^" << log_size;
       }
     }
   }
