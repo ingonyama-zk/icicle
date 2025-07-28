@@ -37,7 +37,7 @@ TYPED_TEST(FieldTest, NTTTest)
 {
   // Test NTT sizes from 2^1 to 2^20 to identify where Vulkan starts failing
   for (int dir_idx = 0; dir_idx < 2; dir_idx++) {  // Test both forward and inverse NTT directions
-    for (int log_size = 1; log_size <= 2; log_size++) {
+    for (int log_size = 1; log_size <= 20; log_size++) {
       const uint64_t N = 1 << log_size;
       const int batch_size = 1 << 0; // rand_uint_32b(0, 4);
       const bool columns_batch = false; // rand_uint_32b(0, 1);
