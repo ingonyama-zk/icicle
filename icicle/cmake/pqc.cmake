@@ -36,27 +36,95 @@ function(setup_pqc_package_target)
       message(WARNING "EXPERIMENTAL: Windows platform is not supported yet, this feature wasn't tested yet")
 
       if(MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_link_libraries(icicle_pqc_package INTERFACE
-          "/WHOLEARCHIVE:icicle_device"
-          "/WHOLEARCHIVE:icicle_pqc"
-          "/WHOLEARCHIVE:${PQC_BACKEND_TARGETS}"
+        # Build the interface link libraries list dynamically for Windows MSVC
+        set(_whole_archive_libs "")
+        
+        # Add icicle_device with /WHOLEARCHIVE
+        list(APPEND _whole_archive_libs 
+          "$<BUILD_INTERFACE:/WHOLEARCHIVE:$<TARGET_FILE:icicle_device>>"
+          "$<INSTALL_INTERFACE:/WHOLEARCHIVE:$<INSTALL_PREFIX>/lib/icicle_device.lib>")
+        
+        # Add icicle_pqc with /WHOLEARCHIVE
+        list(APPEND _whole_archive_libs
+          "$<BUILD_INTERFACE:/WHOLEARCHIVE:$<TARGET_FILE:icicle_pqc>>"
+          "$<INSTALL_INTERFACE:/WHOLEARCHIVE:$<INSTALL_PREFIX>/lib/icicle_pqc.lib>")
+        
+        # Add backend targets dynamically with /WHOLEARCHIVE
+        foreach(_backend_target ${PQC_BACKEND_TARGETS})
+          list(APPEND _whole_archive_libs
+            "$<BUILD_INTERFACE:/WHOLEARCHIVE:$<TARGET_FILE:${_backend_target}>>"
+            "$<INSTALL_INTERFACE:/WHOLEARCHIVE:$<INSTALL_PREFIX>/lib/${_backend_target}.lib>")
+        endforeach()
+        
+        # Add other libraries (Windows doesn't need pthread/dl)
+        list(APPEND _whole_archive_libs "$<LINK_ONLY:CUDA::cudart>")
+        
+        # Set the interface link libraries
+        set_target_properties(icicle_pqc_package PROPERTIES
+          INTERFACE_LINK_LIBRARIES "${_whole_archive_libs}"
         )
       else()
-        target_link_libraries(icicle_pqc_package INTERFACE
-          "-Wl,--whole-archive"
-          icicle_device
-          icicle_pqc
-          ${PQC_BACKEND_TARGETS}
+        # Build the interface link libraries list dynamically for Windows MinGW/GCC
+        set(_whole_archive_libs "-Wl,--whole-archive")
+        
+        # Add icicle_device
+        list(APPEND _whole_archive_libs 
+          "$<BUILD_INTERFACE:$<TARGET_FILE:icicle_device>>"
+          "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/lib/libicicle_device.a>")
+        
+        # Add icicle_pqc
+        list(APPEND _whole_archive_libs
+          "$<BUILD_INTERFACE:$<TARGET_FILE:icicle_pqc>>"
+          "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/lib/libicicle_pqc.a>")
+        
+        # Add backend targets dynamically
+        foreach(_backend_target ${PQC_BACKEND_TARGETS})
+          list(APPEND _whole_archive_libs
+            "$<BUILD_INTERFACE:$<TARGET_FILE:${_backend_target}>>"
+            "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/lib/lib${_backend_target}.a>")
+        endforeach()
+        
+        # Close whole-archive and add other libraries
+        list(APPEND _whole_archive_libs 
           "-Wl,--no-whole-archive"
+          "$<LINK_ONLY:CUDA::cudart>")
+        
+        # Set the interface link libraries
+        set_target_properties(icicle_pqc_package PROPERTIES
+          INTERFACE_LINK_LIBRARIES "${_whole_archive_libs}"
         )
       endif()
     else()
-      target_link_libraries(icicle_pqc_package INTERFACE
-        "-Wl,--whole-archive"
-        icicle_device
-        icicle_pqc
-        ${PQC_BACKEND_TARGETS}
+      # Build the interface link libraries list dynamically
+      set(_whole_archive_libs "-Wl,--whole-archive")
+      
+      # Add icicle_device
+      list(APPEND _whole_archive_libs 
+        "$<BUILD_INTERFACE:$<TARGET_FILE:icicle_device>>"
+        "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/lib/libicicle_device.a>")
+      
+      # Add icicle_pqc
+      list(APPEND _whole_archive_libs
+        "$<BUILD_INTERFACE:$<TARGET_FILE:icicle_pqc>>"
+        "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/lib/libicicle_pqc.a>")
+      
+      # Add backend targets dynamically
+      foreach(_backend_target ${PQC_BACKEND_TARGETS})
+        list(APPEND _whole_archive_libs
+          "$<BUILD_INTERFACE:$<TARGET_FILE:${_backend_target}>>"
+          "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/lib/lib${_backend_target}.a>")
+      endforeach()
+      
+      # Close whole-archive and add other libraries
+      list(APPEND _whole_archive_libs 
         "-Wl,--no-whole-archive"
+        "pthread" 
+        "dl"
+        "$<LINK_ONLY:CUDA::cudart>")
+      
+      # Set the interface link libraries
+      set_target_properties(icicle_pqc_package PROPERTIES
+        INTERFACE_LINK_LIBRARIES "${_whole_archive_libs}"
       )
     endif()
   else()
