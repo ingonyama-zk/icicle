@@ -37,18 +37,20 @@ TYPED_TEST(FieldTest, NTTTest)
 {
   // Test NTT sizes from 2^1 to 2^20 to identify where Vulkan starts failing
   const int batch_sizes[] = {0, 1, 2, 3};
+  for (int ordering_idx = 0; ordering_idx < 6; ordering_idx++) {  // Test all orderings
   for (int dir_idx = 0; dir_idx < 2; dir_idx++) {  // Test both forward and inverse NTT directions
     for (int log_size = 1; log_size <= 17; log_size++) {
       for (int batch_idx = 0; batch_idx < 4; batch_idx++) {  // Test batch sizes [1, 2, 3]
-        const uint64_t N = 1 << log_size;
-        const int batch_size = 1 << batch_sizes[batch_idx];
-        const bool columns_batch = false; // rand_uint_32b(0, 1);
-        const NTTDir dir = (dir_idx == 0) ? NTTDir::kForward : NTTDir::kInverse;
-        const bool inplace = false; // rand_uint_32b(0, 1);
-        const Ordering test_ordering = Ordering::kNR;
+          const uint64_t N = 1 << log_size;
+          const int batch_size = 1 << batch_sizes[batch_idx];
+          const bool columns_batch = false; // rand_uint_32b(0, 1);
+          const NTTDir dir = (dir_idx == 0) ? NTTDir::kForward : NTTDir::kInverse;
+          const bool inplace = false; // rand_uint_32b(0, 1);
+          const Ordering test_ordering = static_cast<Ordering>(ordering_idx);
         ICICLE_LOG_INFO << "\n=== Testing NTT with size 2^" << log_size << " = " << N 
                         << ", batch_size: " << batch_size
-                        << ", direction: " << (dir == NTTDir::kForward ? "FORWARD" : "INVERSE") << " ===";
+                        << ", direction: " << (dir == NTTDir::kForward ? "FORWARD" : "INVERSE")
+                        << ", ordering: " << ordering_idx << " ===";
       ICICLE_LOG_DEBUG << "N = " << N;
       ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
       ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
@@ -60,7 +62,7 @@ TYPED_TEST(FieldTest, NTTTest)
       auto out_main = std::make_unique<TypeParam[]>(total_size);
       auto out_ref = std::make_unique<TypeParam[]>(total_size);
 
-      // Initialize input data with alternating 0s and 1s
+      //Initialize input data with alternating 0s and 1s
       // for (int i = 0; i < total_size; i++) {
       //   in_a[i] = (i % 2 == 0) ? TypeParam::zero() : TypeParam::one();
       // }
@@ -226,7 +228,8 @@ TYPED_TEST(FieldTest, NTTTest)
           // Fail the test immediately when any size fails
           ASSERT_TRUE(vulkan_passed) << "Vulkan NTT failed for size 2^" << log_size;
         }
-      }
+      }  // end of ordering_idx loop
+        }
       }  // end of batch_idx loop
     }  // end of log_size loop
   }  // end of dir_idx loop
