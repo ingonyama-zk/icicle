@@ -225,9 +225,9 @@ namespace ntt_cpu {
     }
     if (ntt_data.direction == NTTDir::kInverse && ntt_data.config.coset_gen != S::one()) { coset_mul(); }
 
-    if (ntt_data.config.ordering == Ordering::kNR || 
-        ntt_data.config.ordering == Ordering::kNM ||
-        ntt_data.config.ordering == Ordering::kRR) {
+    if (
+      ntt_data.config.ordering == Ordering::kNR || ntt_data.config.ordering == Ordering::kNM ||
+      ntt_data.config.ordering == Ordering::kRR) {
       reorder_by_bit_reverse();
     }
     return eIcicleError::SUCCESS;
@@ -251,8 +251,7 @@ namespace ntt_cpu {
     const uint64_t total_memory_size = ntt_data.size * ntt_data.config.batch_size;
     const uint32_t stride = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
     const uint32_t logn = static_cast<uint32_t>(std::log2(ntt_data.size));
-    const bool bit_rev = ntt_data.config.ordering == Ordering::kRN ||
-                         ntt_data.config.ordering == Ordering::kRR ||
+    const bool bit_rev = ntt_data.config.ordering == Ordering::kRN || ntt_data.config.ordering == Ordering::kRR ||
                          ntt_data.config.ordering == Ordering::kMN;
 
     // Check if input and output point to the same memory location

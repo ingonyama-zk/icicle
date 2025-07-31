@@ -11,22 +11,22 @@ namespace icicle {
    * @brief Enum representing various error codes for Icicle library operations.
    */
   enum class eIcicleError {
-    SUCCESS = 0,               ///< Operation completed successfully
-    INVALID_DEVICE,            ///< The specified device is invalid
-    OUT_OF_MEMORY,             ///< Memory allocation failed due to insufficient memory
-    INVALID_POINTER,           ///< The specified pointer is invalid
-    ALLOCATION_FAILED,         ///< Memory allocation failed
-    DEALLOCATION_FAILED,       ///< Memory deallocation failed
-    COPY_FAILED,               ///< Data copy operation failed
-    SYNCHRONIZATION_FAILED,    ///< Device synchronization failed
-    STREAM_CREATION_FAILED,    ///< Stream creation failed
-    STREAM_DESTRUCTION_FAILED, ///< Stream destruction failed
-    API_NOT_IMPLEMENTED,       ///< The API is not implemented for a device
-    INVALID_ARGUMENT,          ///< Invalid argument passed
-    BACKEND_LOAD_FAILED,       ///< Failed to load the backend
-    LICENSE_CHECK_ERROR,       ////< Failed to check license or invalid license
+    SUCCESS = 0,                  ///< Operation completed successfully
+    INVALID_DEVICE,               ///< The specified device is invalid
+    OUT_OF_MEMORY,                ///< Memory allocation failed due to insufficient memory
+    INVALID_POINTER,              ///< The specified pointer is invalid
+    ALLOCATION_FAILED,            ///< Memory allocation failed
+    DEALLOCATION_FAILED,          ///< Memory deallocation failed
+    COPY_FAILED,                  ///< Data copy operation failed
+    SYNCHRONIZATION_FAILED,       ///< Device synchronization failed
+    STREAM_CREATION_FAILED,       ///< Stream creation failed
+    STREAM_DESTRUCTION_FAILED,    ///< Stream destruction failed
+    API_NOT_IMPLEMENTED,          ///< The API is not implemented for a device
+    INVALID_ARGUMENT,             ///< Invalid argument passed
+    BACKEND_LOAD_FAILED,          ///< Failed to load the backend
+    LICENSE_CHECK_ERROR,          ////< Failed to check license or invalid license
     DOMAIN_INITIALIZATION_FAILED, ///< Failed to initialize the ntt domain
-    UNKNOWN_ERROR,             ///< An unknown error occurred
+    UNKNOWN_ERROR,                ///< An unknown error occurred
   };
 
   /**
