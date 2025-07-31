@@ -13,9 +13,10 @@ mod tests {
         merkle::{MerkleProof, MerkleTree, MerkleTreeConfig, PaddingPolicy},
     };
     use icicle_runtime::{
-        memory::{DeviceVec, HostSlice},
+        memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut},
         test_utilities,
     };
+
     use rand::Rng;
     use std::sync::Once;
     use std::time::Instant;
@@ -35,28 +36,20 @@ mod tests {
         let batch = 3;
 
         let mut input = vec![0 as u8; single_hash_input_size * batch];
-        rand::thread_rng().fill(&mut input[..]);
+        rand::thread_rng().fill(input.as_mut_slice());
         let mut output_ref = vec![0 as u8; 64 * batch]; // 64B (=512b) is the output size of Keccak512,
         let mut output_main = vec![0 as u8; 64 * batch];
 
         test_utilities::test_set_ref_device();
         let keccak_hasher = Keccak512::new(0 /*default chunk size */).unwrap();
         keccak_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_ref),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_ref.into_slice_mut())
             .unwrap();
 
         test_utilities::test_set_main_device();
         let keccak_hasher = Keccak512::new(0 /*default chunk size */).unwrap();
         keccak_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_main),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_main.into_slice_mut())
             .unwrap();
         assert_eq!(output_ref, output_main);
     }
@@ -68,28 +61,20 @@ mod tests {
         let batch = 11;
 
         let mut input = vec![0 as u8; single_hash_input_size * batch];
-        rand::thread_rng().fill(&mut input[..]);
+        rand::thread_rng().fill(input.as_mut_slice());
         let mut output_ref = vec![0 as u8; 32 * batch]; // 32B (=256b) is the output size of blake2s
         let mut output_main = vec![0 as u8; 32 * batch];
 
         test_utilities::test_set_ref_device();
         let blake2s_hasher = Blake2s::new(0 /*default chunk size */).unwrap();
         blake2s_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_ref),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_ref.into_slice_mut())
             .unwrap();
 
         test_utilities::test_set_main_device();
         let blake2s_hasher = Blake2s::new(0 /*default chunk size */).unwrap();
         blake2s_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_main),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_main.into_slice_mut())
             .unwrap();
         assert_eq!(output_ref, output_main);
     }
@@ -101,28 +86,20 @@ mod tests {
         let batch = 11;
 
         let mut input = vec![0 as u8; single_hash_input_size * batch];
-        rand::thread_rng().fill(&mut input[..]);
+        rand::thread_rng().fill(input.as_mut_slice());
         let mut output_ref = vec![0 as u8; 32 * batch]; // 32B (=256b) is the output size of blake3
         let mut output_main = vec![0 as u8; 32 * batch];
 
         test_utilities::test_set_ref_device();
         let blake3_hasher = Blake3::new(0 /*default chunk size */).unwrap();
         blake3_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_ref),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_ref.into_slice_mut())
             .unwrap();
 
         test_utilities::test_set_main_device();
         let blake3_hasher = Blake3::new(0 /*default chunk size */).unwrap();
         blake3_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_main),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_main.into_slice_mut())
             .unwrap();
         assert_eq!(output_ref, output_main);
     }
@@ -139,11 +116,7 @@ mod tests {
         test_utilities::test_set_ref_device();
         let blake3_hasher = Blake3::new(0 /*default chunk size */).unwrap();
         blake3_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_ref),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_ref.into_slice_mut())
             .unwrap();
 
         // Convert output_ref to hex for comparison
@@ -164,28 +137,20 @@ mod tests {
     fn sha3_hashing() {
         initialize();
         let mut input = vec![0 as u8; 1153];
-        rand::thread_rng().fill(&mut input[..]);
+        rand::thread_rng().fill(input.as_mut_slice());
         let mut output_main = vec![0 as u8; 32];
         let mut output_ref = vec![0 as u8; 32];
 
         test_utilities::test_set_ref_device();
         let sha3_hasher = Sha3_256::new(0 /*default chunk size */).unwrap();
         sha3_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_ref),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_ref.into_slice_mut())
             .unwrap();
 
         test_utilities::test_set_main_device();
         let sha3_hasher = Sha3_256::new(0 /*default chunk size */).unwrap();
         sha3_hasher
-            .hash(
-                HostSlice::from_slice(&input),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output_main),
-            )
+            .hash(input.into_slice(), &HashConfig::default(), output_main.into_slice_mut())
             .unwrap();
 
         assert_eq!(output_ref, output_main);
@@ -203,7 +168,7 @@ mod tests {
             let hasher_l0 = Keccak256::new(2 * leaf_element_size /*input chunk size*/).unwrap();
             let hasher_l1 = Sha3_256::new(2 * 32 /*input chunk size*/).unwrap();
             let layer_hashes = [&hasher_l0, &hasher_l1];
-            let _merkle_tree = MerkleTree::new(&layer_hashes[..], leaf_element_size as u64, 0).unwrap();
+            let _merkle_tree = MerkleTree::new(layer_hashes.as_slice(), leaf_element_size as u64, 0).unwrap();
         }
 
         // or any way that ends up with &[&Hashers]
@@ -215,19 +180,19 @@ mod tests {
         let layer_hashes: Vec<&Hasher> = (0..nof_layers)
             .map(|_| &hasher)
             .collect();
-        let merkle_tree = MerkleTree::new(&layer_hashes[..], leaf_element_size as u64, 0).unwrap();
+        let merkle_tree = MerkleTree::new(layer_hashes.as_slice(), leaf_element_size as u64, 0).unwrap();
 
         // Create a vector of random bytes efficiently
         let mut input: Vec<u8> = vec![0; leaf_element_size as usize * num_elements];
-        rand::thread_rng().fill(&mut input[..]); // Fill the vector with random data
+        rand::thread_rng().fill(input.as_mut_slice()); // Fill the vector with random data
 
         merkle_tree
-            .build(HostSlice::from_slice(&input), &MerkleTreeConfig::default())
+            .build(input.into_slice(), &MerkleTreeConfig::default())
             .unwrap();
 
         let merkle_proof: MerkleProof = merkle_tree
             .get_proof(
-                HostSlice::from_slice(&input),
+                input.into_slice(),
                 1,
                 false, /*=pruned*/
                 &MerkleTreeConfig::default(),
@@ -251,14 +216,14 @@ mod tests {
         let layer_hashes: Vec<&Hasher> = (0..nof_layers)
             .map(|_| &hasher)
             .collect();
-        let merkle_tree = MerkleTree::new(&layer_hashes[..], leaf_element_size as u64, 0).unwrap();
+        let merkle_tree = MerkleTree::new(layer_hashes.as_slice(), leaf_element_size as u64, 0).unwrap();
         merkle_tree
-            .build(HostSlice::from_slice(&input), &MerkleTreeConfig::default())
+            .build(input.into_slice(), &MerkleTreeConfig::default())
             .unwrap();
 
         let merkle_proof: MerkleProof = merkle_tree
             .get_proof(
-                HostSlice::from_slice(&input),
+                input.into_slice(),
                 1,
                 false, /*=pruned*/
                 &MerkleTreeConfig::default(),
@@ -278,10 +243,7 @@ mod tests {
         assert_eq!(leaf, main_leaf);
 
         // test proving merkle-proof with device memory too
-        let mut device_leaves = DeviceVec::<u8>::device_malloc(input.len()).unwrap();
-        device_leaves
-            .copy_from_host(HostSlice::from_slice(&input))
-            .unwrap();
+        let device_leaves = DeviceVec::from_host_slice(&input);
         let merkle_proof_from_device_mem: MerkleProof = merkle_tree
             .get_proof(&device_leaves, 2, false /*=pruned*/, &MerkleTreeConfig::default())
             .unwrap();
@@ -301,7 +263,7 @@ mod tests {
         let input: [u8; 32] = [20; 32];
         let golden_nonce: u64 = 40825909;
         let golden_hash: u64 = 364385878471;
-        let input_host = HostSlice::from_slice(&input);
+        let input_host = input.into_slice();
         let cfg = PowConfig::default();
 
         let mut gpu_found = false;
@@ -382,7 +344,7 @@ mod tests {
         const BITS: u8 = 25;
         let input: [u8; 21] = [20; 21];
 
-        let input_host = HostSlice::from_slice(&input);
+        let input_host = input.into_slice();
         let mut cfg = PowConfig::default();
         cfg.padding_size = 3;
 
@@ -505,7 +467,7 @@ mod tests {
                 let build_start = Instant::now();
 
                 merkle_tree
-                    .build(HostSlice::from_slice(&test_vec), &config)
+                    .build(test_vec.into_slice(), &config)
                     .unwrap();
 
                 println!(

@@ -8,6 +8,13 @@ class Field : public ModArith<Field<CONFIG>, CONFIG>
   // By deriving from ModArith<Field> (CRTP) we get operands defined for the type Field
 
 public:
+  // Copy-assignment forwards to ModArith implementation.
+  HOST_DEVICE Field& operator=(const Field& other)
+  {
+    ModArith<Field<CONFIG>, CONFIG>::operator=(other);
+    return *this;
+  }
+
   static constexpr unsigned TLC = CONFIG::limbs_count;
   static constexpr unsigned NBITS = CONFIG::modulus_bit_count;
   typedef storage<TLC> ff_storage;

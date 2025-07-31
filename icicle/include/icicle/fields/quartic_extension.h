@@ -171,7 +171,7 @@ public:
     return *this;
   }
 
-  constexpr HOST_DEVICE_INLINE Wide mul_wide(const QuarticExtensionField& ys) const
+  constexpr HOST_DEVICE Wide mul_wide(const QuarticExtensionField& ys) const
   {
     if (CONFIG::nonresidue_is_negative)
       return Wide{

@@ -199,7 +199,7 @@ public:
     }
   }
 
-  constexpr HOST_DEVICE_INLINE Wide mul_wide(const ComplexExtensionField& ys) const
+  constexpr HOST_DEVICE Wide mul_wide(const ComplexExtensionField& ys) const
   {
 #ifdef __CUDA_ARCH__
     constexpr bool do_karatsuba = FF::TLC >= 8; // The basic multiplier size is 1 limb, Karatsuba is more efficient when

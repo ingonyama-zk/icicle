@@ -4,7 +4,7 @@ use crate::random_sampling::{
 };
 use crate::ring::IntegerRing;
 use crate::vec_ops::VecOpsConfig;
-use icicle_runtime::{memory::HostSlice, test_utilities};
+use icicle_runtime::{memory::IntoIcicleSliceMut, test_utilities};
 use rand::Rng;
 
 pub fn check_random_sampling<F>()
@@ -22,9 +22,9 @@ where
     rand::thread_rng().fill(&mut seed);
 
     test_utilities::test_set_main_device();
-    random_sampling(false, &seed, &cfg, HostSlice::from_mut_slice(&mut output_a)).expect("random sampling failed");
+    random_sampling(false, &seed, &cfg, output_a.into_slice_mut()).expect("random sampling failed");
     test_utilities::test_set_ref_device();
-    random_sampling(false, &seed, &cfg, HostSlice::from_mut_slice(&mut output_b)).expect("random sampling failed");
+    random_sampling(false, &seed, &cfg, output_b.into_slice_mut()).expect("random sampling failed");
 
     for i in 0..output_size {
         assert_eq!(output_a[i], output_b[i], "random sampling mismatch at index {}", i);
@@ -51,11 +51,11 @@ where
     let norm = 15;
 
     test_utilities::test_set_main_device();
-    challenge_space_polynomials_sampling(&seed, &cfg, ones, twos, norm, HostSlice::from_mut_slice(&mut output_a))
+    challenge_space_polynomials_sampling(&seed, &cfg, ones, twos, norm, output_a.into_slice_mut())
         .expect("challenge space polynomials sampling failed");
 
     test_utilities::test_set_ref_device();
-    challenge_space_polynomials_sampling(&seed, &cfg, ones, twos, norm, HostSlice::from_mut_slice(&mut output_b))
+    challenge_space_polynomials_sampling(&seed, &cfg, ones, twos, norm, output_b.into_slice_mut())
         .expect("challenge space polynomials sampling failed");
 
     for i in 0..output_size {

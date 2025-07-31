@@ -1,7 +1,7 @@
 use crate::polynomial_ring::PolynomialRing;
 use crate::{balanced_decomposition, traits::GenerateRandom, vec_ops::VecOpsConfig};
 
-use icicle_runtime::memory::{DeviceVec, HostSlice};
+use icicle_runtime::memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut};
 
 pub fn check_balanced_decomposition<F>()
 where
@@ -20,11 +20,11 @@ where
 
     for base in bases {
         let digits_per_element = balanced_decomposition::count_digits::<F>(base);
-        let mut decomposed = DeviceVec::<F>::device_malloc((total_size * digits_per_element) as usize).unwrap();
+        let mut decomposed = DeviceVec::<F>::malloc((total_size * digits_per_element) as usize);
 
-        balanced_decomposition::decompose::<F>(HostSlice::from_slice(&input), &mut decomposed[..], base, &cfg).unwrap();
+        balanced_decomposition::decompose::<F>(input.into_slice(), decomposed.into_slice_mut(), base, &cfg).unwrap();
         // In C++ tests we also check here that the digits are in the correct range. Skipping this check here.
-        balanced_decomposition::recompose::<F>(&decomposed[..], HostSlice::from_mut_slice(&mut recomposed), base, &cfg)
+        balanced_decomposition::recompose::<F>(decomposed.into_slice(), recomposed.into_slice_mut(), base, &cfg)
             .unwrap();
         assert_eq!(input, recomposed);
     }

@@ -50,16 +50,14 @@ TYPED_TEST(PqcTest, MLkemSharedSecretConsistencyTest)
   auto message = this->random_entropy(batch_size * MESSAGE_BYTES);
 
   // Key generation
-  auto err = keygen<TypeParam>(entropy.data(), config, public_key.data(), secret_key.data());
-  ASSERT_EQ(err, eIcicleError::SUCCESS);
+  ICICLE_CHECK(keygen<TypeParam>(entropy.data(), config, public_key.data(), secret_key.data()));
 
   // Encapsulation
-  err = encapsulate<TypeParam>(message.data(), public_key.data(), config, ciphertext.data(), shared_secret_enc.data());
-  ASSERT_EQ(err, eIcicleError::SUCCESS);
+  ICICLE_CHECK(
+    encapsulate<TypeParam>(message.data(), public_key.data(), config, ciphertext.data(), shared_secret_enc.data()));
 
   // Decapsulation
-  err = decapsulate<TypeParam>(secret_key.data(), ciphertext.data(), config, shared_secret_dec.data());
-  ASSERT_EQ(err, eIcicleError::SUCCESS);
+  ICICLE_CHECK(decapsulate<TypeParam>(secret_key.data(), ciphertext.data(), config, shared_secret_dec.data()));
 
   // Check equality
   EXPECT_EQ(shared_secret_enc, shared_secret_dec);
@@ -116,8 +114,7 @@ TYPED_TEST(PqcTest, MLkemSharedSecretConsistencyTestOnDevice)
     icicle_copy_to_device_async(d_entropy, h_entropy.data(), batch_size * ENTROPY_BYTES * sizeof(std::byte), stream));
 
   // Key generation
-  auto err = keygen<TypeParam>(d_entropy, config, d_public_key, d_secret_key);
-  ASSERT_EQ(err, eIcicleError::SUCCESS);
+  ICICLE_CHECK(keygen<TypeParam>(d_entropy, config, d_public_key, d_secret_key));
 
   // Encapsulation
   auto h_message = this->random_entropy(batch_size * MESSAGE_BYTES);
@@ -126,12 +123,10 @@ TYPED_TEST(PqcTest, MLkemSharedSecretConsistencyTestOnDevice)
     icicle_malloc_async(reinterpret_cast<void**>(&d_message), batch_size * MESSAGE_BYTES * sizeof(std::byte), stream));
   ICICLE_CHECK(
     icicle_copy_to_device_async(d_message, h_message.data(), batch_size * MESSAGE_BYTES * sizeof(std::byte), stream));
-  err = encapsulate<TypeParam>(d_message, d_public_key, config, d_ciphertext, d_shared_secret_enc);
-  ASSERT_EQ(err, eIcicleError::SUCCESS);
+  ICICLE_CHECK(encapsulate<TypeParam>(d_message, d_public_key, config, d_ciphertext, d_shared_secret_enc));
 
   // Decapsulation
-  err = decapsulate<TypeParam>(d_secret_key, d_ciphertext, config, d_shared_secret_dec);
-  ASSERT_EQ(err, eIcicleError::SUCCESS);
+  ICICLE_CHECK(decapsulate<TypeParam>(d_secret_key, d_ciphertext, config, d_shared_secret_dec));
 
   // Copy results back to host for comparison
   std::vector<std::byte> h_shared_secret_enc(batch_size * TypeParam::SHARED_SECRET_BYTES);

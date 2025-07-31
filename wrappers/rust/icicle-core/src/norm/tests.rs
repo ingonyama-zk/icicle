@@ -5,7 +5,7 @@ use crate::{
     vec_ops::VecOpsConfig,
 };
 
-use icicle_runtime::memory::HostSlice;
+use icicle_runtime::memory::{IntoIcicleSlice, IntoIcicleSliceMut};
 use rand::Rng;
 
 pub fn check_norm<T>()
@@ -40,8 +40,8 @@ where
         let bound = (actual_norm as f64).sqrt() as u64 + 1;
 
         let mut expected = vec![false; batch];
-        let result = HostSlice::from_mut_slice(&mut expected);
-        norm::check_norm_bound(HostSlice::from_slice(&input), norm::NormType::L2, bound, &cfg, result).unwrap();
+        let result = expected.into_slice_mut();
+        norm::check_norm_bound(input.into_slice(), norm::NormType::L2, bound, &cfg, result).unwrap();
 
         assert!(
             result
@@ -61,15 +61,8 @@ where
             + 1) as u64;
 
         let mut expected = vec![false; batch];
-        let result = HostSlice::from_mut_slice(&mut expected);
-        norm::check_norm_bound(
-            HostSlice::from_slice(&input),
-            norm::NormType::LInfinity,
-            bound,
-            &cfg,
-            result,
-        )
-        .unwrap();
+        let result = expected.into_slice_mut();
+        norm::check_norm_bound(input.into_slice(), norm::NormType::LInfinity, bound, &cfg, result).unwrap();
 
         assert!(
             result
