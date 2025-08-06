@@ -55,6 +55,10 @@ ICICLE delivers optimized performance for the core building blocks used in moder
 
 ICICLE includes a comprehensive set of libraries for various fields and curves, and is built for seamless integration and expansion—allowing you to add custom backends or cryptographic primitives as needed.
 
+<p align="center">
+  <img width="500" height="500" alt="Algorithm (1)" src="https://github.com/user-attachments/assets/1e4ea5e1-f7e8-442f-96e8-d95639d81f5f" />
+</p>
+
 #### Cross-Platform and Cross-Language Support
 
 ICICLE works across multiple languages (C++, Rust, Go, potentially Python) and supports development on CPU with deployment across diverse backends, including GPUs, Metal, specialized hardware, and emerging platforms.
