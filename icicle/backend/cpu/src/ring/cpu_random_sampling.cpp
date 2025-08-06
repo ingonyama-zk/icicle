@@ -25,7 +25,8 @@ void fast_mode_random_sampling(
   for (uint32_t b = 0; b < cfg.batch_size; ++b) {
     field_t* batch_output = output + b * size;
     HashConfig hash_cfg{};
-    for (uint64_t t = 0; t < std::min(total_tasks, RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS); ++t) {
+    for (uint64_t t = 0; t < std::min(total_tasks, static_cast<size_t>(RANDOM_SAMPLING_FAST_MODE_NUMBER_OF_TASKS));
+         ++t) {
       taskflow.emplace([=]() {
         std::vector<std::byte> hash_input(seed_len + sizeof(b) + sizeof(uint64_t));
         std::memcpy(hash_input.data(), seed, seed_len);
