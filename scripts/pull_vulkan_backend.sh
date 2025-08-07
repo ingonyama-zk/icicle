@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VULKAN_BACKEND=${1:-main}
+VULKAN_BACKEND=${1:-develop/vhnat/vulcan-ntt}
 BACKEND_DIR=${2:-./icicle/backend}
 
 # Check if BACKEND_DIR exists
@@ -11,6 +11,7 @@ fi
 
 # Get the absolute path of the backend directory
 ABS_VULKAN_DIR=$(realpath ${BACKEND_DIR})/vulkan
+ABS_CUDA_DIR=$(realpath ${BACKEND_DIR})/cuda
 
 echo "Trying to pull vulkan backend commit '${VULKAN_BACKEND}' to '${ABS_VULKAN_DIR}'"
 
@@ -37,6 +38,7 @@ else
     echo "Directory ${ABS_VULKAN_DIR} is empty or does not exist. Cloning..."
     mkdir -p ${ABS_VULKAN_DIR}
     cd ${ABS_VULKAN_DIR}
-    git clone git@github.com:ingonyama-zk/icicle-vulkan-backend.git ${ABS_VULKAN_DIR}
+    git clone https://github.com/ingonyama-zk/icicle-vulkan-backend.git ${ABS_VULKAN_DIR}
+    git clone https://github.com/ingonyama-zk/icicle-cuda-backend.git ${ABS_CUDA_DIR}
     git checkout ${VULKAN_BACKEND}
 fi
