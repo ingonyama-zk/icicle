@@ -1,0 +1,79 @@
+name: Test PQC ML-KEM
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: 'Runner labels as JSON array'
+        required: true
+        type: string
+      # Feature flags for CI conditional testing
+      enable_conditional_testing:
+        description: 'Enable conditional testing based on changed files'
+        required: false
+        type: boolean
+        default: false
+      # Changed files flags (only used when enable_conditional_testing is true)
+      changed_pqc:
+        description: 'Whether PQC files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_cpp:
+        description: 'Whether C++ files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_cpu_backend:
+        description: 'Whether CPU backend files changed'
+        required: false
+        type: string
+        default: "true"
+      changed_backend_api:
+        description: 'Whether backend API files changed'
+        required: false
+        type: string
+        default: "true"
+
+jobs:
+  test-pqc-ml-kem:
+    name: Test PQC ML-KEM
+    runs-on: ${{ fromJson(inputs.runner) }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Build PQC
+        working-directory: ./icicle
+        if: ${{ !inputs.enable_conditional_testing || inputs.changed_pqc == 'true' }}
+        run: |
+          mkdir -p build && rm -rf build/*
+          cmake --fresh -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCUDA_PQC_BACKEND=ON -D${{ inputs.backend_upper }}_BACKEND=local -S . -B build
+          cmake --build build
+
+      - name: Run C++ PQC Tests
+        working-directory: ./icicle/build/tests
+        if: ${{ !inputs.enable_conditional_testing || (inputs.changed_pqc == 'true' && (inputs.changed_cpp == 'true' || inputs.changed_cpu_backend == 'true' || inputs.changed_backend_api == 'true')) }}
+        run: |
+          ctest --output-on-failure -R "KyberTest"
+
+      - name: Run Rust ML-KEM Tests
+        working-directory: ./wrappers/rust/icicle-pqc
+        if: ${{ !inputs.enable_conditional_testing || (inputs.changed_pqc == 'true' && inputs.changed_rust == 'true') }}
+        run: |
+          export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
+          cargo test --release --verbose
+
+      - name: Setup go
+        if: ${{ !inputs.enable_conditional_testing || (inputs.changed_pqc == 'true' && inputs.changed_go == 'true') }}
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+        with:
+          go-version: '1.22.0'
+          cache: false
+
+      - name: Test GoLang PQC
+        working-directory: ./wrappers/golang/pqc
+        if: ${{ !inputs.enable_conditional_testing || (inputs.changed_pqc == 'true' && inputs.changed_go == 'true') }}
+        run: |
+          export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_pqc -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
+          go test ./tests -count=1 -failfast -p 2 -timeout 10m -v
