@@ -248,7 +248,7 @@ fn main() {
     //============================================================================================//
     //========================= Part 2: or transmute ark scalars in-place ========================//
     //============================================================================================//
-    let mut ark_scalars_copy = ark_scalars.clone(); // copy since transmute modifies the scalars in-place
+    let mut ark_scalars_copy = ark_scalars.clone(); // copy since we need mutable access for transmute
     let start = Instant::now();
     let _icicle_transumated_scalars: &mut [ScalarField] = transmute_ark_to_icicle_scalars(&mut ark_scalars_copy);
     let duration = start.elapsed();
