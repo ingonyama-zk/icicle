@@ -1,0 +1,98 @@
+---
+description: Project structure and file organization guidelines
+globs: 
+alwaysApply: false
+---
+# Project Structure
+
+The ICICLE project is made up of three pieces:
+- The frontend
+- A backend
+- A wrapper language
+
+The frontend is a cpp implementation that includes API definitions, object definitions, interfaces for backends to implement, some core logic for fields and arithmetic, and a dispatcher class that routes API calls to the correct backend implementation.
+
+Each backend, located under `icicle/backend`, implements features according to the frontend's interfaces
+
+Each wrapper language, located under `wrappers/`, implements bindings for that language to the frontend's externed C API which wraps the c++ implementation
+
+## Directory Structure
+
+- Front cpp implementation is in the `icicle` folder
+- Wrapper languages are in the `wrappers` folder
+- Backends are in `icicle/backend` folder
+- Docs are in `docs` folder
+
+```tree
+.
+├── docs                                      # Developer documentation
+│   ├── docs                                  # Developer documentation for the next release
+│   │   └── icicle                            #
+│   │       ├── golang-bindings               # Golang bindings docs
+│   │       ├── primitives                    # Cpp docs
+│   │       ├── programmers_guide             # Guides for using ICICLE
+│   │       └── rust-bindings                 # Rust bindings docs
+│   ├── versioned_docs                        # Previous versions' docs
+│   └── versioned_sidebars                    # Previous versions' nav menu
+├── examples                                  # Examples using ICICLE APIs
+│   ├── c++                                   # Examples using ICICLE c++ API
+│   ├── golang                                # Examples using ICICLE golang API
+│   └── rust                                  # Examples using ICICLE rust API
+├── icicle                                    # Main c++ implementation of ICICLE
+│   ├── backend                               # Backends location
+│   │   ├── cpu                               # CPU Backend
+│   │   └── <other>                           # Potentially other local backends
+│   ├── cmake                                 # Cmake configuration files
+│   ├── include                               # includes directory for ICICLE
+│   │   └── icicle
+│   │       ├── api
+│   │       ├── backend
+│   │       ├── curves
+│   │       ├── fields
+│   │       ├── fri
+│   │       ├── hash
+│   │       ├── math
+│   │       ├── merkle
+│   │       ├── pairing
+│   │       ├── polynomials
+│   │       ├── program
+│   │       ├── rings
+│   │       ├── sumcheck
+│   │       └── utils
+│   ├── src                                   # source directory for ICICLE
+│   │   ├── curves
+│   │   ├── fields
+│   │   ├── fri
+│   │   ├── hash
+│   │   ├── polynomials
+│   │   ├── program
+│   │   ├── rings
+│   │   ├── sumcheck
+│   │   └── symbol
+│   └── tests                                 # Tests directory for ICICLE using gtest
+├── scripts                                   # Scripts directory
+│   ├── hooks                                 # Git hooks scripts
+│   ├── python                                # python scripts
+│   └── release                               # Buidling releases
+└── wrappers                                  # Wrapper languages
+    ├── golang                                # Golang bindings
+    │   ├── core                              # Core package
+    │   ├── curves
+    │   ├── fields
+    │   ├── hash
+    │   ├── internal                          # Code templates and generation
+    │   ├── merkle-tree
+    │   └── runtime                           # Bindings for device and runtime
+    └── rust                                  # Rust bindings
+        ├── icicle-core                       # Core package
+        ├── icicle-curves
+        ├── icicle-fields
+        ├── icicle-hash
+        ├── icicle-rings
+        └── icicle-runtime                    # Bindings for device and runtime
+```
+
+## New Docs
+
+- Create new docs in `docs/docs`
+
