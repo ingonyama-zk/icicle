@@ -30,7 +30,7 @@ void lambda_multi_result(std::vector<Symbol<scalar_t>>& vars)
 
 Each symbol element at the vector argument `var` represent an input or an output. The type of the symbol (`scalar_t` in this example) will be the type of the inputs and outputs. In this example we created a lambda function with four inputs and three outputs.
 
-In this example there are four input variables and three three outputs. Inside the function the user can define custom expressions on them.
+In this example there are four input variables and three outputs. Inside the function the user can define custom expressions on them.
 
 Program support few pre-defined programs. The user can use those pre-defined programs without creating a lambda function, as will be explained in the next section.
 
