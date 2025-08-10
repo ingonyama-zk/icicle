@@ -74,11 +74,17 @@ public:
     const int BATCH_SIZE = 1 << 13;
 
     // Allocate memory for inputs and outputs
-    cudaMalloc(&d_ek, ek_size * BATCH_SIZE);
-    cudaMalloc(&d_m, m_size * BATCH_SIZE);
-    cudaMalloc(&d_K, K_size * BATCH_SIZE);
-    cudaMalloc(&d_c, c_size * BATCH_SIZE);
-    cudaMalloc(&d_A, PolyMatrixView<256, k, k, Zq>::byte_size() * BATCH_SIZE);
+    cudaError_t err;
+    err = cudaMalloc(&d_ek, ek_size * BATCH_SIZE);
+    ASSERT_EQ(err, cudaSuccess) << "Failed to allocate d_ek: " << cudaGetErrorString(err);
+    err = cudaMalloc(&d_m, m_size * BATCH_SIZE);
+    ASSERT_EQ(err, cudaSuccess) << "Failed to allocate d_m: " << cudaGetErrorString(err);
+    err = cudaMalloc(&d_K, K_size * BATCH_SIZE);
+    ASSERT_EQ(err, cudaSuccess) << "Failed to allocate d_K: " << cudaGetErrorString(err);
+    err = cudaMalloc(&d_c, c_size * BATCH_SIZE);
+    ASSERT_EQ(err, cudaSuccess) << "Failed to allocate d_c: " << cudaGetErrorString(err);
+    err = cudaMalloc(&d_A, PolyMatrixView<256, k, k, Zq>::byte_size() * BATCH_SIZE);
+    ASSERT_EQ(err, cudaSuccess) << "Failed to allocate d_A: " << cudaGetErrorString(err);
 
     // Copy inputs from host to device
     for (int i = 0; i < BATCH_SIZE; ++i) {
