@@ -48,7 +48,41 @@ let device = icicle_runtime::Device::new("CUDA", 0 /* =device_id*/);
 icicle_runtime::set_device(&device).unwrap();
 ```
 
-### Go (TODO)
+### Go
+
+```go
+import (
+    "fmt"
+    "github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+)
+
+// Set the device to the first CUDA GPU (GPU-0) using RunOnDevice
+device := runtime.CreateDevice("CUDA", 0)
+runtime.RunOnDevice(&device, func(args ...any) {
+    // All CUDA operations here will target GPU 0
+    fmt.Println("Running on CUDA GPU 0")
+    // Your ICICLE operations go here
+}, nil)
+
+// Alternatively, set the device to CPU using RunOnDevice
+cpuDevice := runtime.CreateDevice("CPU", 0)
+runtime.RunOnDevice(&cpuDevice, func(args ...any) {
+    // All CPU operations here will target CPU 0
+    fmt.Println("Running on CPU 0")
+    // Your ICICLE operations go here
+}, nil)
+
+// For multi-device scenarios with goroutines, use RunOnDevice for each device
+numDevices, _ := runtime.GetDeviceCount()
+for i := 0; i < numDevices; i++ {
+    device := runtime.CreateDevice("CUDA", i)
+    runtime.RunOnDevice(&device, func(args ...any) {
+        deviceID := args[0].(int)
+        fmt.Printf("Running on GPU %d\n", deviceID)
+        // Your ICICLE operations for this device go here
+    }, i)
+}
+```
 
 ## Best Practices
 
