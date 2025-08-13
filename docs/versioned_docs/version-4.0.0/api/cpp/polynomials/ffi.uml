@@ -1,0 +1,27 @@
+@startuml
+skinparam componentStyle uml2
+
+' Define Components
+component "C++ Template\nComponent" as CppTemplate {
+  [Parameterizable Interface]
+}
+component "C API Wrapper\nComponent" as CApiWrapper {
+  [C API Interface]
+}
+component "Rust Code\nComponent" as RustCode {
+  [Macro Interface\n(Template Instantiation)]
+}
+
+' Define Artifact
+artifact "Static Library\n«artifact»" as StaticLib
+
+' Connections
+CppTemplate -down-> CApiWrapper : Instantiates
+CApiWrapper .down.> StaticLib : Compiles into
+RustCode -left-> StaticLib : Links against\nand calls via FFI
+
+' Notes
+note right of CppTemplate : Generic C++\ntemplate implementation
+note right of CApiWrapper : Exposes C API for FFI\nto Rust/Go
+note right of RustCode : Uses macros to\ninstantiate templates
+@enduml

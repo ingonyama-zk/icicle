@@ -1,13 +1,13 @@
 use clap::Parser;
 use hex;
-use icicle_babybear::field::ScalarCfg as BabybearCfg;
+use icicle_babybear::field::ScalarField;
 use icicle_core::{
     hash::{HashConfig, Hasher},
     merkle::{MerkleTree, MerkleTreeConfig, PaddingPolicy},
     traits::GenerateRandom,
 };
 use icicle_hash::{blake2s::Blake2s, keccak::Keccak256};
-use icicle_runtime::memory::HostSlice;
+use icicle_runtime::memory::{HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
 use std::time::Instant;
 
 /// Command-line argument parser
@@ -43,9 +43,9 @@ fn keccak_hash_example() {
 
     keccak_hasher
         .hash(
-            HostSlice::from_slice(input_str.as_bytes()),
+            input_str.as_bytes().into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut output),
+            output.into_slice_mut(),
         )
         .unwrap();
 
@@ -55,14 +55,14 @@ fn keccak_hash_example() {
     assert_eq!(expected_hash, output_as_hex_str);
 
     // 3. Hash field elements (Babybear field elements)
-    let input_field_elements = BabybearCfg::generate_random(128); // Generate random field elements
+    let input_field_elements = ScalarField::generate_random(128); // Generate random field elements
     let mut output = vec![0u8; 32]; // Output buffer for the hash
 
     keccak_hasher
         .hash(
-            HostSlice::from_slice(&input_field_elements),
+            input_field_elements.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut output),
+            output.into_slice_mut(),
         )
         .unwrap();
 
@@ -74,7 +74,7 @@ fn keccak_hash_example() {
     let batch = 1 << 10; // 1024
     let single_hash_nof_elements = 1 << 12; // 4096
     let total_input_elements = batch * single_hash_nof_elements;
-    let input_field_elements_batch = BabybearCfg::generate_random(total_input_elements);
+    let input_field_elements_batch = ScalarField::generate_random(total_input_elements);
 
     // The size of the output determines the batch size for the hash function
     let mut output = vec![0u8; 32 * batch]; // Output buffer for batch hashing. Doesn't have to be u8.
@@ -82,9 +82,9 @@ fn keccak_hash_example() {
     let start = Instant::now(); // Start timer for performance measurement
     keccak_hasher
         .hash(
-            HostSlice::from_slice(&input_field_elements_batch),
+            input_field_elements_batch.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut output),
+            output.into_slice_mut(),
         )
         .unwrap();
 
@@ -141,7 +141,7 @@ fn merkle_tree_example() {
     // Build the tree with the input data.
     let input = input_string.as_bytes();
     merkle_tree
-        .build(HostSlice::from_slice(&input), &config)
+        .build(input.into_slice(), &config)
         .unwrap();
 
     // Retrieve the root commitment (Merkle root).
@@ -154,7 +154,7 @@ fn merkle_tree_example() {
     // A Merkle proof contains sibling hashes that help verify a specific leaf's inclusion in the tree.
     let merkle_proof = merkle_tree
         .get_proof(
-            HostSlice::from_slice(&input),
+            input.into_slice(),
             3,    /* leaf index */
             true, /* pruned */
             &config,

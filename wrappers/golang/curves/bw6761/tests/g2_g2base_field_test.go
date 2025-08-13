@@ -1,3 +1,5 @@
+//go:build !icicle_exclude_all || g2
+
 package tests
 
 import (
@@ -93,14 +95,14 @@ type G2BaseFieldTestSuite struct {
 }
 
 func (s *G2BaseFieldTestSuite) TestG2BaseField() {
-	s.Run("TestG2BaseFieldFromLimbs", testWrapper(&s.Suite, testG2BaseFieldFromLimbs))
-	s.Run("TestG2BaseFieldGetLimbs", testWrapper(&s.Suite, testG2BaseFieldGetLimbs))
-	s.Run("TestG2BaseFieldOne", testWrapper(&s.Suite, testG2BaseFieldOne))
-	s.Run("TestG2BaseFieldZero", testWrapper(&s.Suite, testG2BaseFieldZero))
-	s.Run("TestG2BaseFieldSize", testWrapper(&s.Suite, testG2BaseFieldSize))
-	s.Run("TestG2BaseFieldAsPointer", testWrapper(&s.Suite, testG2BaseFieldAsPointer))
-	s.Run("TestG2BaseFieldFromBytes", testWrapper(&s.Suite, testG2BaseFieldFromBytes))
-	s.Run("TestG2BaseFieldToBytes", testWrapper(&s.Suite, testG2BaseFieldToBytes))
+	s.Run("TestG2BaseFieldFromLimbs", test_helpers.TestWrapper(&s.Suite, testG2BaseFieldFromLimbs))
+	s.Run("TestG2BaseFieldGetLimbs", test_helpers.TestWrapper(&s.Suite, testG2BaseFieldGetLimbs))
+	s.Run("TestG2BaseFieldOne", test_helpers.TestWrapper(&s.Suite, testG2BaseFieldOne))
+	s.Run("TestG2BaseFieldZero", test_helpers.TestWrapper(&s.Suite, testG2BaseFieldZero))
+	s.Run("TestG2BaseFieldSize", test_helpers.TestWrapper(&s.Suite, testG2BaseFieldSize))
+	s.Run("TestG2BaseFieldAsPointer", test_helpers.TestWrapper(&s.Suite, testG2BaseFieldAsPointer))
+	s.Run("TestG2BaseFieldFromBytes", test_helpers.TestWrapper(&s.Suite, testG2BaseFieldFromBytes))
+	s.Run("TestG2BaseFieldToBytes", test_helpers.TestWrapper(&s.Suite, testG2BaseFieldToBytes))
 
 }
 

@@ -158,17 +158,17 @@ type ExtensionFieldTestSuite struct {
 }
 
 func (s *ExtensionFieldTestSuite) TestExtensionField() {
-	s.Run("TestExtensionFieldFromLimbs", testWrapper(&s.Suite, testExtensionFieldFromLimbs))
-	s.Run("TestExtensionFieldGetLimbs", testWrapper(&s.Suite, testExtensionFieldGetLimbs))
-	s.Run("TestExtensionFieldOne", testWrapper(&s.Suite, testExtensionFieldOne))
-	s.Run("TestExtensionFieldZero", testWrapper(&s.Suite, testExtensionFieldZero))
-	s.Run("TestExtensionFieldSize", testWrapper(&s.Suite, testExtensionFieldSize))
-	s.Run("TestExtensionFieldAsPointer", testWrapper(&s.Suite, testExtensionFieldAsPointer))
-	s.Run("TestExtensionFieldFromBytes", testWrapper(&s.Suite, testExtensionFieldFromBytes))
-	s.Run("TestExtensionFieldToBytes", testWrapper(&s.Suite, testExtensionFieldToBytes))
-	s.Run("TestExtensionFieldArithmetic", testWrapper(&s.Suite, testExtensionFieldArithmetic))
-	s.Run("TestBabybear_extensionGenerateScalars", testWrapper(&s.Suite, testBabybear_extensionGenerateScalars))
-	s.Run("TestBabybear_extensionMongtomeryConversion", testWrapper(&s.Suite, testBabybear_extensionMongtomeryConversion))
+	s.Run("TestExtensionFieldFromLimbs", test_helpers.TestWrapper(&s.Suite, testExtensionFieldFromLimbs))
+	s.Run("TestExtensionFieldGetLimbs", test_helpers.TestWrapper(&s.Suite, testExtensionFieldGetLimbs))
+	s.Run("TestExtensionFieldOne", test_helpers.TestWrapper(&s.Suite, testExtensionFieldOne))
+	s.Run("TestExtensionFieldZero", test_helpers.TestWrapper(&s.Suite, testExtensionFieldZero))
+	s.Run("TestExtensionFieldSize", test_helpers.TestWrapper(&s.Suite, testExtensionFieldSize))
+	s.Run("TestExtensionFieldAsPointer", test_helpers.TestWrapper(&s.Suite, testExtensionFieldAsPointer))
+	s.Run("TestExtensionFieldFromBytes", test_helpers.TestWrapper(&s.Suite, testExtensionFieldFromBytes))
+	s.Run("TestExtensionFieldToBytes", test_helpers.TestWrapper(&s.Suite, testExtensionFieldToBytes))
+	s.Run("TestExtensionFieldArithmetic", test_helpers.TestWrapper(&s.Suite, testExtensionFieldArithmetic))
+	s.Run("TestBabybear_extensionGenerateScalars", test_helpers.TestWrapper(&s.Suite, testBabybear_extensionGenerateScalars))
+	s.Run("TestBabybear_extensionMongtomeryConversion", test_helpers.TestWrapper(&s.Suite, testBabybear_extensionMongtomeryConversion))
 }
 
 func TestSuiteExtensionField(t *testing.T) {

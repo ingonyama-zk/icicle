@@ -37,16 +37,21 @@ func initBabybearDomain() runtime.EIcicleError {
 }
 
 func init() {
-	runtime.LoadBackendFromEnvOrDefault()
-
 	var deviceType string
 
 	flag.UintVar(&maxNttLogSize, "maxNttLogSize", 20, "")
 	flag.UintVar(&polyLogSize, "polyLogSize", 15, "")
 	flag.StringVar(&deviceType, "device", "CUDA", "Device type")
+	flag.Parse()
+	if deviceType != "CPU" {
+		runtime.LoadBackendFromEnvOrDefault()
+	}
 
 	device := runtime.CreateDevice(deviceType, 0)
-	runtime.SetDevice(&device)
+	// NOTE: If you are only using a single device the entire time
+	// 			then this is ok. If you are using multiple devices
+	// 			then you should use runtime.RunOnDevice() instead.
+	runtime.SetDefaultDevice(&device)
 
 	e := initBn254Domain()
 	if e != runtime.Success {
@@ -61,6 +66,7 @@ func init() {
 		panic(errorString)
 	}
 }
+
 func main() {
 	polySize := 1 << polyLogSize
 

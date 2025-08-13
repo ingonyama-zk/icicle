@@ -28,62 +28,59 @@ The `UnivariatePolynomial` trait encapsulates the essential functionalities requ
 ### Trait Definition
 
 ```rust
-pub trait UnivariatePolynomial
-where
-    Self::Field: FieldImpl,
-    Self::FieldConfig: FieldConfig,
-{
-    type Field: FieldImpl;
-    type FieldConfig: FieldConfig;
+use icicle_runtime::memory::HostOrDeviceSlice;
+use icicle_core::ring::IntegerRing;
 
-    // Methods to create polynomials from coefficients or roots-of-unity evaluations.
-    fn from_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(coeffs: &S, size: usize) -> Self;
-    fn from_rou_evals<S: HostOrDeviceSlice<Self::Field> + ?Sized>(evals: &S, size: usize) -> Self;
+pub trait UnivariatePolynomial: Clone + Sized {
+    type Coeff: IntegerRing;
 
-    // Method to divide this polynomial by another, returning quotient and remainder.
+    // Create a polynomial from coefficients (lowest-degree first).
+    fn from_coeffs<S: HostOrDeviceSlice<Self::Coeff> + ?Sized>(coeffs: &S, size: usize) -> Self;
+
+    // Create a polynomial from evaluations on a roots-of-unity (power-of-two) domain.
+    fn from_rou_evals<S: HostOrDeviceSlice<Self::Coeff> + ?Sized>(evals: &S, size: usize) -> Self;
+
+    // Polynomial long division.  Returns (quotient, remainder).
     fn divide(&self, denominator: &Self) -> (Self, Self) where Self: Sized;
 
-    // Method to divide this polynomial by the vanishing polynomial 'X^N-1'.
+    // Divide by the vanishing polynomial X^degree − 1.
     fn div_by_vanishing(&self, degree: u64) -> Self;
 
-    // Methods to add or subtract a monomial in-place.
-    fn add_monomial_inplace(&mut self, monomial_coeff: &Self::Field, monomial: u64);
-    fn sub_monomial_inplace(&mut self, monomial_coeff: &Self::Field, monomial: u64);
+    // In-place monomial updates.
+    fn add_monomial_inplace(&mut self, monomial_coeff: &Self::Coeff, monomial: u64);
+    fn sub_monomial_inplace(&mut self, monomial_coeff: &Self::Coeff, monomial: u64);
 
-    // Method to slice the polynomial, creating a sub-polynomial.
+    // Slicing helpers.
     fn slice(&self, offset: u64, stride: u64, size: u64) -> Self;
+    fn even(&self) -> Self;                // keep even-indexed terms only
+    fn odd(&self) -> Self;                 // keep odd-indexed terms only
 
-    // Methods to return new polynomials containing only the even or odd terms.
-    fn even(&self) -> Self;
-    fn odd(&self) -> Self;
-
-    // Method to evaluate the polynomial at a given domain point.
-    fn eval(&self, x: &Self::Field) -> Self::Field;
-
-    // Method to evaluate the polynomial over a domain and store the results.
-    fn eval_on_domain<D: HostOrDeviceSlice<Self::Field> + ?Sized, E: HostOrDeviceSlice<Self::Field> + ?Sized>(
+    // Evaluation helpers.
+    fn eval(&self, x: &Self::Coeff) -> Self::Coeff;
+    fn eval_on_domain<D: HostOrDeviceSlice<Self::Coeff> + ?Sized,
+                      E: HostOrDeviceSlice<Self::Coeff> + ?Sized>(
         &self,
         domain: &D,
         evals: &mut E,
     );
+    fn eval_on_rou_domain<E: HostOrDeviceSlice<Self::Coeff> + ?Sized>(
+        &self,
+        domain_log_size: u64,
+        evals: &mut E,
+    );
 
-    // Method to evaluate the polynomial over the roots-of-unity domain for power-of-two sized domain
-    fn eval_on_rou_domain<E: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, domain_log_size: u64, evals: &mut E);
-
-    // Method to retrieve a coefficient at a specific index.
-    fn get_coeff(&self, idx: u64) -> Self::Field;
-
-    // Method to copy coefficients into a provided slice.
-    fn copy_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, start_idx: u64, coeffs: &mut S);
-
-    // Method to get the degree of the polynomial.
+    // Misc accessors.
+    fn get_coeff(&self, idx: u64) -> Self::Coeff;
+    fn copy_coeffs<S: HostOrDeviceSlice<Self::Coeff> + ?Sized>(&self, start_idx: u64, coeffs: &mut S);
     fn degree(&self) -> i64;
 }
 ```
 
-## `DensePolynomial` Struct
+> **Note**  All `HostOrDeviceSlice` parameters accept either CPU memory (`HostSlice`) or GPU memory (`DeviceSlice`/`DeviceVec`).  The implementation handles transfers automatically based on the `is_*_on_device` flags inside the various config structs.
 
-The DensePolynomial struct represents a dense univariate polynomial in Rust, leveraging a handle to manage its underlying memory within the CUDA device context. This struct acts as a high-level abstraction over complex C++ memory management practices, facilitating the integration of high-performance polynomial operations through Rust's Foreign Function Interface (FFI) bindings.
+### `DensePolynomial`
+
+The concrete wrapper that implements `UnivariatePolynomial` is called `DensePolynomial`.  Its public API remains the same; only the generic parameter names in the docs below were updated from `F` to `Self::Coeff` for clarity.
 
 ```rust
 pub struct DensePolynomial {
@@ -110,10 +107,10 @@ These traits are implemented for references to DensePolynomial (i.e., &DensePoly
 In addition to the traits, the following methods are implemented:
 
 ```rust
-impl DensePolynomial {    
-    // Returns a mutable slice of the polynomial coefficients on the device
-    pub fn coeffs_mut_slice(&mut self) -> &mut DeviceSlice<F> {...}
-}      
+impl DensePolynomial {
+    /// Returns a **mutable** slice of the coefficients that lives on the active device.
+    pub fn coeffs_mut_slice(&mut self) -> &mut DeviceSlice<Self::Coeff> { ... }
+}
 ```
 
 ## Flexible Memory Handling With `HostOrDeviceSlice`
@@ -130,7 +127,7 @@ Functions within the DensePolynomial API that deal with polynomial coefficients 
 
 ```rust
 // Assume `coeffs` could either be in host memory or CUDA device memory
-let coeffs: DeviceSlice<F> = DeviceVec::<F>::device_malloc(coeffs_len).unwrap();
+let coeffs: DeviceSlice<F> = DeviceVec::<F>::malloc(coeffs_len);
 let p_from_coeffs = PolynomialBabyBear::from_coeffs(&coeffs, coeffs.len());
 
 // Similarly for evaluations from roots of unity
@@ -231,8 +228,8 @@ f.eval_on_domain(HostSlice::from_slice(&domain), HostSlice::from_mut_slice(&mut 
 
 // Evaluate on roots-of-unity-domain
 let domain_log_size = 4;
-let mut device_evals = DeviceVec::<ScalarField>::device_malloc(1 << domain_log_size).unwrap();
-f.eval_on_rou_domain(domain_log_size, &mut device_evals[..]);
+let mut device_evals = DeviceVec::<ScalarField>::malloc(1 << domain_log_size);
+f.eval_on_rou_domain(domain_log_size, device_evals.into_slice_mut());
 ```
 
 ### Read coefficients
@@ -243,8 +240,8 @@ Read or copy polynomial coefficients for further processing:
 let x_squared_coeff = f.get_coeff(2);  // Coefficient of x^2
 
 // Copy coefficients to a device-specific memory space
-let mut device_mem = DeviceVec::<Field>::device_malloc(coeffs.len()).unwrap();
-f.copy_coeffs(0, &mut device_mem[..]);
+let mut device_mem = DeviceVec::<Field>::malloc(coeffs.len());
+f.copy_coeffs(0, device_mem.into_slice_mut());
 ```
 
 ### Polynomial Degree

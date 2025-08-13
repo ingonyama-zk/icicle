@@ -39,7 +39,7 @@ If you have access to cuda backend repo, it can be built along ICICLE frontend b
    ```bash
    cmake --build build -j
    ```
-   This is building the [libicicle_device](start/architecture/libraries.md#icicle-device) and the [libicicle_field_babybear](/start/architecture/libraries.md#icicle-core) frontend lib that correspond to the field or curve.
+   This is building the [libicicle_device](start/architecture/libraries.mdx#device-library) and the [libicicle_field_babybear](/start/architecture/libraries.mdx#core-library) frontend lib that correspond to the field or curve.
 
 4. **Link:**
 Link you application (or library) to ICICLE:
@@ -90,7 +90,7 @@ You can customize your ICICLE build with the following flags:
 
 #### Features
 
-By default, all [features](/start/architecture/libraries.md#supported-curves-and-operations) are enabled. 
+By default, all [features](/start/architecture/libraries.mdx#supported-curves-fields-and-operations) are enabled. 
 This is since installed backends may implement and register all APIs. Missing APIs in the frontend would cause linkage to fail due to missing symbols. Therefore by default we include them in the frontend part too.
 
 To disable features, add the following to the cmake command.

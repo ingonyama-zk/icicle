@@ -7,6 +7,7 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/hash"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	merkletree "github.com/ingonyama-zk/icicle/v3/wrappers/golang/merkle-tree"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 	"github.com/stretchr/testify/suite"
@@ -57,7 +58,7 @@ func testMerkleTree(s *suite.Suite) {
 		s.FailNow(fmt.Sprintf("TestMerkleTree: Could not verify merkle tree due to: %v", err))
 	}
 
-	runtime.SetDevice(&devices[1])
+	test_helpers.ActivateMainDevice()
 	d_keccak256, err := hash.NewKeccak256Hasher(uint64(2 * leafElemSize))
 	if err != runtime.Success {
 		s.FailNow(fmt.Sprintf("TestMerkleTree: Could not create keccak hasher due to: %v", err))
@@ -68,7 +69,7 @@ func testMerkleTree(s *suite.Suite) {
 		d_hashers[i] = d_keccak256
 	}
 
-	d_mt, err := merkletree.CreateMerkleTree(hashers, uint64(leafElemSize), 0)
+	d_mt, err := merkletree.CreateMerkleTree(d_hashers, uint64(leafElemSize), 0)
 	if err != runtime.Success {
 		s.FailNow(fmt.Sprintf("TestMerkleTree: Could not create merkle tree due to: %v", err.AsString()))
 	}
@@ -100,7 +101,7 @@ type MerkleTreeTestSuite struct {
 }
 
 func (s *MerkleTreeTestSuite) TestMerkleTree() {
-	s.Run("TestMerkleTree", testWrapper(&s.Suite, testMerkleTree))
+	s.Run("TestMerkleTree", test_helpers.TestWrapper(&s.Suite, testMerkleTree))
 }
 
 func TestSuiteMerkleTree(t *testing.T) {

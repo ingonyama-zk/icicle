@@ -2,7 +2,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_void};
 
 use crate::device::{Device, DeviceProperties};
-use crate::errors::eIcicleError;
+use crate::errors::{eIcicleError, IcicleError};
 use crate::stream::IcicleStream;
 
 pub type IcicleStreamHandle = *mut c_void;
@@ -53,41 +53,31 @@ extern "C" {
     fn icicle_memset_async(ptr: *mut c_void, value: i32, size: usize, stream: IcicleStreamHandle) -> eIcicleError;
 }
 
-pub fn load_backend_from_env_or_default() -> Result<(), eIcicleError> {
+pub fn load_backend_from_env_or_default() -> Result<(), IcicleError> {
     unsafe { icicle_load_backend_from_env_or_default().wrap() }
 }
 
-pub fn load_backend(path: &str) -> Result<(), eIcicleError> {
+pub fn load_backend(path: &str) -> Result<(), IcicleError> {
     let c_path = CString::new(path).unwrap();
     unsafe { icicle_load_backend(c_path.as_ptr(), true).wrap() }
 }
 
-pub fn load_backend_non_recursive(path: &str) -> Result<(), eIcicleError> {
+pub fn load_backend_non_recursive(path: &str) -> Result<(), IcicleError> {
     let c_path = CString::new(path).unwrap();
     unsafe { icicle_load_backend(c_path.as_ptr(), false).wrap() }
 }
 
-pub fn set_device(device: &Device) -> Result<(), eIcicleError> {
-    let result = unsafe { icicle_set_device(device) };
-    if result == eIcicleError::Success {
-        Ok(())
-    } else {
-        Err(result)
-    }
+pub fn set_device(device: &Device) -> Result<(), IcicleError> {
+    unsafe { icicle_set_device(device).wrap() }
 }
 
-pub fn set_default_device(device: &Device) -> Result<(), eIcicleError> {
-    let result = unsafe { icicle_set_default_device(device) };
-    if result == eIcicleError::Success {
-        Ok(())
-    } else {
-        Err(result)
-    }
+pub fn set_default_device(device: &Device) -> Result<(), IcicleError> {
+    unsafe { icicle_set_default_device(device).wrap() }
 }
 
-pub fn get_active_device() -> Result<Device, eIcicleError> {
+pub fn get_active_device() -> Result<Device, IcicleError> {
     let mut device: Device = Device::new("invalid", -1);
-    unsafe { icicle_get_active_device(&mut device).wrap_value::<Device>(device) }
+    unsafe { icicle_get_active_device(&mut device).wrap_value(device) }
 }
 
 pub fn is_host_memory(ptr: *const c_void) -> bool {
@@ -98,9 +88,9 @@ pub fn is_active_device_memory(ptr: *const c_void) -> bool {
     unsafe { eIcicleError::Success == icicle_is_active_device_memory(ptr) }
 }
 
-pub fn get_device_count() -> Result<i32, eIcicleError> {
+pub fn get_device_count() -> Result<i32, IcicleError> {
     let mut device_count = 0;
-    unsafe { icicle_get_device_count(&mut device_count).wrap_value::<i32>(device_count) }
+    unsafe { icicle_get_device_count(&mut device_count).wrap_value(device_count) }
 }
 
 pub fn is_device_available(device: &Device) -> bool {
@@ -108,44 +98,32 @@ pub fn is_device_available(device: &Device) -> bool {
     err == eIcicleError::Success
 }
 
-pub fn get_available_memory() -> Result<(usize, usize), eIcicleError> {
+pub fn get_available_memory() -> Result<(usize, usize), IcicleError> {
     let mut total: usize = 0;
     let mut free: usize = 0;
-    let result = unsafe { icicle_get_available_memory(&mut total, &mut free) };
-    if result == eIcicleError::Success {
-        Ok((total, free))
-    } else {
-        Err(result)
-    }
+    unsafe { icicle_get_available_memory(&mut total, &mut free).wrap_value((total, free)) }
 }
 
-pub fn device_synchronize() -> Result<(), eIcicleError> {
+pub fn device_synchronize() -> Result<(), IcicleError> {
     unsafe { icicle_device_synchronize().wrap() }
 }
 
-pub fn get_device_properties() -> Result<DeviceProperties, eIcicleError> {
+pub fn get_device_properties() -> Result<DeviceProperties, IcicleError> {
     let mut properties = DeviceProperties {
         using_host_memory: false,
         num_memory_regions: 0,
         supports_pinned_memory: false,
     };
-    let result = unsafe { icicle_get_device_properties(&mut properties) };
-    if result == eIcicleError::Success {
-        Ok(properties)
-    } else {
-        Err(result)
-    }
+    unsafe { icicle_get_device_properties(&mut properties).wrap_value(properties) }
 }
 
-pub fn get_registered_devices() -> Result<Vec<String>, eIcicleError> {
+pub fn get_registered_devices() -> Result<Vec<String>, IcicleError> {
     const BUFFER_SIZE: usize = 256;
     let mut buffer = vec![0 as c_char; BUFFER_SIZE];
 
     unsafe {
         let result = icicle_get_registered_devices(buffer.as_mut_ptr(), BUFFER_SIZE);
-        if result != eIcicleError::Success {
-            return Err(result);
-        }
+        result.wrap()?;
 
         let c_str = CStr::from_ptr(buffer.as_ptr());
         let str_slice: &str = c_str
@@ -161,7 +139,7 @@ pub fn get_registered_devices() -> Result<Vec<String>, eIcicleError> {
 
 // This function pre-allocates default memory pool and warms the GPU up
 // so that subsequent memory allocations and other calls are not slowed down
-pub fn warmup(stream: &IcicleStream) -> Result<(), eIcicleError> {
+pub fn warmup(stream: &IcicleStream) -> Result<(), IcicleError> {
     let mut device_ptr: *mut c_void = std::ptr::null_mut();
     let free_memory: usize = 1 << 28;
     unsafe {
@@ -170,10 +148,10 @@ pub fn warmup(stream: &IcicleStream) -> Result<(), eIcicleError> {
     }
 }
 
-pub fn memset(ptr: *mut c_void, value: i32, size: usize) -> eIcicleError {
-    unsafe { icicle_memset(ptr, value, size) }
+pub fn memset(ptr: *mut c_void, value: i32, size: usize) -> Result<(), IcicleError> {
+    unsafe { icicle_memset(ptr, value, size).wrap() }
 }
 
-pub fn memset_async(ptr: *mut c_void, value: i32, size: usize, stream: *mut c_void) -> eIcicleError {
-    unsafe { icicle_memset_async(ptr, value, size, stream) }
+pub fn memset_async(ptr: *mut c_void, value: i32, size: usize, stream: *mut c_void) -> Result<(), IcicleError> {
+    unsafe { icicle_memset_async(ptr, value, size, stream).wrap() }
 }

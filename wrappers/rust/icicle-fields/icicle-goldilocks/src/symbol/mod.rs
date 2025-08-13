@@ -1,5 +1,6 @@
-use crate::field::ScalarField;
+use crate::field::{ExtensionField, ScalarField};
 
-use icicle_core::impl_symbol_field;
+use icicle_core::impl_invertible_symbol_ring;
 
-impl_symbol_field!("goldilocks", goldilocks, ScalarField, ScalarCfg);
+impl_invertible_symbol_ring!("goldilocks", goldilocks, ScalarField);
+impl_invertible_symbol_ring!("goldilocks_extension", goldilocks_extension, ExtensionField);

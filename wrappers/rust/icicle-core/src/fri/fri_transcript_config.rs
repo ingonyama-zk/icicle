@@ -1,6 +1,6 @@
+use crate::field::Field;
 use crate::hash::Hasher;
 use crate::hash::HasherHandle;
-use crate::traits::FieldImpl;
 
 const DEFAULT_DOMAIN_SEPARATOR_LABEL: &str = "domain_separator_label";
 const DEFAULT_ROUND_CHALLENGE_LABEL: &str = "round_challenge_label";
@@ -9,7 +9,7 @@ const DEFAULT_NONCE_LABEL: &str = "nonce_label";
 const DEFAULT_PUBLIC_STATE: &[u8] = b"";
 
 /// Configuration for encoding and hashing messages in the FRI protocol.
-pub struct FriTranscriptConfig<'a, F: FieldImpl + 'a> {
+pub struct FriTranscriptConfig<'a, F: Field + 'a> {
     pub hash: &'a Hasher,
     pub domain_separator_label: String,
     pub round_challenge_label: String,
@@ -19,7 +19,7 @@ pub struct FriTranscriptConfig<'a, F: FieldImpl + 'a> {
     pub seed_rng: F,
 }
 
-impl<'a, F: FieldImpl + 'a> FriTranscriptConfig<'a, F> {
+impl<'a, F: Field + 'a> FriTranscriptConfig<'a, F> {
     /// Creates a new `FriTranscriptConfig` with custom labels.
     pub fn new(
         hash: &'a Hasher,
@@ -57,7 +57,7 @@ impl<'a, F: FieldImpl + 'a> FriTranscriptConfig<'a, F> {
 
 #[repr(C)]
 #[derive(Debug)]
-pub struct FFIFriTranscriptConfig<F: FieldImpl> {
+pub struct FFIFriTranscriptConfig<F: Field> {
     hasher_handle: HasherHandle,
     domain_separator_label: *const u8,
     domain_separator_label_len: usize,
@@ -72,7 +72,7 @@ pub struct FFIFriTranscriptConfig<F: FieldImpl> {
     seed_rng: *const F,
 }
 
-impl<'a, F: FieldImpl> From<&FriTranscriptConfig<'a, F>> for FFIFriTranscriptConfig<F> {
+impl<'a, F: Field> From<&FriTranscriptConfig<'a, F>> for FFIFriTranscriptConfig<F> {
     fn from(config: &FriTranscriptConfig<'a, F>) -> Self {
         Self {
             hasher_handle: config

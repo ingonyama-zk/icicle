@@ -1,7 +1,7 @@
 
 """
 Reference implementation of balanced base decomposition and recomposition
-for finite field elements in Z_q, specifically targeting the Labrador field.
+for finite field elements in Z_q, specifically targeting the babykoala field.
 
 This code serves as a correctness reference for ICICLE:
 - It demonstrates how to perform balanced decomposition using integer digits.
@@ -39,7 +39,7 @@ class ZqElement:
         return f"{self.value} (mod {self.q})"
     
 
-class Labrador(ZqElement):
+class babykoala(ZqElement):
     q = 0x3b880000f7000001
     def __init__(self, value):
         super().__init__(value, self.q)
@@ -49,12 +49,12 @@ def calc_nof_digits(q: int, base: int) -> int:
     nof_digits = ceil(log(q)/ log(base)) + 1 if base>2 else ceil(log(q)/ log(base))
     return nof_digits
 
-# Decompose a Labrador element in a given base using integer digits
-def decompose(num: Labrador, base: int) -> list[int]:
+# Decompose a babykoala element in a given base using integer digits
+def decompose(num: babykoala, base: int) -> list[int]:
     assert base > 1 and base < 2**32
     
     
-    q = Labrador.q
+    q = babykoala.q
     val = num.value
     if base>2 and val > q//2: # for base=2 no negative numbers
         print("Warning: value is greater than q//2")
@@ -74,18 +74,18 @@ def decompose(num: Labrador, base: int) -> list[int]:
     assert(val==0), f"Decomposition failed"
     return digits
 
-def recompose(digits: list[int], base: int) -> Labrador:
+def recompose(digits: list[int], base: int) -> babykoala:
     assert base > 1 and base < 2**32
     
-    assert len(digits) == calc_nof_digits(Labrador.q, base)
+    assert len(digits) == calc_nof_digits(babykoala.q, base)
     val = 0
     for i in range(len(digits)):
         val += digits[i] * base**i
-    return Labrador(val)
+    return babykoala(val)
 
 
 if __name__ == "__main__":
-    a = Labrador(0x2223f2a9798ca4d3) # (0x00879ad81ff72bde)
+    a = babykoala(0x2223f2a9798ca4d3) # (0x00879ad81ff72bde)
     base = 4
     digits = decompose(a, base)
     all_small = [digit <= base//2 and digit > -base//2 for digit in digits]

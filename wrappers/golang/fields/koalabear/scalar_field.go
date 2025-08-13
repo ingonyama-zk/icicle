@@ -105,7 +105,7 @@ func GenerateScalars(size int) core.HostSlice[ScalarField] {
 
 	cScalars := (*C.scalar_t)(unsafe.Pointer(&scalarSlice[0]))
 	cSize := (C.int)(size)
-	C.koalabear_generate_scalars(cScalars, cSize)
+	C.koalabear_generate_random(cScalars, cSize)
 
 	return scalarSlice
 }

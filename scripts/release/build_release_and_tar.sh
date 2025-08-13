@@ -7,9 +7,10 @@ ICICLE_VERSION=${1:-icicle30}      # Default to "icicle30" if not set
 ICICLE_OS=${2:-unknown_os}              # Default to "unknown_os" if not set
 ICICLE_CUDA_VERSION=${3:-cuda_unknown} # Default to "cuda_unknown" if not set
 
-# List of fields and curves
+# List of fields, curves, and rings
 fields=("babybear" "stark252" "m31" "koalabear" "goldilocks")
 curves=("bn254" "bls12_381" "bls12_377" "bw6_761" "grumpkin")
+rings=("babykoala")
 
 cd /
 mkdir -p install_dir/icicle # output dir that is tarred
@@ -37,6 +38,29 @@ for curve in "${curves[@]}"; do
     cmake --build build     # build
     cmake --install build   # install
 done
+
+# Iterate over rings
+for ring in "${rings[@]}"; do
+    echo "Building for ring: $ring"
+
+    mkdir -p build && rm -rf build/*
+    # Configure, build, and install
+    # Precompile SASS for modern architectures (Turing, Ampere, etc.) and include PTX fallback (?)
+    cmake -S icicle -B build -G Ninja -DRING=$ring -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle -DCMAKE_BUILD_TYPE=Release -DCUDA_ARCH="75;80;86;89"
+    cmake --build build     # build
+    cmake --install build   # install
+done
+
+# Build CUDA PQC backend
+# NOTE: CUDA PQC backend is only supported on Ampere and newer architectures
+echo "Building for CUDA PQC backend"
+
+mkdir -p build && rm -rf build/*
+# Configure, build, and install
+# Precompile SASS for modern architectures (Turing, Ampere, etc.) and include PTX fallback (?)
+cmake -S icicle -B build -G Ninja -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle -DCMAKE_BUILD_TYPE=Release -DCUDA_ARCH="80;86;89" -DCUDA_PQC_BACKEND=ON
+cmake --build build     # build
+cmake --install build   # install
 
 # Split CUDA binaries to a separate directory to tar them separately
 mkdir -p install_dir_cuda_only/icicle/lib/backend

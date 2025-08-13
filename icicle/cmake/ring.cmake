@@ -40,7 +40,11 @@ function(check_ring RING RING_INDEX_OUT FEATURES_STRING_OUT)
 endfunction()
 
 function(setup_ring_target RING RING_INDEX FEATURES_STRING)
-  add_library(icicle_ring SHARED)
+  if(ICICLE_STATIC_LINK)
+    add_library(icicle_ring STATIC)
+  else()
+    add_library(icicle_ring SHARED)
+  endif()
 
   # Split FEATURES_STRING into a list using "," as the separator
   string(REPLACE "," ";" FEATURES_LIST ${FEATURES_STRING})
@@ -53,6 +57,12 @@ function(setup_ring_target RING RING_INDEX FEATURES_STRING)
 
   set_target_properties(icicle_ring PROPERTIES OUTPUT_NAME "icicle_ring_${RING}")
   target_link_libraries(icicle_ring PUBLIC icicle_device)
+  if(NOT HASH)
+    message(FATAL_ERROR "HASH must be ON to link icicle_ring against icicle_hash")
+  else()
+    target_link_libraries(icicle_ring PRIVATE icicle_hash)
+  endif()
+
 
   # Ensure RING is defined in the cache for backends to see
   set(RING "${RING}" CACHE STRING "")

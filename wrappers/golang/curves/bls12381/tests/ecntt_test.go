@@ -1,3 +1,5 @@
+//go:build !icicle_exclude_all || ecntt
+
 package tests
 
 import (
@@ -57,7 +59,7 @@ type ECNttTestSuite struct {
 }
 
 func (s *ECNttTestSuite) TestECNtt() {
-	s.Run("TestECNtt", testWrapper(&s.Suite, testECNtt))
+	s.Run("TestECNtt", test_helpers.TestWrapper(&s.Suite, testECNtt))
 }
 
 func TestSuiteECNtt(t *testing.T) {

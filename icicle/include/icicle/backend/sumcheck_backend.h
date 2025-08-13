@@ -51,6 +51,7 @@ namespace icicle {
       const CombineFunction<F>& combine_function,
       SumcheckTranscriptConfig<F>&& transcript_config,
       const SumcheckConfig& sumcheck_config,
+      F* challenge_vector /*out*/,
       SumcheckProof<F>& sumcheck_proof /*out*/) = 0;
   };
 
@@ -80,5 +81,21 @@ namespace icicle {
       return true;                                                                                                     \
     }();                                                                                                               \
   }
+
+#ifdef EXT_FIELD
+  template <typename F>
+  using SumcheckExtFieldImpl =
+    std::function<eIcicleError(const Device& device, std::shared_ptr<SumcheckBackend<F>>& backend /*OUT*/)>;
+
+  void register_extension_sumcheck_factory(const std::string& deviceType, SumcheckExtFieldImpl<extension_t> impl);
+
+  #define REGISTER_SUMCHECK_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_sumcheck_ext_field) = []() -> bool {                                                     \
+        register_extension_sumcheck_factory(DEVICE_TYPE, FUNC);                                                        \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+#endif // EXT_FIELD
 
 } // namespace icicle

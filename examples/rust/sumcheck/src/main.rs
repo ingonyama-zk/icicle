@@ -2,10 +2,11 @@ pub mod transcript;
 pub mod utils;
 
 use icicle_bn254::curve::ScalarField as Fr;
-use icicle_bn254::sumcheck::SumcheckWrapper;
-use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
+use icicle_bn254::sumcheck::SumcheckProof;
+use icicle_core::bignum::BigNum;
+use icicle_core::traits::GenerateRandom;
+use icicle_core::program::{PreDefinedProgram, ReturningValueProgramImpl};
 use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckTranscriptConfig};
-use icicle_core::traits::FieldImpl;
 use icicle_hash::blake3::Blake3;
 use icicle_runtime::memory::HostSlice;
 use merlin::Transcript;
@@ -19,7 +20,7 @@ use std::time::Instant;
 
 const SAMPLES: usize = 1 << 22;
 
-pub fn verify_proof(sumcheck: SumcheckWrapper, proof: icicle_bn254::sumcheck::SumcheckProof, claimed_sum: Fr) {
+pub fn verify_proof(proof: SumcheckProof, claimed_sum: Fr) {
     let mut verifier_previous_transcript = Transcript::new(b"my_sumcheck");
     <Transcript as TranscriptProtocol<Fr>>::append_data(&mut verifier_previous_transcript, b"public", &claimed_sum);
     //get seed based on previous state
@@ -52,7 +53,7 @@ pub fn verify_proof(sumcheck: SumcheckWrapper, proof: icicle_bn254::sumcheck::Su
             assert!(false, "Sumcheck proof verification failed!");
         }
         Err(err) => {
-            eprintln!("Error in verification {:?}",err);
+            eprintln!("Error in verification {:?}", err);
             assert!(false, "Sumcheck proof verification encountered an error!");
         }
     }
@@ -68,10 +69,10 @@ pub fn main() {
     let mut prover_previous_transcript = Transcript::new(b"my_sumcheck");
 
     let gen_data_time = Instant::now();
-    let poly_a = generate_random_vector::<Fr>(SAMPLES);
-    let poly_b = generate_random_vector::<Fr>(SAMPLES);
-    let poly_c = generate_random_vector::<Fr>(SAMPLES);
-    let poly_e = generate_random_vector::<Fr>(SAMPLES);
+    let poly_a = Fr::generate_random(SAMPLES);
+    let poly_b = Fr::generate_random(SAMPLES);
+    let poly_c = Fr::generate_random(SAMPLES);
+    let poly_e = Fr::generate_random(SAMPLES);
 
     info!(
         "Generate e,A,B,C of log size {:?}, time {:?}",
@@ -125,7 +126,7 @@ pub fn main() {
     );
     //try different combine functions!
     let combine_function =
-        <icicle_bn254::program::bn254::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(
+        <icicle_bn254::program::bn254::ReturningValueProgram as ReturningValueProgramImpl>::new_predefined(
             PreDefinedProgram::EQtimesABminusC,
         )
         .unwrap();
@@ -144,7 +145,7 @@ pub fn main() {
     set_backend_cpu();
     //experiment with fake sum or fake proof
     let verify_time = Instant::now();
-    verify_proof(sumcheck, proof, claimed_sum);
+    verify_proof(proof.unwrap(), claimed_sum);
     info!("verify time {:?}", verify_time.elapsed());
     info!("total time {:?}", gen_data_time.elapsed());
 }

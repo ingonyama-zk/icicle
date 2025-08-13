@@ -1,10 +1,10 @@
-use crate::curve::{ScalarCfg, ScalarField};
+use crate::curve::ScalarField;
 
 use icicle_core::ntt::{NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NTT};
 use icicle_core::{impl_ntt, impl_ntt_without_domain};
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, IcicleError};
 
-impl_ntt!("bls12_381", bls12_381, ScalarField, ScalarCfg);
+impl_ntt!("bls12_381", bls12_381, ScalarField);
 
 #[cfg(test)]
 pub(crate) mod tests {

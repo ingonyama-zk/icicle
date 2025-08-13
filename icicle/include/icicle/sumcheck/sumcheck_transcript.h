@@ -1,5 +1,6 @@
 #pragma once
 #include "icicle/sumcheck/sumcheck_transcript_config.h"
+#include "icicle/fields/quartic_extension.h"
 #include <string.h>
 
 template <typename S>
@@ -65,7 +66,7 @@ private:
   // append a field to hash input
   void append_field(std::vector<std::byte>& byte_vec, const S& field)
   {
-    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(field.limbs_storage.limbs);
+    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(&field);
     byte_vec.insert(byte_vec.end(), data_bytes, data_bytes + sizeof(S));
   }
 

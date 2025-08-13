@@ -15,7 +15,7 @@ fn main() {
     let mut output = DeviceVec::<u8>::cuda_malloc(32).unwrap();
 
     let mut config = HashConfig::default();
-    keccak256(input, initial_data.len() as i32, 1, &mut output[..], &mut config).expect("Failed to execute keccak256 hashing");
+    keccak256(input, initial_data.len() as i32, 1, output.into_slice(), &mut config).expect("Failed to execute keccak256 hashing");
 
     let mut output_host = vec![0_u8; 32];
     output.copy_to_host(HostSlice::from_mut_slice(&mut output_host[..])).unwrap();

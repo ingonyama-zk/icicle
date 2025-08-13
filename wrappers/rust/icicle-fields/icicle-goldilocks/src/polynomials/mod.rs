@@ -1,7 +1,8 @@
-use crate::field::{ScalarCfg, ScalarField};
 use icicle_core::impl_univariate_polynomial_api;
 
-impl_univariate_polynomial_api!("goldilocks", goldilocks, ScalarField, ScalarCfg);
+use crate::field::ScalarField;
+
+impl_univariate_polynomial_api!("goldilocks", goldilocks, ScalarField);
 
 #[cfg(test)]
 mod tests {

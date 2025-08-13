@@ -1,7 +1,7 @@
 #include "icicle/errors.h"
 #include "icicle/backend/hash/poseidon2_backend.h"
 #include "icicle/dispatcher.h"
-
+#include <algorithm>
 namespace icicle {
 
   ICICLE_DISPATCHER_INST(CreatePoseidon2HasherDispatcher, create_poseidon2, CreatePoseidon2Impl);

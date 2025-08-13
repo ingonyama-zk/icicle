@@ -8,6 +8,13 @@ class Field : public ModArith<Field<CONFIG>, CONFIG>
   // By deriving from ModArith<Field> (CRTP) we get operands defined for the type Field
 
 public:
+  // Copy-assignment forwards to ModArith implementation.
+  HOST_DEVICE Field& operator=(const Field& other)
+  {
+    ModArith<Field<CONFIG>, CONFIG>::operator=(other);
+    return *this;
+  }
+
   static constexpr unsigned TLC = CONFIG::limbs_count;
   static constexpr unsigned NBITS = CONFIG::modulus_bit_count;
   typedef storage<TLC> ff_storage;
@@ -39,7 +46,7 @@ public:
     if constexpr (Gen::is_b_u32) { // assumes that 3b is also u32
       r = ModArith<Field<CONFIG>, CONFIG>::template mul_unsigned<b_mult.limbs_storage.limbs[0], Field>(xs);
       if constexpr (Gen::is_b_neg)
-        return ModArith<Field<CONFIG>, CONFIG>::template neg<>(r);
+        return r.neg();
       else {
         return r;
       }

@@ -81,7 +81,7 @@ void initialize_input(const unsigned ntt_size, const unsigned nof_ntts, scalar_t
   // Highest Harmonics
   for (unsigned i = 1 * ntt_size; i < 2 * ntt_size; i = i + 2) {
     elements[i] = scalar_t::one();
-    elements[i + 1] = scalar_t::neg(scalar_t::one());
+    elements[i + 1] = scalar_t::one().neg();
   }
 }
 

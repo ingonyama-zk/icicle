@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
   START_TIMER(MSM_host_mem);
   ICICLE_CHECK(msm(scalars.get(), points.get(), msm_size, config, &result));
   END_TIMER(MSM_host_mem, "MSM from host-memory took");
-  std::cout << projective_t::to_affine(result) << std::endl;
+  std::cout << result.to_affine() << std::endl;
 
   DeviceProperties device_props;
   ICICLE_CHECK(icicle_get_device_properties(device_props));
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
     // Copy the result back to the host
     icicle_copy(&result, result_d, sizeof(projective_t));
     // Print the result
-    std::cout << projective_t::to_affine(result) << std::endl;
+    std::cout << result.to_affine() << std::endl;
     // Free the device memory
     icicle_free(scalars_d);
     icicle_free(points_d);
@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
   START_TIMER(MSM_g2);
   ICICLE_CHECK(msm(scalars.get(), g2_points.get(), msm_size, config, &g2_result));
   END_TIMER(MSM_g2, "MSM G2 from host-memory took");
-  std::cout << g2_projective_t::to_affine(g2_result) << std::endl;
+  std::cout << g2_result << std::endl;
 
   // Similar to G1 MSM, can explicitly copy to device and execute the G2 MSM using device pointers
 

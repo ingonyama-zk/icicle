@@ -1,18 +1,23 @@
+use icicle_runtime::{
+    memory::{IntoIcicleSlice, IntoIcicleSliceMut},
+    test_utilities,
+};
+
 use crate::{
+    field::Field,
     hash::{HashConfig, Hasher},
     merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
     poseidon2::{Poseidon2, Poseidon2Hasher},
-    traits::{FieldImpl, GenerateRandom},
+    traits::GenerateRandom,
 };
-use icicle_runtime::{memory::HostSlice, test_utilities};
 use std::mem;
 
-pub fn check_poseidon2_hash<F: FieldImpl>()
+pub fn check_poseidon2_hash<F: Field>()
 where
-    <F as FieldImpl>::Config: Poseidon2Hasher<F> + GenerateRandom<F>,
+    F: Poseidon2Hasher<F> + GenerateRandom,
 {
     let batch = 1 << 4;
-    let domain_tag = F::Config::generate_random(1)[0];
+    let domain_tag = F::generate_random(1)[0];
     for t in [2, 3, 4, 8, 12, 16, 20, 24] {
         let large_field = mem::size_of::<F>() > 4;
         let skip_case = large_field && t > 4; // In Poseidon2 there is no support for large fields when t > 4.
@@ -20,10 +25,10 @@ where
             continue;
         };
         for domain_tag in [None, Some(&domain_tag)] {
-            let inputs: Vec<F> = if domain_tag != None {
-                F::Config::generate_random(batch * (t - 1))
+            let inputs: Vec<F> = if domain_tag.is_some() {
+                F::generate_random(batch * (t - 1))
             } else {
-                F::Config::generate_random(batch * t)
+                F::generate_random(batch * t)
             };
             let mut outputs_main = vec![F::zero(); batch];
             let mut outputs_ref = vec![F::zero(); batch];
@@ -33,9 +38,9 @@ where
 
             poseidon_hasher_main
                 .hash(
-                    HostSlice::from_slice(&inputs),
+                    inputs.into_slice(),
                     &HashConfig::default(),
-                    HostSlice::from_mut_slice(&mut outputs_main),
+                    outputs_main.into_slice_mut(),
                 )
                 .unwrap();
 
@@ -44,9 +49,9 @@ where
 
             poseidon_hasher_ref
                 .hash(
-                    HostSlice::from_slice(&inputs),
+                    inputs.into_slice(),
                     &HashConfig::default(),
-                    HostSlice::from_mut_slice(&mut outputs_ref),
+                    outputs_ref.into_slice_mut(),
                 )
                 .unwrap();
 
@@ -56,9 +61,9 @@ where
 }
 
 // TODO uncomment once Poseidon2 sponge function is ready
-pub fn check_poseidon2_hash_sponge<F: FieldImpl>()
+pub fn check_poseidon2_hash_sponge<F: Field>()
 where
-    <F as FieldImpl>::Config: Poseidon2Hasher<F> + GenerateRandom<F>,
+    F: Poseidon2Hasher<F> + GenerateRandom,
 {
     for t in [2, 3, 4, 8, 12, 16, 20, 24] {
         let large_field = mem::size_of::<F>() > 4;
@@ -66,42 +71,42 @@ where
         if skip_case {
             continue;
         };
-        let inputs: Vec<F> = F::Config::generate_random(t * 8 - 2);
+        let inputs: Vec<F> = F::generate_random(t * 8 - 2);
         let mut outputs_main = vec![F::zero(); 1];
         let mut outputs_ref = vec![F::zero(); 1];
 
         test_utilities::test_set_main_device();
         let poseidon_hasher_main = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
-        let main_device_err = poseidon_hasher_main
+        poseidon_hasher_main
             .hash(
-                HostSlice::from_slice(&inputs),
+                inputs.into_slice(),
                 &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut outputs_main),
+                outputs_main.into_slice_mut(),
             )
             .unwrap();
 
         test_utilities::test_set_ref_device();
         let poseidon_hasher_ref = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
-        let ref_device_err = poseidon_hasher_ref
+        poseidon_hasher_ref
             .hash(
-                HostSlice::from_slice(&inputs),
+                inputs.into_slice(),
                 &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut outputs_ref),
+                outputs_ref.into_slice_mut(),
             )
             .unwrap();
 
-        assert_eq!(main_device_err, ref_device_err);
+        assert_eq!((), ());
     }
 }
 
-pub fn check_poseidon2_hash_multi_device<F: FieldImpl>()
+pub fn check_poseidon2_hash_multi_device<F: Field>()
 where
-    <F as FieldImpl>::Config: Poseidon2Hasher<F> + GenerateRandom<F>,
+    F: Poseidon2Hasher<F> + GenerateRandom,
 {
     let t = 4; // t=4 is for Poseidon hash (t is the paper's terminology)
-    let inputs: Vec<F> = F::Config::generate_random(t);
+    let inputs: Vec<F> = F::generate_random(t);
     let mut outputs_main_0 = vec![F::zero(); 1];
     let mut outputs_main_1 = vec![F::zero(); 1];
     let mut outputs_ref = vec![F::zero(); 1];
@@ -111,64 +116,64 @@ where
 
     poseidon_hasher_ref
         .hash(
-            HostSlice::from_slice(&inputs),
+            inputs.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs_ref),
+            outputs_ref.into_slice_mut(),
         )
         .unwrap();
 
     // initialize hasher on 2 devices
-    test_utilities::test_set_main_device_with_id(0);
+    icicle_runtime::test_utilities::test_set_main_device_with_id(0);
     let poseidon_hasher_main_dev_0 = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
-    test_utilities::test_set_main_device_with_id(1);
+    icicle_runtime::test_utilities::test_set_main_device_with_id(1);
     let poseidon_hasher_main_dev_1 = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
     // test device 1
     poseidon_hasher_main_dev_1
         .hash(
-            HostSlice::from_slice(&inputs),
+            inputs.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs_main_1),
+            outputs_main_1.into_slice_mut(),
         )
         .unwrap();
     assert_eq!(outputs_ref, outputs_main_1);
 
     // test device 0
-    test_utilities::test_set_main_device_with_id(0);
+    icicle_runtime::test_utilities::test_set_main_device_with_id(0);
     poseidon_hasher_main_dev_0
         .hash(
-            HostSlice::from_slice(&inputs),
+            inputs.into_slice(),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs_main_0),
+            outputs_main_0.into_slice_mut(),
         )
         .unwrap();
     assert_eq!(outputs_ref, outputs_main_0);
 }
 
-pub fn check_poseidon2_tree<F: FieldImpl>()
+pub fn check_poseidon2_tree<F: Field>()
 where
-    <F as FieldImpl>::Config: Poseidon2Hasher<F>,
+    F: Poseidon2Hasher<F>,
 {
     let t = 4;
     let nof_layers = 4;
     let num_elements = 4_u32.pow(nof_layers);
-    let mut leaves: Vec<F> = (0..num_elements)
-        .map(|i| F::from_u32(i))
+    let leaves: Vec<F> = (0..num_elements)
+        .map(|i| F::from(i))
         .collect();
 
     let hasher = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
     let layer_hashes: Vec<&Hasher> = (0..nof_layers)
         .map(|_| &hasher)
         .collect();
-    let merkle_tree = MerkleTree::new(&layer_hashes[..], mem::size_of::<F>() as u64, 0).unwrap();
+    let merkle_tree = MerkleTree::new(layer_hashes.as_slice(), mem::size_of::<F>() as u64, 0).unwrap();
     merkle_tree
-        .build(HostSlice::from_slice(&mut leaves), &MerkleTreeConfig::default())
+        .build(leaves.into_slice(), &MerkleTreeConfig::default())
         .unwrap();
 
     let leaf_idx_to_open = num_elements >> 1;
     let merkle_proof: MerkleProof = merkle_tree
         .get_proof(
-            HostSlice::from_slice(&leaves),
+            leaves.into_slice(),
             leaf_idx_to_open as u64,
             true, /*=pruned */
             &MerkleTreeConfig::default(),
@@ -181,5 +186,5 @@ where
     let verification_valid = merkle_tree
         .verify(&merkle_proof)
         .unwrap();
-    assert_eq!(verification_valid, true);
+    assert!(verification_valid);
 }

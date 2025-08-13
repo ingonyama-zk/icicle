@@ -1,3 +1,4 @@
+
 #pragma once
 
 #ifdef __CUDACC__
@@ -6,33 +7,26 @@
 #include "icicle/utils/modifiers.h"
 #include <iostream>
 
-template <class FF>
+template <class BaseField>
 class Affine
 {
 public:
-  FF x;
-  FF y;
+  BaseField x;
+  BaseField y;
 
-  static HOST_DEVICE_INLINE Affine neg(const Affine& point) { return {point.x, FF::neg(point.y)}; }
+  static HOST_DEVICE_INLINE Affine zero() { return {BaseField::zero(), BaseField::zero()}; }
 
-  static HOST_DEVICE_INLINE Affine zero() { return {FF::zero(), FF::zero()}; }
+  HOST_DEVICE_INLINE Affine neg() const { return {x, y.neg()}; }
 
-  static HOST_DEVICE_INLINE Affine to_montgomery(const Affine& point)
-  {
-    return {FF::to_montgomery(point.x), FF::to_montgomery(point.y)};
-  }
+  HOST_DEVICE_INLINE Affine to_montgomery() const { return {x.to_montgomery(), y.to_montgomery()}; }
 
-  static HOST_DEVICE_INLINE Affine from_montgomery(const Affine& point)
-  {
-    return {FF::from_montgomery(point.x), FF::from_montgomery(point.y)};
-  }
+  HOST_DEVICE_INLINE Affine from_montgomery() const { return {x.from_montgomery(), y.from_montgomery()}; }
 
-  friend HOST_DEVICE_INLINE bool operator==(const Affine& xs, const Affine& ys)
-  {
-    return (xs.x == ys.x) && (xs.y == ys.y);
-  }
+  HOST_DEVICE_INLINE bool operator==(const Affine& ys) const { return (x == ys.x) && (y == ys.y); }
 
-  friend HOST_DEVICE_INLINE bool operator!=(const Affine& xs, const Affine& ys) { return !(xs == ys); }
+  HOST_DEVICE_INLINE bool operator!=(const Affine& ys) const { return !(*this == ys); }
+
+  HOST_DEVICE_INLINE bool is_zero() const { return x == BaseField::zero() && y == BaseField::zero(); }
 
   friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Affine& point)
   {
@@ -42,11 +36,11 @@ public:
 };
 
 #ifdef __CUDACC__
-template <class FF>
-struct SharedMemory<Affine<FF>> {
-  __device__ Affine<FF>* getPointer()
+template <class BaseField>
+struct SharedMemory<Affine<BaseField>> {
+  __device__ Affine<BaseField>* getPointer()
   {
-    extern __shared__ Affine<FF> s_affine_[];
+    extern __shared__ Affine<BaseField> s_affine_[];
     return s_affine_;
   }
 };

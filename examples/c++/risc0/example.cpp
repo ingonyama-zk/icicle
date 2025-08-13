@@ -72,7 +72,7 @@ Polynomial_t p_mix(Polynomial_t* in[], size_t nmix, scalar_t mix_parameter)
 
 void solve_linear(scalar_t xa, scalar_t ya, scalar_t xb, scalar_t yb, scalar_t* coeffs)
 {
-  coeffs[1] = (ya - yb) * scalar_t::inverse(xa - xb);
+  coeffs[1] = (ya - yb) * (xa - xb).inverse();
   coeffs[0] = ya - coeffs[1] * xa;
 }
 
@@ -217,7 +217,7 @@ int main(int argc, char** argv)
   std::cout << "The DEEP d1 degree is: " << p_d1_DEEP.degree() << std::endl;
   // d2, d3 use recursion constraints and need the point corresponding to the previous state (clock cycle)
   auto omega = scalar_t::omega(logn);
-  auto DEEP_prev_point = DEEP_point * scalar_t::inverse(omega);
+  auto DEEP_prev_point = DEEP_point * omega.inverse();
   auto coeffs2 = std::make_unique<scalar_t[]>(2);
   coeffs2[0] = scalar_t::zero() - DEEP_prev_point;
   coeffs2[1] = scalar_t::one();
@@ -283,8 +283,8 @@ int main(int argc, char** argv)
   auto xm = scalar_t::zero() - xp;
   scalar_t lhs[nof_rounds], rhs[nof_rounds];
   for (int i = 0; i < nof_rounds; ++i) {
-    rhs[i] = (rfri[i] + xp) * fri[i](xp) * scalar_t::inverse(scalar_t::from(2) * xp) +
-             (rfri[i] + xm) * fri[i](xm) * scalar_t::inverse(scalar_t::from(2) * xm);
+    rhs[i] = (rfri[i] + xp) * fri[i](xp) * (scalar_t::from(2) * xp).inverse() +
+             (rfri[i] + xm) * fri[i](xm) * (scalar_t::from(2) * xm).inverse();
     lhs[i] = fri[i + 1](xp * xp);
     std::cout << "Round " << i << std::endl << "rhs: " << rhs[i] << std::endl << "lhs: " << lhs[i] << std::endl;
   }

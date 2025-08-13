@@ -408,7 +408,7 @@ namespace icicle {
       auto ntt_config = default_ntt_config<C>();
       ICICLE_CHECK(get_root_of_unity_from_domain<C>((uint64_t)log2(2 * N), &ntt_config.coset_gen));
       // compute inv(u^N-1);
-      D v_coset_eval = D::inverse(D::pow(ntt_config.coset_gen, N) - D::one());
+      D v_coset_eval = (ntt_config.coset_gen.pow(N) - D::one()).inverse();
 
       auto config = default_vec_ops_config();
       config.is_a_on_device = false;
@@ -452,7 +452,7 @@ namespace icicle {
       ntt(numerator_evals_reversed_p, N, NTTDir::kForward, ntt_config, out_evals_reversed_p);
 
       // (2) divide by constant value (that V(x) evaluates to on the coset)
-      D v_coset_eval = D::inverse(D::pow(ntt_config.coset_gen, N) - D::one());
+      D v_coset_eval = (ntt_config.coset_gen.pow(N) - D::one()).inverse();
 
       auto config = default_vec_ops_config();
       config.is_a_on_device = false;

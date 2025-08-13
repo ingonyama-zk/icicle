@@ -14,7 +14,7 @@ eIcicleError
 cpu_convert_mont(const Device& device, const T* input, size_t n, bool is_into, const VecOpsConfig& config, T* output)
 {
   for (size_t i = 0; i < n; ++i) {
-    output[i] = is_into ? T::to_montgomery(input[i]) : T::from_montgomery(input[i]);
+    output[i] = is_into ? input[i].to_montgomery() : input[i].from_montgomery();
   }
   return eIcicleError::SUCCESS;
 }

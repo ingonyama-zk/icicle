@@ -1,28 +1,25 @@
-use crate::{
-    curve::{Affine, Curve},
-    traits::FieldImpl,
-};
+use crate::{field::Field, projective::Projective, traits::GenerateRandom};
 
 use super::{pairing, Pairing};
 
-pub fn check_pairing_bilinearity<C1, C2, F>()
+pub fn check_pairing_bilinearity<P1, P2, F>()
 where
-    C1: Curve,
-    C2: Curve,
-    F: FieldImpl,
-    C1: Pairing<C1, C2, F>,
+    P1: Projective,
+    P2: Projective,
+    F: Field,
+    P1: Pairing<P1, P2, F>,
 {
-    let p = C1::generate_random_affine_points(1)[0];
-    let q = C2::generate_random_affine_points(1)[0];
+    let p = P1::Affine::generate_random(1)[0];
+    let q = P2::Affine::generate_random(1)[0];
     let coeff = 42;
-    let s1 = C1::ScalarField::from_u32(coeff);
-    let s2 = C2::ScalarField::from_u32(coeff);
+    let s1 = P1::ScalarField::from(coeff);
+    let s2 = P2::ScalarField::from(coeff);
 
-    let ps = Affine::<C1>::from(p.to_projective() * s1);
-    let qs = Affine::<C2>::from(q.to_projective() * s2);
+    let ps: P1::Affine = P1::into(P1::from(p) * s1);
+    let qs: P2::Affine = P2::into(P2::from(q) * s2);
 
-    let res1 = pairing(&ps, &q).unwrap();
-    let res2 = pairing(&p, &qs).unwrap();
+    let res1 = pairing::<P1, P2, F>(&ps, &q).unwrap();
+    let res2 = pairing::<P1, P2, F>(&p, &qs).unwrap();
 
     assert_eq!(res1, res2);
 }

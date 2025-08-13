@@ -1,10 +1,10 @@
-#[cfg(not(feature = "no_ecntt"))]
-use icicle_bls12_381::curve::{CurveCfg, ScalarField};
+#[cfg(feature = "ecntt")]
+use icicle_bls12_381::curve::{G1Projective, ScalarField};
 
-#[cfg(not(feature = "no_ecntt"))]
+#[cfg(feature = "ecntt")]
 use icicle_core::impl_ecntt_bench;
-#[cfg(not(feature = "no_ecntt"))]
-impl_ecntt_bench!("bls12_381", ScalarField, CurveCfg);
+#[cfg(feature = "ecntt")]
+impl_ecntt_bench!("bls12_381", ScalarField, G1Projective);
 
-#[cfg(feature = "no_ecntt")]
+#[cfg(not(feature = "ecntt"))]
 fn main() {}

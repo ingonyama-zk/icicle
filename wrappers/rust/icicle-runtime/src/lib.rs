@@ -11,5 +11,5 @@ pub mod tests;
 
 // Re-export the types for easier access
 pub use device::{Device, DeviceProperties};
-pub use errors::eIcicleError;
+pub use errors::{eIcicleError, IcicleError};
 pub use runtime::*;

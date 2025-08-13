@@ -1,7 +1,5 @@
-use crate::curve::{BaseField, ScalarField};
+use crate::curve::ScalarField;
 
-use icicle_core::impl_symbol_field;
+use icicle_core::impl_invertible_symbol_ring;
 
-impl_symbol_field!("bls12_377", bls12_377, ScalarField, ScalarCfg);
-#[cfg(feature = "bw6-761")]
-impl_symbol_field!("bw6_761", bw6_761, BaseField, BaseCfg);
+impl_invertible_symbol_ring!("bls12_377", bls12_377, ScalarField);

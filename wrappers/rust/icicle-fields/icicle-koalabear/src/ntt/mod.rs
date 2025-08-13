@@ -1,18 +1,11 @@
-use crate::field::{ExtensionField, ScalarCfg, ScalarField};
+use crate::field::{ExtensionField, ScalarField};
 use icicle_core::ntt::{NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NTT};
 use icicle_core::{impl_ntt, impl_ntt_without_domain};
-use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
+use icicle_runtime::{eIcicleError, IcicleError};
 
-impl_ntt!("koalabear", koalabear, ScalarField, ScalarCfg);
-impl_ntt_without_domain!(
-    "koalabear_extension",
-    ScalarField,
-    ScalarCfg,
-    NTT,
-    "_ntt",
-    ExtensionField
-);
+impl_ntt!("koalabear", koalabear, ScalarField);
+impl_ntt_without_domain!("koalabear_extension", ScalarField, NTT, "_ntt", ExtensionField);
 
 #[cfg(test)]
 pub(crate) mod tests {

@@ -1,14 +1,9 @@
 use icicle_core::impl_fri;
 
-use crate::field::{ExtensionCfg, ExtensionField, ScalarCfg, ScalarField};
+use crate::field::{ExtensionField, ScalarField};
 
-impl_fri!("koalabear", koalabear_fri, ScalarField, ScalarCfg);
-impl_fri!(
-    "koalabear_extension",
-    koalabear_extension_fri,
-    ExtensionField,
-    ExtensionCfg
-);
+impl_fri!("koalabear", koalabear_fri, ScalarField);
+impl_fri!("koalabear_extension", koalabear_extension_fri, ExtensionField);
 
 #[cfg(test)]
 mod tests {

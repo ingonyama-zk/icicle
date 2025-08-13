@@ -142,11 +142,11 @@ type M31_extensionVecOpsTestSuite struct {
 }
 
 func (s *M31_extensionVecOpsTestSuite) TestM31_extensionVecOps() {
-	s.Run("TestM31_extensionVecOps", testWrapper(&s.Suite, testM31_extensionVecOps))
-	s.Run("TestM31_extensionTranspose", testWrapper(&s.Suite, testM31_extensionTranspose))
-	s.Run("TestM31_extensionSum", testWrapper(&s.Suite, testM31_extensionSum))
-	s.Run("TestM31_extensionProduct", testWrapper(&s.Suite, testM31_extensionProduct))
-	s.Run("TestM31_extensionMixedVecOps", testWrapper(&s.Suite, testM31_extensionMixedVecOps))
+	s.Run("TestM31_extensionVecOps", test_helpers.TestWrapper(&s.Suite, testM31_extensionVecOps))
+	s.Run("TestM31_extensionTranspose", test_helpers.TestWrapper(&s.Suite, testM31_extensionTranspose))
+	s.Run("TestM31_extensionSum", test_helpers.TestWrapper(&s.Suite, testM31_extensionSum))
+	s.Run("TestM31_extensionProduct", test_helpers.TestWrapper(&s.Suite, testM31_extensionProduct))
+	s.Run("TestM31_extensionMixedVecOps", test_helpers.TestWrapper(&s.Suite, testM31_extensionMixedVecOps))
 }
 
 func TestSuiteM31_extensionVecOps(t *testing.T) {

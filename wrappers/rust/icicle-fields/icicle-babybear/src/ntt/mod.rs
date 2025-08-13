@@ -1,34 +1,25 @@
-use crate::field::{ExtensionField, ScalarCfg, ScalarField};
+use crate::field::{ExtensionField, ScalarField};
 use icicle_core::ntt::{NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NTT};
 use icicle_core::{impl_ntt, impl_ntt_without_domain};
-use icicle_runtime::errors::eIcicleError;
-use icicle_runtime::memory::HostOrDeviceSlice;
+use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, IcicleError};
 
-impl_ntt!("babybear", babybear, ScalarField, ScalarCfg);
-impl_ntt_without_domain!(
-    "babybear_extension",
-    ScalarField,
-    ScalarCfg,
-    NTT,
-    "_ntt",
-    ExtensionField
-);
+impl_ntt!("babybear", babybear, ScalarField);
+impl_ntt_without_domain!("babybear_extension", ScalarField, NTT, "_ntt", ExtensionField);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::field::ScalarField;
+    use crate::field::{ExtensionField, ScalarField};
     use icicle_core::impl_ntt_tests;
     use icicle_core::ntt::tests::*;
     use serial_test::{parallel, serial};
     impl_ntt_tests!(ScalarField);
 
     // Tests against risc0 and plonky3
-    use super::ExtensionField;
     use icicle_core::{
         ntt::{initialize_domain, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTInitDomainConfig},
-        traits::{FieldImpl, GenerateRandom},
+        traits::GenerateRandom,
     };
-    use icicle_runtime::memory::HostSlice;
+    use icicle_runtime::memory::IntoIcicleSliceMut;
     use risc0_core::field::{
         baby_bear::{Elem, ExtElem},
         Elem as FieldElem, RootsOfUnity,
@@ -49,17 +40,17 @@ pub(crate) mod tests {
         for log_size in log_sizes {
             let ntt_size = 1 << log_size;
 
-            let mut scalars: Vec<ScalarField> = <ScalarField as FieldImpl>::Config::generate_random(ntt_size);
+            let mut scalars: Vec<ScalarField> = <ScalarField as GenerateRandom>::generate_random(ntt_size);
             let mut scalars_risc0: Vec<Elem> = scalars
                 .iter()
                 .map(|x| Elem::new(Into::<[u32; 1]>::into(*x)[0]))
                 .collect();
 
             let ntt_cfg: NTTConfig<ScalarField> = NTTConfig::default();
-            ntt_inplace(HostSlice::from_mut_slice(&mut scalars[..]), NTTDir::kForward, &ntt_cfg).unwrap();
+            ntt_inplace(scalars.into_slice_mut(), NTTDir::kForward, &ntt_cfg).unwrap();
 
-            risc0_zkp::core::ntt::bit_reverse(&mut scalars_risc0[..]);
-            risc0_zkp::core::ntt::evaluate_ntt::<Elem, Elem>(&mut scalars_risc0[..], ntt_size);
+            risc0_zkp::core::ntt::bit_reverse(scalars_risc0.as_mut_slice());
+            risc0_zkp::core::ntt::evaluate_ntt::<Elem, Elem>(scalars_risc0.as_mut_slice(), ntt_size);
 
             for (s1, s2) in scalars
                 .iter()
@@ -68,21 +59,16 @@ pub(crate) mod tests {
                 assert_eq!(Into::<[u32; 1]>::into(*s1)[0], s2.as_u32());
             }
 
-            let mut ext_scalars: Vec<ExtensionField> = <ExtensionField as FieldImpl>::Config::generate_random(ntt_size);
+            let mut ext_scalars: Vec<ExtensionField> = <ExtensionField as GenerateRandom>::generate_random(ntt_size);
             let mut ext_scalars_risc0: Vec<ExtElem> = ext_scalars
                 .iter()
                 .map(|x| ExtElem::from_u32_words(&Into::<[u32; 4]>::into(*x)[..]))
                 .collect();
 
-            ntt_inplace(
-                HostSlice::from_mut_slice(&mut ext_scalars[..]),
-                NTTDir::kForward,
-                &ntt_cfg,
-            )
-            .unwrap();
+            ntt_inplace(ext_scalars.into_slice_mut(), NTTDir::kForward, &ntt_cfg).unwrap();
 
-            risc0_zkp::core::ntt::bit_reverse(&mut ext_scalars_risc0[..]);
-            risc0_zkp::core::ntt::evaluate_ntt::<Elem, ExtElem>(&mut ext_scalars_risc0[..], ntt_size);
+            risc0_zkp::core::ntt::bit_reverse(ext_scalars_risc0.as_mut_slice());
+            risc0_zkp::core::ntt::evaluate_ntt::<Elem, ExtElem>(ext_scalars_risc0.as_mut_slice(), ntt_size);
 
             for (s1, s2) in ext_scalars
                 .iter()

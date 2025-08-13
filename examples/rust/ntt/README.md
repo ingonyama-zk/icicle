@@ -24,7 +24,7 @@ In this example we use the `BN254` and `BLS12377` fields.
 3. Set up the domain.
 4. Configure NTT
 5. Execute NTT on-device
-6. Move the result on host
+6. Move the result to host
 7. Compare results with arkworks
 
 Running the example:

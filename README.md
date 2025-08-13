@@ -69,7 +69,7 @@ If you require more compute and have an interesting research project, we have [b
 
 ## Building ICICLE from source
 
-ICICLE provides build systems for C++, Rust, and Go. Each build system incorporates the core ICICLE library, which contains the essential cryptographic primitives. Refer to the [Getting started page](https://dev.ingonyama.com/icicle/build_from_source) for full details about building and using ICICLE.
+ICICLE provides build systems for C++, Rust, and Go. Each build system incorporates the core ICICLE library, which contains the essential cryptographic primitives. Refer to the [Getting started page](https://dev.ingonyama.com/start/programmers_guide/general) for full details about building and using ICICLE.
 
 > [!WARNING]
 > Ensure ICICLE libraries are installed correctly when building or installing a library/application that depends on ICICLE so that they can be located at runtime.
@@ -277,7 +277,7 @@ eIcicleError result = icicle_set_device(device);
 // Any call will now execute on GPU-0
 ```
 
-Full details can be found in our [getting started docs](https://dev.ingonyama.com/icicle/getting_started)
+Full details can be found in our [getting started docs](https://dev.ingonyama.com/start)
 
 ## Contributions
 
@@ -317,12 +317,12 @@ For help and support talk to our devs in our discord channel [#ICICLE](https://d
 
 ## License
 
-ICICLE frontend is distributed under the terms of the MIT License.
-
-> [!NOTE]
-> ICICLE backends, excluding the CPU backend, are distributed under a special license and are not covered by the MIT license.
+ICICLE frontend is distributed under the terms of the MIT License. 
 
 See [LICENSE-MIT][LMIT] for details.
+
+> [!NOTE]
+> ICICLE backends, excluding backends exposed in this repository, are distributed under a special license and are not covered by the MIT license. If you want to learn more, check out our [developer documentation.](https://dev.ingonyama.com/start/architecture/install_gpu_backend#licensing)
 
 <!-- Begin Links -->
 [BLS12-381]: ./icicle/curves/
@@ -339,7 +339,7 @@ See [LICENSE-MIT][LMIT] for details.
 [googletest]: https://github.com/google/googletest/
 [HOOKS_DOCS]: https://git-scm.com/docs/githooks
 [HOOKS_PATH]: ./scripts/hooks/
-[GOOGLE-COLAB-ICICLE]: https://dev.ingonyama.com/icicle/colab-instructions
+[GOOGLE-COLAB-ICICLE]: https://dev.ingonyama.com/start/integration-&-support/colab-instructions
 [GRANT_PROGRAM]: https://medium.com/@ingonyama/icicle-for-researchers-grants-challenges-9be1f040998e
 [ICICLE-CORE]: ./icicle/
 [ICICLE-RUST]: ./wrappers/rust/

@@ -105,7 +105,7 @@ func GenerateScalars(size int) core.HostSlice[ExtensionField] {
 
 	cScalars := (*C.scalar_t)(unsafe.Pointer(&scalarSlice[0]))
 	cSize := (C.int)(size)
-	C.babybear_extension_generate_scalars(cScalars, cSize)
+	C.babybear_extension_generate_random(cScalars, cSize)
 
 	return scalarSlice
 }

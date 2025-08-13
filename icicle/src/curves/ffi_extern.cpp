@@ -1,12 +1,13 @@
 #include "icicle/utils/utils.h"
 #include "icicle/curves/curve_config.h"
+#include "icicle/fields/externs.h"
 
 using namespace curve_config;
 
 // extern functions for FFI
 
 /********************************** G1 **********************************/
-extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, eq)(projective_t* point1, projective_t* point2)
+extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, projective_eq)(projective_t* point1, projective_t* point2)
 {
   return (*point1 == *point2) &&
          !((point1->x == point_field_t::zero()) && (point1->y == point_field_t::zero()) &&
@@ -35,7 +36,7 @@ CONCAT_EXPAND(ICICLE_FFI_PREFIX, mul_scalar)(projective_t* point, scalar_t* scal
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, to_affine)(projective_t* point, affine_t* point_out)
 {
-  *point_out = projective_t::to_affine(*point);
+  *point_out = point->to_affine();
 }
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, from_affine)(affine_t* point, projective_t* point_out)
@@ -53,24 +54,18 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, generate_affine_points)(affine_
   projective_t::rand_host_many(points, size);
 }
 
-extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, base_field_from_u32)(uint32_t val, point_field_t* result)
-{
-  *result = point_field_t::from(val);
-}
+ICICLE_DEFINE_FIELD_FFI_FUNCS(_base_field, point_field_t);
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, generator)(projective_t* result)
 {
   *result = projective_t::generator();
 }
 
-extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, is_on_curve)(projective_t* point)
-{
-  return projective_t::is_on_curve(*point);
-}
+extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, is_on_curve)(projective_t* point) { return point->is_on_curve(); }
 
 /********************************** G2 **********************************/
 #ifdef G2_ENABLED
-extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_eq)(g2_projective_t* point1, g2_projective_t* point2)
+extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_projective_eq)(g2_projective_t* point1, g2_projective_t* point2)
 {
   return (*point1 == *point2) &&
          !((point1->x == g2_point_field_t::zero()) && (point1->y == g2_point_field_t::zero()) &&
@@ -99,7 +94,7 @@ CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_mul_scalar)(g2_projective_t* point, scalar_t
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_to_affine)(g2_projective_t* point, g2_affine_t* point_out)
 {
-  *point_out = g2_projective_t::to_affine(*point);
+  *point_out = point->to_affine();
 }
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_from_affine)(g2_affine_t* point, g2_projective_t* point_out)
@@ -117,10 +112,7 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_generate_affine_points)(g2_a
   g2_projective_t::rand_host_many(points, size);
 }
 
-extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_base_field_from_u32)(uint32_t val, g2_point_field_t* result)
-{
-  *result = g2_point_field_t::from(val);
-}
+ICICLE_DEFINE_FIELD_FFI_FUNCS(_g2_base_field, g2_point_field_t);
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_generator)(g2_projective_t* result)
 {
@@ -129,6 +121,6 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_generator)(g2_projective_t* 
 
 extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_is_on_curve)(g2_projective_t* point)
 {
-  return g2_projective_t::is_on_curve(*point);
+  return point->is_on_curve();
 }
 #endif // G2

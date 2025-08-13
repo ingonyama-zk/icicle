@@ -1,65 +1,67 @@
 #[doc(hidden)]
 pub mod tests;
 
-use crate::{hash::Hasher, traits::FieldImpl};
-use icicle_runtime::errors::eIcicleError;
+use crate::{field::Field, hash::Hasher};
+use icicle_runtime::IcicleError;
 
 /// Trait to define the behavior of a Poseidon hasher for different field types.
-/// This allows the implementation of Poseidon hashing for various field types that implement `FieldImpl`.
-pub trait PoseidonHasher<F: FieldImpl> {
-    /// Method to create a new Poseidon hasher for a given t (branching factor).
-    fn new(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError> {
+/// This allows the implementation of Poseidon hashing for various field types that implement `Field`.
+pub trait PoseidonHasher<F: Field> {
+    /// Creates a Poseidon hasher with an explicit `input_size` (rate). This is the
+    /// low-level constructor that all implementations must provide.
+    fn new_with_input_size(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, IcicleError>;
+
+    /// Convenience constructor that forwards to `new_with_input_size` with
+    /// `input_size = 0`, signalling the backend to use a default value.
+    fn new(t: u32, domain_tag: Option<&F>) -> Result<Hasher, IcicleError> {
         Self::new_with_input_size(t, domain_tag, 0)
     }
-    fn new_with_input_size(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, eIcicleError>;
 }
 
 /// Function to create a Poseidon hasher for a specific field type and t (branching factor).
 /// Delegates the creation to the `new` method of the `PoseidonHasher` trait.
-pub fn create_poseidon_hasher<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>
+pub fn create_poseidon_hasher<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, IcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: PoseidonHasher<F>, // Requires that the `Config` associated with `F` implements `PoseidonHasher`.
+    F: Field + PoseidonHasher<F>,
 {
-    <<F as FieldImpl>::Config as PoseidonHasher<F>>::new(t, domain_tag)
+    <F as PoseidonHasher<F>>::new(t, domain_tag)
 }
 
 pub struct Poseidon;
 
 impl Poseidon {
-    pub fn new<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>
+    pub fn new<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, IcicleError>
     where
-        F: FieldImpl,                 // F must implement the FieldImpl trait
-        F::Config: PoseidonHasher<F>, // The Config associated with F must implement PoseidonHasher<F>
+        F: Field + PoseidonHasher<F>, // F must implement the Field trait
     {
         create_poseidon_hasher::<F>(t, domain_tag)
     }
 
-    pub fn new_with_input_size<F>(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, eIcicleError>
+    pub fn new_with_input_size<F>(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, IcicleError>
     where
-        F: FieldImpl,
-        F::Config: PoseidonHasher<F>,
+        F: Field,
+        F: PoseidonHasher<F>,
     {
-        <<F as FieldImpl>::Config as PoseidonHasher<F>>::new_with_input_size(t, domain_tag, input_size)
+        <F as PoseidonHasher<F>>::new_with_input_size(t, domain_tag, input_size)
     }
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)]
 macro_rules! impl_poseidon {
     (
         $field_prefix:literal,
         $field_prefix_ident:ident,
-        $field:ident,
-        $field_cfg:ident
+        $field:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::poseidon::{$field, $field_cfg};
+            use crate::poseidon::$field;
             use icicle_core::{
+                field::Field,
                 hash::{Hasher, HasherHandle},
                 poseidon::PoseidonHasher,
-                traits::FieldImpl,
             };
-            use icicle_runtime::errors::eIcicleError;
+            use icicle_runtime::errors::{eIcicleError, IcicleError};
             use std::marker::PhantomData;
 
             extern "C" {
@@ -68,12 +70,12 @@ macro_rules! impl_poseidon {
             }
 
             // Implement the `PoseidonHasher` trait for the given field configuration.
-            impl PoseidonHasher<$field> for $field_cfg {
+            impl PoseidonHasher<$field> for $field {
                 fn new_with_input_size(
                     t: u32,
                     domain_tag: Option<&$field>,
                     input_size: u32,
-                ) -> Result<Hasher, eIcicleError> {
+                ) -> Result<Hasher, IcicleError> {
                     let handle: HasherHandle = unsafe {
                         create_poseidon_hasher(
                             t,
@@ -82,7 +84,10 @@ macro_rules! impl_poseidon {
                         )
                     };
                     if handle.is_null() {
-                        return Err(eIcicleError::UnknownError);
+                        return Err(IcicleError::new(
+                            eIcicleError::UnknownError,
+                            "poseidon hasher handle is null",
+                        ));
                     }
                     Ok(Hasher::from_handle(handle))
                 }

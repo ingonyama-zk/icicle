@@ -12,8 +12,8 @@ const darkCodeTheme = themes.dracula;
 const ingoPreset = {
   docs: {
     showLastUpdateAuthor: false,
-    showLastUpdateTime: false,
-    includeCurrentVersion: false,
+    showLastUpdateTime: true,
+    includeCurrentVersion: process.env.NODE_ENV !== 'production',
     routeBasePath: '/',
     remarkPlugins: [math],
     rehypePlugins: [katex],
@@ -81,19 +81,26 @@ const navBarRightSide = [
   },
 
   {
+          label: 'Leave Feedback',
+          position: 'right',
+          href: 'https://forms.monday.com/forms/7b51e0bdad766b71da8869704c301472?r=use1',
+          target: '_blank',
+        },
+
+  {
     type: 'html',
     position: 'right',
     value: `
       <a href="https://ingonyama.com"
-         class="navbar__item ingo-paw"
-         title="Visit Ingonyama"
-         target="_blank"
-         rel="noopener noreferrer">
-        <img src="/img/Ingologo.svg" alt="Ingonyama logo" />
+        class="navbar__item ingo-paw"
+        title="Visit Ingonyama"
+        target="_blank"
+        rel="noopener noreferrer">
+        <img src="/img/Ingologo.svg" alt="Ingonyama logo" class="ingo-paw-logo" />
       </a>
     `,
   }
-  
+
   
 ] satisfies NavbarItem[];
 
@@ -111,6 +118,12 @@ const config: Config = {
   trailingSlash: false,
   deploymentBranch: "main",
   staticDirectories: ['static'],
+  markdown: { 
+    mermaid: true,
+  },
+  themes: [
+    '@docusaurus/theme-mermaid',
+  ],
   presets: [
     [
       'classic',
@@ -153,6 +166,13 @@ const config: Config = {
       {name: 'og:description', content: 'Ingonyama is a next-generation semiconductor company focusing on Zero-Knowledge Proof hardware acceleration...'},
       {name: 'og:image', content: 'https://dev.ingonyama.com/img/ICICLELOGONEW.png'},
     ],
+      announcementBar: {
+      id: 'my-special-announcement', // unique ID, change if you update the message
+      content: '🚀 We just released <strong>ICICLE v4</strong> — featuring a more intuitive API with lattices. <a href="/start/integration-&-support/migrate_from_v3">Check out the migration guide</a>.',
+      backgroundColor: '#006AEA', 
+      textColor: '#ffffff',      
+      isCloseable: true,          // allows users to dismiss the banner
+    },
     docs: {
       sidebar: {
         hideable: true,
@@ -160,7 +180,7 @@ const config: Config = {
     },
     colorMode: {
       defaultMode: 'light',
-      disableSwitch: true,
+      disableSwitch: false,
       respectPrefersColorScheme: false,
     },
     algolia: {
@@ -196,7 +216,12 @@ const config: Config = {
       darkTheme: darkCodeTheme,
       additionalLanguages: ['rust', 'go'],
     },
-  } satisfies Preset.ThemeConfig,
+    mermaid: {
+      theme: { light: 'default', dark: 'default' },
+  },
+} satisfies Preset.ThemeConfig,
 };
+
+
 
 export default config;

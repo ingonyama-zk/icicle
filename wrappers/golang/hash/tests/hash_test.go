@@ -7,6 +7,7 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/hash"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 	"github.com/stretchr/testify/suite"
 )
@@ -36,7 +37,7 @@ func testKeccakBatch(s *suite.Suite) {
 		core.GetDefaultHashConfig(),
 	)
 
-	runtime.SetDevice(&devices[1])
+	test_helpers.ActivateMainDevice()
 	keccakHasher, error = hash.NewKeccak512Hasher(0 /*default chunk size*/)
 	if error != runtime.Success {
 		fmt.Println("error:", error)
@@ -80,7 +81,7 @@ func testBlake2s(s *suite.Suite) {
 		core.GetDefaultHashConfig(),
 	)
 
-	runtime.SetDevice(&devices[1])
+	test_helpers.ActivateMainDevice()
 	Blake2sHasher, error = hash.NewBlake2sHasher(0 /*default chunk size*/)
 	if error != runtime.Success {
 		fmt.Println("error:", error)
@@ -124,7 +125,7 @@ func testBlake3_cpu_gpu(s *suite.Suite) {
 		core.GetDefaultHashConfig(),
 	)
 
-	runtime.SetDevice(&devices[1])
+	test_helpers.ActivateMainDevice()
 	Blake3Hasher, error = hash.NewBlake3Hasher(0 /*default chunk size*/)
 	if error != runtime.Success {
 		fmt.Println("error:", error)
@@ -195,7 +196,7 @@ func testSha3(s *suite.Suite) {
 		core.GetDefaultHashConfig(),
 	)
 
-	runtime.SetDevice(&devices[1])
+	test_helpers.ActivateMainDevice()
 	Sha3Hasher, error = hash.NewSha3256Hasher(0 /*default chunk size*/)
 	if error != runtime.Success {
 		fmt.Println("error:", error)
@@ -219,11 +220,11 @@ type HashTestSuite struct {
 }
 
 func (s *HashTestSuite) TestHash() {
-	s.Run("TestKeccakBatch", testWrapper(&s.Suite, testKeccakBatch))
-	s.Run("TestBlake2s", testWrapper(&s.Suite, testBlake2s))
-	s.Run("TestBlake3_CPU_GPU", testWrapper(&s.Suite, testBlake3_cpu_gpu))
-	s.Run("TestBlake3", testWrapper(&s.Suite, testBlake3))
-	s.Run("TestSha3", testWrapper(&s.Suite, testSha3))
+	s.Run("TestKeccakBatch", test_helpers.TestWrapper(&s.Suite, testKeccakBatch))
+	s.Run("TestBlake2s", test_helpers.TestWrapper(&s.Suite, testBlake2s))
+	s.Run("TestBlake3_CPU_GPU", test_helpers.TestWrapper(&s.Suite, testBlake3_cpu_gpu))
+	s.Run("TestBlake3", test_helpers.TestWrapper(&s.Suite, testBlake3))
+	s.Run("TestSha3", test_helpers.TestWrapper(&s.Suite, testSha3))
 }
 
 func TestSuiteHash(t *testing.T) {
