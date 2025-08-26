@@ -43,5 +43,5 @@
   extern "C" void ICICLE_FFI_EXPAND_AND_CONCAT3(ICICLE_FFI_PREFIX, PREFIX, _from_bytes_le)(                            \
     uint8_t* bytes, TYPE* result)                                                                                      \
   {                                                                                                                    \
-    *result = TYPE::reduce_from_bytes((std::byte*)bytes);                                                              \
+    *result = TYPE::from((std::byte*)bytes, TYPE::TLC * 4);                                                            \
   }
