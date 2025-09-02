@@ -181,6 +181,10 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_proof_get_final_poly)(FriProof
     ICICLE_LOG_ERROR << "proof_ptr is null — cannot retrieve Fri proof";
     return eIcicleError::INVALID_POINTER;
   }
+  if (!final_poly) {
+    ICICLE_LOG_ERROR << "final_poly is null — cannot set result";
+    return eIcicleError::INVALID_POINTER;
+  }
   *final_poly = proof_ptr->get_final_poly();
   return eIcicleError::SUCCESS;
 }
@@ -203,6 +207,10 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_proof_get_serialized_size)(Fri
 {
   if (!proof_ptr) {
     ICICLE_LOG_ERROR << "proof_ptr is null — cannot retrieve Fri proof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!result) {
+    ICICLE_LOG_ERROR << "result is null — cannot set result";
     return eIcicleError::INVALID_POINTER;
   }
   return BinarySerializer<FriProof<scalar_t>>::serialized_size(*proof_ptr, *result);
@@ -261,9 +269,11 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_merkle_tree_prove)(
   }
   if (!merkle_tree_leaves_hash) {
     ICICLE_LOG_ERROR << "merkle_tree_leaves_hash is null — cannot retrieve Merkle tree leaves hash";
+    return eIcicleError::INVALID_POINTER;
   }
   if (!merkle_tree_compress_hash) {
     ICICLE_LOG_ERROR << "merkle_tree_compress_hash is null — cannot retrieve Merkle tree compress hash";
+    return eIcicleError::INVALID_POINTER;
   }
   if (!fri_proof) {
     ICICLE_LOG_ERROR << "fri_proof is null — cannot retrieve Fri proof";
@@ -293,9 +303,11 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_merkle_tree_verify)(
   }
   if (!merkle_tree_leaves_hash) {
     ICICLE_LOG_ERROR << "merkle_tree_leaves_hash is null — cannot retrieve Merkle tree leaves hash";
+    return eIcicleError::INVALID_POINTER;
   }
   if (!merkle_tree_compress_hash) {
     ICICLE_LOG_ERROR << "merkle_tree_compress_hash is null — cannot retrieve Merkle tree compress hash";
+    return eIcicleError::INVALID_POINTER;
   }
   if (!fri_proof) {
     ICICLE_LOG_ERROR << "fri_proof is null — cannot retrieve Fri proof";
@@ -457,6 +469,10 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_fri_proof_get_serialized
     ICICLE_LOG_ERROR << "proof_ptr is null — cannot retrieve Fri proof";
     return eIcicleError::INVALID_POINTER;
   }
+  if (!result) {
+    ICICLE_LOG_ERROR << "result is null — cannot set result";
+    return eIcicleError::INVALID_POINTER;
+  }
   return BinarySerializer<FriProof<extension_t>>::serialized_size(*proof_ptr, *result);
 }
 
@@ -513,9 +529,11 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_fri_merkle_tree_prove)(
   }
   if (!merkle_tree_leaves_hash) {
     ICICLE_LOG_ERROR << "merkle_tree_leaves_hash is null — cannot retrieve Merkle tree leaves hash";
+    return eIcicleError::INVALID_POINTER;
   }
   if (!merkle_tree_compress_hash) {
     ICICLE_LOG_ERROR << "merkle_tree_compress_hash is null — cannot retrieve Merkle tree compress hash";
+    return eIcicleError::INVALID_POINTER;
   }
   if (!fri_proof) {
     ICICLE_LOG_ERROR << "fri_proof is null — cannot retrieve Fri proof";
