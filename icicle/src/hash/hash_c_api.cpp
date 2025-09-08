@@ -1,140 +1,216 @@
-#include <memory>
-#include "icicle/hash/hash.h"
+#include "icicle/utils/log.h"
 #include "icicle/errors.h"
-#include "icicle/hash/keccak.h"
-#include "icicle/hash/blake2s.h"
-#include "icicle/hash/blake3.h"
-
+#include "icicle/merkle/merkle_proof.h"
+#include "icicle/merkle/merkle_tree.h"
+#include "icicle/merkle/merkle_proof_serializer.h"
 extern "C" {
-// Define a type for the HasherHandle (which is a pointer to Hash)
-typedef icicle::Hash* HasherHandle;
+// Define an opaque pointer type for MerkleProof (similar to a handle in C)
+typedef icicle::MerkleProof* MerkleProofHandle;
+typedef icicle::MerkleTree* MerkleTreeHandle;
 
-/**
- * @brief Hashes input data and stores the result in the output buffer.
- *
- * @param hash_ptr Handle to the Hash object.
- * @param input_ptr Pointer to the input data.
- * @param input_len Length of the input data in bytes.
- * @param config Pointer to the HashConfig object.
- * @param output_ptr Pointer to the output buffer to store the result.
- * @return eIcicleError indicating success or failure.
- */
-eIcicleError icicle_hasher_hash(
-  HasherHandle hash_ptr,
-  const uint8_t* input_ptr,
-  uint64_t input_len,
-  const icicle::HashConfig* config,
-  uint8_t* output_ptr)
+// Create a new MerkleProof object and return a handle to it.
+MerkleProofHandle icicle_merkle_proof_create() { return new icicle::MerkleProof(); }
+
+// Create a new MerkleProof object with specified leaf, root, and path data.
+MerkleProofHandle icicle_merkle_proof_create_with_data(
+  bool pruned_path,
+  int64_t leaf_idx,
+  const std::byte* leaf,
+  std::size_t leaf_size,
+  const std::byte* root,
+  std::size_t root_size,
+  const std::byte* path,
+  std::size_t path_size)
 {
-  if (!hash_ptr) return eIcicleError::INVALID_POINTER;
-  return hash_ptr->hash(
-    reinterpret_cast<const std::byte*>(input_ptr), input_len, *config, reinterpret_cast<std::byte*>(output_ptr));
+  std::vector<std::byte> leaf_vec(leaf, leaf + leaf_size);
+  std::vector<std::byte> root_vec(root, root + root_size);
+  std::vector<std::byte> path_vec(path, path + path_size);
+  return new icicle::MerkleProof(pruned_path, leaf_idx, std::move(leaf_vec), std::move(root_vec), std::move(path_vec));
 }
 
-/**
- * @brief Returns the output size in bytes for the hash operation.
- *
- * @param hash_ptr Handle to the Hash object.
- * @return uint64_t The size of the output in bytes.
- */
-uint64_t icicle_hasher_output_size(HasherHandle hash_ptr)
+// Delete the MerkleProof object and free its resources.
+eIcicleError icicle_merkle_proof_delete(MerkleProofHandle proof)
 {
-  if (!hash_ptr) return 0;
-  return hash_ptr->output_size();
-}
-
-/**
- * @brief Deletes the Hash object and cleans up its resources.
- *
- * @param hash_ptr Handle to the Hash object.
- * @return eIcicleError indicating success or failure.
- */
-eIcicleError icicle_hasher_delete(HasherHandle hash_ptr)
-{
-  if (!hash_ptr) return eIcicleError::INVALID_POINTER;
-  delete hash_ptr;
+  if (!proof) { return eIcicleError::INVALID_POINTER; }
+  delete proof;
   return eIcicleError::SUCCESS;
 }
 
-/*=================================================================================*
-   The following are factories to create hasher objects of general-purpose hashes.
- *=================================================================================*/
-
-/**
- * @brief Creates a Keccak-256 hash object.
- *
- * This function constructs a Hash object configured for Keccak-256.
- *
- * @param input_chunk_size Size of the input in bytes for the Keccak-256 hash.
- * @return HasherHandle A handle to the created Keccak-256 Hash object.
- */
-HasherHandle icicle_create_keccak_256(uint64_t input_chunk_size)
+// Check if the Merkle path is pruned.
+bool icicle_merkle_proof_is_pruned(MerkleProofHandle proof)
 {
-  return new icicle::Hash(icicle::create_keccak_256_hash(input_chunk_size));
+  if (!proof) { return false; }
+  return proof->is_pruned();
 }
 
-/**
- * @brief Creates a Keccak-512 hash object.
- *
- * This function constructs a Hash object configured for Keccak-512.
- *
- * @param input_chunk_size Size of the input in bytes for the Keccak-512 hash.
- * @return HasherHandle A handle to the created Keccak-512 Hash object.
- */
-HasherHandle icicle_create_keccak_512(uint64_t input_chunk_size)
+// Get the path data and its size.
+const std::byte* icicle_merkle_proof_get_path(MerkleProofHandle proof, std::size_t* out_size)
 {
-  return new icicle::Hash(icicle::create_keccak_512_hash(input_chunk_size));
+  if (!proof || !out_size) { return nullptr; }
+  auto [path, size] = proof->get_path();
+  *out_size = size;
+  return path;
 }
 
-/**
- * @brief Creates a SHA3-256 hash object.
- *
- * This function constructs a Hash object configured for SHA3-256.
- *
- * @param input_chunk_size Size of the input in bytes for the SHA3-256 hash.
- * @return HasherHandle A handle to the created SHA3-256 Hash object.
- */
-HasherHandle icicle_create_sha3_256(uint64_t input_chunk_size)
+// Get the leaf data, its size, and its index.
+const std::byte* icicle_merkle_proof_get_leaf(MerkleProofHandle proof, std::size_t* out_size, uint64_t* out_leaf_idx)
 {
-  return new icicle::Hash(icicle::create_sha3_256_hash(input_chunk_size));
+  if (!proof || !out_size || !out_leaf_idx) { return nullptr; }
+  auto [leaf, size, leaf_idx] = proof->get_leaf();
+  *out_size = size;
+  *out_leaf_idx = leaf_idx;
+  return leaf;
 }
 
-/**
- * @brief Creates a SHA3-512 hash object.
- *
- * This function constructs a Hash object configured for SHA3-512.
- *
- * @param input_chunk_size Size of the input in bytes for the SHA3-512 hash.
- * @return HasherHandle A handle to the created SHA3-512 Hash object.
- */
-HasherHandle icicle_create_sha3_512(uint64_t input_chunk_size)
+// Get the root data and its size.
+const std::byte* icicle_merkle_proof_get_root(MerkleProofHandle proof, std::size_t* out_size)
 {
-  return new icicle::Hash(icicle::create_sha3_512_hash(input_chunk_size));
+  if (!proof || !out_size) { return nullptr; }
+  auto [root, size] = proof->get_root();
+  *out_size = size;
+  return root;
 }
 
-/**
- * @brief Creates a Blake2s hash object.
- *
- * This function constructs a Hash object configured for Blake2s.
- *
- * @param input_chunk_size Size of the input in bytes for the Blake2s hash.
- * @return HasherHandle A handle to the created Blake2s Hash object.
- */
-HasherHandle icicle_create_blake2s(uint64_t input_chunk_size)
+// Create a new MerkleTree object
+icicle::MerkleTree* icicle_merkle_tree_create(
+  const icicle::Hash** layer_hashes,
+  size_t layer_hashes_len,
+  uint64_t leaf_element_size,
+  uint64_t output_store_min_layer)
 {
-  return new icicle::Hash(icicle::create_blake2s_hash(input_chunk_size));
+  try {
+    // Convert the array of Hash pointers to a vector of Hash objects
+    std::vector<icicle::Hash> hash_vector;
+    hash_vector.reserve(layer_hashes_len);
+
+    // Dereference each pointer and push the Hash object into the vector
+    for (size_t i = 0; i < layer_hashes_len; ++i) {
+      if (layer_hashes[i] == nullptr) {
+        // Handle the case where one of the pointers is null, if needed
+        throw std::invalid_argument("Null pointer found in layer_hashes.");
+      }
+      hash_vector.push_back(*layer_hashes[i]);
+    }
+
+    // Create a MerkleTree instance using the static factory method
+    return new icicle::MerkleTree(icicle::MerkleTree::create(hash_vector, leaf_element_size, output_store_min_layer));
+  } catch (...) {
+    return nullptr;
+  }
 }
 
-/**
- * @brief Creates a Blake3 hash object.
- *
- * This function constructs a Hash object configured for Blake2s.
- *
- * @param input_chunk_size Size of the input in bytes for the Blake2s hash.
- * @return HasherHandle A handle to the created Blake2s Hash object.
- */
-HasherHandle icicle_create_blake3(uint64_t input_chunk_size)
+// Delete the MerkleTree object and free its resources
+eIcicleError icicle_merkle_tree_delete(icicle::MerkleTree* tree)
 {
-  return new icicle::Hash(icicle::create_blake3_hash(input_chunk_size));
+  if (!tree) { return eIcicleError::INVALID_POINTER; }
+  delete tree;
+  return eIcicleError::SUCCESS;
 }
+
+// Build the Merkle tree from the provided leaves
+eIcicleError icicle_merkle_tree_build(
+  icicle::MerkleTree* tree, const std::byte* leaves, uint64_t size, const icicle::MerkleTreeConfig* config)
+{
+  if (!tree || !leaves || !config) { return eIcicleError::INVALID_POINTER; }
+
+  try {
+    return tree->build(leaves, size, *config);
+  } catch (...) {
+    return eIcicleError::UNKNOWN_ERROR;
+  }
 }
+
+// Get the Merkle root as a pointer to the root data and its size
+const std::byte* icicle_merkle_tree_get_root(icicle::MerkleTree* tree, size_t* out_size)
+{
+  if (!tree || !out_size) { return nullptr; }
+
+  try {
+    auto [root_ptr, root_size] = tree->get_merkle_root();
+    *out_size = root_size;
+    return root_ptr;
+  } catch (...) {
+    return nullptr;
+  }
+}
+
+// Retrieve the Merkle proof for a specific element
+eIcicleError icicle_merkle_tree_get_proof(
+  icicle::MerkleTree* tree,
+  const std::byte* leaves,
+  uint64_t leaves_size,
+  uint64_t leaf_idx,
+  bool is_pruned,
+  const icicle::MerkleTreeConfig* config,
+  icicle::MerkleProof* merkle_proof)
+{
+  if (!tree || !leaves || !config || !merkle_proof) { return eIcicleError::INVALID_POINTER; }
+
+  try {
+    return tree->get_merkle_proof(leaves, leaves_size, leaf_idx, is_pruned, *config, *merkle_proof);
+  } catch (...) {
+    return eIcicleError::UNKNOWN_ERROR;
+  }
+}
+
+// Verify a Merkle proof
+eIcicleError icicle_merkle_tree_verify(icicle::MerkleTree* tree, const icicle::MerkleProof* merkle_proof, bool* valid)
+{
+  if (!tree || !merkle_proof || !valid) { return eIcicleError::INVALID_POINTER; }
+
+  try {
+    return tree->verify(*merkle_proof, *valid);
+  } catch (...) {
+    return eIcicleError::UNKNOWN_ERROR;
+  }
+}
+
+// Get the serialized size of the MerkleProof object
+eIcicleError icicle_merkle_proof_get_serialized_size(MerkleProofHandle proof, size_t* size)
+{
+  if (!proof || !size) {
+    ICICLE_LOG_ERROR << "Cannot get serialized size of a null MerkleProof instance.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  return icicle::BinarySerializer<icicle::MerkleProof>::serialized_size(*proof, *size);
+}
+
+// Serialize the MerkleProof object to a buffer
+eIcicleError icicle_merkle_proof_serialize(MerkleProofHandle proof, std::byte* buffer, size_t size)
+{
+  if (!proof) {
+    ICICLE_LOG_ERROR << "Cannot serialize a null MerkleProof instance.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!buffer) {
+    ICICLE_LOG_ERROR << "buffer is null — cannot serialize MerkleProof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  size_t expected_size = 0;
+  eIcicleError err = icicle::BinarySerializer<icicle::MerkleProof>::serialized_size(*proof, expected_size);
+  if (err != eIcicleError::SUCCESS) {
+    ICICLE_LOG_ERROR << "Cannot get serialized size of MerkleProof";
+    return err;
+  }
+  if (size < expected_size) {
+    ICICLE_LOG_ERROR << "buffer is too small — cannot serialize MerkleProof";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  return icicle::BinarySerializer<icicle::MerkleProof>::serialize(buffer, size, *proof);
+}
+
+// Deserialize the MerkleProof object from a buffer
+eIcicleError icicle_merkle_proof_deserialize(MerkleProofHandle* proof, std::byte* buffer, size_t size)
+{
+  if (!proof) {
+    ICICLE_LOG_ERROR << "Cannot deserialize into a null MerkleProof pointer.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!buffer || !size) {
+    ICICLE_LOG_ERROR << "Cannot deserialize from a null buffer or size is 0.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  *proof = new icicle::MerkleProof();
+  return icicle::BinarySerializer<icicle::MerkleProof>::deserialize(buffer, size, **proof);
+}
+} // extern "C"
