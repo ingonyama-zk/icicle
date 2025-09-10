@@ -7,6 +7,8 @@
 #include <taskflow/core/taskflow.hpp>
 
 static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+static_assert(
+  sizeof(((::storage<field_t::TLC>*)nullptr)->limbs[0]) == 4, "Balanced decomposition assumes 32-bit limbs");
 
 // extract the number of threads to run from config
 int get_nof_workers(const VecOpsConfig& config); // defined in cpu_vec_ops.cpp
@@ -39,8 +41,8 @@ template <typename T>
 int64_t get_q()
 {
   constexpr auto q_storage = T::get_modulus();
-  const int64_t q = *(const int64_t*)&q_storage;
-  return q;
+  const uint64_t q_u = (static_cast<uint64_t>(q_storage.limbs[0])) | (static_cast<uint64_t>(q_storage.limbs[1]) << 32);
+  return static_cast<int64_t>(q_u);
 }
 
 template <typename T>
