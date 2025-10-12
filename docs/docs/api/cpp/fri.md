@@ -171,7 +171,7 @@ To generate a FRI proof using the Merkle Tree commit scheme, use one of the foll
 
 
 :::note
-An NTT domain is used for proof generation, so before generating a proof, an NTT domain of at least the input_data size must be initialized. For more information see [NTT documentation](api/cpp/ntt.md).
+An NTT domain is used for proof generation, so before generating a proof, an NTT domain of at least the input_data size must be initialized. For more information see [NTT documentation](./ntt.md).
 :::
 
 ```cpp
