@@ -15,10 +15,15 @@ First thing to do in a notebook is to set the runtime type to a T4 GPU.
 
 ![T4 GPU](/img/t4_gpu.png)
 
-Installing Rust is rather simple, just execute the following command:
+Installing Rust using rustup ensures you get the latest version (ICICLE requires Rust ≥1.80):
 
 ```sh
-!apt install rustc cargo
+# Install rustup (Rust version manager)
+!curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+# Add Rust to PATH for current session
+import os
+os.environ['PATH'] = f"{os.environ['HOME']}/.cargo/bin:{os.environ['PATH']}"
 ```
 
 To test the installation of Rust:
@@ -28,12 +33,18 @@ To test the installation of Rust:
 !cargo --version
 ```
 
-A successful installation will result in a rustc and cargo version print, a faulty installation will look like this:
+A successful installation will show Rust version 1.80 or higher:
 
 ```sh
-/bin/bash: line 1: rustc: command not found
-/bin/bash: line 1: cargo: command not found
+rustc 1.80.0 (051478957 2024-07-21)
+cargo 1.80.0 (376290515 2024-07-16)
 ```
+
+:::note
+
+The `apt install rustc cargo` command installs Rust 1.75, which is too old for ICICLE. Always use rustup for the latest version.
+
+:::
 
 Now we will check the environment:
 
