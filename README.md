@@ -277,7 +277,7 @@ eIcicleError result = icicle_set_device(device);
 // Any call will now execute on GPU-0
 ```
 
-Full details can be found in our [getting started docs](https://dev.ingonyama.com/start)
+Full details can be found in our [getting started docs](https://dev.ingonyama.com/start/programmers_guide/general)
 
 ## Contributions
 
