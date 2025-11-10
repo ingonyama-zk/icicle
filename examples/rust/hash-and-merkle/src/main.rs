@@ -43,7 +43,9 @@ fn keccak_hash_example() {
 
     keccak_hasher
         .hash(
-            input_str.as_bytes().into_slice(),
+            input_str
+                .as_bytes()
+                .into_slice(),
             &HashConfig::default(),
             output.into_slice_mut(),
         )

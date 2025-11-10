@@ -2,6 +2,10 @@ use clap::Parser;
 use rand::{Rng, RngCore};
 use std::time::Instant;
 
+use icicle_babykoala::{
+    polynomial_ring::PolyRing, // polynomial ring type Zq[X]/X^64+1
+    ring::ScalarRing as Zq,    // the scalar integer ring Zq (q~64b)
+};
 use icicle_core::{
     balanced_decomposition, jl_projection, matrix_ops,
     matrix_ops::MatMulConfig,
@@ -14,10 +18,6 @@ use icicle_core::{
     traits::GenerateRandom,
     vec_ops,
     vec_ops::{poly_vecops, VecOpsConfig},
-};
-use icicle_babykoala::{
-    polynomial_ring::PolyRing, // polynomial ring type Zq[X]/X^64+1
-    ring::ScalarRing as Zq,    // the scalar integer ring Zq (q~64b)
 };
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
@@ -252,13 +252,8 @@ where
         // ⏱️ Recompose
         // ------------------------------
         let t1 = std::time::Instant::now();
-        balanced_decomposition::recompose::<P>(
-            &decomposed[..],
-            recomposed.into_slice_mut(),
-            *base,
-            &cfg,
-        )
-        .expect("Recomposition failed");
+        balanced_decomposition::recompose::<P>(&decomposed[..], recomposed.into_slice_mut(), *base, &cfg)
+            .expect("Recomposition failed");
         let recompose_time = t1.elapsed();
         println!(
             "[Balanced Decomposition] Recomposition completed in {:.2?}",
