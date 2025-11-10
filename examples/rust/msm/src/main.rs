@@ -1,13 +1,11 @@
 use icicle_core::projective::Projective;
 use icicle_runtime::{
-    memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut},
+    memory::{DeviceVec, IntoIcicleSlice},
     stream::IcicleStream,
 };
 
 // Using both bn254 and bls12-377 curves
-use icicle_bls12_377::curve::{
-    G1Projective as BLS12377G1Projective, ScalarField as BLS12377ScalarField,
-};
+use icicle_bls12_377::curve::{G1Projective as BLS12377G1Projective, ScalarField as BLS12377ScalarField};
 use icicle_bn254::curve::{G1Projective, G2Projective, ScalarField};
 
 use clap::Parser;
@@ -99,7 +97,13 @@ fn main() {
         msm::msm(scalars, g2_points, &g2_cfg, g2_msm_results.into_slice_mut()).unwrap();
 
         println!("Executing bls12377 MSM on device...");
-        msm::msm(scalars_bls12377, points_bls12377, &cfg_bls12377, msm_results_bls12377.into_slice_mut()).unwrap();
+        msm::msm(
+            scalars_bls12377,
+            points_bls12377,
+            &cfg_bls12377,
+            msm_results_bls12377.into_slice_mut(),
+        )
+        .unwrap();
 
         println!("Moving results to host...");
         stream

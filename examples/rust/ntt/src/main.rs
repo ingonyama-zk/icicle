@@ -1,7 +1,7 @@
 use icicle_bls12_377::curve::ScalarField as BLS12377ScalarField;
 use icicle_bn254::curve::ScalarField;
 use icicle_core::bignum::BigNum;
-use icicle_runtime::memory::{DeviceVec, HostSlice};
+use icicle_runtime::memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut};
 
 use clap::Parser;
 use icicle_core::{
@@ -12,8 +12,8 @@ use std::convert::TryInto;
 use std::time::Instant;
 
 // Add Arkworks imports for comparison
-use ark_bn254::Fr as ArkBn254Fr;
 use ark_bls12_377::Fr as ArkBls12377Fr;
+use ark_bn254::Fr as ArkBn254Fr;
 use ark_ff::{BigInteger, PrimeField as ArkPrimeField};
 use ark_poly::domain::Radix2EvaluationDomain;
 use ark_poly::EvaluationDomain;
@@ -55,7 +55,8 @@ fn main() {
 
     // Setting Bn254 points and scalars
     println!("Generating random inputs on host for bn254...");
-    let scalars = ScalarField::generate_random(size);
+    let mut scalars = ScalarField::generate_random(size);
+    let scalars_orig = scalars.clone();
     let mut ntt_results = DeviceVec::<ScalarField>::malloc(size);
 
     // Setting bls12377 points and scalars
@@ -112,12 +113,7 @@ fn main() {
     let host_bn254_results = ntt_results.to_host_vec();
     assert_ne!(host_bn254_results, scalars); // check that the results are not the same as the inputs
 
-    ntt::ntt_inplace(
-        scalars.into_slice_mut(),
-        ntt::NTTDir::kForward,
-        &cfg,
-    )
-    .unwrap();
+    ntt::ntt_inplace(scalars.into_slice_mut(), ntt::NTTDir::kForward, &cfg).unwrap();
 
     assert_eq!(host_bn254_results, scalars); // check that the results are the same as the inputs after inplace
 
@@ -143,12 +139,7 @@ fn main() {
     let host_bls12377_results = ntt_results_bls12377.to_host_vec();
     assert_ne!(host_bls12377_results, scalars_bls12377); // check that the results are not the same as the inputs
 
-    ntt::ntt_inplace(
-        scalars_bls12377.into_slice_mut(),
-        ntt::NTTDir::kForward,
-        &cfg_bls12377,
-    )
-    .unwrap();
+    ntt::ntt_inplace(scalars_bls12377.into_slice_mut(), ntt::NTTDir::kForward, &cfg_bls12377).unwrap();
 
     assert_eq!(host_bls12377_results, scalars_bls12377);
 
@@ -167,7 +158,9 @@ fn main() {
     let ark_bn_as_icicle: Vec<ScalarField> = ark_bn_data
         .iter()
         .map(|x| {
-            let bytes = x.into_bigint().to_bytes_le();
+            let bytes = x
+                .into_bigint()
+                .to_bytes_le();
             ScalarField::from_bytes_le(bytes.as_slice())
         })
         .collect();
@@ -186,7 +179,9 @@ fn main() {
     let ark_bls_as_icicle: Vec<BLS12377ScalarField> = ark_bls_data
         .iter()
         .map(|x| {
-            let bytes = x.into_bigint().to_bytes_le();
+            let bytes = x
+                .into_bigint()
+                .to_bytes_le();
             BLS12377ScalarField::from_bytes_le(bytes.as_slice())
         })
         .collect();
