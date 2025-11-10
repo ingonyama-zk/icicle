@@ -20,7 +20,7 @@ use icicle_babykoala::{
     ring::ScalarRing as Zq,    // the scalar integer ring Zq (q~64b)
 };
 use icicle_runtime::{
-    memory::{DeviceVec, HostSlice},
+    memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut},
     IcicleError,
 };
 
@@ -51,7 +51,7 @@ where
     let input = P::generate_random(size);
 
     // Allocate and transfer to device memory
-    let mut device_input = DeviceVec::from_host_slice(&input);
+    let mut device_input = input.clone();
 
     let cfg = negacyclic_ntt::NegacyclicNttConfig::default();
 
@@ -61,7 +61,7 @@ where
     // In-place NTT on device memory (timed)
     // ----------------------------------------------------------------------
     let start = Instant::now();
-    negacyclic_ntt::ntt_inplace(&mut device_input, NTTDir::kForward, &cfg).unwrap();
+    negacyclic_ntt::ntt_inplace(device_input.into_slice_mut(), NTTDir::kForward, &cfg).unwrap();
     let duration = start.elapsed();
     println!(
         "[NTT] In-place forward NTT completed in {:.2?} for {} polynomials",
@@ -73,7 +73,7 @@ where
     // ----------------------------------------------------------------------
     let mut output = vec![P::zero(); size];
     negacyclic_ntt::ntt(
-        &device_input,
+        device_input.into_slice(),
         NTTDir::kForward,
         &cfg,
         output.into_slice_mut(),
@@ -114,17 +114,17 @@ where
     let host_b: Vec<P> = P::generate_random(b_len);
 
     // Allocate device memory for inputs and output
-    let device_a = DeviceVec::from_host_slice(&host_a);
-    let device_b = DeviceVec::from_host_slice(&host_b);
+    let device_a = host_a.into_slice();
+    let device_b = host_b.into_slice();
     let mut device_c = DeviceVec::<P>::device_malloc(c_len).expect("Allocation failed");
 
     // Perform matrix multiplication on device: C = A × B
     let start = std::time::Instant::now();
     matrix_ops::matmul::<P>(
-        &device_a,
+        device_a,
         n,
         m,
-        &device_b,
+        device_b,
         m,
         k,
         &MatMulConfig::default(), // Can define Aᵗ or Bᵗ here assuming dims match
@@ -159,12 +159,12 @@ where
     let host_input: Vec<P> = P::generate_random(len);
 
     // Allocate device memory
-    let device_input = DeviceVec::from_host_slice(&host_input);
+    let device_input = host_input.into_slice();
     let mut device_output = DeviceVec::<P>::device_malloc(len).expect("Allocation failed");
 
     // Transpose
     let start = std::time::Instant::now();
-    matrix_ops::matrix_transpose::<P>(&device_input, rows, cols, &VecOpsConfig::default(), &mut device_output)
+    matrix_ops::matrix_transpose::<P>(device_input, rows, cols, &VecOpsConfig::default(), &mut device_output)
         .expect("Transpose failed");
     let elapsed = start.elapsed();
 
@@ -299,7 +299,7 @@ where
     // ----------------------------------------------------------------------
 
     let host_input: Vec<P> = P::generate_random(size);
-    let device_input = DeviceVec::from_host_slice(&host_input);
+    let device_input = host_input.into_slice();
 
     // ----------------------------------------------------------------------
     // (2) JL projection on flattened device memory
@@ -307,7 +307,7 @@ where
 
     // Reinterpret `PolyRing` as a flat slice of base field elements (`Zq`),
     // since the projection operates on individual scalars rather than polynomials.
-    let zq_device_slice = flatten_polyring_slice(&device_input);
+    let zq_device_slice = flatten_polyring_slice(device_input);
     let mut device_output = DeviceVec::<P::Base>::malloc(projection_dim);
 
     let t_start = std::time::Instant::now();

@@ -502,6 +502,18 @@ impl<T> DeviceVec<T> {
             .unwrap();
         device_vec
     }
+
+    /// Convert this `DeviceVec` to a `DeviceSlice` reference.
+    /// This inherent method allows calling `into_slice()` without importing the `IntoIcicleSlice` trait.
+    pub fn into_slice<'a>(&'a self) -> &'a DeviceSlice<T> {
+        <Self as IntoIcicleSlice<'a, T>>::into_slice(self)
+    }
+
+    /// Convert this `DeviceVec` to a mutable `DeviceSlice` reference.
+    /// This inherent method allows calling `into_slice_mut()` without importing the `IntoIcicleSliceMut` trait.
+    pub fn into_slice_mut<'a>(&'a mut self) -> &'a mut DeviceSlice<T> {
+        <Self as IntoIcicleSliceMut<'a, T>>::into_slice_mut(self)
+    }
 }
 
 impl<T> Drop for DeviceVec<T> {
@@ -674,6 +686,13 @@ impl<'a, T> IntoIcicleSlice<'a, T> for &'a [T] {
     }
 }
 
+impl<'a, T: 'a> IntoIcicleSlice<'a, T> for [T] {
+    type Out = HostSlice<T>;
+    fn into_slice(&'a self) -> &'a HostSlice<T> {
+        HostSlice::from_slice(self)
+    }
+}
+
 impl<'a, T> IntoIcicleSlice<'a, T> for &'a Vec<T> {
     type Out = HostSlice<T>;
     fn into_slice(&'a self) -> &'a HostSlice<T> {
@@ -751,6 +770,7 @@ impl<'a, T: 'a> IntoIcicleSliceMut<'a, T> for DeviceVec<T> {
         &mut **self
     }
 }
+
 // Utility to reinterpret HostOrDeviceSlice via a UnifiedSlice or UnifiedSliceMut that also implement HostOrDeviceSlice.
 pub mod reinterpret {
     use super::*;

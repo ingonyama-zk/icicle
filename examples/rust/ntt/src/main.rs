@@ -1,7 +1,7 @@
 use icicle_bls12_377::curve::ScalarField as BLS12377ScalarField;
 use icicle_bn254::curve::ScalarField;
 use icicle_core::bignum::BigNum;
-use icicle_runtime::memory::{DeviceVec, HostSlice};
+use icicle_runtime::memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut};
 
 use clap::Parser;
 use icicle_core::{
@@ -55,7 +55,8 @@ fn main() {
 
     // Setting Bn254 points and scalars
     println!("Generating random inputs on host for bn254...");
-    let scalars = ScalarField::generate_random(size);
+    let mut scalars = ScalarField::generate_random(size);
+    let scalars_orig = scalars.clone();
     let mut ntt_results = DeviceVec::<ScalarField>::malloc(size);
 
     // Setting bls12377 points and scalars

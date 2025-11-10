@@ -1,6 +1,6 @@
 use icicle_core::projective::Projective;
 use icicle_runtime::{
-    memory::{DeviceVec, IntoIcicleSlice, IntoIcicleSliceMut},
+    memory::{DeviceVec, IntoIcicleSlice},
     stream::IcicleStream,
 };
 

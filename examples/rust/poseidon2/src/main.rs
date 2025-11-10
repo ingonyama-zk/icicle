@@ -7,7 +7,7 @@ use icicle_core::{
     poseidon2::Poseidon2,
 };
 use icicle_m31::field::ScalarField as M31Field;
-use icicle_runtime::memory::HostSlice;
+use icicle_runtime::memory::{IntoIcicleSlice, IntoIcicleSliceMut};
 use rand::{random, Rng};
 use std::convert::TryInto;
 

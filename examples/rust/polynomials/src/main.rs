@@ -4,7 +4,7 @@ use icicle_bn254::curve::ScalarField as Bn254ScalarField;
 use icicle_bn254::polynomials::DensePolynomial as PolynomialBn254;
 use icicle_core::bignum::BigNum;
 
-use icicle_runtime::memory::{DeviceVec, HostSlice, IntoIcicleSlice, IntoIcicleSliceMut};
+use icicle_runtime::memory::{DeviceVec, IntoIcicleSlice};
 
 use icicle_core::field::Field;
 use icicle_core::{
