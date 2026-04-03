@@ -67,6 +67,11 @@ println!("Hash(`{}`) = {:?}", input_str, &output_as_hex_str);
 ### 3. Poseidon Example (field elements) and batch hashing
 
 The Poseidon hash is designed for cryptographic field elements and curves, making it ideal for use cases such as zero-knowledge proofs (ZKPs).
+
+:::info Supported arities
+The `t` parameter (width) passed to `Poseidon::new` must be one of **3, 5, 9, or 12**.  These correspond to arities of 2, 4, 8, and 11 inputs respectively (width = arity + 1).  When a domain tag is supplied, the domain tag occupies one input slot, so the caller provides `t - 1` input elements per hash.  Using an unsupported `t` value will return an error on the CPU backend and may cause undefined behavior on other backends.
+:::
+
 Poseidon hash using babybear field:
 
 ```rust
