@@ -52,6 +52,63 @@ typedef testing::Types<scalar_t> FTImplementations;
 
 TYPED_TEST_SUITE(ModArithTest, FTImplementations);
 
+TYPED_TEST(ModArithTest, reduceFromBytes)
+{
+  // Test 1: round-trip through to_bytes_le / from_bytes_le preserves random field elements
+  for (int trial = 0; trial < 100; trial++) {
+    TypeParam x = TypeParam::rand_host();
+    // Serialize to bytes
+    constexpr unsigned byte_len = TypeParam::TLC * 4;
+    uint8_t bytes[byte_len];
+    memcpy(bytes, x.limbs_storage.limbs, byte_len);
+    // Deserialize via reduce_from_bytes
+    TypeParam y = TypeParam::reduce_from_bytes(reinterpret_cast<const std::byte*>(bytes));
+    ASSERT_EQ(x, y) << "Round-trip failed on trial " << trial;
+  }
+
+  // Test 2: adding zero to a deserialized element is idempotent
+  for (int trial = 0; trial < 100; trial++) {
+    // Generate random bytes that may exceed the modulus
+    constexpr unsigned byte_len = TypeParam::TLC * 4;
+    uint8_t bytes[byte_len];
+    std::uniform_int_distribution<unsigned> dist;
+    for (unsigned i = 0; i < byte_len; i++)
+      bytes[i] = dist(rand_generator) & 0xFF;
+    TypeParam beta = TypeParam::reduce_from_bytes(reinterpret_cast<const std::byte*>(bytes));
+    TypeParam beta_1 = beta + TypeParam::zero();
+    TypeParam beta_2 = beta_1 + TypeParam::zero();
+    ASSERT_EQ(beta, beta_1) << "beta + 0 != beta on trial " << trial;
+    ASSERT_EQ(beta_1, beta_2) << "(beta + 0) + 0 != beta + 0 on trial " << trial;
+  }
+
+  // Test 3: bytes encoding the modulus itself must reduce to zero
+  {
+    constexpr unsigned byte_len = TypeParam::TLC * 4;
+    uint8_t mod_bytes[byte_len];
+    auto modulus = TypeParam::get_modulus();
+    memcpy(mod_bytes, modulus.limbs, byte_len);
+    TypeParam from_mod = TypeParam::reduce_from_bytes(reinterpret_cast<const std::byte*>(mod_bytes));
+    ASSERT_EQ(from_mod, TypeParam::zero()) << "Bytes equal to modulus did not reduce to zero";
+  }
+
+  // Test 4: bytes encoding modulus + 1 must reduce to one
+  {
+    constexpr unsigned byte_len = TypeParam::TLC * 4;
+    auto modulus = TypeParam::get_modulus();
+    uint8_t mp1_bytes[byte_len];
+    memcpy(mp1_bytes, modulus.limbs, byte_len);
+    // Add 1 to the byte representation (little-endian)
+    unsigned carry = 1;
+    for (unsigned i = 0; i < byte_len && carry; i++) {
+      unsigned sum = mp1_bytes[i] + carry;
+      mp1_bytes[i] = sum & 0xFF;
+      carry = sum >> 8;
+    }
+    TypeParam from_mp1 = TypeParam::reduce_from_bytes(reinterpret_cast<const std::byte*>(mp1_bytes));
+    ASSERT_EQ(from_mp1, TypeParam::one()) << "Bytes equal to modulus+1 did not reduce to one";
+  }
+}
+
 TYPED_TEST(ModArithTest, vectorVectorOps)
 {
   const uint64_t N = 1 << rand_uint_32b(3, 17);
