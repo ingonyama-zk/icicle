@@ -315,12 +315,10 @@ public:
   static HOST_INLINE Derived rand_host()
   {
     std::uniform_int_distribution<unsigned> distribution;
-    Derived value{};
+    storage<TLC> value{};
     for (unsigned i = 0; i < TLC; i++)
-      value.limbs_storage.limbs[i] = distribution(rand_generator);
-    while (lt(Derived{get_modulus()}, value))
-      value = value - Derived{get_modulus()};
-    return value;
+      value.limbs[i] = distribution(rand_generator);
+    return from(value);
   }
 
   static void rand_host_many(Derived* out, int size)
@@ -498,11 +496,7 @@ public:
 
   static constexpr HOST_DEVICE_INLINE Derived reduce_from_bytes(const std::byte* in)
   {
-    Derived value;
-    memcpy(reinterpret_cast<std::byte*>(value.limbs_storage.limbs), in, TLC * 4);
-    while (lt(Derived{get_modulus()}, value))
-      value = value - Derived{get_modulus()};
-    return value;
+    return from(in, TLC * 4);
   }
 
   HOST_DEVICE Derived& operator=(const Derived& other)
