@@ -26,7 +26,9 @@ public:
   }
 
 protected:
-  void SetUp() override { ICICLE_CHECK(icicle_set_device("CUDA-PQC")); }
+  // Use the GPU backend that was actually registered (e.g. "CUDA-PQC" on
+  // NVIDIA, "HIP-PQC" on ROCm) rather than a hard-coded device string.
+  void SetUp() override { ICICLE_CHECK(icicle_set_device(IcicleTestBase::main_device())); }
 };
 
 typedef testing::Types<Kyber512Params, Kyber768Params, Kyber1024Params> MLkemTypes;
@@ -77,8 +79,8 @@ TYPED_TEST(PqcTest, MLkemSharedSecretConsistencyTestOnDevice)
   config.shared_secrets_on_device = true;
   config.is_async = true;
 
-  // Set device
-  icicle::Device dev = {"CUDA-PQC", 0};
+  // Set device (registered GPU backend: CUDA-PQC on NVIDIA, HIP-PQC on ROCm)
+  icicle::Device dev = {IcicleTestBase::main_device(), 0};
   ICICLE_CHECK(icicle_set_device(dev));
 
   // Create stream
