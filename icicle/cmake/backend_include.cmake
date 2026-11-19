@@ -29,6 +29,14 @@ if (CUDA_PQC_BACKEND AND PQC)
   add_subdirectory(backend/cuda_pqc)
 endif()
 
+if (HIP_PQC_BACKEND AND PQC)
+  message(STATUS "Building HIP-PQC backend (ROCm)")
+  add_subdirectory(backend/hip_pqc)
+  # So the frontend backend loader (icicle_load_backend_from_env_or_default)
+  # finds the runtime DSO during tests, mirroring the CUDA backend.
+  add_compile_definitions(BACKEND_BUILD_DIR="${CMAKE_BINARY_DIR}/backend/hip_pqc")
+endif()
+
 if (METAL_BACKEND)
   string(TOLOWER "${METAL_BACKEND}" METAL_BACKEND_LOWER)
   if (METAL_BACKEND_LOWER STREQUAL "local")
